@@ -2,7 +2,6 @@ namespace Freetool.Infrastructure.Database
 
 open System.Data.Common
 open System.Reflection
-open System.Threading
 open DbUp
 open Microsoft.Data.Sqlite
 

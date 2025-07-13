@@ -214,3 +214,5 @@ packages/
 # Temporary files
 *.tmp
 *.temp
+
+coveragereport/

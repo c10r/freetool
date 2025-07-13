@@ -9,8 +9,19 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
     <PackageReference Include="dbup-sqlite" Version="5.0.40" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
@@ -27,6 +38,10 @@
     <Compile Include="src/Database/FreetoolDbContext.fs" />
     <Compile Include="src/Database/Persistence.fs" />
     <Compile Include="src/Database/Repositories/UserRepository.fs" />
+    <Compile Include="test/Database/Mapping/UserEntityMapperTests.fs" />
+    <Compile Include="test/Database/Context/FreetoolDbContextTests.fs" />
+    <Compile Include="test/Database/Repositories/UserRepositoryTests.fs" />
+    <Compile Include="test/Database/PersistenceTests.fs" />
   </ItemGroup>
 
 </Project>
