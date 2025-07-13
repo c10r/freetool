@@ -6,7 +6,27 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Library.fs" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0" />
+    <PackageReference Include="dbup-sqlite" Version="5.0.40" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Freetool.Domain/Freetool.Domain.fsproj" />
+    <ProjectReference Include="../Freetool.Application/Freetool.Application.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.001_CreateUsersTable.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="src/Database/UserEntity.fs" />
+    <Compile Include="src/Database/FreetoolDbContext.fs" />
+    <Compile Include="src/Database/Persistence.fs" />
+    <Compile Include="src/Database/Repositories/UserRepository.fs" />
   </ItemGroup>
 
 </Project>

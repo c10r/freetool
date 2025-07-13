@@ -33,6 +33,7 @@ This project follows **Onion Architecture** principles to maintain clean separat
 - **Pure Business Logic**: Domain and Application layers contain no infrastructure concerns
 - **Testability**: Business logic is easily unit tested without external dependencies
 - **Flexibility**: Infrastructure can be swapped without affecting core functionality
+- **Functional Design**: Uses F# discriminated unions and pattern matching for command handling instead of object-oriented use cases
 
 ## 📁 Project Structure
 
@@ -64,17 +65,18 @@ Freetool.sln
 │   │
 │   ├── Freetool.Application/         # 🔧 Application orchestration
 │   │   ├── src/
+│   │   │   ├── DTOs/                 # Data transfer objects for boundaries
+│   │   │   │   └── UserDtos.fs       # User-related DTOs
 │   │   │   ├── Interfaces/           # Repository and service contracts
 │   │   │   │   ├── IUserRepository.fs # User data access interface
 │   │   │   │   ├── IToolRepository.fs # Tool data access interface
 │   │   │   │   ├── IDashboardRepository.fs
 │   │   │   │   ├── IAuditRepository.fs
 │   │   │   │   └── IEmailService.fs  # Email service interface
-│   │   │   ├── UseCases/             # Application use cases (commands/queries)
-│   │   │   │   ├── UserManagement/   # User registration, authentication
-│   │   │   │   ├── ToolManagement/   # CRUD operations for tools
-│   │   │   │   └── Dashboard/        # Dashboard creation and management
-│   │   │   ├── DTOs/                 # Data transfer objects for boundaries
+│   │   │   ├── Commands/             # Command definitions using discriminated unions
+│   │   │   │   └── UserCommands.fs   # User commands and result types
+│   │   │   ├── Handlers/             # Command handlers using pattern matching
+│   │   │   │   └── UserHandler.fs    # User command handler module
 │   │   │   └── Common/               # Shared application utilities
 │   │   │       ├── Result.fs         # Result type for error handling
 │   │   │       ├── Validation.fs     # Cross-cutting validation logic
@@ -84,9 +86,13 @@ Freetool.sln
 │   ├── Freetool.Infrastructure/      # 🔌 External system integrations
 │   │   ├── src/
 │   │   │   ├── Database/             # Data persistence layer
+│   │   │   │   ├── FreetoolDbContext.fs # Entity Framework context
+│   │   │   │   ├── UserEntity.fs     # Database entity mappings
+│   │   │   │   ├── Persistence.fs    # Database migration utilities
 │   │   │   │   ├── Repositories/     # Repository implementations
-│   │   │   │   ├── Migrations/       # Database schema migrations
-│   │   │   │   └── DbContext.fs      # Entity Framework context
+│   │   │   │   │   └── UserRepository.fs # User repository implementation
+│   │   │   │   └── Migrations/       # Database schema migrations
+│   │   │   │       └── DatabaseUpgradeScripts.DBUP.001_CreateUsersTable.sql
 │   │   │   ├── ExternalServices/     # Third-party service integrations
 │   │   │   │   ├── EmailService.fs   # SMTP email implementation
 │   │   │   │   ├── HttpClientService.fs # HTTP client for external APIs
@@ -111,9 +117,11 @@ Freetool.sln
 │       │   │   ├── AuditMiddleware.fs # Request/response audit logging
 │       │   │   └── ErrorHandlingMiddleware.fs
 │       │   ├── Models/               # HTTP request/response models
-│       │   ├── Startup.fs            # Dependency injection configuration
-│       │   ├── Program.fs            # Application entry point
-│       │   └── appsettings.json
+│       │   ├── Program.fs            # Application entry point & DI configuration
+│       │   ├── appsettings.json      # Production configuration
+│       │   ├── appsettings.Development.json # Development configuration
+│       │   └── Properties/
+│       │       └── launchSettings.json # Launch profiles
 │       └── test/                     # 🔗 End-to-end integration tests
 │
 └── docs/                             # 📚 Additional documentation
@@ -124,8 +132,11 @@ Freetool.sln
 ### Prerequisites
 
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- [SQL Server](https://www.microsoft.com/en-us/sql-server) (or SQL Server Express/LocalDB for development)
 - [Git](https://git-scm.com/)
+
+### Database Setup
+
+This project uses **SQLite** with **DBUp** for database migrations. SQLite is a lightweight, file-based database that works perfectly on Windows, macOS, and Linux with zero configuration required.
 
 ### Setup
 
@@ -140,29 +151,94 @@ Freetool.sln
    dotnet restore
    ```
 
-3. **Update database connection string**
-   Edit `src/Freetool.Api/appsettings.Development.json`:
+3. **Configure database (optional)**
+   The default configuration uses SQLite with a local file. The database file `freetool.db` will be created automatically in the API project directory. If needed, edit `src/Freetool.Api/appsettings.Development.json`:
    ```json
    {
      "ConnectionStrings": {
-       "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=FreetoolDev;Trusted_Connection=true;"
+       "DefaultConnection": "Data Source=freetool.db"
      }
    }
    ```
 
-4. **Run database migrations**
-   ```bash
-   dotnet ef database update --project src/Freetool.Infrastructure --startup-project src/Freetool.Api
-   ```
-
-5. **Start the application**
+4. **Start the application**
    ```bash
    dotnet run --project src/Freetool.Api
    ```
+   
+   **The database will be created automatically on first run!** The application uses DBUp to:
+   - Create the database if it doesn't exist
+   - Run all migration scripts automatically
+   - Display migration progress in the console
 
-6. **Access the API**
-   - API: https://localhost:5001
+5. **Access the API**
+   - API: https://localhost:5001 or http://localhost:5000
    - Swagger UI: https://localhost:5001/swagger
+
+### Quick Test
+
+Once the application is running, you can test the User API:
+
+1. **Open Swagger UI** at https://localhost:5001/swagger
+2. **Create a user** using the `POST /user` endpoint:
+   ```json
+   {
+     "name": "John Doe",
+     "email": "john.doe@example.com",
+     "profilePicUrl": "https://example.com/profile.jpg"
+   }
+   ```
+3. **Get users** using the `GET /user` endpoint
+4. **Get user by ID** using the `GET /user/{id}` endpoint with the returned ID
+
+The API supports full CRUD operations:
+- `POST /user` - Create a new user
+- `GET /user/{id}` - Get user by ID
+- `GET /user/email/{email}` - Get user by email
+- `GET /user?skip=0&take=10` - Get paginated list of users
+- `PUT /user/{id}/name` - Update user name
+- `PUT /user/{id}/email` - Update user email
+- `PUT /user/{id}/profile-picture` - Set user profile picture
+- `DELETE /user/{id}/profile-picture` - Remove user profile picture
+- `DELETE /user/{id}` - Delete user
+
+### Database Migrations
+
+This project uses [DBUp](https://dbup.readthedocs.io/) for database migrations instead of Entity Framework migrations. This gives you full control over your SQL scripts.
+
+#### Adding New Migrations
+
+1. **Create a new SQL script** in `src/Freetool.Infrastructure/src/Database/Migrations/`
+   - File naming convention: `DatabaseUpgradeScripts.DBUP.{number}_{description}.sql`
+   - Example: `DatabaseUpgradeScripts.DBUP.002_AddUserPreferencesTable.sql`
+
+2. **Add the script to the project file** as an embedded resource:
+   ```xml
+   <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.002_AddUserPreferencesTable.sql" />
+   ```
+
+3. **Restart the application** - DBUp will automatically detect and run new scripts
+
+#### Example Migration Script
+```sql
+-- DatabaseUpgradeScripts.DBUP.002_AddUserPreferencesTable.sql
+CREATE TABLE UserPreferences (
+    Id TEXT NOT NULL PRIMARY KEY,
+    UserId TEXT NOT NULL,
+    Theme TEXT NOT NULL DEFAULT 'Light',
+    Language TEXT NOT NULL DEFAULT 'en',
+    CreatedAt TEXT NOT NULL,
+    UpdatedAt TEXT NOT NULL,
+    FOREIGN KEY (UserId) REFERENCES Users(Id)
+);
+```
+
+#### Migration Benefits
+- **Version control friendly**: SQL scripts are checked into source control
+- **Database agnostic**: Easy to switch between SQL Server, SQLite, PostgreSQL, etc.
+- **Full SQL control**: Write optimized SQL for complex migrations
+- **Rollback support**: Create explicit down migration scripts when needed
+- **Team collaboration**: No merge conflicts with migration files
 
 ## 🧪 Testing Strategy
 

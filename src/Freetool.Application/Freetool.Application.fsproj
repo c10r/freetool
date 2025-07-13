@@ -6,7 +6,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Library.fs" />
+    <ProjectReference Include="../Freetool.Domain/Freetool.Domain.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="src/DTOs/UserDtos.fs" />
+    <Compile Include="src/Interfaces/IUserRepository.fs" />
+    <Compile Include="src/Commands/UserCommands.fs" />
+    <Compile Include="src/Interfaces/ICommandHandler.fs" />
+    <Compile Include="src/Handlers/UserHandler.fs" />
   </ItemGroup>
 
 </Project>
