@@ -7,13 +7,13 @@ open Freetool.Domain.ValueObjects
 type UserChange =
     | NameChanged of oldValue: string * newValue: string
     | EmailChanged of oldValue: Email * newValue: Email
-    | ProfilePicChanged of oldValue: string option * newValue: string option
+    | ProfilePicChanged of oldValue: Url option * newValue: Url option
 
 type UserCreatedEvent = {
     UserId: UserId
     Name: string
     Email: Email
-    ProfilePicUrl: string option
+    ProfilePicUrl: Url option
     OccurredAt: DateTime
     EventId: Guid
 } with
@@ -44,7 +44,7 @@ type UserDeletedEvent = {
         member this.EventId = this.EventId
 
 module UserEvents =
-    let userCreated (userId: UserId) (name: string) (email: Email) (profilePicUrl: string option) =
+    let userCreated (userId: UserId) (name: string) (email: Email) (profilePicUrl: Url option) =
         {
             UserId = userId
             Name = name

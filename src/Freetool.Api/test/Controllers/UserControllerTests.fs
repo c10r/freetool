@@ -93,17 +93,30 @@ module UserControllerTests =
                         if existsWithEmail then
                             return Error(Conflict "A user with this email already exists")
                         else
-                            match User.create dto.Name email (Option.ofObj dto.ProfilePicUrl) with
+                            let urlOption =
+                                if System.String.IsNullOrWhiteSpace(dto.ProfilePicUrl) then
+                                    None
+                                else
+                                    Url.Create dto.ProfilePicUrl
+                                    |> Result.map Some
+                                    |> Result.defaultWith (fun _ -> failwith "Invalid url in test setup")
+
+                            match User.create (dto.Name) (email) urlOption with
                             | Ok user ->
                                 let! addResult = repository.AddAsync(user)
 
                                 match addResult with
                                 | Ok _ ->
+                                    let url =
+                                        user.ProfilePicUrl
+                                        |> Option.map (fun url -> url.Value)
+                                        |> Option.defaultValue null
+
                                     let userDto = {
                                         Id = user.Id.Value.ToString()
                                         Name = user.Name
                                         Email = user.Email.Value
-                                        ProfilePicUrl = Option.toObj user.ProfilePicUrl
+                                        ProfilePicUrl = url
                                         CreatedAt = user.CreatedAt
                                         UpdatedAt = user.UpdatedAt
                                     }
@@ -121,11 +134,16 @@ module UserControllerTests =
 
                         match userOpt with
                         | Some user ->
+                            let url =
+                                user.ProfilePicUrl
+                                |> Option.map (fun url -> url.Value)
+                                |> Option.defaultValue null
+
                             let userDto = {
                                 Id = user.Id.Value.ToString()
                                 Name = user.Name
                                 Email = user.Email.Value
-                                ProfilePicUrl = Option.toObj user.ProfilePicUrl
+                                ProfilePicUrl = url
                                 CreatedAt = user.CreatedAt
                                 UpdatedAt = user.UpdatedAt
                             }
@@ -141,11 +159,16 @@ module UserControllerTests =
 
                         match userOpt with
                         | Some user ->
+                            let url =
+                                user.ProfilePicUrl
+                                |> Option.map (fun url -> url.Value)
+                                |> Option.defaultValue null
+
                             let userDto = {
                                 Id = user.Id.Value.ToString()
                                 Name = user.Name
                                 Email = user.Email.Value
-                                ProfilePicUrl = Option.toObj user.ProfilePicUrl
+                                ProfilePicUrl = url
                                 CreatedAt = user.CreatedAt
                                 UpdatedAt = user.UpdatedAt
                             }
@@ -164,14 +187,20 @@ module UserControllerTests =
 
                         let userDtos =
                             users
-                            |> List.map (fun user -> {
-                                Id = user.Id.Value.ToString()
-                                Name = user.Name
-                                Email = user.Email.Value
-                                ProfilePicUrl = Option.toObj user.ProfilePicUrl
-                                CreatedAt = user.CreatedAt
-                                UpdatedAt = user.UpdatedAt
-                            })
+                            |> List.map (fun user ->
+                                let url =
+                                    user.ProfilePicUrl
+                                    |> Option.map (fun url -> url.Value)
+                                    |> Option.defaultValue null
+
+                                {
+                                    Id = user.Id.Value.ToString()
+                                    Name = user.Name
+                                    Email = user.Email.Value
+                                    ProfilePicUrl = url
+                                    CreatedAt = user.CreatedAt
+                                    UpdatedAt = user.UpdatedAt
+                                })
 
                         let pagedResult = {
                             Users = userDtos
@@ -199,11 +228,16 @@ module UserControllerTests =
 
                                     match updateResult with
                                     | Ok _ ->
+                                        let url =
+                                            updatedUser.ProfilePicUrl
+                                            |> Option.map (fun url -> url.Value)
+                                            |> Option.defaultValue null
+
                                         let userDto = {
                                             Id = updatedUser.Id.Value.ToString()
                                             Name = updatedUser.Name
                                             Email = updatedUser.Email.Value
-                                            ProfilePicUrl = Option.toObj updatedUser.ProfilePicUrl
+                                            ProfilePicUrl = url
                                             CreatedAt = updatedUser.CreatedAt
                                             UpdatedAt = updatedUser.UpdatedAt
                                         }
@@ -234,11 +268,16 @@ module UserControllerTests =
 
                                     match updateResult with
                                     | Ok _ ->
+                                        let url =
+                                            updatedUser.ProfilePicUrl
+                                            |> Option.map (fun url -> url.Value)
+                                            |> Option.defaultValue null
+
                                         let userDto = {
                                             Id = updatedUser.Id.Value.ToString()
                                             Name = updatedUser.Name
                                             Email = updatedUser.Email.Value
-                                            ProfilePicUrl = Option.toObj updatedUser.ProfilePicUrl
+                                            ProfilePicUrl = url
                                             CreatedAt = updatedUser.CreatedAt
                                             UpdatedAt = updatedUser.UpdatedAt
                                         }
@@ -257,16 +296,25 @@ module UserControllerTests =
 
                         match userOpt with
                         | Some user ->
-                            let updatedUser = User.updateProfilePic (Some profilePicUrl) user
+                            let url =
+                                Url.Create(profilePicUrl)
+                                |> Result.defaultWith (fun _ -> failwith "Invalid url in test setup")
+
+                            let updatedUser = User.updateProfilePic (Some url) user
                             let! updateResult = repository.UpdateAsync(updatedUser)
 
                             match updateResult with
                             | Ok _ ->
+                                let url =
+                                    updatedUser.ProfilePicUrl
+                                    |> Option.map (fun url -> url.Value)
+                                    |> Option.defaultValue null
+
                                 let userDto = {
                                     Id = updatedUser.Id.Value.ToString()
                                     Name = updatedUser.Name
                                     Email = updatedUser.Email.Value
-                                    ProfilePicUrl = Option.toObj updatedUser.ProfilePicUrl
+                                    ProfilePicUrl = url
                                     CreatedAt = updatedUser.CreatedAt
                                     UpdatedAt = updatedUser.UpdatedAt
                                 }
@@ -289,11 +337,16 @@ module UserControllerTests =
 
                             match updateResult with
                             | Ok _ ->
+                                let url =
+                                    updatedUser.ProfilePicUrl
+                                    |> Option.map (fun url -> url.Value)
+                                    |> Option.defaultValue null
+
                                 let userDto = {
                                     Id = updatedUser.Id.Value.ToString()
                                     Name = updatedUser.Name
                                     Email = updatedUser.Email.Value
-                                    ProfilePicUrl = Option.toObj updatedUser.ProfilePicUrl
+                                    ProfilePicUrl = url
                                     CreatedAt = updatedUser.CreatedAt
                                     UpdatedAt = updatedUser.UpdatedAt
                                 }

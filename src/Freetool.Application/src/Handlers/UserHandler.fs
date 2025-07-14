@@ -15,7 +15,10 @@ module UserHandler =
         Id = user.Id.Value.ToString()
         Name = user.Name
         Email = user.Email.Value
-        ProfilePicUrl = Option.toObj user.ProfilePicUrl
+        ProfilePicUrl =
+            user.ProfilePicUrl
+            |> Option.map (fun url -> url.Value)
+            |> Option.defaultValue null
         CreatedAt = user.CreatedAt
         UpdatedAt = user.UpdatedAt
     }
@@ -35,12 +38,20 @@ module UserHandler =
                     if existsByEmail then
                         return Error(Conflict "A user with this email already exists")
                     else
-                        match User.create dto.Name email (Option.ofObj dto.ProfilePicUrl) with
+                        let profilePicUrlResult =
+                            match Option.ofObj dto.ProfilePicUrl with
+                            | Some urlStr -> Url.Create urlStr |> Result.map Some
+                            | None -> Ok None
+
+                        match profilePicUrlResult with
                         | Error error -> return Error error
-                        | Ok user ->
-                            match! userRepository.AddAsync user with
+                        | Ok profilePicUrlOption ->
+                            match User.create dto.Name email profilePicUrlOption with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(UserResult(mapUserToDto user))
+                            | Ok user ->
+                                match! userRepository.AddAsync user with
+                                | Error error -> return Error error
+                                | Ok() -> return Ok(UserResult(mapUserToDto user))
 
             | DeleteUser userId ->
                 match Guid.TryParse userId with
@@ -102,11 +113,19 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        let updatedUser = User.updateProfilePic (Option.ofObj profilePicUrl) user
+                        let profilePicUrlResult =
+                            match Option.ofObj profilePicUrl with
+                            | Some urlStr -> Url.Create urlStr |> Result.map Some
+                            | None -> Ok None
 
-                        match! userRepository.UpdateAsync updatedUser with
+                        match profilePicUrlResult with
                         | Error error -> return Error error
-                        | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
+                        | Ok profilePicUrlOption ->
+                            let updatedUser = User.updateProfilePic profilePicUrlOption user
+
+                            match! userRepository.UpdateAsync updatedUser with
+                            | Error error -> return Error error
+                            | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
 
             | RemoveProfilePicture userId ->
                 match Guid.TryParse userId with

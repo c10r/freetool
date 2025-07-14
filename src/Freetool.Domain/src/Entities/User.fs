@@ -8,7 +8,7 @@ type User = {
     Id: UserId
     Name: string
     Email: Email
-    ProfilePicUrl: string option
+    ProfilePicUrl: Url option
     CreatedAt: DateTime
     UpdatedAt: DateTime
 } with
@@ -17,7 +17,7 @@ type User = {
         member this.Id = this.Id
 
 module User =
-    let create (name: string) (email: Email) (profilePicUrl: string option) : Result<User, DomainError> =
+    let create (name: string) (email: Email) (profilePicUrl: Url option) : Result<User, DomainError> =
         if String.IsNullOrWhiteSpace name then
             Error(ValidationError "User name cannot be empty")
         elif name.Length > 100 then
@@ -52,7 +52,7 @@ module User =
             UpdatedAt = DateTime.UtcNow
     }
 
-    let updateProfilePic (newProfilePicUrl: string option) (user: User) : User = {
+    let updateProfilePic (newProfilePicUrl: Url option) (user: User) : User = {
         user with
             ProfilePicUrl = newProfilePicUrl
             UpdatedAt = DateTime.UtcNow

@@ -25,7 +25,11 @@ module UserRepositoryTests =
             Email.Create("test@example.com")
             |> Result.defaultWith (fun _ -> failwith "Invalid email in test setup")
 
-        User.create "Test User" email (Some "https://example.com/pic.jpg")
+        let url =
+            Url.Create("https://google.com")
+            |> Result.defaultWith (fun _ -> failwith "Invalid url in test setup")
+
+        User.create "Test User" email (Some url)
         |> Result.defaultWith (fun _ -> failwith "Invalid user in test setup")
 
     let createValidUserWithEmail emailStr =

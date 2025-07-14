@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <Compile Include="src/Types.fs" />
+    <Compile Include="src/ValueObjects/Url.fs" />
     <Compile Include="src/ValueObjects/UserId.fs" />
     <Compile Include="src/ValueObjects/Email.fs" />
     <Compile Include="src/Entities/User.fs" />

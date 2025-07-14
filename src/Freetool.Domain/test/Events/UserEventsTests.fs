@@ -14,12 +14,16 @@ module UserEventsTests =
 
     let createValidUserId () = UserId.NewId()
 
+    let createValidUrl () =
+        Url.Create("https://google.com")
+        |> Result.defaultWith (fun _ -> failwith "Invalid url in test setup")
+
     [<Fact>]
     let ``userCreated creates UserCreatedEvent with correct properties`` () =
         let userId = createValidUserId ()
         let email = createValidEmail ()
         let name = "John Doe"
-        let profilePicUrl = Some "https://example.com/pic.jpg"
+        let profilePicUrl = Some(createValidUrl ())
 
         let event = UserEvents.userCreated userId name email profilePicUrl
 
@@ -115,8 +119,14 @@ module UserEventsTests =
 
     [<Fact>]
     let ``ProfilePicChanged stores old and new values correctly`` () =
-        let oldValue = Some "https://example.com/old.jpg"
-        let newValue = Some "https://example.com/new.jpg"
+        let oldValue = Some(createValidUrl ())
+
+        let newValue =
+            Some(
+                Url.Create("https://yahoo.com")
+                |> Result.defaultWith (fun _ -> failwith "Invalid url in test setup")
+            )
+
         let change = ProfilePicChanged(oldValue, newValue)
 
         match change with
@@ -127,12 +137,13 @@ module UserEventsTests =
 
     [<Fact>]
     let ``ProfilePicChanged handles None values correctly`` () =
-        let change = ProfilePicChanged(None, Some "https://example.com/new.jpg")
+        let newUrl = createValidUrl ()
+        let change = ProfilePicChanged(None, Some(newUrl))
 
         match change with
         | ProfilePicChanged(oldVal, newVal) ->
             Assert.Equal(None, oldVal)
-            Assert.Equal(Some "https://example.com/new.jpg", newVal)
+            Assert.Equal(Some newUrl, newVal)
         | _ -> Assert.True(false, "Expected ProfilePicChanged")
 
     [<Fact>]

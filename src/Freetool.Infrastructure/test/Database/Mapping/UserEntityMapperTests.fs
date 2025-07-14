@@ -14,7 +14,11 @@ module UserEntityMapperTests =
             Email.Create("test@example.com")
             |> Result.defaultWith (fun _ -> failwith "Invalid email in test setup")
 
-        User.create "Test User" email (Some "https://example.com/pic.jpg")
+        let url =
+            Url.Create("https://example.com/pic.jpg")
+            |> Result.defaultWith (fun _ -> failwith "Invalid url in test setup")
+
+        User.create "Test User" email (Some url)
         |> Result.defaultWith (fun _ -> failwith "Invalid user in test setup")
 
     let createUserEntity () =
@@ -36,7 +40,7 @@ module UserEntityMapperTests =
         Assert.Equal(domainUser.Id.Value, entity.Id)
         Assert.Equal(domainUser.Name, entity.Name)
         Assert.Equal(domainUser.Email.Value, entity.Email)
-        Assert.Equal(domainUser.ProfilePicUrl, entity.ProfilePicUrl)
+        Assert.Equal(domainUser.ProfilePicUrl |> Option.map (fun url -> url.Value), entity.ProfilePicUrl)
         Assert.Equal(domainUser.CreatedAt, entity.CreatedAt)
         Assert.Equal(domainUser.UpdatedAt, entity.UpdatedAt)
 
@@ -63,7 +67,7 @@ module UserEntityMapperTests =
         Assert.Equal(UserId.FromGuid(entity.Id), domainUser.Id)
         Assert.Equal(entity.Name, domainUser.Name)
         Assert.Equal(entity.Email, domainUser.Email.Value)
-        Assert.Equal(entity.ProfilePicUrl, domainUser.ProfilePicUrl)
+        Assert.Equal(entity.ProfilePicUrl, domainUser.ProfilePicUrl |> Option.map (fun url -> url.Value))
         Assert.Equal(entity.CreatedAt, domainUser.CreatedAt)
         Assert.Equal(entity.UpdatedAt, domainUser.UpdatedAt)
 

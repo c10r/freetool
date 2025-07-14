@@ -12,11 +12,13 @@ open Freetool.Infrastructure.Database
 module UserEntityMapper =
 
     let toEntityUser (domainUser: User) : UserEntity =
+        let url = domainUser.ProfilePicUrl |> Option.map (fun url -> url.Value)
+
         UserEntity(
             Id = domainUser.Id.Value,
             Name = domainUser.Name,
             Email = domainUser.Email.Value,
-            ProfilePicUrl = domainUser.ProfilePicUrl,
+            ProfilePicUrl = url,
             CreatedAt = domainUser.CreatedAt,
             UpdatedAt = domainUser.UpdatedAt
         )
@@ -27,11 +29,19 @@ module UserEntityMapper =
             | Ok email -> email
             | Error _ -> failwith $"Invalid email in database: {entity.Email}"
 
+        let profilePicUrl =
+            match entity.ProfilePicUrl with
+            | Some urlStr ->
+                match Url.Create urlStr with
+                | Ok url -> Some url
+                | Error _ -> failwith $"Invalid URL in database: {urlStr}"
+            | None -> None
+
         {
             Id = UserId.FromGuid entity.Id
             Name = entity.Name
             Email = email
-            ProfilePicUrl = entity.ProfilePicUrl
+            ProfilePicUrl = profilePicUrl
             CreatedAt = entity.CreatedAt
             UpdatedAt = entity.UpdatedAt
         }
@@ -81,7 +91,7 @@ type UserRepository(context: FreetoolDbContext) =
                 | Some entity ->
                     entity.Name <- user.Name
                     entity.Email <- user.Email.Value
-                    entity.ProfilePicUrl <- user.ProfilePicUrl
+                    entity.ProfilePicUrl <- user.ProfilePicUrl |> Option.map (fun url -> url.Value)
                     entity.UpdatedAt <- user.UpdatedAt
 
                     let! _ = context.SaveChangesAsync()

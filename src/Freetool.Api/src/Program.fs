@@ -7,6 +7,7 @@ open System.Text.Json.Serialization
 open System.Diagnostics
 open OpenTelemetry.Resources
 open OpenTelemetry.Trace
+open OpenTelemetry.Exporter
 open Freetool.Infrastructure.Database
 open Freetool.Infrastructure.Database.Repositories
 open Freetool.Application.Interfaces

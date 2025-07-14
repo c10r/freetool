@@ -12,16 +12,21 @@ module UserTests =
         Email.Create("test@example.com")
         |> Result.defaultWith (fun _ -> failwith "Invalid email in test setup")
 
+    let createValidUrl () =
+        Url.Create("https://google.com")
+        |> Result.defaultWith (fun _ -> failwith "Invalid url in test setup")
+
     [<Fact>]
     let ``create with valid parameters returns Ok with User`` () =
         let email = createValidEmail ()
-        let result = User.create "John Doe" email (Some "https://example.com/pic.jpg")
+        let url = Some(createValidUrl ())
+        let result = User.create "John Doe" email url
 
         match result with
         | Ok user ->
             Assert.Equal("John Doe", user.Name)
             Assert.Equal(email, user.Email)
-            Assert.Equal(Some "https://example.com/pic.jpg", user.ProfilePicUrl)
+            Assert.Equal(url, user.ProfilePicUrl)
             Assert.True(user.CreatedAt <= DateTime.UtcNow)
             Assert.True(user.UpdatedAt <= DateTime.UtcNow)
             Assert.Equal(user.CreatedAt, user.UpdatedAt)
@@ -187,10 +192,10 @@ module UserTests =
 
         match originalResult with
         | Ok originalUser ->
-            let updatedUser =
-                User.updateProfilePic (Some "https://example.com/newpic.jpg") originalUser
+            let url = createValidUrl ()
+            let updatedUser = User.updateProfilePic (Some url) originalUser
 
-            Assert.Equal(Some "https://example.com/newpic.jpg", updatedUser.ProfilePicUrl)
+            Assert.Equal(Some(url), updatedUser.ProfilePicUrl)
             Assert.Equal(originalUser.Name, updatedUser.Name)
             Assert.Equal(originalUser.Email, updatedUser.Email)
             Assert.Equal(originalUser.CreatedAt, updatedUser.CreatedAt)
@@ -200,9 +205,9 @@ module UserTests =
     [<Fact>]
     let ``updateProfilePic with None removes profile pic`` () =
         let email = createValidEmail ()
+        let url = createValidUrl ()
 
-        let originalResult =
-            User.create "John Doe" email (Some "https://example.com/pic.jpg")
+        let originalResult = User.create "John Doe" email (Some url)
 
         match originalResult with
         | Ok originalUser ->
