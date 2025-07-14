@@ -7,9 +7,16 @@ open Freetool.Domain
 
 module Tracing =
 
-    let withSpan (activitySource: ActivitySource) (spanName: string) (operation: Activity option -> 'T) : 'T =
-        use activity = activitySource.StartActivity(spanName)
-        operation (Option.ofObj activity)
+    let withSpan
+        (activitySource: ActivitySource)
+        (spanName: string)
+        (operation: Activity option -> System.Threading.Tasks.Task<'T>)
+        : System.Threading.Tasks.Task<'T> =
+        task {
+            use activity = activitySource.StartActivity(spanName)
+            printfn "Creating span: %s, Activity: %A" spanName (Option.ofObj activity)
+            return! operation (Option.ofObj activity)
+        }
 
     let addAttribute (activity: Activity option) (key: string) (value: string) =
         match activity with

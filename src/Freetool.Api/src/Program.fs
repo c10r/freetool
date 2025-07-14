@@ -20,11 +20,8 @@ let main args =
     // Add services to the container
     builder.Services
         .AddControllers(fun options -> options.SuppressAsyncSuffixInActionNames <- false)
-        .ConfigureApiBehaviorOptions(fun options ->
-            // Enable automatic model validation
-            options.SuppressModelStateInvalidFilter <- false)
+        .ConfigureApiBehaviorOptions(fun options -> options.SuppressModelStateInvalidFilter <- false)
         .AddJsonOptions(fun options ->
-            // Configure JSON serialization for F# option types
             options.JsonSerializerOptions.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull
             options.JsonSerializerOptions.Converters.Add(JsonFSharpConverter()))
     |> ignore
@@ -36,16 +33,13 @@ let main args =
         c.UseAllOfToExtendReferenceSchemas() |> ignore)
     |> ignore
 
-    // Add Entity Framework
     builder.Services.AddDbContext<FreetoolDbContext>(fun options ->
         options.UseSqlite(builder.Configuration.GetConnectionString "DefaultConnection")
         |> ignore)
     |> ignore
 
-    // Register repositories
     builder.Services.AddScoped<IUserRepository, UserRepository>() |> ignore
 
-    // Register command handlers with tracing decorator
     builder.Services.AddScoped<UserHandler>() |> ignore
 
     builder.Services.AddScoped<ICommandHandler>(fun serviceProvider ->
@@ -65,22 +59,25 @@ let main args =
                 .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("freetool-api", "1.0.0"))
                 .AddSource("Freetool.Api")
                 .AddAspNetCoreInstrumentation()
-                .AddConsoleExporter()
+                .AddEntityFrameworkCoreInstrumentation()
+                .AddOtlpExporter(fun options ->
+                    let endpoint = builder.Configuration.["OTEL_EXPORTER_OTLP_ENDPOINT"]
+
+                    if not (System.String.IsNullOrEmpty(endpoint)) then
+                        options.Endpoint <- System.Uri(endpoint)
+                        options.Protocol <- OtlpExportProtocol.Grpc
+                    else
+                        eprintfn "No OTLP endpoint configured, using default")
             |> ignore)
     |> ignore
 
-    // No use cases needed - using command handler pattern
-
     let app = builder.Build()
 
-    // Run database migrations
     let connectionString =
         builder.Configuration.GetConnectionString("DefaultConnection")
 
     Persistence.upgradeDatabase connectionString
 
-    // Configure the HTTP request pipeline
-    // Enable Swagger in all environments for this demo app
     app.UseSwagger() |> ignore
     app.UseSwaggerUI() |> ignore
 
