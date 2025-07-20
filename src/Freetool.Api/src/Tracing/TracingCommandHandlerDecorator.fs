@@ -3,6 +3,7 @@ namespace Freetool.Api.Tracing
 open System.Diagnostics
 open Freetool.Application.Commands
 open Freetool.Application.Interfaces
+open Freetool.Domain.Entities
 
 type TracingCommandHandlerDecorator(inner: ICommandHandler, activitySource: ActivitySource) =
 
@@ -42,7 +43,7 @@ type TracingCommandHandlerDecorator(inner: ICommandHandler, activitySource: Acti
     member private this.AddCommandAttributes activity command =
         match command with
         | CreateUser dto ->
-            Tracing.addUserAttributes activity None (Some dto.Email)
+            Tracing.addUserAttributes activity None (Some(User.getEmail dto))
             Tracing.addAttribute activity "operation.type" "create"
         | GetUserById id ->
             Tracing.addUserAttributes activity (Some id) None
@@ -53,20 +54,20 @@ type TracingCommandHandlerDecorator(inner: ICommandHandler, activitySource: Acti
         | GetAllUsers(skip, take) ->
             Tracing.addPaginationAttributes activity skip take None
             Tracing.addAttribute activity "operation.type" "read"
-        | UpdateUserName(id, name) ->
+        | UpdateUserName(id, nameDto) ->
             Tracing.addUserAttributes activity (Some id) None
             Tracing.addAttribute activity "operation.type" "update"
             Tracing.addAttribute activity "update.field" "name"
-            Tracing.addAttribute activity "update.value" name
-        | UpdateUserEmail(id, email) ->
+            Tracing.addAttribute activity "update.value" nameDto.Name
+        | UpdateUserEmail(id, emailDto) ->
             Tracing.addUserAttributes activity (Some id) None
             Tracing.addAttribute activity "operation.type" "update"
             Tracing.addAttribute activity "update.field" "email"
-            Tracing.addAttribute activity "update.value" email
-        | SetProfilePicture(id, url) ->
+            Tracing.addAttribute activity "update.value" emailDto.Email
+        | SetProfilePicture(id, urlDto) ->
             Tracing.addUserAttributes activity (Some id) None
             Tracing.addAttribute activity "operation.type" "update"
-            Tracing.addAttribute activity "profile_picture.url" url
+            Tracing.addAttribute activity "profile_picture.url" urlDto.ProfilePicUrl
         | RemoveProfilePicture id ->
             Tracing.addUserAttributes activity (Some id) None
             Tracing.addAttribute activity "operation.type" "update"

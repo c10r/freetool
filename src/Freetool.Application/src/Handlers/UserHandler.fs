@@ -8,20 +8,11 @@ open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Application.DTOs
 open Freetool.Application.Commands
+open Freetool.Application.Mappers
 
 module UserHandler =
 
-    let private mapUserToDto (user: User) : UserDto = {
-        Id = user.Id.Value.ToString()
-        Name = user.Name
-        Email = user.Email.Value
-        ProfilePicUrl =
-            user.ProfilePicUrl
-            |> Option.map (fun url -> url.Value)
-            |> Option.defaultValue null
-        CreatedAt = user.CreatedAt
-        UpdatedAt = user.UpdatedAt
-    }
+    let private mapUserToDto = UserMapper.toDto
 
     let handleCommand
         (userRepository: IUserRepository)
@@ -29,29 +20,22 @@ module UserHandler =
         : Task<Result<UserCommandResult, DomainError>> =
         task {
             match command with
-            | CreateUser dto ->
-                match Email.Create dto.Email with
-                | Error error -> return Error error
-                | Ok email ->
-                    let! existsByEmail = userRepository.ExistsByEmailAsync email
+            | CreateUser validatedUser ->
+                // Check if email already exists
+                let email =
+                    Email.Create(User.getEmail validatedUser)
+                    |> function
+                        | Ok e -> e
+                        | Error _ -> failwith "ValidatedUser should have valid email"
 
-                    if existsByEmail then
-                        return Error(Conflict "A user with this email already exists")
-                    else
-                        let profilePicUrlResult =
-                            match Option.ofObj dto.ProfilePicUrl with
-                            | Some urlStr -> Url.Create urlStr |> Result.map Some
-                            | None -> Ok None
+                let! existsByEmail = userRepository.ExistsByEmailAsync email
 
-                        match profilePicUrlResult with
-                        | Error error -> return Error error
-                        | Ok profilePicUrlOption ->
-                            match User.create dto.Name email profilePicUrlOption with
-                            | Error error -> return Error error
-                            | Ok user ->
-                                match! userRepository.AddAsync user with
-                                | Error error -> return Error error
-                                | Ok() -> return Ok(UserResult(mapUserToDto user))
+                if existsByEmail then
+                    return Error(Conflict "A user with this email already exists")
+                else
+                    match! userRepository.AddAsync validatedUser with
+                    | Error error -> return Error error
+                    | Ok() -> return Ok(UserResult(mapUserToDto validatedUser))
 
             | DeleteUser userId ->
                 match Guid.TryParse userId with
@@ -67,7 +51,7 @@ module UserHandler =
                         | Error error -> return Error error
                         | Ok() -> return Ok(UnitResult())
 
-            | UpdateUserName(userId, name) ->
+            | UpdateUserName(userId, dto) ->
                 match Guid.TryParse userId with
                 | false, _ -> return Error(ValidationError "Invalid user ID format")
                 | true, guid ->
@@ -77,33 +61,16 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        match User.updateName name user with
+                        let unvalidatedUser = UserMapper.fromUpdateNameDto dto user
+
+                        match User.validate unvalidatedUser with
                         | Error error -> return Error error
-                        | Ok updatedUser ->
-                            match! userRepository.UpdateAsync updatedUser with
+                        | Ok validatedUser ->
+                            match! userRepository.UpdateAsync validatedUser with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
+                            | Ok() -> return Ok(UserResult(mapUserToDto validatedUser))
 
-            | UpdateUserEmail(userId, email) ->
-                match Guid.TryParse userId with
-                | false, _ -> return Error(ValidationError "Invalid user ID format")
-                | true, guid ->
-                    match Email.Create email with
-                    | Error error -> return Error error
-                    | Ok emailObj ->
-                        let userIdObj = UserId.FromGuid guid
-                        let! userOption = userRepository.GetByIdAsync userIdObj
-
-                        match userOption with
-                        | None -> return Error(NotFound "User not found")
-                        | Some user ->
-                            let updatedUser = User.updateEmail emailObj user
-
-                            match! userRepository.UpdateAsync updatedUser with
-                            | Error error -> return Error error
-                            | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
-
-            | SetProfilePicture(userId, profilePicUrl) ->
+            | UpdateUserEmail(userId, dto) ->
                 match Guid.TryParse userId with
                 | false, _ -> return Error(ValidationError "Invalid user ID format")
                 | true, guid ->
@@ -113,19 +80,33 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        let profilePicUrlResult =
-                            match Option.ofObj profilePicUrl with
-                            | Some urlStr -> Url.Create urlStr |> Result.map Some
-                            | None -> Ok None
+                        let unvalidatedUser = UserMapper.fromUpdateEmailDto dto user
 
-                        match profilePicUrlResult with
+                        match User.validate unvalidatedUser with
                         | Error error -> return Error error
-                        | Ok profilePicUrlOption ->
-                            let updatedUser = User.updateProfilePic profilePicUrlOption user
-
-                            match! userRepository.UpdateAsync updatedUser with
+                        | Ok validatedUser ->
+                            match! userRepository.UpdateAsync validatedUser with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
+                            | Ok() -> return Ok(UserResult(mapUserToDto validatedUser))
+
+            | SetProfilePicture(userId, dto) ->
+                match Guid.TryParse userId with
+                | false, _ -> return Error(ValidationError "Invalid user ID format")
+                | true, guid ->
+                    let userIdObj = UserId.FromGuid guid
+                    let! userOption = userRepository.GetByIdAsync userIdObj
+
+                    match userOption with
+                    | None -> return Error(NotFound "User not found")
+                    | Some user ->
+                        let unvalidatedUser = UserMapper.fromSetProfilePictureDto dto user
+
+                        match User.validate unvalidatedUser with
+                        | Error error -> return Error error
+                        | Ok validatedUser ->
+                            match! userRepository.UpdateAsync validatedUser with
+                            | Error error -> return Error error
+                            | Ok() -> return Ok(UserResult(mapUserToDto validatedUser))
 
             | RemoveProfilePicture userId ->
                 match Guid.TryParse userId with
@@ -137,7 +118,7 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        let updatedUser = User.updateProfilePic None user
+                        let updatedUser = User.removeProfilePicture user
 
                         match! userRepository.UpdateAsync updatedUser with
                         | Error error -> return Error error
@@ -171,14 +152,8 @@ module UserHandler =
                     return Error(ValidationError "Take must be between 1 and 100")
                 else
                     let! users = userRepository.GetAllAsync skip take
-                    let userDtos = users |> List.map mapUserToDto
-
-                    let result = {
-                        Users = userDtos
-                        TotalCount = userDtos.Length
-                        Skip = skip
-                        Take = take
-                    }
+                    let! totalCount = userRepository.GetCountAsync()
+                    let result = UserMapper.toPagedDto users totalCount skip take
 
                     return Ok(UsersResult result)
         }

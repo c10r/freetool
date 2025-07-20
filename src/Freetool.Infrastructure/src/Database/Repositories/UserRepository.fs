@@ -8,71 +8,35 @@ open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Infrastructure.Database
-
-module UserEntityMapper =
-
-    let toEntityUser (domainUser: User) : UserEntity =
-        let url = domainUser.ProfilePicUrl |> Option.map (fun url -> url.Value)
-
-        UserEntity(
-            Id = domainUser.Id.Value,
-            Name = domainUser.Name,
-            Email = domainUser.Email.Value,
-            ProfilePicUrl = url,
-            CreatedAt = domainUser.CreatedAt,
-            UpdatedAt = domainUser.UpdatedAt
-        )
-
-    let toDomainUser (entity: UserEntity) : User =
-        let email =
-            match Email.Create entity.Email with
-            | Ok email -> email
-            | Error _ -> failwith $"Invalid email in database: {entity.Email}"
-
-        let profilePicUrl =
-            match entity.ProfilePicUrl with
-            | Some urlStr ->
-                match Url.Create urlStr with
-                | Ok url -> Some url
-                | Error _ -> failwith $"Invalid URL in database: {urlStr}"
-            | None -> None
-
-        {
-            Id = UserId.FromGuid entity.Id
-            Name = entity.Name
-            Email = email
-            ProfilePicUrl = profilePicUrl
-            CreatedAt = entity.CreatedAt
-            UpdatedAt = entity.UpdatedAt
-        }
+open Freetool.Infrastructure.Database.Mappers
 
 type UserRepository(context: FreetoolDbContext) =
 
     interface IUserRepository with
 
-        member _.GetByIdAsync(userId: UserId) : Task<User option> = task {
+        member _.GetByIdAsync(userId: UserId) : Task<ValidatedUser option> = task {
             let guidId = userId.Value
             let! userEntity = context.Users.FirstOrDefaultAsync(fun u -> u.Id = guidId)
 
-            return userEntity |> Option.ofObj |> Option.map UserEntityMapper.toDomainUser
+            return userEntity |> Option.ofObj |> Option.map UserEntityMapper.fromEntity
         }
 
-        member _.GetByEmailAsync(email: Email) : Task<User option> = task {
+        member _.GetByEmailAsync(email: Email) : Task<ValidatedUser option> = task {
             let emailStr = email.Value
             let! userEntity = context.Users.FirstOrDefaultAsync(fun u -> u.Email = emailStr)
 
-            return userEntity |> Option.ofObj |> Option.map UserEntityMapper.toDomainUser
+            return userEntity |> Option.ofObj |> Option.map UserEntityMapper.fromEntity
         }
 
-        member _.GetAllAsync (skip: int) (take: int) : Task<User list> = task {
+        member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedUser list> = task {
             let! userEntities = context.Users.OrderBy(fun u -> u.CreatedAt).Skip(skip).Take(take).ToListAsync()
 
-            return userEntities |> Seq.map UserEntityMapper.toDomainUser |> Seq.toList
+            return userEntities |> Seq.map UserEntityMapper.fromEntity |> Seq.toList
         }
 
-        member _.AddAsync(user: User) : Task<Result<unit, DomainError>> = task {
+        member _.AddAsync(user: ValidatedUser) : Task<Result<unit, DomainError>> = task {
             try
-                let userEntity = UserEntityMapper.toEntityUser user
+                let userEntity = UserEntityMapper.toEntity user
                 context.Users.Add userEntity |> ignore
                 let! _ = context.SaveChangesAsync()
                 return Ok()
@@ -81,18 +45,19 @@ type UserRepository(context: FreetoolDbContext) =
             | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
-        member _.UpdateAsync(user: User) : Task<Result<unit, DomainError>> = task {
+        member _.UpdateAsync(user: ValidatedUser) : Task<Result<unit, DomainError>> = task {
             try
-                let guidId = user.Id.Value
+                let guidId = (User.getId user).Value
                 let! existingEntity = context.Users.FirstOrDefaultAsync(fun u -> u.Id = guidId)
 
                 match Option.ofObj existingEntity with
                 | None -> return Error(NotFound "User not found")
                 | Some entity ->
-                    entity.Name <- user.Name
-                    entity.Email <- user.Email.Value
-                    entity.ProfilePicUrl <- user.ProfilePicUrl |> Option.map (fun url -> url.Value)
-                    entity.UpdatedAt <- user.UpdatedAt
+                    let (User userData) = user
+                    entity.Name <- userData.Name
+                    entity.Email <- userData.Email
+                    entity.ProfilePicUrl <- userData.ProfilePicUrl
+                    entity.UpdatedAt <- userData.UpdatedAt
 
                     let! _ = context.SaveChangesAsync()
                     return Ok()
@@ -126,3 +91,5 @@ type UserRepository(context: FreetoolDbContext) =
             let emailStr = email.Value
             return! context.Users.AnyAsync(fun u -> u.Email = emailStr)
         }
+
+        member _.GetCountAsync() : Task<int> = task { return! context.Users.CountAsync() }

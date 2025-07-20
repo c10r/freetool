@@ -3,9 +3,11 @@ namespace Freetool.Api.Controllers
 open System.Threading.Tasks
 open Microsoft.AspNetCore.Mvc
 open Freetool.Domain
+open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 open Freetool.Application.Commands
 open Freetool.Application.Interfaces
+open Freetool.Application.Mappers
 
 [<ApiController>]
 [<Route("user")>]
@@ -14,14 +16,19 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
 
     [<HttpPost>]
     member this.CreateUser([<FromBody>] createDto: CreateUserDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand userRepository (CreateUser createDto)
+        let unvalidatedUser = UserMapper.fromCreateDto createDto
 
-        return
-            match result with
-            | Ok(UserResult userDto) ->
-                this.CreatedAtAction(nameof this.GetUserById, {| id = userDto.Id |}, userDto) :> IActionResult
-            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-            | Error error -> this.HandleDomainError(error)
+        match User.validate unvalidatedUser with
+        | Error domainError -> return this.HandleDomainError(domainError)
+        | Ok validatedUser ->
+            let! result = commandHandler.HandleCommand userRepository (CreateUser validatedUser)
+
+            return
+                match result with
+                | Ok(UserResult userDto) ->
+                    this.CreatedAtAction(nameof this.GetUserById, {| id = userDto.Id |}, userDto) :> IActionResult
+                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                | Error error -> this.HandleDomainError(error)
     }
 
     [<HttpGet("{id}")>]
@@ -66,7 +73,7 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
 
     [<HttpPut("{id}/name")>]
     member this.UpdateUserName(id: string, [<FromBody>] updateDto: UpdateUserNameDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand userRepository (UpdateUserName(id, updateDto.Name))
+        let! result = commandHandler.HandleCommand userRepository (UpdateUserName(id, updateDto))
 
         return
             match result with
@@ -77,7 +84,7 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
 
     [<HttpPut("{id}/email")>]
     member this.UpdateUserEmail(id: string, [<FromBody>] updateDto: UpdateUserEmailDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand userRepository (UpdateUserEmail(id, updateDto.Email))
+        let! result = commandHandler.HandleCommand userRepository (UpdateUserEmail(id, updateDto))
 
         return
             match result with
@@ -88,7 +95,7 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
 
     [<HttpPut("{id}/profile-picture")>]
     member this.SetProfilePicture(id: string, [<FromBody>] setDto: SetProfilePictureDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand userRepository (SetProfilePicture(id, setDto.ProfilePicUrl))
+        let! result = commandHandler.HandleCommand userRepository (SetProfilePicture(id, setDto))
 
         return
             match result with

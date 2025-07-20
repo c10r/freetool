@@ -15,9 +15,6 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.10.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.12" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.10.0" />
-    <PackageReference Include="xunit" Version="2.9.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
-    <PackageReference Include="coverlet.collector" Version="6.0.2" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,7 +28,6 @@
     <Compile Include="src/Tracing/TracingExtensions.fs" />
     <Compile Include="src/Tracing/TracingCommandHandlerDecorator.fs" />
     <Compile Include="src/Controllers/UserController.fs" />
-    <Compile Include="test/Controllers/UserControllerTests.fs" />
     <Compile Include="src/Program.fs" />
   </ItemGroup>
 

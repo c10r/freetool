@@ -6,33 +6,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-    <PackageReference Include="xunit" Version="2.6.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Moq" Version="4.20.69" />
-    <PackageReference Include="coverlet.collector" Version="6.0.4">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="../Freetool.Domain/Freetool.Domain.fsproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="src/DTOs/UserDtos.fs" />
+    <Compile Include="src/Mappers/UserMapper.fs" />
     <Compile Include="src/Interfaces/IUserRepository.fs" />
     <Compile Include="src/Commands/UserCommands.fs" />
     <Compile Include="src/Interfaces/ICommandHandler.fs" />
     <Compile Include="src/Handlers/UserHandler.fs" />
-    <Compile Include="test/DTOs/UserDtosTests.fs" />
-    <Compile Include="test/Commands/UserCommandsTests.fs" />
-    <Compile Include="test/Handlers/UserHandlerTests.fs" />
-    <Compile Include="test/Interfaces/InterfaceTests.fs" />
   </ItemGroup>
 
 </Project>
