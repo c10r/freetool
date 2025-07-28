@@ -40,6 +40,7 @@ let main args =
     |> ignore
 
     builder.Services.AddScoped<IUserRepository, UserRepository>() |> ignore
+    builder.Services.AddScoped<IResourceRepository, ResourceRepository>() |> ignore
 
     builder.Services.AddScoped<UserHandler>() |> ignore
 

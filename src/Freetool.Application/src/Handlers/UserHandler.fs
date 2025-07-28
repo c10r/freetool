@@ -6,7 +6,6 @@ open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
-open Freetool.Application.DTOs
 open Freetool.Application.Commands
 open Freetool.Application.Mappers
 

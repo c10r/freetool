@@ -11,11 +11,16 @@
 
   <ItemGroup>
     <Compile Include="src/DTOs/UserDtos.fs" />
-    <Compile Include="src/Mappers/UserMapper.fs" />
+    <Compile Include="src/DTOs/ResourceDtos.fs" />
     <Compile Include="src/Interfaces/IUserRepository.fs" />
+    <Compile Include="src/Interfaces/IResourceRepository.fs" />
     <Compile Include="src/Commands/UserCommands.fs" />
+    <Compile Include="src/Commands/ResourceCommands.fs" />
     <Compile Include="src/Interfaces/ICommandHandler.fs" />
+    <Compile Include="src/Mappers/UserMapper.fs" />
+    <Compile Include="src/Mappers/ResourceMapper.fs" />
     <Compile Include="src/Handlers/UserHandler.fs" />
+    <Compile Include="src/Handlers/ResourceHandler.fs" />
   </ItemGroup>
 
 </Project>
