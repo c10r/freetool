@@ -16,6 +16,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     [<DefaultValue>]
     val mutable private _folders: DbSet<FolderEntity>
 
+    [<DefaultValue>]
+    val mutable private _apps: DbSet<AppEntity>
+
     member this.Users
         with get () = this._users
         and set value = this._users <- value
@@ -27,6 +30,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     member this.Folders
         with get () = this._folders
         and set value = this._folders <- value
+
+    member this.Apps
+        with get () = this._apps
+        and set value = this._apps <- value
 
     override this.OnModelCreating(modelBuilder: ModelBuilder) =
         base.OnModelCreating modelBuilder
@@ -97,4 +104,20 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun f -> f.CreatedAt :> obj).IsRequired() |> ignore
 
             entity.Property(fun f -> f.UpdatedAt :> obj).IsRequired() |> ignore)
+        |> ignore
+
+        modelBuilder.Entity<AppEntity>(fun entity ->
+            entity.HasKey(fun a -> a.Id :> obj) |> ignore
+
+            entity.HasIndex([| "Name"; "FolderId" |]).IsUnique() |> ignore
+
+            entity.Property(fun a -> a.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
+
+            entity.Property(fun a -> a.FolderId :> obj).IsRequired() |> ignore
+
+            entity.Property(fun a -> a.Inputs :> obj).IsRequired() |> ignore
+
+            entity.Property(fun a -> a.CreatedAt :> obj).IsRequired() |> ignore
+
+            entity.Property(fun a -> a.UpdatedAt :> obj).IsRequired() |> ignore)
         |> ignore

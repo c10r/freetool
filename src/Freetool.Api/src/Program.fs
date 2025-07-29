@@ -42,6 +42,7 @@ let main args =
     builder.Services.AddScoped<IUserRepository, UserRepository>() |> ignore
     builder.Services.AddScoped<IResourceRepository, ResourceRepository>() |> ignore
     builder.Services.AddScoped<IFolderRepository, FolderRepository>() |> ignore
+    builder.Services.AddScoped<IAppRepository, AppRepository>() |> ignore
 
     builder.Services.AddScoped<UserHandler>() |> ignore
 
