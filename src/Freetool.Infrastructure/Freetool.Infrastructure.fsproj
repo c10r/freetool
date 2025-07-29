@@ -22,17 +22,21 @@
   <ItemGroup>
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.001_CreateUsersTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.002_CreateResourcesTable.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.003_CreateFoldersTable.sql" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="src/Database/UserEntity.fs" />
     <Compile Include="src/Database/ResourceEntity.fs" />
+    <Compile Include="src/Database/FolderEntity.fs" />
     <Compile Include="src/Database/FreetoolDbContext.fs" />
     <Compile Include="src/Database/Mappers/UserEntityMapper.fs" />
     <Compile Include="src/Database/Mappers/ResourceEntityMapper.fs" />
+    <Compile Include="src/Database/Mappers/FolderEntityMapper.fs" />
     <Compile Include="src/Database/Persistence.fs" />
     <Compile Include="src/Database/Repositories/UserRepository.fs" />
     <Compile Include="src/Database/Repositories/ResourceRepository.fs" />
+    <Compile Include="src/Database/Repositories/FolderRepository.fs" />
   </ItemGroup>
 
 </Project>

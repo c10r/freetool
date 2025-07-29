@@ -10,13 +10,16 @@
     <Compile Include="src/ValueObjects/Url.fs" />
     <Compile Include="src/ValueObjects/UserId.fs" />
     <Compile Include="src/ValueObjects/ResourceId.fs" />
+    <Compile Include="src/ValueObjects/FolderId.fs" />
     <Compile Include="src/ValueObjects/Email.fs" />
     <Compile Include="src/ValueObjects/ResourceName.fs" />
     <Compile Include="src/ValueObjects/ResourceDescription.fs" />
+    <Compile Include="src/ValueObjects/FolderName.fs" />
     <Compile Include="src/ValueObjects/BaseUrl.fs" />
     <Compile Include="src/ValueObjects/KeyValuePair.fs" />
     <Compile Include="src/Entities/User.fs" />
     <Compile Include="src/Entities/Resource.fs" />
+    <Compile Include="src/Entities/Folder.fs" />
     <Compile Include="src/Events/UserEvents.fs" />
   </ItemGroup>
 

@@ -29,6 +29,7 @@
     <Compile Include="src/Tracing/TracingCommandHandlerDecorator.fs" />
     <Compile Include="src/Controllers/UserController.fs" />
     <Compile Include="src/Controllers/ResourceController.fs" />
+    <Compile Include="src/Controllers/FolderController.fs" />
     <Compile Include="src/Program.fs" />
   </ItemGroup>
 

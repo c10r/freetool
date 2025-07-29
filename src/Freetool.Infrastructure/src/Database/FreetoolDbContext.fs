@@ -1,5 +1,6 @@
 namespace Freetool.Infrastructure.Database
 
+open System
 open Microsoft.EntityFrameworkCore
 open Microsoft.EntityFrameworkCore.Storage.ValueConversion
 
@@ -12,6 +13,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     [<DefaultValue>]
     val mutable private _resources: DbSet<ResourceEntity>
 
+    [<DefaultValue>]
+    val mutable private _folders: DbSet<FolderEntity>
+
     member this.Users
         with get () = this._users
         and set value = this._users <- value
@@ -19,6 +23,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     member this.Resources
         with get () = this._resources
         and set value = this._resources <- value
+
+    member this.Folders
+        with get () = this._folders
+        and set value = this._folders <- value
 
     override this.OnModelCreating(modelBuilder: ModelBuilder) =
         base.OnModelCreating modelBuilder
@@ -75,4 +83,18 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun r -> r.CreatedAt :> obj).IsRequired() |> ignore
 
             entity.Property(fun r -> r.UpdatedAt :> obj).IsRequired() |> ignore)
+        |> ignore
+
+        modelBuilder.Entity<FolderEntity>(fun entity ->
+            entity.HasKey(fun f -> f.Id :> obj) |> ignore
+
+            entity.HasIndex([| "Name"; "ParentId" |]).IsUnique() |> ignore
+
+            entity.Property(fun f -> f.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
+
+            entity.Property(fun f -> f.ParentId :> obj) |> ignore
+
+            entity.Property(fun f -> f.CreatedAt :> obj).IsRequired() |> ignore
+
+            entity.Property(fun f -> f.UpdatedAt :> obj).IsRequired() |> ignore)
         |> ignore
