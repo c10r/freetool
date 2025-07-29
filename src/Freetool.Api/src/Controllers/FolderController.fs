@@ -11,7 +11,11 @@ open Freetool.Application.Handlers
 
 [<ApiController>]
 [<Route("folder")>]
-type FolderController(folderRepository: IFolderRepository) =
+type FolderController
+    (
+        folderRepository: IFolderRepository,
+        commandHandler: IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>
+    ) =
     inherit ControllerBase()
 
     [<HttpPost>]
@@ -19,7 +23,7 @@ type FolderController(folderRepository: IFolderRepository) =
         match FolderMapper.fromCreateDto createDto with
         | Error domainError -> return this.HandleDomainError(domainError)
         | Ok validatedFolder ->
-            let! result = FolderHandler.handleCommand folderRepository (CreateFolder validatedFolder)
+            let! result = commandHandler.HandleCommand folderRepository (CreateFolder validatedFolder)
 
             return
                 match result with
@@ -31,7 +35,7 @@ type FolderController(folderRepository: IFolderRepository) =
 
     [<HttpGet("{id}")>]
     member this.GetFolderById(id: string) : Task<IActionResult> = task {
-        let! result = FolderHandler.handleCommand folderRepository (GetFolderById id)
+        let! result = commandHandler.HandleCommand folderRepository (GetFolderById id)
 
         return
             match result with
@@ -42,7 +46,7 @@ type FolderController(folderRepository: IFolderRepository) =
 
     [<HttpGet("{id}/children")>]
     member this.GetFolderWithChildren(id: string) : Task<IActionResult> = task {
-        let! result = FolderHandler.handleCommand folderRepository (GetFolderWithChildren id)
+        let! result = commandHandler.HandleCommand folderRepository (GetFolderWithChildren id)
 
         return
             match result with
@@ -60,7 +64,7 @@ type FolderController(folderRepository: IFolderRepository) =
             elif take > 100 then 100
             else take
 
-        let! result = FolderHandler.handleCommand folderRepository (GetRootFolders(skipValue, takeValue))
+        let! result = commandHandler.HandleCommand folderRepository (GetRootFolders(skipValue, takeValue))
 
         return
             match result with
@@ -81,7 +85,8 @@ type FolderController(folderRepository: IFolderRepository) =
                 elif take > 100 then 100
                 else take
 
-            let! result = FolderHandler.handleCommand folderRepository (GetChildFolders(parentId, skipValue, takeValue))
+            let! result =
+                commandHandler.HandleCommand folderRepository (GetChildFolders(parentId, skipValue, takeValue))
 
             return
                 match result with
@@ -99,7 +104,7 @@ type FolderController(folderRepository: IFolderRepository) =
             elif take > 100 then 100
             else take
 
-        let! result = FolderHandler.handleCommand folderRepository (GetAllFolders(skipValue, takeValue))
+        let! result = commandHandler.HandleCommand folderRepository (GetAllFolders(skipValue, takeValue))
 
         return
             match result with
@@ -110,7 +115,7 @@ type FolderController(folderRepository: IFolderRepository) =
 
     [<HttpPut("{id}/name")>]
     member this.UpdateFolderName(id: string, [<FromBody>] updateDto: UpdateFolderNameDto) : Task<IActionResult> = task {
-        let! result = FolderHandler.handleCommand folderRepository (UpdateFolderName(id, updateDto))
+        let! result = commandHandler.HandleCommand folderRepository (UpdateFolderName(id, updateDto))
 
         return
             match result with
@@ -121,7 +126,7 @@ type FolderController(folderRepository: IFolderRepository) =
 
     [<HttpPut("{id}/move")>]
     member this.MoveFolder(id: string, [<FromBody>] moveDto: MoveFolderDto) : Task<IActionResult> = task {
-        let! result = FolderHandler.handleCommand folderRepository (MoveFolder(id, moveDto))
+        let! result = commandHandler.HandleCommand folderRepository (MoveFolder(id, moveDto))
 
         return
             match result with
@@ -132,7 +137,7 @@ type FolderController(folderRepository: IFolderRepository) =
 
     [<HttpDelete("{id}")>]
     member this.DeleteFolder(id: string) : Task<IActionResult> = task {
-        let! result = FolderHandler.handleCommand folderRepository (DeleteFolder id)
+        let! result = commandHandler.HandleCommand folderRepository (DeleteFolder id)
 
         return
             match result with

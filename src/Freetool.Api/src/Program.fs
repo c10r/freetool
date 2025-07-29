@@ -12,6 +12,7 @@ open Freetool.Infrastructure.Database
 open Freetool.Infrastructure.Database.Repositories
 open Freetool.Application.Interfaces
 open Freetool.Application.Handlers
+open Freetool.Application.Commands
 open Freetool.Api.Tracing
 
 [<EntryPoint>]
@@ -45,11 +46,35 @@ let main args =
     builder.Services.AddScoped<IAppRepository, AppRepository>() |> ignore
 
     builder.Services.AddScoped<UserHandler>() |> ignore
+    builder.Services.AddScoped<ResourceHandler>() |> ignore
+    builder.Services.AddScoped<FolderHandler>() |> ignore
+    builder.Services.AddScoped<AppHandler>() |> ignore
 
     builder.Services.AddScoped<ICommandHandler>(fun serviceProvider ->
         let userHandler = serviceProvider.GetRequiredService<UserHandler>()
         let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-        TracingCommandHandlerDecorator(userHandler, activitySource))
+        TracingUserCommandHandlerDecorator(userHandler, activitySource))
+    |> ignore
+
+    builder.Services.AddScoped<IGenericCommandHandler<IResourceRepository, ResourceCommand, ResourceCommandResult>>
+        (fun serviceProvider ->
+            let resourceHandler = serviceProvider.GetRequiredService<ResourceHandler>()
+            let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
+            TracingResourceCommandHandlerDecorator(resourceHandler, activitySource))
+    |> ignore
+
+    builder.Services.AddScoped<IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>>
+        (fun serviceProvider ->
+            let folderHandler = serviceProvider.GetRequiredService<FolderHandler>()
+            let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
+            TracingFolderCommandHandlerDecorator(folderHandler, activitySource))
+    |> ignore
+
+    builder.Services.AddScoped<IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>>
+        (fun serviceProvider ->
+            let appHandler = serviceProvider.GetRequiredService<AppHandler>()
+            let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
+            TracingAppCommandHandlerDecorator(appHandler, activitySource))
     |> ignore
 
     // Configure OpenTelemetry

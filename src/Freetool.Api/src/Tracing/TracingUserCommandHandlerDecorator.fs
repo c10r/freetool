@@ -5,7 +5,7 @@ open Freetool.Application.Commands
 open Freetool.Application.Interfaces
 open Freetool.Domain.Entities
 
-type TracingCommandHandlerDecorator(inner: ICommandHandler, activitySource: ActivitySource) =
+type TracingUserCommandHandlerDecorator(inner: ICommandHandler, activitySource: ActivitySource) =
 
     interface ICommandHandler with
         member this.HandleCommand repository command =

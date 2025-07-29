@@ -193,3 +193,8 @@ module ResourceHandler =
 
                     return Ok(ResourcesResult result)
         }
+
+type ResourceHandler() =
+    interface IGenericCommandHandler<IResourceRepository, ResourceCommand, ResourceCommandResult> with
+        member this.HandleCommand repository command =
+            ResourceHandler.handleCommand repository command

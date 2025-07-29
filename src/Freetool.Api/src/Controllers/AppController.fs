@@ -12,7 +12,9 @@ open Freetool.Application.Handlers
 
 [<ApiController>]
 [<Route("app")>]
-type AppController(appRepository: IAppRepository) =
+type AppController
+    (appRepository: IAppRepository, commandHandler: IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>)
+    =
     inherit ControllerBase()
 
     [<HttpPost>]
@@ -22,7 +24,7 @@ type AppController(appRepository: IAppRepository) =
         match App.validate unvalidatedApp with
         | Error domainError -> return this.HandleDomainError(domainError)
         | Ok validatedApp ->
-            let! result = AppHandler.handleCommand appRepository (CreateApp validatedApp)
+            let! result = commandHandler.HandleCommand appRepository (CreateApp validatedApp)
 
             return
                 match result with
@@ -34,7 +36,7 @@ type AppController(appRepository: IAppRepository) =
 
     [<HttpGet("{id}")>]
     member this.GetAppById(id: string) : Task<IActionResult> = task {
-        let! result = AppHandler.handleCommand appRepository (GetAppById id)
+        let! result = commandHandler.HandleCommand appRepository (GetAppById id)
 
         return
             match result with
@@ -55,7 +57,7 @@ type AppController(appRepository: IAppRepository) =
                 elif take > 100 then 100
                 else take
 
-            let! result = AppHandler.handleCommand appRepository (GetAppsByFolderId(folderId, skipValue, takeValue))
+            let! result = commandHandler.HandleCommand appRepository (GetAppsByFolderId(folderId, skipValue, takeValue))
 
             return
                 match result with
@@ -73,7 +75,7 @@ type AppController(appRepository: IAppRepository) =
             elif take > 100 then 100
             else take
 
-        let! result = AppHandler.handleCommand appRepository (GetAllApps(skipValue, takeValue))
+        let! result = commandHandler.HandleCommand appRepository (GetAllApps(skipValue, takeValue))
 
         return
             match result with
@@ -84,7 +86,7 @@ type AppController(appRepository: IAppRepository) =
 
     [<HttpPut("{id}/name")>]
     member this.UpdateAppName(id: string, [<FromBody>] updateDto: UpdateAppNameDto) : Task<IActionResult> = task {
-        let! result = AppHandler.handleCommand appRepository (UpdateAppName(id, updateDto))
+        let! result = commandHandler.HandleCommand appRepository (UpdateAppName(id, updateDto))
 
         return
             match result with
@@ -95,7 +97,7 @@ type AppController(appRepository: IAppRepository) =
 
     [<HttpPut("{id}/inputs")>]
     member this.UpdateAppInputs(id: string, [<FromBody>] updateDto: UpdateAppInputsDto) : Task<IActionResult> = task {
-        let! result = AppHandler.handleCommand appRepository (UpdateAppInputs(id, updateDto))
+        let! result = commandHandler.HandleCommand appRepository (UpdateAppInputs(id, updateDto))
 
         return
             match result with
@@ -106,7 +108,7 @@ type AppController(appRepository: IAppRepository) =
 
     [<HttpDelete("{id}")>]
     member this.DeleteApp(id: string) : Task<IActionResult> = task {
-        let! result = AppHandler.handleCommand appRepository (DeleteApp id)
+        let! result = commandHandler.HandleCommand appRepository (DeleteApp id)
 
         return
             match result with

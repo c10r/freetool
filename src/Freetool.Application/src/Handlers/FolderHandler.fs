@@ -251,3 +251,8 @@ module FolderHandler =
                     let result = FolderMapper.toPagedDto folders totalCount skip take
                     return Ok(FoldersResult result)
         }
+
+type FolderHandler() =
+    interface IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult> with
+        member this.HandleCommand repository command =
+            FolderHandler.handleCommand repository command

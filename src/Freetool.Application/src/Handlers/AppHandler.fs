@@ -142,3 +142,8 @@ module AppHandler =
 
                     return Ok(AppsResult result)
         }
+
+type AppHandler() =
+    interface IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult> with
+        member this.HandleCommand repository command =
+            AppHandler.handleCommand repository command

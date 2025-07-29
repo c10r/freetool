@@ -18,6 +18,7 @@
     <Compile Include="src/Interfaces/IResourceRepository.fs" />
     <Compile Include="src/Interfaces/IFolderRepository.fs" />
     <Compile Include="src/Interfaces/IAppRepository.fs" />
+    <Compile Include="src/Interfaces/IGenericCommandHandler.fs" />
     <Compile Include="src/Commands/UserCommands.fs" />
     <Compile Include="src/Commands/ResourceCommands.fs" />
     <Compile Include="src/Commands/FolderCommands.fs" />
