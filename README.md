@@ -35,6 +35,132 @@ This project follows **Onion Architecture** principles to maintain clean separat
 - **Flexibility**: Infrastructure can be swapped without affecting core functionality
 - **Functional Design**: Uses F# discriminated unions and pattern matching for command handling instead of object-oriented use cases
 
+## 📊 OpenTelemetry & Distributed Tracing
+
+Freetool includes comprehensive **OpenTelemetry (OTEL)** instrumentation with automatic business logic tracing across all layers. The system provides complete observability from HTTP requests down to database operations without requiring manual span creation.
+
+### 🔍 Tracing Coverage
+
+The application instruments three layers automatically:
+
+1. **HTTP Layer**: ASP.NET Core instrumentation captures all incoming requests, response times, and HTTP status codes
+2. **Business Logic Layer**: Custom AutoTracing system automatically generates spans for all command operations with detailed attributes
+3. **Database Layer**: Entity Framework Core instrumentation tracks all SQL queries, connection times, and database operations
+
+### ⚡ AutoTracing System
+
+The AutoTracing system uses **pure reflection** and **naming conventions** to automatically generate OTEL spans and attributes for all business operations without requiring manual configuration.
+
+#### Key Features
+
+- **Zero Configuration**: Works automatically for all controllers - just register one line in DI
+- **Naming Convention Based**: Converts `CreateUser` command to `"user.create"` span name
+- **Automatic Attributes**: Extracts all command parameters and result data as OTEL attributes
+- **Security First**: Automatically skips sensitive fields (password, token, secret, key, credential)
+- **Architecture Compliant**: Uses pure reflection to maintain clean onion architecture separation
+
+#### How It Works
+
+```fsharp
+// 1. Command Analysis - Automatic span name generation
+CreateUser → "user.create"
+GetUserById → "user.get_user_by_id"
+UpdateUserEmail → "user.update_user_email"
+DeleteUser → "user.delete"
+
+// 2. Attribute Extraction - Automatic parameter capture
+CreateUser(ValidatedUser { Name = "John"; Email = "john@example.com" })
+→ Attributes: user.name = "John", user.email = "john@example.com"
+
+// 3. Result Tracking - Automatic response capture
+UserResult(UserDto { Id = "123"; Name = "John" })
+→ Attributes: result.id = "123", result.name = "John"
+```
+
+#### Adding Tracing to New Controllers
+
+Adding OTEL tracing to a new controller requires just **one line** in dependency injection:
+
+```fsharp
+// In Program.fs
+builder.Services.AddScoped<IGenericCommandHandler<INewRepository, NewCommand, NewCommandResult>>
+    (fun serviceProvider ->
+        let newHandler = serviceProvider.GetRequiredService<NewHandler>()
+        let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
+        AutoTracing.createTracingDecorator "new_entity" newHandler activitySource)
+```
+
+### 📊 Current Tracing Coverage
+
+| Layer          | Automatic Spans     | What Gets Traced                       |
+|----------------|---------------------|----------------------------------------|
+| HTTP           | ✅ ASP.NET Core     | Request/response, status codes, routes |
+| Business Logic | ✅ AutoTracing      | Commands, DTOs, domain operations      |
+| Database       | ✅ Entity Framework | SQL queries, connection times          |
+| Repository     | ❌ Not yet          | Individual repository method calls     |
+| Domain Models  | ❌ Not yet          | Domain entity operations               |
+
+### 🔧 Configuration
+
+#### Basic Setup
+
+```fsharp
+// Configure OTEL in Program.fs
+builder.Services
+    .AddOpenTelemetry()
+    .WithTracing(fun tracing ->
+        tracing
+            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("freetool-api", "1.0.0"))
+            .AddSource("Freetool.Api")                    // Custom business logic spans
+            .AddAspNetCoreInstrumentation()               // HTTP request/response spans
+            .AddEntityFrameworkCoreInstrumentation()      // Database query spans
+            .AddOtlpExporter(fun options ->
+                options.Endpoint <- System.Uri("http://localhost:4317") // Jaeger/OTEL collector
+                options.Protocol <- OtlpExportProtocol.Grpc))
+```
+
+#### Environment Variables
+
+```bash
+# OTEL Collector/Jaeger endpoint
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+
+# Service identification
+OTEL_SERVICE_NAME=freetool-api
+OTEL_SERVICE_VERSION=1.0.0
+```
+
+### 📈 Observability Examples
+
+#### Sample Trace Hierarchy
+```
+🌐 HTTP GET /user/123                                   [200ms]
+├── 🔧 user.get_user_by_id                              [180ms]
+│   ├── 🗄️ SELECT * FROM Users WHERE Id = @p0           [50ms]
+│   └── 🔄 Domain Mapping & Validation                  [5ms]
+└── 🌐 HTTP Response Serialization                      [15ms]
+```
+
+#### Automatic Span Attributes
+```
+Span: user.create
+├── operation.type = "create"
+├── user.name = "John Doe"
+├── user.email = "john@example.com"
+├── user.profile_pic_url = "https://example.com/pic.jpg"
+├── result.id = "user-123"
+├── result.created_at = "2024-01-15T10:30:00Z"
+└── span.status = "ok"
+```
+
+### 🔐 Security & Privacy
+
+The AutoTracing system automatically protects sensitive data:
+
+- **Field Filtering**: Automatically skips any field containing: `password`, `token`, `secret`, `key`, `credential`
+- **Configurable**: Additional sensitive patterns can be added to the `shouldSkipField` function
+- **Secure by Default**: Unknown field types are safely converted to strings with null checks
+
 ## 📁 Project Structure
 
 ```
@@ -163,7 +289,7 @@ This project uses **SQLite** with **DBUp** for database migrations. SQLite is a 
 
 4. **Start the application**
    ```bash
-   dotnet run --project src/Freetool.Api
+   docker-compose up --build
    ```
    
    **The database will be created automatically on first run!** The application uses DBUp to:
@@ -172,14 +298,15 @@ This project uses **SQLite** with **DBUp** for database migrations. SQLite is a 
    - Display migration progress in the console
 
 5. **Access the API**
-   - API: https://localhost:5001 or http://localhost:5000
-   - Swagger UI: https://localhost:5001/swagger
+   - API: http://localhost:5000
+   - Swagger UI: http://localhost:5001/swagger
+   - OTEL traces: http://localhost:18888/
 
 ### Quick Test
 
 Once the application is running, you can test the User API:
 
-1. **Open Swagger UI** at https://localhost:5001/swagger
+1. **Open Swagger UI** at http://localhost:5001/swagger
 2. **Create a user** using the `POST /user` endpoint:
    ```json
    {
@@ -274,16 +401,6 @@ F# requires dependencies to be ordered correctly in `.fsproj` files. Always ensu
 - Value objects come before entities that use them
 - Domain services come after the entities they operate on
 - Interfaces are defined before their implementations
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Write tests for your changes
-4. Ensure all tests pass (`dotnet test`)
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
 
 ### Code Standards
 

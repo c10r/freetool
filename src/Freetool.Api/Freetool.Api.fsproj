@@ -26,10 +26,9 @@
 
   <ItemGroup>
     <Compile Include="src/Tracing/TracingExtensions.fs" />
+    <Compile Include="src/Tracing/TracingAttributes.fs" />
+    <Compile Include="src/Tracing/AutoTracing.fs" />
     <Compile Include="src/Tracing/TracingUserCommandHandlerDecorator.fs" />
-    <Compile Include="src/Tracing/TracingResourceCommandHandlerDecorator.fs" />
-    <Compile Include="src/Tracing/TracingFolderCommandHandlerDecorator.fs" />
-    <Compile Include="src/Tracing/TracingAppCommandHandlerDecorator.fs" />
     <Compile Include="src/Controllers/UserController.fs" />
     <Compile Include="src/Controllers/ResourceController.fs" />
     <Compile Include="src/Controllers/FolderController.fs" />

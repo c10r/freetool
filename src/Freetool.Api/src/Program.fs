@@ -60,21 +60,21 @@ let main args =
         (fun serviceProvider ->
             let resourceHandler = serviceProvider.GetRequiredService<ResourceHandler>()
             let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-            TracingResourceCommandHandlerDecorator(resourceHandler, activitySource))
+            AutoTracing.createTracingDecorator "resource" resourceHandler activitySource)
     |> ignore
 
     builder.Services.AddScoped<IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>>
         (fun serviceProvider ->
             let folderHandler = serviceProvider.GetRequiredService<FolderHandler>()
             let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-            TracingFolderCommandHandlerDecorator(folderHandler, activitySource))
+            AutoTracing.createTracingDecorator "folder" folderHandler activitySource)
     |> ignore
 
     builder.Services.AddScoped<IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>>
         (fun serviceProvider ->
             let appHandler = serviceProvider.GetRequiredService<AppHandler>()
             let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-            TracingAppCommandHandlerDecorator(appHandler, activitySource))
+            AutoTracing.createTracingDecorator "app" appHandler activitySource)
     |> ignore
 
     // Configure OpenTelemetry
