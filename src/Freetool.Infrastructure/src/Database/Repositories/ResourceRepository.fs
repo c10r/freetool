@@ -83,12 +83,18 @@ type ResourceRepository(context: FreetoolDbContext) =
         member _.DeleteAsync(resourceId: ResourceId) : Task<Result<unit, DomainError>> = task {
             try
                 let guidId = resourceId.Value
-                let! resourceEntity = context.Resources.FirstOrDefaultAsync(fun r -> r.Id = guidId)
+
+                let! resourceEntity =
+                    context.Resources
+                        .IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(fun r -> r.Id = guidId)
 
                 match Option.ofObj resourceEntity with
                 | None -> return Error(NotFound "Resource not found")
                 | Some entity ->
-                    context.Resources.Remove entity |> ignore
+                    // Soft delete: set IsDeleted flag instead of removing entity
+                    entity.IsDeleted <- true
+                    entity.UpdatedAt <- System.DateTime.UtcNow
                     let! _ = context.SaveChangesAsync()
                     return Ok()
             with

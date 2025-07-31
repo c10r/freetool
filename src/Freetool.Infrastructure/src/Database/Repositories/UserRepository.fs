@@ -114,14 +114,16 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
 
             try
                 let guidId = userId.Value
-                let! userEntity = context.Users.FirstOrDefaultAsync(fun u -> u.Id = guidId)
+                let! userEntity = context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(fun u -> u.Id = guidId)
 
                 match Option.ofObj userEntity with
                 | None ->
                     transaction.Rollback()
                     return Error(NotFound "User not found")
                 | Some entity ->
-                    context.Users.Remove entity |> ignore
+                    // Soft delete: set IsDeleted flag instead of removing entity
+                    entity.IsDeleted <- true
+                    entity.UpdatedAt <- System.DateTime.UtcNow
                     let! _ = context.SaveChangesAsync()
 
                     // Save delete event if provided

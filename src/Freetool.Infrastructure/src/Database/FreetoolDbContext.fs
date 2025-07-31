@@ -152,5 +152,21 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
             entity.Property(fun e -> e.OccurredAt :> obj).IsRequired() |> ignore
 
-            entity.Property(fun e -> e.CreatedAt :> obj).IsRequired() |> ignore)
+            entity.Property(fun e -> e.CreatedAt :> obj).IsRequired() |> ignore
+
+            // Prevent all delete operations on Events table - audit log should be immutable
+            entity.HasQueryFilter(fun _ -> false) |> ignore)
+        |> ignore
+
+        // Add soft delete filters for all other entities
+        modelBuilder.Entity<UserEntity>().HasQueryFilter(fun u -> not u.IsDeleted)
+        |> ignore
+
+        modelBuilder.Entity<ResourceEntity>().HasQueryFilter(fun r -> not r.IsDeleted)
+        |> ignore
+
+        modelBuilder.Entity<FolderEntity>().HasQueryFilter(fun f -> not f.IsDeleted)
+        |> ignore
+
+        modelBuilder.Entity<AppEntity>().HasQueryFilter(fun a -> not a.IsDeleted)
         |> ignore

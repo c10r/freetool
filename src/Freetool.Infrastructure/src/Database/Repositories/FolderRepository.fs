@@ -104,12 +104,14 @@ type FolderRepository(context: FreetoolDbContext) =
         member _.DeleteAsync(folderId: FolderId) : Task<Result<unit, DomainError>> = task {
             try
                 let guidId = folderId.Value
-                let! folderEntity = context.Folders.FirstOrDefaultAsync(fun f -> f.Id = guidId)
+                let! folderEntity = context.Folders.IgnoreQueryFilters().FirstOrDefaultAsync(fun f -> f.Id = guidId)
 
                 match Option.ofObj folderEntity with
                 | None -> return Error(NotFound "Folder not found")
                 | Some entity ->
-                    context.Folders.Remove entity |> ignore
+                    // Soft delete: set IsDeleted flag instead of removing entity
+                    entity.IsDeleted <- true
+                    entity.UpdatedAt <- System.DateTime.UtcNow
                     let! _ = context.SaveChangesAsync()
                     return Ok()
             with

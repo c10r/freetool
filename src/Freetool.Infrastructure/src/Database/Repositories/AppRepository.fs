@@ -86,12 +86,14 @@ type AppRepository(context: FreetoolDbContext) =
         member _.DeleteAsync(appId: AppId) : Task<Result<unit, DomainError>> = task {
             try
                 let guidId = appId.Value
-                let! appEntity = context.Apps.FirstOrDefaultAsync(fun a -> a.Id = guidId)
+                let! appEntity = context.Apps.IgnoreQueryFilters().FirstOrDefaultAsync(fun a -> a.Id = guidId)
 
                 match Option.ofObj appEntity with
                 | None -> return Error(NotFound "App not found")
                 | Some entity ->
-                    context.Apps.Remove entity |> ignore
+                    // Soft delete: set IsDeleted flag instead of removing entity
+                    entity.IsDeleted <- true
+                    entity.UpdatedAt <- System.DateTime.UtcNow
                     let! _ = context.SaveChangesAsync()
                     return Ok()
             with

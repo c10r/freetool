@@ -25,3 +25,5 @@ type UserEntity() =
 
     [<Required>]
     member val UpdatedAt = DateTime.UtcNow with get, set
+
+    member val IsDeleted = false with get, set
