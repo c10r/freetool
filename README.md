@@ -2,15 +2,6 @@
 
 A free, open-source alternative to Retool for building internal tools and dashboards. Freetool helps companies create CRUD interfaces around their internal APIs with authentication, authorization, and audit logging - all without requiring developers to build custom admin interfaces.
 
-## 🎯 Project Vision
-
-Freetool enables non-technical team members to safely interact with internal APIs through a user-friendly interface. Instead of asking developers to create one-off admin tools or exposing raw API endpoints, teams can use Freetool to:
-
-- **Wrap APIs with UI**: Transform REST endpoints into intuitive forms and dashboards
-- **Control Access**: Fine-grained permissions and role-based access control
-- **Track Everything**: Comprehensive audit logging for compliance and debugging
-- **Self-Service**: Empower business users to perform operations independently
-
 ## 🏗️ Architecture
 
 This project follows **Onion Architecture** principles to maintain clean separation of concerns and enable comprehensive testing:
@@ -34,6 +25,7 @@ This project follows **Onion Architecture** principles to maintain clean separat
 - **Testability**: Business logic is easily unit tested without external dependencies
 - **Flexibility**: Infrastructure can be swapped without affecting core functionality
 - **Functional Design**: Uses F# discriminated unions and pattern matching for command handling instead of object-oriented use cases
+- **Event Store Integration**: Guarantees 1:1 consistency between business operations and audit trail using transactional event sourcing
 
 ## 📊 OpenTelemetry & Distributed Tracing
 
@@ -160,6 +152,172 @@ The AutoTracing system automatically protects sensitive data:
 - **Field Filtering**: Automatically skips any field containing: `password`, `token`, `secret`, `key`, `credential`
 - **Configurable**: Additional sensitive patterns can be added to the `shouldSkipField` function
 - **Secure by Default**: Unknown field types are safely converted to strings with null checks
+
+## 🗃️ Event Store Integration & Audit Trail
+
+Freetool implements a **transactional event sourcing pattern** that guarantees perfect **1:1 consistency** between business operations and audit trail. This ensures that every database change is atomically recorded as domain events, providing complete auditability and compliance.
+
+### 🎯 Key Benefits
+
+- **Atomic Consistency**: Events and business data are saved in the same database transaction
+- **Complete Audit Trail**: Every business operation automatically generates audit events
+- **Architecture Compliance**: Maintains clean onion architecture with domain events in the core
+- **Type Safety**: F# discriminated unions ensure correct event structure at compile time
+- **Performance**: Events stored in same database - no distributed transaction overhead
+
+### 🔧 How It Works
+
+#### 1. Domain Events Collection
+Domain aggregates collect uncommitted events as business operations are performed:
+
+```fsharp
+// Domain Layer - User.fs
+type User = {
+    State: UserData                    // Business data
+    UncommittedEvents: IDomainEvent list  // Events to be persisted
+}
+
+let updateName (newName: string) (user: User) : Result<User, DomainError> =
+    // Business logic validation
+    if String.IsNullOrWhiteSpace newName then
+        Error(ValidationError "User name cannot be empty")
+    else
+        // Update business data
+        let updatedData = { user.State with Name = newName.Trim() }
+        
+        // Collect domain event
+        let nameChangedEvent = UserEvents.userUpdated user.State.Id [NameChanged(oldName, newName)]
+        
+        // Return updated aggregate with new event
+        Ok {
+            State = updatedData
+            UncommittedEvents = user.UncommittedEvents @ [nameChangedEvent]
+        }
+```
+
+#### 2. Transactional Persistence
+The Infrastructure layer saves both business data and events atomically:
+
+```fsharp
+// Infrastructure Layer - UserRepository.fs
+member _.UpdateAsync(user: ValidatedUser) : Task<Result<unit, DomainError>> = task {
+    use transaction = context.Database.BeginTransaction()
+    
+    try
+        // 1. Save business data to Users table
+        let! _ = context.SaveChangesAsync()
+        
+        // 2. Save events to Events table (SAME transaction)
+        let events = User.getUncommittedEvents user
+        for event in events do
+            do! eventRepository.SaveEventAsync event
+        
+        // 3. Commit everything atomically
+        transaction.Commit()
+        return Ok()
+    with
+    | ex -> 
+        transaction.Rollback()
+        return Error(InvalidOperation "Transaction failed")
+}
+```
+
+#### 3. Application Layer Orchestration
+Command handlers use domain methods that automatically generate events:
+
+```fsharp
+// Application Layer - UserHandler.fs
+| UpdateUserName(userId, dto) ->
+    let! userOption = userRepository.GetByIdAsync userIdObj
+    match userOption with
+    | Some user ->
+        // Domain method automatically creates events
+        match User.updateName dto.Name user with
+        | Ok updatedUser ->
+            // Repository saves both data and events atomically
+            match! userRepository.UpdateAsync updatedUser with
+            | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
+```
+
+### 📊 Event Store Schema
+
+Events are stored in a dedicated table with full metadata:
+
+```sql
+CREATE TABLE Events (
+    Id TEXT NOT NULL PRIMARY KEY,
+    EventId TEXT NOT NULL,           -- Domain event ID
+    EventType TEXT NOT NULL,         -- UserCreatedEvent, UserUpdatedEvent, etc.
+    EntityType TEXT NOT NULL,        -- User, Tool, etc.
+    EntityId TEXT NOT NULL,          -- ID of the affected entity
+    EventData TEXT NOT NULL,         -- JSON serialized event data
+    OccurredAt TEXT NOT NULL,        -- When the business operation happened
+    CreatedAt TEXT NOT NULL          -- When the event was persisted
+);
+```
+
+### 🔍 Event Types
+
+The system generates comprehensive events for all business operations:
+
+```fsharp
+// Domain Events - UserEvents.fs
+type UserCreatedEvent = {
+    UserId: UserId
+    Name: string
+    Email: Email
+    ProfilePicUrl: Url option
+    OccurredAt: DateTime
+    EventId: Guid
+}
+
+type UserUpdatedEvent = {
+    UserId: UserId
+    Changes: UserChange list          // What specifically changed
+    OccurredAt: DateTime
+    EventId: Guid
+}
+
+type UserChange =
+    | NameChanged of oldValue: string * newValue: string
+    | EmailChanged of oldValue: Email * newValue: Email
+    | ProfilePicChanged of oldValue: Url option * newValue: Url option
+```
+
+### ⚡ Operational Flow
+
+1. **User Action**: HTTP request to update user name
+2. **Domain Logic**: `User.updateName` validates and creates `UserUpdatedEvent`
+3. **Atomic Save**: Repository saves user data + event in single transaction
+4. **Audit Trail**: Event is immediately queryable via `/audit` endpoints
+5. **Tracing**: OpenTelemetry captures the entire operation flow
+
+### 🧪 Testing Benefits
+
+Domain events enable comprehensive testing without infrastructure dependencies:
+
+```fsharp
+[<Fact>]
+let ``User name update should generate correct event`` () =
+    // Arrange
+    let user = User.create "John Doe" email None
+    
+    // Act
+    let result = User.updateName "Jane Doe" user
+    
+    // Assert
+    match result with
+    | Ok updatedUser ->
+        let events = User.getUncommittedEvents updatedUser
+        Assert.Single(events)
+        
+        match events.[0] with
+        | :? UserUpdatedEvent as event ->
+            Assert.Equal("John Doe", event.Changes.[0].OldValue)
+            Assert.Equal("Jane Doe", event.Changes.[0].NewValue)
+```
+
+This event store integration pattern ensures that Freetool maintains perfect audit compliance while preserving clean architecture principles and providing comprehensive observability.
 
 ## 📁 Project Structure
 

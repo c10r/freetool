@@ -3,10 +3,10 @@ namespace Freetool.Application.Mappers
 open System
 open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
+open Freetool.Domain.Events
 open Freetool.Application.DTOs
 
 module AppMapper =
-    // Helper functions for input type conversion
     let rec inputTypeToDtoType (inputType: InputType) : InputTypeDto =
         match inputType.Value with
         | InputTypeValue.Email -> Email
@@ -64,7 +64,6 @@ module AppMapper =
         Type = inputTypeFromDtoType inputDto.Type
     }
 
-    // DTO -> Domain conversions (for API requests)
     let fromCreateDto (dto: CreateAppDto) : UnvalidatedApp =
         let folderId =
             match Guid.TryParse dto.FolderId with
@@ -98,7 +97,6 @@ module AppMapper =
                 UpdatedAt = DateTime.UtcNow
         }
 
-    // Domain -> DTO conversions (for API responses)
     let toDto (App appData: ValidatedApp) : AppDto = {
         Id = appData.Id.Value.ToString()
         Name = appData.Name

@@ -3,7 +3,8 @@ namespace Freetool.Domain.Events
 open System
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
-open Freetool.Domain.Entities
+
+type Input = { Title: string; Type: InputType }
 
 type AppChange =
     | NameChanged of oldValue: AppName * newValue: AppName

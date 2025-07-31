@@ -2,6 +2,7 @@ namespace Freetool.Infrastructure.Database.Mappers
 
 open System.Text.Json
 open Freetool.Domain.Entities
+open Freetool.Domain.Events
 open Freetool.Domain.ValueObjects
 open Freetool.Infrastructure.Database
 

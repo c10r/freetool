@@ -3,10 +3,7 @@ namespace Freetool.Domain.Entities
 open System
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
-
-// Validation state markers (phantom types)
-type Unvalidated = Unvalidated
-type Validated = Validated
+open Freetool.Domain.Events
 
 // Core user data that's shared across all states
 type UserData = {
@@ -18,22 +15,60 @@ type UserData = {
     UpdatedAt: DateTime
 }
 
-// User type parameterized by validation state
-type User<'State> =
-    | User of UserData
+// Event-sourcing aggregate wrapper
+type EventSourcingAggregate<'T> = {
+    State: 'T
+    UncommittedEvents: IDomainEvent list
+}
 
-    interface IEntity<UserId> with
-        member this.Id =
-            let (User userData) = this
-            userData.Id
+// User type with event collection
+type User = EventSourcingAggregate<UserData>
+
+module UserAggregateHelpers =
+    let getEntityId (user: User) : UserId = user.State.Id
+
+    let implementsIEntity (user: User) =
+        { new IEntity<UserId> with
+            member _.Id = user.State.Id
+        }
 
 // Type aliases for clarity
-type UnvalidatedUser = User<Unvalidated> // From DTOs - potentially unsafe
-type ValidatedUser = User<Validated> // Validated domain model and database data
+type UnvalidatedUser = User // From DTOs - potentially unsafe
+type ValidatedUser = User // Validated domain model and database data
 
 module User =
+    // Create new user with events
+    let create (name: string) (email: Email) (profilePicUrl: string option) : ValidatedUser =
+        let userData = {
+            Id = UserId.NewId()
+            Name = name.Trim()
+            Email = email.Value
+            ProfilePicUrl = profilePicUrl
+            CreatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow
+        }
+
+        let userCreatedEvent =
+            let profilePicUrlOption =
+                profilePicUrl |> Option.bind (fun url -> Url.Create(url) |> Result.toOption)
+
+            UserEvents.userCreated userData.Id userData.Name email profilePicUrlOption
+
+        {
+            State = userData
+            UncommittedEvents = [ userCreatedEvent :> IDomainEvent ]
+        }
+
+    // Create user from existing data without events (for loading from database)
+    let fromData (userData: UserData) : ValidatedUser = {
+        State = userData
+        UncommittedEvents = []
+    }
+
     // Validate unvalidated user -> validated user
-    let validate (User userData: UnvalidatedUser) : Result<ValidatedUser, DomainError> =
+    let validate (user: UnvalidatedUser) : Result<ValidatedUser, DomainError> =
+        let userData = user.State
+
         if String.IsNullOrWhiteSpace(userData.Name) then
             Error(ValidationError "User name cannot be empty")
         elif userData.Name.Length > 100 then
@@ -46,106 +81,158 @@ module User =
                 // Validate profile pic URL if present
                 match userData.ProfilePicUrl with
                 | None ->
-                    Ok(
-                        User {
+                    Ok {
+                        State = {
                             userData with
                                 Name = userData.Name.Trim()
                         }
-                    )
+                        UncommittedEvents = user.UncommittedEvents
+                    }
                 | Some urlString ->
                     match Url.Create(urlString) with
                     | Error err -> Error err
                     | Ok validUrl ->
-                        Ok(
-                            User {
+                        Ok {
+                            State = {
                                 userData with
                                     Name = userData.Name.Trim()
                                     ProfilePicUrl = Some(validUrl.Value)
                             }
-                        )
+                            UncommittedEvents = user.UncommittedEvents
+                        }
 
-    // Business logic operations on validated users
-    let updateName (newName: string) (User userData: ValidatedUser) : Result<ValidatedUser, DomainError> =
+    // Business logic operations on validated users with event tracking
+    let updateName (newName: string) (user: ValidatedUser) : Result<ValidatedUser, DomainError> =
         if String.IsNullOrWhiteSpace newName then
             Error(ValidationError "User name cannot be empty")
         elif newName.Length > 100 then
             Error(ValidationError "User name cannot exceed 100 characters")
         else
-            Ok(
-                User {
-                    userData with
-                        Name = newName.Trim()
-                        UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let oldName = user.State.Name
 
-    let updateEmail (newEmail: string) (User userData: ValidatedUser) : Result<ValidatedUser, DomainError> =
+            let updatedUserData = {
+                user.State with
+                    Name = newName.Trim()
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let nameChangedEvent =
+                UserEvents.userUpdated user.State.Id [ UserChange.NameChanged(oldName, newName.Trim()) ]
+
+            Ok {
+                State = updatedUserData
+                UncommittedEvents = user.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
+            }
+
+    let updateEmail (newEmail: string) (user: ValidatedUser) : Result<ValidatedUser, DomainError> =
         match Email.Create(newEmail) with
         | Error err -> Error err
-        | Ok validEmail ->
-            Ok(
-                User {
-                    userData with
-                        Email = validEmail.Value
+        | Ok newEmailObj ->
+            match Email.Create(user.State.Email) with
+            | Error _ -> Error(ValidationError "Current email is invalid")
+            | Ok oldEmailObj ->
+                let updatedUserData = {
+                    user.State with
+                        Email = newEmailObj.Value
                         UpdatedAt = DateTime.UtcNow
                 }
-            )
 
-    let updateProfilePic
-        (newProfilePicUrl: string option)
-        (User userData: ValidatedUser)
-        : Result<ValidatedUser, DomainError> =
+                let emailChangedEvent =
+                    UserEvents.userUpdated user.State.Id [ EmailChanged(oldEmailObj, newEmailObj) ]
+
+                Ok {
+                    State = updatedUserData
+                    UncommittedEvents = user.UncommittedEvents @ [ emailChangedEvent :> IDomainEvent ]
+                }
+
+    let updateProfilePic (newProfilePicUrl: string option) (user: ValidatedUser) : Result<ValidatedUser, DomainError> =
+        let oldProfilePicUrl =
+            user.State.ProfilePicUrl
+            |> Option.map Url.Create
+            |> Option.bind (function
+                | Ok url -> Some url
+                | Error _ -> None)
+
         match newProfilePicUrl with
         | None ->
-            Ok(
-                User {
-                    userData with
-                        ProfilePicUrl = None
-                        UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let updatedUserData = {
+                user.State with
+                    ProfilePicUrl = None
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let profilePicChangedEvent =
+                UserEvents.userUpdated user.State.Id [ ProfilePicChanged(oldProfilePicUrl, None) ]
+
+            Ok {
+                State = updatedUserData
+                UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
+            }
         | Some urlString ->
             match Url.Create(urlString) with
             | Error err -> Error err
             | Ok validUrl ->
-                Ok(
-                    User {
-                        userData with
-                            ProfilePicUrl = Some(validUrl.Value)
-                            UpdatedAt = DateTime.UtcNow
-                    }
-                )
+                let newProfilePicUrlObj = Some validUrl
 
-    let removeProfilePicture (User userData: ValidatedUser) : ValidatedUser =
-        User {
-            userData with
+                let updatedUserData = {
+                    user.State with
+                        ProfilePicUrl = Some(validUrl.Value)
+                        UpdatedAt = DateTime.UtcNow
+                }
+
+                let profilePicChangedEvent =
+                    UserEvents.userUpdated user.State.Id [ ProfilePicChanged(oldProfilePicUrl, newProfilePicUrlObj) ]
+
+                Ok {
+                    State = updatedUserData
+                    UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
+                }
+
+    let removeProfilePicture (user: ValidatedUser) : ValidatedUser =
+        let oldProfilePicUrl =
+            user.State.ProfilePicUrl
+            |> Option.map Url.Create
+            |> Option.bind (function
+                | Ok url -> Some url
+                | Error _ -> None)
+
+        let updatedUserData = {
+            user.State with
                 ProfilePicUrl = None
                 UpdatedAt = DateTime.UtcNow
         }
 
-    // Create a new validated user (for testing purposes)
-    let create (name: string) (email: Email) (profilePicUrl: string option) : Result<ValidatedUser, DomainError> =
-        let unvalidatedUser =
-            User {
-                Id = UserId.NewId()
-                Name = name
-                Email = email.Value
-                ProfilePicUrl = profilePicUrl
-                CreatedAt = DateTime.UtcNow
-                UpdatedAt = DateTime.UtcNow
-            }
+        let profilePicChangedEvent =
+            UserEvents.userUpdated user.State.Id [ ProfilePicChanged(oldProfilePicUrl, None) ]
 
-        validate unvalidatedUser
+        {
+            State = updatedUserData
+            UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
+        }
+
+    // Delete user with event tracking
+    let markForDeletion (user: ValidatedUser) : ValidatedUser =
+        let userDeletedEvent = UserEvents.userDeleted user.State.Id
+
+        {
+            user with
+                UncommittedEvents = user.UncommittedEvents @ [ userDeletedEvent :> IDomainEvent ]
+        }
+
+    // Event management functions
+    let getUncommittedEvents (user: ValidatedUser) : IDomainEvent list = user.UncommittedEvents
+
+    let markEventsAsCommitted (user: ValidatedUser) : ValidatedUser = { user with UncommittedEvents = [] }
 
     // Utility functions for accessing data from any state
-    let getId (User userData: User<'State>) : UserId = userData.Id
+    let getId (user: User) : UserId = user.State.Id
 
-    let getName (User userData: User<'State>) : string = userData.Name
+    let getName (user: User) : string = user.State.Name
 
-    let getEmail (User userData: User<'State>) : string = userData.Email
+    let getEmail (user: User) : string = user.State.Email
 
-    let getProfilePicUrl (User userData: User<'State>) : string option = userData.ProfilePicUrl
+    let getProfilePicUrl (user: User) : string option = user.State.ProfilePicUrl
 
-    let getCreatedAt (User userData: User<'State>) : DateTime = userData.CreatedAt
+    let getCreatedAt (user: User) : DateTime = user.State.CreatedAt
 
-    let getUpdatedAt (User userData: User<'State>) : DateTime = userData.UpdatedAt
+    let getUpdatedAt (user: User) : DateTime = user.State.UpdatedAt

@@ -5,7 +5,6 @@ open System.Threading.Tasks
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
-open Freetool.Domain.Events
 open Freetool.Application.Interfaces
 open Freetool.Application.Commands
 open Freetool.Application.Mappers
@@ -16,7 +15,6 @@ module UserHandler =
 
     let handleCommand
         (userRepository: IUserRepository)
-        (eventPublisher: IEventPublisher)
         (command: UserCommand)
         : Task<Result<UserCommandResult, DomainError>> =
         task {
@@ -34,46 +32,33 @@ module UserHandler =
                 if existsByEmail then
                     return Error(Conflict "A user with this email already exists")
                 else
-                    match! userRepository.AddAsync validatedUser with
+                    // Create event-aware user from the validated user
+                    let eventAwareUser =
+                        User.create (User.getName validatedUser) email (User.getProfilePicUrl validatedUser)
+
+                    // Save user and events atomically
+                    match! userRepository.AddAsync eventAwareUser with
                     | Error error -> return Error error
-                    | Ok() ->
-                        // Emit UserCreated event
-                        let userId = User.getId validatedUser
-                        let name = User.getName validatedUser
-                        let emailResult = Email.Create(User.getEmail validatedUser)
-
-                        let profilePicUrlResult =
-                            User.getProfilePicUrl validatedUser
-                            |> Option.map Url.Create
-                            |> Option.map (function
-                                | Ok url -> Some url
-                                | Error _ -> None)
-                            |> Option.flatten
-
-                        match emailResult with
-                        | Ok email ->
-                            let event = UserEvents.userCreated userId name email profilePicUrlResult
-                            do! eventPublisher.PublishAsync event
-                            return Ok(UserResult(mapUserToDto validatedUser))
-                        | Error _ -> return Ok(UserResult(mapUserToDto validatedUser)) // Still return success, just skip event
+                    | Ok() -> return Ok(UserResult(mapUserToDto eventAwareUser))
 
             | DeleteUser userId ->
                 match Guid.TryParse userId with
                 | false, _ -> return Error(ValidationError "Invalid user ID format")
                 | true, guid ->
                     let userIdObj = UserId.FromGuid guid
-                    let! exists = userRepository.ExistsAsync userIdObj
+                    let! userOption = userRepository.GetByIdAsync userIdObj
 
-                    if not exists then
-                        return Error(NotFound "User not found")
-                    else
-                        match! userRepository.DeleteAsync userIdObj with
+                    match userOption with
+                    | None -> return Error(NotFound "User not found")
+                    | Some user ->
+                        // Mark user for deletion to create the delete event
+                        let userWithDeleteEvent = User.markForDeletion user
+                        let deleteEvent = User.getUncommittedEvents userWithDeleteEvent |> List.tryHead
+
+                        // Delete user and save event atomically
+                        match! userRepository.DeleteAsync userIdObj deleteEvent with
                         | Error error -> return Error error
-                        | Ok() ->
-                            // Emit UserDeleted event
-                            let event = UserEvents.userDeleted userIdObj
-                            do! eventPublisher.PublishAsync event
-                            return Ok(UnitResult())
+                        | Ok() -> return Ok(UnitResult())
 
             | UpdateUserName(userId, dto) ->
                 match Guid.TryParse userId with
@@ -85,21 +70,14 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        let unvalidatedUser = UserMapper.fromUpdateNameDto dto user
-
-                        match User.validate unvalidatedUser with
+                        // Update name using domain method (automatically creates event)
+                        match User.updateName dto.Name user with
                         | Error error -> return Error error
-                        | Ok validatedUser ->
-                            match! userRepository.UpdateAsync validatedUser with
+                        | Ok updatedUser ->
+                            // Save user and events atomically
+                            match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok() ->
-                                // Emit UserUpdated event for name change
-                                let oldName = User.getName user
-                                let newName = User.getName validatedUser
-                                let changes = [ NameChanged(oldName, newName) ]
-                                let event = UserEvents.userUpdated userIdObj changes
-                                do! eventPublisher.PublishAsync event
-                                return Ok(UserResult(mapUserToDto validatedUser))
+                            | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
 
             | UpdateUserEmail(userId, dto) ->
                 match Guid.TryParse userId with
@@ -111,26 +89,14 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        let unvalidatedUser = UserMapper.fromUpdateEmailDto dto user
-
-                        match User.validate unvalidatedUser with
+                        // Update email using domain method (automatically creates event)
+                        match User.updateEmail dto.Email user with
                         | Error error -> return Error error
-                        | Ok validatedUser ->
-                            match! userRepository.UpdateAsync validatedUser with
+                        | Ok updatedUser ->
+                            // Save user and events atomically
+                            match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok() ->
-                                // Emit UserUpdated event for email change
-                                let oldEmailResult = Email.Create(User.getEmail user)
-                                let newEmailResult = Email.Create(User.getEmail validatedUser)
-
-                                match oldEmailResult, newEmailResult with
-                                | Ok oldEmail, Ok newEmail ->
-                                    let changes = [ EmailChanged(oldEmail, newEmail) ]
-                                    let event = UserEvents.userUpdated userIdObj changes
-                                    do! eventPublisher.PublishAsync event
-                                | _, _ -> () // Skip event if email parsing fails
-
-                                return Ok(UserResult(mapUserToDto validatedUser))
+                            | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
 
             | SetProfilePicture(userId, dto) ->
                 match Guid.TryParse userId with
@@ -142,33 +108,14 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        let unvalidatedUser = UserMapper.fromSetProfilePictureDto dto user
-
-                        match User.validate unvalidatedUser with
+                        // Update profile picture using domain method (automatically creates event)
+                        match User.updateProfilePic (Some dto.ProfilePicUrl) user with
                         | Error error -> return Error error
-                        | Ok validatedUser ->
-                            match! userRepository.UpdateAsync validatedUser with
+                        | Ok updatedUser ->
+                            // Save user and events atomically
+                            match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok() ->
-                                // Emit UserUpdated event for profile picture change
-                                let oldProfilePicUrl =
-                                    User.getProfilePicUrl user
-                                    |> Option.map Url.Create
-                                    |> Option.bind (function
-                                        | Ok url -> Some url
-                                        | Error _ -> None)
-
-                                let newProfilePicUrl =
-                                    User.getProfilePicUrl validatedUser
-                                    |> Option.map Url.Create
-                                    |> Option.bind (function
-                                        | Ok url -> Some url
-                                        | Error _ -> None)
-
-                                let changes = [ ProfilePicChanged(oldProfilePicUrl, newProfilePicUrl) ]
-                                let event = UserEvents.userUpdated userIdObj changes
-                                do! eventPublisher.PublishAsync event
-                                return Ok(UserResult(mapUserToDto validatedUser))
+                            | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
 
             | RemoveProfilePicture userId ->
                 match Guid.TryParse userId with
@@ -180,23 +127,13 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
+                        // Remove profile picture using domain method (automatically creates event)
                         let updatedUser = User.removeProfilePicture user
 
+                        // Save user and events atomically
                         match! userRepository.UpdateAsync updatedUser with
                         | Error error -> return Error error
-                        | Ok() ->
-                            // Emit UserUpdated event for profile picture removal
-                            let oldProfilePicUrl =
-                                User.getProfilePicUrl user
-                                |> Option.map Url.Create
-                                |> Option.bind (function
-                                    | Ok url -> Some url
-                                    | Error _ -> None)
-
-                            let changes = [ ProfilePicChanged(oldProfilePicUrl, None) ]
-                            let event = UserEvents.userUpdated userIdObj changes
-                            do! eventPublisher.PublishAsync event
-                            return Ok(UserResult(mapUserToDto updatedUser))
+                        | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
 
             | GetUserById userId ->
                 match Guid.TryParse userId with
@@ -232,7 +169,7 @@ module UserHandler =
                     return Ok(UsersResult result)
         }
 
-type UserHandler(eventPublisher: IEventPublisher) =
+type UserHandler() =
     interface ICommandHandler with
         member this.HandleCommand repository command =
-            UserHandler.handleCommand repository eventPublisher command
+            UserHandler.handleCommand repository command

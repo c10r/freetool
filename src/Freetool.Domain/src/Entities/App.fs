@@ -3,9 +3,7 @@ namespace Freetool.Domain.Entities
 open System
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
-
-// Input definition
-type Input = { Title: string; Type: InputType }
+open Freetool.Domain.Events
 
 // Core app data that's shared across all states
 type AppData = {

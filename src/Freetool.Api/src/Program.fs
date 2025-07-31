@@ -41,17 +41,19 @@ let main args =
         |> ignore)
     |> ignore
 
-    builder.Services.AddScoped<IUserRepository, UserRepository>() |> ignore
+    builder.Services.AddScoped<IUserRepository>(fun serviceProvider ->
+        let context = serviceProvider.GetRequiredService<FreetoolDbContext>()
+        let eventRepository = serviceProvider.GetRequiredService<IEventRepository>()
+        UserRepository(context, eventRepository))
+    |> ignore
+
     builder.Services.AddScoped<IResourceRepository, ResourceRepository>() |> ignore
     builder.Services.AddScoped<IFolderRepository, FolderRepository>() |> ignore
     builder.Services.AddScoped<IAppRepository, AppRepository>() |> ignore
     builder.Services.AddScoped<IEventRepository, EventRepository>() |> ignore
     builder.Services.AddScoped<IEventPublisher, EventPublisher>() |> ignore
 
-    builder.Services.AddScoped<UserHandler>(fun serviceProvider ->
-        let eventPublisher = serviceProvider.GetRequiredService<IEventPublisher>()
-        UserHandler(eventPublisher))
-    |> ignore
+    builder.Services.AddScoped<UserHandler>() |> ignore
 
     builder.Services.AddScoped<ResourceHandler>() |> ignore
     builder.Services.AddScoped<FolderHandler>() |> ignore
