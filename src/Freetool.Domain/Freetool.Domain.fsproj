@@ -26,6 +26,9 @@
     <Compile Include="src/Entities/Folder.fs" />
     <Compile Include="src/Entities/App.fs" />
     <Compile Include="src/Events/UserEvents.fs" />
+    <Compile Include="src/Events/AppEvents.fs" />
+    <Compile Include="src/Events/ResourceEvents.fs" />
+    <Compile Include="src/Events/FolderEvents.fs" />
   </ItemGroup>
 
 </Project>

@@ -10,6 +10,7 @@ open OpenTelemetry.Trace
 open OpenTelemetry.Exporter
 open Freetool.Infrastructure.Database
 open Freetool.Infrastructure.Database.Repositories
+open Freetool.Infrastructure.Services
 open Freetool.Application.Interfaces
 open Freetool.Application.Handlers
 open Freetool.Application.Commands
@@ -44,8 +45,14 @@ let main args =
     builder.Services.AddScoped<IResourceRepository, ResourceRepository>() |> ignore
     builder.Services.AddScoped<IFolderRepository, FolderRepository>() |> ignore
     builder.Services.AddScoped<IAppRepository, AppRepository>() |> ignore
+    builder.Services.AddScoped<IEventRepository, EventRepository>() |> ignore
+    builder.Services.AddScoped<IEventPublisher, EventPublisher>() |> ignore
 
-    builder.Services.AddScoped<UserHandler>() |> ignore
+    builder.Services.AddScoped<UserHandler>(fun serviceProvider ->
+        let eventPublisher = serviceProvider.GetRequiredService<IEventPublisher>()
+        UserHandler(eventPublisher))
+    |> ignore
+
     builder.Services.AddScoped<ResourceHandler>() |> ignore
     builder.Services.AddScoped<FolderHandler>() |> ignore
     builder.Services.AddScoped<AppHandler>() |> ignore

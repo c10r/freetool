@@ -24,6 +24,7 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.002_CreateResourcesTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.003_CreateFoldersTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.004_CreateAppsTable.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.005_CreateEventsTable.sql" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,6 +32,7 @@
     <Compile Include="src/Database/ResourceEntity.fs" />
     <Compile Include="src/Database/FolderEntity.fs" />
     <Compile Include="src/Database/AppEntity.fs" />
+    <Compile Include="src/Database/EventEntity.fs" />
     <Compile Include="src/Database/FreetoolDbContext.fs" />
     <Compile Include="src/Database/Mappers/UserEntityMapper.fs" />
     <Compile Include="src/Database/Mappers/ResourceEntityMapper.fs" />
@@ -41,6 +43,8 @@
     <Compile Include="src/Database/Repositories/ResourceRepository.fs" />
     <Compile Include="src/Database/Repositories/FolderRepository.fs" />
     <Compile Include="src/Database/Repositories/AppRepository.fs" />
+    <Compile Include="src/Database/Repositories/EventRepository.fs" />
+    <Compile Include="src/Services/EventPublisher.fs" />
   </ItemGroup>
 
 </Project>

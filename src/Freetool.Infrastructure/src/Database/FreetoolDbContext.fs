@@ -19,6 +19,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     [<DefaultValue>]
     val mutable private _apps: DbSet<AppEntity>
 
+    [<DefaultValue>]
+    val mutable private _events: DbSet<EventEntity>
+
     member this.Users
         with get () = this._users
         and set value = this._users <- value
@@ -34,6 +37,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     member this.Apps
         with get () = this._apps
         and set value = this._apps <- value
+
+    member this.Events
+        with get () = this._events
+        and set value = this._events <- value
 
     override this.OnModelCreating(modelBuilder: ModelBuilder) =
         base.OnModelCreating modelBuilder
@@ -120,4 +127,30 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun a -> a.CreatedAt :> obj).IsRequired() |> ignore
 
             entity.Property(fun a -> a.UpdatedAt :> obj).IsRequired() |> ignore)
+        |> ignore
+
+        modelBuilder.Entity<EventEntity>(fun entity ->
+            entity.HasKey(fun e -> e.Id :> obj) |> ignore
+
+            entity.HasIndex(fun e -> e.EventId :> obj).IsUnique() |> ignore
+
+            entity.HasIndex([| "EntityType"; "EntityId" |]) |> ignore
+
+            entity.Property(fun e -> e.EventId :> obj).IsRequired().HasMaxLength(36)
+            |> ignore
+
+            entity.Property(fun e -> e.EventType :> obj).IsRequired().HasMaxLength(100)
+            |> ignore
+
+            entity.Property(fun e -> e.EntityType :> obj).IsRequired().HasMaxLength(100)
+            |> ignore
+
+            entity.Property(fun e -> e.EntityId :> obj).IsRequired().HasMaxLength(36)
+            |> ignore
+
+            entity.Property(fun e -> e.EventData :> obj).IsRequired() |> ignore
+
+            entity.Property(fun e -> e.OccurredAt :> obj).IsRequired() |> ignore
+
+            entity.Property(fun e -> e.CreatedAt :> obj).IsRequired() |> ignore)
         |> ignore
