@@ -68,7 +68,7 @@ type AppRepository(context: FreetoolDbContext) =
                 match Option.ofObj existingEntity with
                 | None -> return Error(NotFound "App not found")
                 | Some entity ->
-                    let (App appData) = app
+                    let appData = app.State
                     let inputsJson = appData.Inputs |> List.map AppEntityMapper.inputFromDomain
                     let inputsJsonString = System.Text.Json.JsonSerializer.Serialize(inputsJson)
 

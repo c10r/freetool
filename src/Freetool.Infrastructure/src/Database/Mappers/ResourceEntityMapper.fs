@@ -68,7 +68,7 @@ module ResourceEntityMapper =
                     | Ok kvp -> kvp
                     | Error _ -> failwith "Invalid body parameter in database")
 
-        Resource {
+        Resource.fromData {
             Id = ResourceId.FromGuid(entity.Id)
             Name = name
             Description = description
@@ -81,18 +81,18 @@ module ResourceEntityMapper =
         }
 
     // Domain -> Entity conversions (can convert from any validation state)
-    let toEntity (Resource resourceData: Resource<'State>) : ResourceEntity =
+    let toEntity (resource: Resource) : ResourceEntity =
         let entity = ResourceEntity()
-        entity.Id <- resourceData.Id.Value
-        entity.Name <- resourceData.Name.Value
-        entity.Description <- resourceData.Description.Value
-        entity.BaseUrl <- resourceData.BaseUrl.Value
+        entity.Id <- resource.State.Id.Value
+        entity.Name <- resource.State.Name.Value
+        entity.Description <- resource.State.Description.Value
+        entity.BaseUrl <- resource.State.BaseUrl.Value
 
         entity.UrlParameters <-
-            serializeKeyValuePairs (resourceData.UrlParameters |> List.map (fun kvp -> (kvp.Key, kvp.Value)))
+            serializeKeyValuePairs (resource.State.UrlParameters |> List.map (fun kvp -> (kvp.Key, kvp.Value)))
 
-        entity.Headers <- serializeKeyValuePairs (resourceData.Headers |> List.map (fun kvp -> (kvp.Key, kvp.Value)))
-        entity.Body <- serializeKeyValuePairs (resourceData.Body |> List.map (fun kvp -> (kvp.Key, kvp.Value)))
-        entity.CreatedAt <- resourceData.CreatedAt
-        entity.UpdatedAt <- resourceData.UpdatedAt
+        entity.Headers <- serializeKeyValuePairs (resource.State.Headers |> List.map (fun kvp -> (kvp.Key, kvp.Value)))
+        entity.Body <- serializeKeyValuePairs (resource.State.Body |> List.map (fun kvp -> (kvp.Key, kvp.Value)))
+        entity.CreatedAt <- resource.State.CreatedAt
+        entity.UpdatedAt <- resource.State.UpdatedAt
         entity

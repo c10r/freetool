@@ -85,15 +85,14 @@ type FolderRepository(context: FreetoolDbContext) =
                 match Option.ofObj existingEntity with
                 | None -> return Error(NotFound "Folder not found")
                 | Some entity ->
-                    let (Folder folderData) = folder
-                    entity.Name <- folderData.Name.Value
+                    entity.Name <- folder.State.Name.Value
 
                     entity.ParentId <-
-                        match folderData.ParentId with
+                        match folder.State.ParentId with
                         | Some pid -> Nullable(pid.Value)
                         | None -> Nullable()
 
-                    entity.UpdatedAt <- folderData.UpdatedAt
+                    entity.UpdatedAt <- folder.State.UpdatedAt
 
                     let! _ = context.SaveChangesAsync()
                     return Ok()

@@ -21,25 +21,28 @@ module FolderEntityMapper =
             else
                 None
 
-        Folder {
-            Id = FolderId.FromGuid(entity.Id)
-            Name = name
-            ParentId = parentId
-            CreatedAt = entity.CreatedAt
-            UpdatedAt = entity.UpdatedAt
+        {
+            State = {
+                Id = FolderId.FromGuid(entity.Id)
+                Name = name
+                ParentId = parentId
+                CreatedAt = entity.CreatedAt
+                UpdatedAt = entity.UpdatedAt
+            }
+            UncommittedEvents = []
         }
 
     // Domain -> Entity conversions (can convert from any validation state)
-    let toEntity (Folder folderData: Folder<'State>) : FolderEntity =
+    let toEntity (folder: EventSourcingAggregate<FolderData>) : FolderEntity =
         let entity = FolderEntity()
-        entity.Id <- folderData.Id.Value
-        entity.Name <- folderData.Name.Value
+        entity.Id <- folder.State.Id.Value
+        entity.Name <- folder.State.Name.Value
 
         entity.ParentId <-
-            match folderData.ParentId with
+            match folder.State.ParentId with
             | Some pid -> Nullable(pid.Value)
             | None -> Nullable()
 
-        entity.CreatedAt <- folderData.CreatedAt
-        entity.UpdatedAt <- folderData.UpdatedAt
+        entity.CreatedAt <- folder.State.CreatedAt
+        entity.UpdatedAt <- folder.State.UpdatedAt
         entity

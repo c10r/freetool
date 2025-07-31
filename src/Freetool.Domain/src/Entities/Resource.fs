@@ -3,6 +3,7 @@ namespace Freetool.Domain.Entities
 open System
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
+open Freetool.Domain.Events
 
 // Core resource data that's shared across all states
 type ResourceData = {
@@ -17,21 +18,29 @@ type ResourceData = {
     UpdatedAt: DateTime
 }
 
-// Resource type parameterized by validation state
-type Resource<'State> =
-    | Resource of ResourceData
+// Resource type with event collection
+type Resource = EventSourcingAggregate<ResourceData>
 
-    interface IEntity<ResourceId> with
-        member this.Id =
-            let (Resource resourceData) = this
-            resourceData.Id
+module ResourceAggregateHelpers =
+    let getEntityId (resource: Resource) : ResourceId = resource.State.Id
+
+    let implementsIEntity (resource: Resource) =
+        { new IEntity<ResourceId> with
+            member _.Id = resource.State.Id
+        }
 
 // Type aliases for clarity
-type UnvalidatedResource = Resource<Unvalidated> // From DTOs - potentially unsafe
-type ValidatedResource = Resource<Validated> // Validated domain model and database data
+type UnvalidatedResource = Resource // From DTOs - potentially unsafe
+type ValidatedResource = Resource // Validated domain model and database data
 
 module Resource =
-    // Create a new validated resource from primitive values
+    // Create resource from existing data without events (for loading from database)
+    let fromData (resourceData: ResourceData) : ValidatedResource = {
+        State = resourceData
+        UncommittedEvents = []
+    }
+
+    // Create a new validated resource with events
     let create
         (name: string)
         (description: string)
@@ -75,69 +84,104 @@ module Resource =
                             match validateKeyValuePairs body with
                             | Error err -> Error err
                             | Ok validBody ->
-                                Ok(
-                                    Resource {
-                                        Id = ResourceId.NewId()
-                                        Name = validName
-                                        Description = validDescription
-                                        BaseUrl = validBaseUrl
-                                        UrlParameters = validUrlParams
-                                        Headers = validHeaders
-                                        Body = validBody
-                                        CreatedAt = DateTime.UtcNow
-                                        UpdatedAt = DateTime.UtcNow
-                                    }
-                                )
+                                let resourceData = {
+                                    Id = ResourceId.NewId()
+                                    Name = validName
+                                    Description = validDescription
+                                    BaseUrl = validBaseUrl
+                                    UrlParameters = validUrlParams
+                                    Headers = validHeaders
+                                    Body = validBody
+                                    CreatedAt = DateTime.UtcNow
+                                    UpdatedAt = DateTime.UtcNow
+                                }
 
-    // Business logic operations on validated resources
-    let updateName
-        (newName: string)
-        (Resource resourceData: ValidatedResource)
-        : Result<ValidatedResource, DomainError> =
+                                let resourceCreatedEvent =
+                                    ResourceEvents.resourceCreated
+                                        resourceData.Id
+                                        validName
+                                        validDescription
+                                        validBaseUrl
+                                        validUrlParams
+                                        validHeaders
+                                        validBody
+
+                                Ok {
+                                    State = resourceData
+                                    UncommittedEvents = [ resourceCreatedEvent :> IDomainEvent ]
+                                }
+
+    // Business logic operations on validated resources with event tracking
+    let updateName (newName: string) (resource: ValidatedResource) : Result<ValidatedResource, DomainError> =
         match ResourceName.Create(newName) with
         | Error err -> Error err
         | Ok validName ->
-            Ok(
-                Resource {
-                    resourceData with
-                        Name = validName
-                        UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let oldName = resource.State.Name
+
+            let updatedResourceData = {
+                resource.State with
+                    Name = validName
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let nameChangedEvent =
+                ResourceEvents.resourceUpdated resource.State.Id [ ResourceChange.NameChanged(oldName, validName) ]
+
+            Ok {
+                State = updatedResourceData
+                UncommittedEvents = resource.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
+            }
 
     let updateDescription
         (newDescription: string)
-        (Resource resourceData: ValidatedResource)
+        (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
         match ResourceDescription.Create(newDescription) with
         | Error err -> Error err
         | Ok validDescription ->
-            Ok(
-                Resource {
-                    resourceData with
-                        Description = validDescription
-                        UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let oldDescription = resource.State.Description
 
-    let updateBaseUrl
-        (newBaseUrl: string)
-        (Resource resourceData: ValidatedResource)
-        : Result<ValidatedResource, DomainError> =
+            let updatedResourceData = {
+                resource.State with
+                    Description = validDescription
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let descriptionChangedEvent =
+                ResourceEvents.resourceUpdated resource.State.Id [
+                    ResourceChange.DescriptionChanged(oldDescription, validDescription)
+                ]
+
+            Ok {
+                State = updatedResourceData
+                UncommittedEvents = resource.UncommittedEvents @ [ descriptionChangedEvent :> IDomainEvent ]
+            }
+
+    let updateBaseUrl (newBaseUrl: string) (resource: ValidatedResource) : Result<ValidatedResource, DomainError> =
         match BaseUrl.Create(newBaseUrl) with
         | Error err -> Error err
         | Ok validBaseUrl ->
-            Ok(
-                Resource {
-                    resourceData with
-                        BaseUrl = validBaseUrl
-                        UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let oldBaseUrl = resource.State.BaseUrl
+
+            let updatedResourceData = {
+                resource.State with
+                    BaseUrl = validBaseUrl
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let baseUrlChangedEvent =
+                ResourceEvents.resourceUpdated resource.State.Id [
+                    ResourceChange.BaseUrlChanged(oldBaseUrl, validBaseUrl)
+                ]
+
+            Ok {
+                State = updatedResourceData
+                UncommittedEvents = resource.UncommittedEvents @ [ baseUrlChangedEvent :> IDomainEvent ]
+            }
 
     let updateUrlParameters
         (newUrlParameters: (string * string) list)
-        (Resource resourceData: ValidatedResource)
+        (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
         let validateKeyValuePairs pairs =
             pairs
@@ -155,17 +199,27 @@ module Resource =
         match validateKeyValuePairs newUrlParameters with
         | Error err -> Error err
         | Ok validUrlParams ->
-            Ok(
-                Resource {
-                    resourceData with
-                        UrlParameters = validUrlParams
-                        UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let oldUrlParams = resource.State.UrlParameters
+
+            let updatedResourceData = {
+                resource.State with
+                    UrlParameters = validUrlParams
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let urlParamsChangedEvent =
+                ResourceEvents.resourceUpdated resource.State.Id [
+                    ResourceChange.UrlParametersChanged(oldUrlParams, validUrlParams)
+                ]
+
+            Ok {
+                State = updatedResourceData
+                UncommittedEvents = resource.UncommittedEvents @ [ urlParamsChangedEvent :> IDomainEvent ]
+            }
 
     let updateHeaders
         (newHeaders: (string * string) list)
-        (Resource resourceData: ValidatedResource)
+        (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
         let validateKeyValuePairs pairs =
             pairs
@@ -183,17 +237,27 @@ module Resource =
         match validateKeyValuePairs newHeaders with
         | Error err -> Error err
         | Ok validHeaders ->
-            Ok(
-                Resource {
-                    resourceData with
-                        Headers = validHeaders
-                        UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let oldHeaders = resource.State.Headers
+
+            let updatedResourceData = {
+                resource.State with
+                    Headers = validHeaders
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let headersChangedEvent =
+                ResourceEvents.resourceUpdated resource.State.Id [
+                    ResourceChange.HeadersChanged(oldHeaders, validHeaders)
+                ]
+
+            Ok {
+                State = updatedResourceData
+                UncommittedEvents = resource.UncommittedEvents @ [ headersChangedEvent :> IDomainEvent ]
+            }
 
     let updateBody
         (newBody: (string * string) list)
-        (Resource resourceData: ValidatedResource)
+        (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
         let validateKeyValuePairs pairs =
             pairs
@@ -211,32 +275,57 @@ module Resource =
         match validateKeyValuePairs newBody with
         | Error err -> Error err
         | Ok validBody ->
-            Ok(
-                Resource {
-                    resourceData with
-                        Body = validBody
-                        UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let oldBody = resource.State.Body
+
+            let updatedResourceData = {
+                resource.State with
+                    Body = validBody
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let bodyChangedEvent =
+                ResourceEvents.resourceUpdated resource.State.Id [ ResourceChange.BodyChanged(oldBody, validBody) ]
+
+            Ok {
+                State = updatedResourceData
+                UncommittedEvents = resource.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ]
+            }
+
+    // Delete resource with event tracking
+    let markForDeletion (resource: ValidatedResource) : ValidatedResource =
+        let resourceDeletedEvent = ResourceEvents.resourceDeleted resource.State.Id
+
+        {
+            resource with
+                UncommittedEvents = resource.UncommittedEvents @ [ resourceDeletedEvent :> IDomainEvent ]
+        }
+
+    // Event management functions
+    let getUncommittedEvents (resource: ValidatedResource) : IDomainEvent list = resource.UncommittedEvents
+
+    let markEventsAsCommitted (resource: ValidatedResource) : ValidatedResource = {
+        resource with
+            UncommittedEvents = []
+    }
 
     // Utility functions for accessing data from any state
-    let getId (Resource resourceData: Resource<'State>) : ResourceId = resourceData.Id
+    let getId (resource: Resource) : ResourceId = resource.State.Id
 
-    let getName (Resource resourceData: Resource<'State>) : string = resourceData.Name.Value
+    let getName (resource: Resource) : string = resource.State.Name.Value
 
-    let getDescription (Resource resourceData: Resource<'State>) : string = resourceData.Description.Value
+    let getDescription (resource: Resource) : string = resource.State.Description.Value
 
-    let getBaseUrl (Resource resourceData: Resource<'State>) : string = resourceData.BaseUrl.Value
+    let getBaseUrl (resource: Resource) : string = resource.State.BaseUrl.Value
 
-    let getUrlParameters (Resource resourceData: Resource<'State>) : (string * string) list =
-        resourceData.UrlParameters |> List.map (fun kvp -> (kvp.Key, kvp.Value))
+    let getUrlParameters (resource: Resource) : (string * string) list =
+        resource.State.UrlParameters |> List.map (fun kvp -> (kvp.Key, kvp.Value))
 
-    let getHeaders (Resource resourceData: Resource<'State>) : (string * string) list =
-        resourceData.Headers |> List.map (fun kvp -> (kvp.Key, kvp.Value))
+    let getHeaders (resource: Resource) : (string * string) list =
+        resource.State.Headers |> List.map (fun kvp -> (kvp.Key, kvp.Value))
 
-    let getBody (Resource resourceData: Resource<'State>) : (string * string) list =
-        resourceData.Body |> List.map (fun kvp -> (kvp.Key, kvp.Value))
+    let getBody (resource: Resource) : (string * string) list =
+        resource.State.Body |> List.map (fun kvp -> (kvp.Key, kvp.Value))
 
-    let getCreatedAt (Resource resourceData: Resource<'State>) : DateTime = resourceData.CreatedAt
+    let getCreatedAt (resource: Resource) : DateTime = resource.State.CreatedAt
 
-    let getUpdatedAt (Resource resourceData: Resource<'State>) : DateTime = resourceData.UpdatedAt
+    let getUpdatedAt (resource: Resource) : DateTime = resource.State.UpdatedAt

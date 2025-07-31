@@ -15,18 +15,20 @@ type AppData = {
     UpdatedAt: DateTime
 }
 
-// App type parameterized by validation state
-type App<'State> =
-    | App of AppData
+// App type with event collection
+type App = EventSourcingAggregate<AppData>
 
-    interface IEntity<AppId> with
-        member this.Id =
-            let (App appData) = this
-            appData.Id
+module AppAggregateHelpers =
+    let getEntityId (app: App) : AppId = app.State.Id
+
+    let implementsIEntity (app: App) =
+        { new IEntity<AppId> with
+            member _.Id = app.State.Id
+        }
 
 // Type aliases for clarity
-type UnvalidatedApp = App<Unvalidated> // From DTOs - potentially unsafe
-type ValidatedApp = App<Validated> // Validated domain model and database data
+type UnvalidatedApp = App // From DTOs - potentially unsafe
+type ValidatedApp = App // Validated domain model and database data
 
 module App =
     // Validate input
@@ -35,8 +37,16 @@ module App =
         | Error err -> Error err
         | Ok validTitle -> Ok { input with Title = validTitle.Value }
 
+    // Create app from existing data without events (for loading from database)
+    let fromData (appData: AppData) : ValidatedApp = {
+        State = appData
+        UncommittedEvents = []
+    }
+
     // Validate unvalidated app -> validated app
-    let validate (App appData: UnvalidatedApp) : Result<ValidatedApp, DomainError> =
+    let validate (app: UnvalidatedApp) : Result<ValidatedApp, DomainError> =
+        let appData = app.State
+
         match AppName.Create(appData.Name) with
         | Error err -> Error err
         | Ok validName ->
@@ -55,28 +65,37 @@ module App =
             match validateInputs appData.Inputs with
             | Error err -> Error err
             | Ok validInputs ->
-                Ok(
-                    App {
+                Ok {
+                    State = {
                         appData with
                             Name = validName.Value
                             Inputs = validInputs
                     }
-                )
+                    UncommittedEvents = app.UncommittedEvents
+                }
 
-    // Business logic operations on validated apps
-    let updateName (newName: string) (App appData: ValidatedApp) : Result<ValidatedApp, DomainError> =
+    // Business logic operations on validated apps with event tracking
+    let updateName (newName: string) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
         match AppName.Create(newName) with
         | Error err -> Error err
         | Ok validName ->
-            Ok(
-                App {
-                    appData with
-                        Name = validName.Value
-                        UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let oldName = AppName.Create(app.State.Name) |> Result.defaultValue (AppName(""))
 
-    let updateInputs (newInputs: Input list) (App appData: ValidatedApp) : Result<ValidatedApp, DomainError> =
+            let updatedAppData = {
+                app.State with
+                    Name = validName.Value
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let nameChangedEvent =
+                AppEvents.appUpdated app.State.Id [ AppChange.NameChanged(oldName, validName) ]
+
+            Ok {
+                State = updatedAppData
+                UncommittedEvents = app.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
+            }
+
+    let updateInputs (newInputs: Input list) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
         let validateInputs inputs =
             let rec validateList acc remaining =
                 match remaining with
@@ -91,37 +110,74 @@ module App =
         match validateInputs newInputs with
         | Error err -> Error err
         | Ok validInputs ->
-            Ok(
-                App {
-                    appData with
-                        Inputs = validInputs
-                        UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let oldInputs = app.State.Inputs
 
-    // Create a new validated app
-    let create (name: string) (folderId: FolderId) (inputs: Input list) : Result<ValidatedApp, DomainError> =
-        let unvalidatedApp =
-            App {
-                Id = AppId.NewId()
-                Name = name
-                FolderId = folderId
-                Inputs = inputs
-                CreatedAt = DateTime.UtcNow
-                UpdatedAt = DateTime.UtcNow
+            let updatedAppData = {
+                app.State with
+                    Inputs = validInputs
+                    UpdatedAt = DateTime.UtcNow
             }
 
-        validate unvalidatedApp
+            let inputsChangedEvent =
+                AppEvents.appUpdated app.State.Id [ AppChange.InputsChanged(oldInputs, validInputs) ]
+
+            Ok {
+                State = updatedAppData
+                UncommittedEvents = app.UncommittedEvents @ [ inputsChangedEvent :> IDomainEvent ]
+            }
+
+    // Create a new validated app with events
+    let create (name: string) (folderId: FolderId) (inputs: Input list) : Result<ValidatedApp, DomainError> =
+        let appData = {
+            Id = AppId.NewId()
+            Name = name
+            FolderId = folderId
+            Inputs = inputs
+            CreatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow
+        }
+
+        let unvalidatedApp = {
+            State = appData
+            UncommittedEvents = []
+        }
+
+        match validate unvalidatedApp with
+        | Error err -> Error err
+        | Ok validatedApp ->
+            let validName = AppName.Create(name) |> Result.defaultValue (AppName(""))
+
+            let appCreatedEvent =
+                AppEvents.appCreated appData.Id validName (Some folderId) inputs
+
+            Ok {
+                validatedApp with
+                    UncommittedEvents = [ appCreatedEvent :> IDomainEvent ]
+            }
+
+    // Delete app with event tracking
+    let markForDeletion (app: ValidatedApp) : ValidatedApp =
+        let appDeletedEvent = AppEvents.appDeleted app.State.Id
+
+        {
+            app with
+                UncommittedEvents = app.UncommittedEvents @ [ appDeletedEvent :> IDomainEvent ]
+        }
+
+    // Event management functions
+    let getUncommittedEvents (app: ValidatedApp) : IDomainEvent list = app.UncommittedEvents
+
+    let markEventsAsCommitted (app: ValidatedApp) : ValidatedApp = { app with UncommittedEvents = [] }
 
     // Utility functions for accessing data from any state
-    let getId (App appData: App<'State>) : AppId = appData.Id
+    let getId (app: App) : AppId = app.State.Id
 
-    let getName (App appData: App<'State>) : string = appData.Name
+    let getName (app: App) : string = app.State.Name
 
-    let getFolderId (App appData: App<'State>) : FolderId = appData.FolderId
+    let getFolderId (app: App) : FolderId = app.State.FolderId
 
-    let getInputs (App appData: App<'State>) : Input list = appData.Inputs
+    let getInputs (app: App) : Input list = app.State.Inputs
 
-    let getCreatedAt (App appData: App<'State>) : DateTime = appData.CreatedAt
+    let getCreatedAt (app: App) : DateTime = app.State.CreatedAt
 
-    let getUpdatedAt (App appData: App<'State>) : DateTime = appData.UpdatedAt
+    let getUpdatedAt (app: App) : DateTime = app.State.UpdatedAt

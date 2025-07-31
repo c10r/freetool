@@ -81,7 +81,7 @@ module AppEntityMapper =
         let inputsJson = JsonSerializer.Deserialize<InputJson list>(entity.Inputs)
         let inputs = inputsJson |> List.map inputToDomain
 
-        App {
+        let appData = {
             Id = AppId.FromGuid(entity.Id)
             Name = entity.Name
             FolderId = FolderId.FromGuid(entity.FolderId)
@@ -90,8 +90,11 @@ module AppEntityMapper =
             UpdatedAt = entity.UpdatedAt
         }
 
+        App.fromData appData
+
     // Domain -> Entity conversions (can convert from any validation state)
-    let toEntity (App appData: App<'State>) : AppEntity =
+    let toEntity (app: App) : AppEntity =
+        let appData = app.State
         let inputsJson = appData.Inputs |> List.map inputFromDomain
         let inputsJsonString = JsonSerializer.Serialize(inputsJson)
 

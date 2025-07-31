@@ -3,6 +3,7 @@ namespace Freetool.Domain.Entities
 open System
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
+open Freetool.Domain.Events
 
 // Core folder data that's shared across all states
 type FolderData = {
@@ -13,65 +14,110 @@ type FolderData = {
     UpdatedAt: DateTime
 }
 
-// Folder type parameterized by validation state
-type Folder<'State> =
-    | Folder of FolderData
+// Folder type with event collection
+type Folder = EventSourcingAggregate<FolderData>
 
-    interface IEntity<FolderId> with
-        member this.Id =
-            let (Folder folderData) = this
-            folderData.Id
+module FolderAggregateHelpers =
+    let getEntityId (folder: Folder) : FolderId = folder.State.Id
+
+    let implementsIEntity (folder: Folder) =
+        { new IEntity<FolderId> with
+            member _.Id = folder.State.Id
+        }
 
 // Type aliases for clarity
-type UnvalidatedFolder = Folder<Unvalidated> // From DTOs - potentially unsafe
-type ValidatedFolder = Folder<Validated> // Validated domain model and database data
+type UnvalidatedFolder = Folder // From DTOs - potentially unsafe
+type ValidatedFolder = Folder // Validated domain model and database data
 
 module Folder =
-    // Create a new validated folder from primitive values
+    // Create folder from existing data without events (for loading from database)
+    let fromData (folderData: FolderData) : ValidatedFolder = {
+        State = folderData
+        UncommittedEvents = []
+    }
+
+    // Create a new validated folder with events
     let create (name: string) (parentId: FolderId option) : Result<ValidatedFolder, DomainError> =
         match FolderName.Create(name) with
         | Error err -> Error err
         | Ok validName ->
-            Ok(
-                Folder {
-                    Id = FolderId.NewId()
-                    Name = validName
-                    ParentId = parentId
-                    CreatedAt = DateTime.UtcNow
-                    UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let folderData = {
+                Id = FolderId.NewId()
+                Name = validName
+                ParentId = parentId
+                CreatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow
+            }
 
-    // Business logic operations on validated folders
-    let updateName (newName: string) (Folder folderData: ValidatedFolder) : Result<ValidatedFolder, DomainError> =
+            let folderCreatedEvent = FolderEvents.folderCreated folderData.Id validName parentId
+
+            Ok {
+                State = folderData
+                UncommittedEvents = [ folderCreatedEvent :> IDomainEvent ]
+            }
+
+    // Business logic operations on validated folders with event tracking
+    let updateName (newName: string) (folder: ValidatedFolder) : Result<ValidatedFolder, DomainError> =
         match FolderName.Create(newName) with
         | Error err -> Error err
         | Ok validName ->
-            Ok(
-                Folder {
-                    folderData with
-                        Name = validName
-                        UpdatedAt = DateTime.UtcNow
-                }
-            )
+            let oldName = folder.State.Name
 
-    let moveToParent (newParentId: FolderId option) (Folder folderData: ValidatedFolder) : ValidatedFolder =
-        Folder {
-            folderData with
+            let updatedFolderData = {
+                folder.State with
+                    Name = validName
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let nameChangedEvent =
+                FolderEvents.folderUpdated folder.State.Id [ FolderChange.NameChanged(oldName, validName) ]
+
+            Ok {
+                State = updatedFolderData
+                UncommittedEvents = folder.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
+            }
+
+    let moveToParent (newParentId: FolderId option) (folder: ValidatedFolder) : ValidatedFolder =
+        let oldParentId = folder.State.ParentId
+
+        let updatedFolderData = {
+            folder.State with
                 ParentId = newParentId
                 UpdatedAt = DateTime.UtcNow
         }
 
+        let parentChangedEvent =
+            FolderEvents.folderUpdated folder.State.Id [ FolderChange.ParentChanged(oldParentId, newParentId) ]
+
+        {
+            State = updatedFolderData
+            UncommittedEvents = folder.UncommittedEvents @ [ parentChangedEvent :> IDomainEvent ]
+        }
+
+    // Delete folder with event tracking
+    let markForDeletion (folder: ValidatedFolder) : ValidatedFolder =
+        let folderDeletedEvent = FolderEvents.folderDeleted folder.State.Id
+
+        {
+            folder with
+                UncommittedEvents = folder.UncommittedEvents @ [ folderDeletedEvent :> IDomainEvent ]
+        }
+
+    // Event management functions
+    let getUncommittedEvents (folder: ValidatedFolder) : IDomainEvent list = folder.UncommittedEvents
+
+    let markEventsAsCommitted (folder: ValidatedFolder) : ValidatedFolder = { folder with UncommittedEvents = [] }
+
     // Utility functions for accessing data from any state
-    let getId (Folder folderData: Folder<'State>) : FolderId = folderData.Id
+    let getId (folder: Folder) : FolderId = folder.State.Id
 
-    let getName (Folder folderData: Folder<'State>) : string = folderData.Name.Value
+    let getName (folder: Folder) : string = folder.State.Name.Value
 
-    let getParentId (Folder folderData: Folder<'State>) : FolderId option = folderData.ParentId
+    let getParentId (folder: Folder) : FolderId option = folder.State.ParentId
 
-    let getCreatedAt (Folder folderData: Folder<'State>) : DateTime = folderData.CreatedAt
+    let getCreatedAt (folder: Folder) : DateTime = folder.State.CreatedAt
 
-    let getUpdatedAt (Folder folderData: Folder<'State>) : DateTime = folderData.UpdatedAt
+    let getUpdatedAt (folder: Folder) : DateTime = folder.State.UpdatedAt
 
     // Helper function to check if a folder is a root folder (no parent)
-    let isRoot (folder: Folder<'State>) : bool = getParentId folder |> Option.isNone
+    let isRoot (folder: Folder) : bool = getParentId folder |> Option.isNone

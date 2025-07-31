@@ -6,20 +6,20 @@ open Freetool.Domain.ValueObjects
 
 type ResourceChange =
     | NameChanged of oldValue: ResourceName * newValue: ResourceName
-    | DescriptionChanged of oldValue: ResourceDescription option * newValue: ResourceDescription option
+    | DescriptionChanged of oldValue: ResourceDescription * newValue: ResourceDescription
     | BaseUrlChanged of oldValue: BaseUrl * newValue: BaseUrl
     | UrlParametersChanged of oldValue: KeyValuePair list * newValue: KeyValuePair list
     | HeadersChanged of oldValue: KeyValuePair list * newValue: KeyValuePair list
-    | BodyChanged of oldValue: string option * newValue: string option
+    | BodyChanged of oldValue: KeyValuePair list * newValue: KeyValuePair list
 
 type ResourceCreatedEvent = {
     ResourceId: ResourceId
     Name: ResourceName
-    Description: ResourceDescription option
+    Description: ResourceDescription
     BaseUrl: BaseUrl
     UrlParameters: KeyValuePair list
     Headers: KeyValuePair list
-    Body: string option
+    Body: KeyValuePair list
     OccurredAt: DateTime
     EventId: Guid
 } with
@@ -53,11 +53,11 @@ module ResourceEvents =
     let resourceCreated
         (resourceId: ResourceId)
         (name: ResourceName)
-        (description: ResourceDescription option)
+        (description: ResourceDescription)
         (baseUrl: BaseUrl)
         (urlParameters: KeyValuePair list)
         (headers: KeyValuePair list)
-        (body: string option)
+        (body: KeyValuePair list)
         =
         {
             ResourceId = resourceId

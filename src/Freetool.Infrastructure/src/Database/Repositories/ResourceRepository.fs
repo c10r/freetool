@@ -51,7 +51,7 @@ type ResourceRepository(context: FreetoolDbContext) =
                 match Option.ofObj existingEntity with
                 | None -> return Error(NotFound "Resource not found")
                 | Some entity ->
-                    let (Resource resourceData) = resource
+                    let resourceData = resource.State
                     entity.Name <- resourceData.Name.Value
                     entity.Description <- resourceData.Description.Value
                     entity.BaseUrl <- resourceData.BaseUrl.Value

@@ -72,38 +72,46 @@ module AppMapper =
 
         let inputs = dto.Inputs |> List.map inputFromDto
 
-        App {
-            Id = AppId.NewId()
-            Name = dto.Name
-            FolderId = folderId
-            Inputs = inputs
-            CreatedAt = DateTime.UtcNow
-            UpdatedAt = DateTime.UtcNow
+        {
+            State = {
+                Id = AppId.NewId()
+                Name = dto.Name
+                FolderId = folderId
+                Inputs = inputs
+                CreatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow
+            }
+            UncommittedEvents = []
         }
 
-    let fromUpdateNameDto (dto: UpdateAppNameDto) (App appData: ValidatedApp) : UnvalidatedApp =
-        App {
-            appData with
+    let fromUpdateNameDto (dto: UpdateAppNameDto) (app: ValidatedApp) : UnvalidatedApp = {
+        State = {
+            app.State with
                 Name = dto.Name
                 UpdatedAt = DateTime.UtcNow
         }
+        UncommittedEvents = app.UncommittedEvents
+    }
 
-    let fromUpdateInputsDto (dto: UpdateAppInputsDto) (App appData: ValidatedApp) : UnvalidatedApp =
+    let fromUpdateInputsDto (dto: UpdateAppInputsDto) (app: ValidatedApp) : UnvalidatedApp =
         let inputs = dto.Inputs |> List.map inputFromDto
 
-        App {
-            appData with
-                Inputs = inputs
-                UpdatedAt = DateTime.UtcNow
+        {
+            State = {
+                app.State with
+                    Inputs = inputs
+                    UpdatedAt = DateTime.UtcNow
+            }
+            UncommittedEvents = app.UncommittedEvents
         }
 
-    let toDto (App appData: ValidatedApp) : AppDto = {
-        Id = appData.Id.Value.ToString()
-        Name = appData.Name
-        FolderId = appData.FolderId.Value.ToString()
-        Inputs = appData.Inputs |> List.map inputToDto
-        CreatedAt = appData.CreatedAt
-        UpdatedAt = appData.UpdatedAt
+    let toDto (app: ValidatedApp) : AppDto = {
+        Id = app.State.Id.Value.ToString()
+        Name = app.State.Name
+        FolderId = app.State.FolderId.Value.ToString()
+        Inputs = app.State.Inputs |> List.map inputToDto
+        CreatedAt = app.State.CreatedAt
+        UpdatedAt = app.State.UpdatedAt
     }
 
     let toPagedDto (apps: ValidatedApp list) (totalCount: int) (skip: int) (take: int) : PagedAppsDto = {
