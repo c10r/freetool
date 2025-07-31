@@ -13,6 +13,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Freetool.Infrastructure", "
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Freetool.Api", "src\Freetool.Api\Freetool.Api.fsproj", "{1A35741F-433E-4272-8F0D-65A82C0E3D71}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Freetool.Domain.Tests", "src\Freetool.Domain\test\Freetool.Domain.Tests.fsproj", "{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,18 @@ Global
 		{1A35741F-433E-4272-8F0D-65A82C0E3D71}.Release|x64.Build.0 = Release|Any CPU
 		{1A35741F-433E-4272-8F0D-65A82C0E3D71}.Release|x86.ActiveCfg = Release|Any CPU
 		{1A35741F-433E-4272-8F0D-65A82C0E3D71}.Release|x86.Build.0 = Release|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Debug|x64.Build.0 = Debug|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Debug|x86.Build.0 = Debug|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Release|x64.ActiveCfg = Release|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Release|x64.Build.0 = Release|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Release|x86.ActiveCfg = Release|Any CPU
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -80,5 +94,6 @@ Global
 		{2740B9BB-92AF-455F-AB26-AEC4CD6B9F81} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{12406CB1-C0FF-42EF-B30B-34419BCA526F} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{1A35741F-433E-4272-8F0D-65A82C0E3D71} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{BE31C62B-E288-404C-AA73-F0EF3E39DAA1} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

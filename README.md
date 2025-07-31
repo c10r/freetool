@@ -239,7 +239,7 @@ Command handlers use domain methods that automatically generate events:
             | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
 ```
 
-### 📊 Event Store Schema
+### 4. Event Store Schema
 
 Events are stored in a dedicated table with full metadata:
 
