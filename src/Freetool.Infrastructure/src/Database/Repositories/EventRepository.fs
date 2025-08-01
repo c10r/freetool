@@ -2,7 +2,6 @@ namespace Freetool.Infrastructure.Database.Repositories
 
 open System
 open System.Linq
-open System.Threading.Tasks
 open Microsoft.EntityFrameworkCore
 open System.Text.Json
 open Freetool.Domain
@@ -24,7 +23,6 @@ type EventRepository(context: FreetoolDbContext) =
 
             let eventType = event.GetType().Name
 
-            // Extract entity ID from the event
             let entityId =
                 match event with
                 | :? Events.UserCreatedEvent as e -> e.UserId.ToString()

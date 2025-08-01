@@ -19,6 +19,9 @@ type InputDto = {
 
     [<Required>]
     Type: InputTypeDto
+
+    [<Required>]
+    Required: bool
 }
 
 // App DTOs

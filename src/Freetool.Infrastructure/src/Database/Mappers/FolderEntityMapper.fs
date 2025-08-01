@@ -8,9 +8,8 @@ open Freetool.Infrastructure.Database
 module FolderEntityMapper =
     // Entity -> Domain conversions (database data is trusted, so directly to ValidatedFolder)
     let fromEntity (entity: FolderEntity) : ValidatedFolder =
-        // Since we're reading from the database, we trust the data is valid
         let name =
-            FolderName.Create(entity.Name)
+            FolderName.Create(Some entity.Name)
             |> function
                 | Ok n -> n
                 | Error _ -> failwith "Invalid name in database"
@@ -33,7 +32,7 @@ module FolderEntityMapper =
         }
 
     // Domain -> Entity conversions (can convert from any validation state)
-    let toEntity (folder: EventSourcingAggregate<FolderData>) : FolderEntity =
+    let toEntity (folder: ValidatedFolder) : FolderEntity =
         let entity = FolderEntity()
         entity.Id <- folder.State.Id.Value
         entity.Name <- folder.State.Name.Value

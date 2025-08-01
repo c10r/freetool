@@ -6,7 +6,6 @@ open Freetool.Domain.Events
 open Freetool.Domain.ValueObjects
 open Freetool.Infrastructure.Database
 
-// JSON serialization types for inputs
 type InputTypeJson =
     | Email
     | Date
@@ -15,10 +14,13 @@ type InputTypeJson =
     | Boolean
     | MultiChoice of Choices: InputTypeJson list
 
-type InputJson = { Title: string; Type: InputTypeJson }
+type InputJson = {
+    Title: string
+    Type: InputTypeJson
+    Required: bool
+}
 
 module AppEntityMapper =
-    // Helper functions for input type conversion
     let rec inputTypeFromDomain (inputType: InputType) : InputTypeJson =
         match inputType.Value with
         | InputTypeValue.Email -> Email
@@ -69,11 +71,13 @@ module AppEntityMapper =
     let inputFromDomain (input: Input) : InputJson = {
         Title = input.Title
         Type = inputTypeFromDomain input.Type
+        Required = input.Required
     }
 
     let inputToDomain (inputJson: InputJson) : Input = {
         Title = inputJson.Title
         Type = inputTypeToDomain inputJson.Type
+        Required = inputJson.Required
     }
 
     // Entity -> Domain conversions (database data is trusted, so directly to ValidatedApp)

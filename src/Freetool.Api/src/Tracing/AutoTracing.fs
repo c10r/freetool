@@ -2,13 +2,11 @@ namespace Freetool.Api.Tracing
 
 open System
 open System.Diagnostics
-open System.Reflection
 open Microsoft.FSharp.Reflection
 open Freetool.Application.Interfaces
 
 module AutoTracing =
 
-    // Extract span name from discriminated union case using naming conventions
     let getSpanName (entityName: string) (command: obj) : string =
         let commandType = command.GetType()
 
@@ -31,7 +29,6 @@ module AutoTracing =
         else
             $"{entityName.ToLowerInvariant()}.unknown"
 
-    // Extract operation type from command using naming conventions
     let getOperationType (command: obj) : string =
         let commandType = command.GetType()
 
@@ -39,7 +36,6 @@ module AutoTracing =
             let case, _ = FSharpValue.GetUnionFields(command, commandType)
             let caseName = case.Name.ToLowerInvariant()
 
-            // Determine operation type from command name patterns
             if caseName.StartsWith("create") then
                 "create"
             elif
@@ -62,7 +58,6 @@ module AutoTracing =
         else
             "unknown"
 
-    // Get attribute name from field name using naming conventions
     let getAttributeName (prefix: string) (fieldName: string) : string =
         let snakeCaseName =
             fieldName
@@ -76,13 +71,11 @@ module AutoTracing =
 
         $"{prefix}.{snakeCaseName}"
 
-    // Check if field should be skipped (sensitive data patterns)
     let shouldSkipField (fieldName: string) : bool =
         let sensitivePatterns = [| "password"; "token"; "secret"; "key"; "credential" |]
         let lowerName = fieldName.ToLowerInvariant()
         sensitivePatterns |> Array.exists lowerName.Contains
 
-    // Automatically extract tracing attributes from any object using reflection
     let rec addObjectAttributes (activity: Activity option) (prefix: string) (obj: obj) =
         if obj <> null then
             let objType = obj.GetType()
@@ -151,7 +144,6 @@ module AutoTracing =
                             if not (String.IsNullOrEmpty(stringValue)) then
                                 Tracing.addAttribute activity (getAttributeName prefix field.Name) stringValue)
 
-    // Automatically extract attributes from command results
     let addResultAttributes (activity: Activity option) (result: obj) =
         if result <> null then
             let resultType = result.GetType()
@@ -182,7 +174,6 @@ module AutoTracing =
                             | _ -> ())
                 | _ -> ()
 
-    // Create a generic tracing decorator using pure reflection
     let createTracingDecorator<'TRepository, 'TCommand, 'TResult>
         (entityName: string)
         (inner: IGenericCommandHandler<'TRepository, 'TCommand, 'TResult>)

@@ -14,3 +14,8 @@ type IEntity<'TId> =
 type IDomainEvent =
     abstract member OccurredAt: DateTime
     abstract member EventId: Guid
+
+type EventSourcingAggregate<'T> = {
+    State: 'T
+    UncommittedEvents: IDomainEvent list
+}

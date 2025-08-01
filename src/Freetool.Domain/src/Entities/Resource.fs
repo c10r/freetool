@@ -5,11 +5,11 @@ open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 
-// Core resource data that's shared across all states
 type ResourceData = {
     Id: ResourceId
     Name: ResourceName
     Description: ResourceDescription
+    HttpMethod: HttpMethod
     BaseUrl: BaseUrl
     UrlParameters: KeyValuePair list
     Headers: KeyValuePair list
@@ -18,7 +18,6 @@ type ResourceData = {
     UpdatedAt: DateTime
 }
 
-// Resource type with event collection
 type Resource = EventSourcingAggregate<ResourceData>
 
 module ResourceAggregateHelpers =
@@ -34,13 +33,11 @@ type UnvalidatedResource = Resource // From DTOs - potentially unsafe
 type ValidatedResource = Resource // Validated domain model and database data
 
 module Resource =
-    // Create resource from existing data without events (for loading from database)
     let fromData (resourceData: ResourceData) : ValidatedResource = {
         State = resourceData
         UncommittedEvents = []
     }
 
-    // Create a new validated resource with events
     let create
         (name: string)
         (description: string)
@@ -48,24 +45,25 @@ module Resource =
         (urlParameters: (string * string) list)
         (headers: (string * string) list)
         (body: (string * string) list)
+        (httpMethod: string)
         : Result<ValidatedResource, DomainError> =
         // Validate name
-        match ResourceName.Create(name) with
+        match ResourceName.Create(Some name) with
         | Error err -> Error err
         | Ok validName ->
             // Validate description
-            match ResourceDescription.Create(description) with
+            match ResourceDescription.Create(Some description) with
             | Error err -> Error err
             | Ok validDescription ->
                 // Validate base URL
-                match BaseUrl.Create(baseUrl) with
+                match BaseUrl.Create(Some baseUrl) with
                 | Error err -> Error err
                 | Ok validBaseUrl ->
                     // Validate URL parameters
                     let validateKeyValuePairs pairs =
                         pairs
                         |> List.fold
-                            (fun acc (key, value) ->
+                            (fun acc (key: string, value: string) ->
                                 match acc with
                                 | Error err -> Error err
                                 | Ok validPairs ->
@@ -84,36 +82,41 @@ module Resource =
                             match validateKeyValuePairs body with
                             | Error err -> Error err
                             | Ok validBody ->
-                                let resourceData = {
-                                    Id = ResourceId.NewId()
-                                    Name = validName
-                                    Description = validDescription
-                                    BaseUrl = validBaseUrl
-                                    UrlParameters = validUrlParams
-                                    Headers = validHeaders
-                                    Body = validBody
-                                    CreatedAt = DateTime.UtcNow
-                                    UpdatedAt = DateTime.UtcNow
-                                }
+                                // Validate HTTP method
+                                match HttpMethod.Create(httpMethod) with
+                                | Error err -> Error err
+                                | Ok validHttpMethod ->
+                                    let resourceData = {
+                                        Id = ResourceId.NewId()
+                                        Name = validName
+                                        Description = validDescription
+                                        HttpMethod = validHttpMethod
+                                        BaseUrl = validBaseUrl
+                                        UrlParameters = validUrlParams
+                                        Headers = validHeaders
+                                        Body = validBody
+                                        CreatedAt = DateTime.UtcNow
+                                        UpdatedAt = DateTime.UtcNow
+                                    }
 
-                                let resourceCreatedEvent =
-                                    ResourceEvents.resourceCreated
-                                        resourceData.Id
-                                        validName
-                                        validDescription
-                                        validBaseUrl
-                                        validUrlParams
-                                        validHeaders
-                                        validBody
+                                    let resourceCreatedEvent =
+                                        ResourceEvents.resourceCreated
+                                            resourceData.Id
+                                            validName
+                                            validDescription
+                                            validBaseUrl
+                                            validUrlParams
+                                            validHeaders
+                                            validBody
+                                            validHttpMethod
 
-                                Ok {
-                                    State = resourceData
-                                    UncommittedEvents = [ resourceCreatedEvent :> IDomainEvent ]
-                                }
+                                    Ok {
+                                        State = resourceData
+                                        UncommittedEvents = [ resourceCreatedEvent :> IDomainEvent ]
+                                    }
 
-    // Business logic operations on validated resources with event tracking
     let updateName (newName: string) (resource: ValidatedResource) : Result<ValidatedResource, DomainError> =
-        match ResourceName.Create(newName) with
+        match ResourceName.Create(Some newName) with
         | Error err -> Error err
         | Ok validName ->
             let oldName = resource.State.Name
@@ -136,7 +139,7 @@ module Resource =
         (newDescription: string)
         (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
-        match ResourceDescription.Create(newDescription) with
+        match ResourceDescription.Create(Some newDescription) with
         | Error err -> Error err
         | Ok validDescription ->
             let oldDescription = resource.State.Description
@@ -158,7 +161,7 @@ module Resource =
             }
 
     let updateBaseUrl (newBaseUrl: string) (resource: ValidatedResource) : Result<ValidatedResource, DomainError> =
-        match BaseUrl.Create(newBaseUrl) with
+        match BaseUrl.Create(Some newBaseUrl) with
         | Error err -> Error err
         | Ok validBaseUrl ->
             let oldBaseUrl = resource.State.BaseUrl
@@ -186,7 +189,7 @@ module Resource =
         let validateKeyValuePairs pairs =
             pairs
             |> List.fold
-                (fun acc (key, value) ->
+                (fun acc (key: string, value: string) ->
                     match acc with
                     | Error err -> Error err
                     | Ok validPairs ->
@@ -224,7 +227,7 @@ module Resource =
         let validateKeyValuePairs pairs =
             pairs
             |> List.fold
-                (fun acc (key, value) ->
+                (fun acc (key: string, value: string) ->
                     match acc with
                     | Error err -> Error err
                     | Ok validPairs ->
@@ -262,7 +265,7 @@ module Resource =
         let validateKeyValuePairs pairs =
             pairs
             |> List.fold
-                (fun acc (key, value) ->
+                (fun acc (key: string, value: string) ->
                     match acc with
                     | Error err -> Error err
                     | Ok validPairs ->
@@ -291,7 +294,6 @@ module Resource =
                 UncommittedEvents = resource.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ]
             }
 
-    // Delete resource with event tracking
     let markForDeletion (resource: ValidatedResource) : ValidatedResource =
         let resourceDeletedEvent = ResourceEvents.resourceDeleted resource.State.Id
 
@@ -300,7 +302,6 @@ module Resource =
                 UncommittedEvents = resource.UncommittedEvents @ [ resourceDeletedEvent :> IDomainEvent ]
         }
 
-    // Event management functions
     let getUncommittedEvents (resource: ValidatedResource) : IDomainEvent list = resource.UncommittedEvents
 
     let markEventsAsCommitted (resource: ValidatedResource) : ValidatedResource = {
@@ -308,7 +309,6 @@ module Resource =
             UncommittedEvents = []
     }
 
-    // Utility functions for accessing data from any state
     let getId (resource: Resource) : ResourceId = resource.State.Id
 
     let getName (resource: Resource) : string = resource.State.Name.Value
@@ -316,6 +316,8 @@ module Resource =
     let getDescription (resource: Resource) : string = resource.State.Description.Value
 
     let getBaseUrl (resource: Resource) : string = resource.State.BaseUrl.Value
+
+    let getHttpMethod (resource: Resource) : string = resource.State.HttpMethod.ToString()
 
     let getUrlParameters (resource: Resource) : (string * string) list =
         resource.State.UrlParameters |> List.map (fun kvp -> (kvp.Key, kvp.Value))

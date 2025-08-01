@@ -27,6 +27,10 @@ type CreateResourceDto = {
     [<Url(ErrorMessage = "Base URL must be a valid URL")>]
     BaseUrl: string
 
+    [<Required>]
+    [<StringLength(10, MinimumLength = 1, ErrorMessage = "HTTP method must be between 1 and 10 characters")>]
+    HttpMethod: string
+
     UrlParameters: KeyValuePairDto list
 
     Headers: KeyValuePairDto list
@@ -64,6 +68,7 @@ type ResourceDto = {
     Name: string
     Description: string
     BaseUrl: string
+    HttpMethod: string
     UrlParameters: KeyValuePairDto list
     Headers: KeyValuePairDto list
     Body: KeyValuePairDto list

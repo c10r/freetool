@@ -7,15 +7,13 @@ type Url =
     private
     | Url of string
 
-    static member Create(url: string) : Result<Url, DomainError> =
-        if System.String.IsNullOrWhiteSpace(url) then
-            Error(ValidationError "URL cannot be empty")
-        elif url.Length > 2_000 then
-            Error(ValidationError "URL cannot exceed 2000 characters")
-        elif not (Url.isValidFormat url) then
-            Error(ValidationError "Invalid URL format")
-        else
-            Ok(Url url)
+    static member Create(url: string option) : Result<Url, DomainError> =
+        match url with
+        | None
+        | Some "" -> Error(ValidationError "URL cannot be empty")
+        | Some urlValue when urlValue.Length > 2_000 -> Error(ValidationError "URL cannot exceed 2000 characters")
+        | Some urlValue when not (Url.isValidFormat urlValue) -> Error(ValidationError "Invalid URL format")
+        | Some urlValue -> Ok(Url urlValue)
 
     member this.Value =
         let (Url url) = this

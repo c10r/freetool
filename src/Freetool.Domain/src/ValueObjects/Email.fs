@@ -7,15 +7,13 @@ type Email =
     private
     | Email of string
 
-    static member Create(email: string) : Result<Email, DomainError> =
-        if System.String.IsNullOrWhiteSpace(email) then
-            Error(ValidationError "Email cannot be empty")
-        elif email.Length > 254 then
-            Error(ValidationError "Email cannot exceed 254 characters")
-        elif not (Email.isValidFormat email) then
-            Error(ValidationError "Invalid email format")
-        else
-            Ok(Email email)
+    static member Create(email: string option) : Result<Email, DomainError> =
+        match email with
+        | None
+        | Some "" -> Error(ValidationError "Email cannot be empty")
+        | Some emailValue when emailValue.Length > 254 -> Error(ValidationError "Email cannot exceed 254 characters")
+        | Some emailValue when not (Email.isValidFormat emailValue) -> Error(ValidationError "Invalid email format")
+        | Some emailValue -> Ok(Email emailValue)
 
     member this.Value =
         let (Email email) = this

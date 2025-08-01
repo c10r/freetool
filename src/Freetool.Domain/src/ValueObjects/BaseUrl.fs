@@ -7,15 +7,13 @@ type BaseUrl =
     private
     | BaseUrl of string
 
-    static member Create(url: string) : Result<BaseUrl, DomainError> =
-        if System.String.IsNullOrWhiteSpace(url) then
-            Error(ValidationError "Base URL cannot be empty")
-        elif url.Length > 1000 then
-            Error(ValidationError "Base URL cannot exceed 1000 characters")
-        elif not (BaseUrl.isValidFormat url) then
-            Error(ValidationError "Invalid URL format")
-        else
-            Ok(BaseUrl(url.Trim()))
+    static member Create(url: string option) : Result<BaseUrl, DomainError> =
+        match url with
+        | None
+        | Some "" -> Error(ValidationError "Base URL cannot be empty")
+        | Some urlValue when urlValue.Length > 1000 -> Error(ValidationError "Base URL cannot exceed 1000 characters")
+        | Some urlValue when not (BaseUrl.isValidFormat urlValue) -> Error(ValidationError "Invalid URL format")
+        | Some urlValue -> Ok(BaseUrl(urlValue.Trim()))
 
     member this.Value =
         let (BaseUrl url) = this

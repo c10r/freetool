@@ -22,7 +22,7 @@ module ResourceHandler =
             | CreateResource validatedResource ->
                 // Check if name already exists
                 let resourceName =
-                    ResourceName.Create(Resource.getName validatedResource)
+                    ResourceName.Create(Some(Resource.getName validatedResource))
                     |> function
                         | Ok n -> n
                         | Error _ -> failwith "ValidatedResource should have valid name"
@@ -62,7 +62,7 @@ module ResourceHandler =
                     | Some resource ->
                         // Check if the new name already exists (only if it's different from current name)
                         if Resource.getName resource <> dto.Name then
-                            match ResourceName.Create(dto.Name) with
+                            match ResourceName.Create(Some dto.Name) with
                             | Error error -> return Error error
                             | Ok newResourceName ->
                                 let! existsByName = resourceRepository.ExistsByNameAsync newResourceName

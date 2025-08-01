@@ -5,7 +5,6 @@ open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 
-// Core user data that's shared across all states
 type UserData = {
     Id: UserId
     Name: string
@@ -15,13 +14,6 @@ type UserData = {
     UpdatedAt: DateTime
 }
 
-// Event-sourcing aggregate wrapper
-type EventSourcingAggregate<'T> = {
-    State: 'T
-    UncommittedEvents: IDomainEvent list
-}
-
-// User type with event collection
 type User = EventSourcingAggregate<UserData>
 
 module UserAggregateHelpers =
@@ -37,7 +29,6 @@ type UnvalidatedUser = User // From DTOs - potentially unsafe
 type ValidatedUser = User // Validated domain model and database data
 
 module User =
-    // Create new user with events
     let create (name: string) (email: Email) (profilePicUrl: string option) : ValidatedUser =
         let userData = {
             Id = UserId.NewId()
@@ -50,7 +41,8 @@ module User =
 
         let userCreatedEvent =
             let profilePicUrlOption =
-                profilePicUrl |> Option.bind (fun url -> Url.Create(url) |> Result.toOption)
+                profilePicUrl
+                |> Option.bind (fun url -> Url.Create(Some url) |> Result.toOption)
 
             UserEvents.userCreated userData.Id userData.Name email profilePicUrlOption
 
@@ -59,13 +51,11 @@ module User =
             UncommittedEvents = [ userCreatedEvent :> IDomainEvent ]
         }
 
-    // Create user from existing data without events (for loading from database)
     let fromData (userData: UserData) : ValidatedUser = {
         State = userData
         UncommittedEvents = []
     }
 
-    // Validate unvalidated user -> validated user
     let validate (user: UnvalidatedUser) : Result<ValidatedUser, DomainError> =
         let userData = user.State
 
@@ -75,7 +65,7 @@ module User =
             Error(ValidationError "User name cannot exceed 100 characters")
         else
             // Validate email format
-            match Email.Create(userData.Email) with
+            match Email.Create(Some userData.Email) with
             | Error err -> Error err
             | Ok validEmail ->
                 // Validate profile pic URL if present
@@ -89,7 +79,7 @@ module User =
                         UncommittedEvents = user.UncommittedEvents
                     }
                 | Some urlString ->
-                    match Url.Create(urlString) with
+                    match Url.Create(Some urlString) with
                     | Error err -> Error err
                     | Ok validUrl ->
                         Ok {
@@ -101,23 +91,22 @@ module User =
                             UncommittedEvents = user.UncommittedEvents
                         }
 
-    // Business logic operations on validated users with event tracking
-    let updateName (newName: string) (user: ValidatedUser) : Result<ValidatedUser, DomainError> =
-        if String.IsNullOrWhiteSpace newName then
-            Error(ValidationError "User name cannot be empty")
-        elif newName.Length > 100 then
-            Error(ValidationError "User name cannot exceed 100 characters")
-        else
+    let updateName (newName: string option) (user: ValidatedUser) : Result<ValidatedUser, DomainError> =
+        match newName with
+        | None
+        | Some "" -> Error(ValidationError "User name cannot be empty")
+        | Some nameValue when nameValue.Length > 100 -> Error(ValidationError "User name cannot exceed 100 characters")
+        | Some nameValue ->
             let oldName = user.State.Name
 
             let updatedUserData = {
                 user.State with
-                    Name = newName.Trim()
+                    Name = nameValue.Trim()
                     UpdatedAt = DateTime.UtcNow
             }
 
             let nameChangedEvent =
-                UserEvents.userUpdated user.State.Id [ UserChange.NameChanged(oldName, newName.Trim()) ]
+                UserEvents.userUpdated user.State.Id [ UserChange.NameChanged(oldName, nameValue.Trim()) ]
 
             Ok {
                 State = updatedUserData
@@ -125,10 +114,10 @@ module User =
             }
 
     let updateEmail (newEmail: string) (user: ValidatedUser) : Result<ValidatedUser, DomainError> =
-        match Email.Create(newEmail) with
+        match Email.Create(Some newEmail) with
         | Error err -> Error err
         | Ok newEmailObj ->
-            match Email.Create(user.State.Email) with
+            match Email.Create(Some user.State.Email) with
             | Error _ -> Error(ValidationError "Current email is invalid")
             | Ok oldEmailObj ->
                 let updatedUserData = {
@@ -148,7 +137,7 @@ module User =
     let updateProfilePic (newProfilePicUrl: string option) (user: ValidatedUser) : Result<ValidatedUser, DomainError> =
         let oldProfilePicUrl =
             user.State.ProfilePicUrl
-            |> Option.map Url.Create
+            |> Option.map (fun url -> Url.Create(Some url))
             |> Option.bind (function
                 | Ok url -> Some url
                 | Error _ -> None)
@@ -169,7 +158,7 @@ module User =
                 UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
             }
         | Some urlString ->
-            match Url.Create(urlString) with
+            match Url.Create(Some urlString) with
             | Error err -> Error err
             | Ok validUrl ->
                 let newProfilePicUrlObj = Some validUrl
@@ -191,7 +180,7 @@ module User =
     let removeProfilePicture (user: ValidatedUser) : ValidatedUser =
         let oldProfilePicUrl =
             user.State.ProfilePicUrl
-            |> Option.map Url.Create
+            |> Option.map (fun url -> Url.Create(Some url))
             |> Option.bind (function
                 | Ok url -> Some url
                 | Error _ -> None)
@@ -210,7 +199,6 @@ module User =
             UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
         }
 
-    // Delete user with event tracking
     let markForDeletion (user: ValidatedUser) : ValidatedUser =
         let userDeletedEvent = UserEvents.userDeleted user.State.Id
 
@@ -219,12 +207,10 @@ module User =
                 UncommittedEvents = user.UncommittedEvents @ [ userDeletedEvent :> IDomainEvent ]
         }
 
-    // Event management functions
     let getUncommittedEvents (user: ValidatedUser) : IDomainEvent list = user.UncommittedEvents
 
     let markEventsAsCommitted (user: ValidatedUser) : ValidatedUser = { user with UncommittedEvents = [] }
 
-    // Utility functions for accessing data from any state
     let getId (user: User) : UserId = user.State.Id
 
     let getName (user: User) : string = user.State.Name

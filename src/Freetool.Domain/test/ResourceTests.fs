@@ -22,7 +22,7 @@ let ``Resource creation should generate ResourceCreatedEvent`` () =
 
     // Act
     let result =
-        Resource.create "User API" "Manages user data" "https://api.example.com/users" urlParams headers body
+        Resource.create "User API" "Manages user data" "https://api.example.com/users" urlParams headers body "GET"
 
     // Assert
     match result with
@@ -45,7 +45,7 @@ let ``Resource creation should generate ResourceCreatedEvent`` () =
 let ``Resource name update should generate correct event`` () =
     // Arrange
     let resource =
-        Resource.create "Old API Name" "Description" "https://api.example.com" [] [] []
+        Resource.create "Old API Name" "Description" "https://api.example.com" [] [] [] "GET"
         |> unwrapResult
 
     // Act
@@ -73,7 +73,7 @@ let ``Resource name update should generate correct event`` () =
 let ``Resource description update should generate correct event`` () =
     // Arrange
     let resource =
-        Resource.create "API Name" "Old description" "https://api.example.com" [] [] []
+        Resource.create "API Name" "Old description" "https://api.example.com" [] [] [] "GET"
         |> unwrapResult
 
     // Act
@@ -101,7 +101,7 @@ let ``Resource description update should generate correct event`` () =
 let ``Resource base URL update should generate correct event`` () =
     // Arrange
     let resource =
-        Resource.create "API Name" "Description" "https://old-api.example.com" [] [] []
+        Resource.create "API Name" "Description" "https://old-api.example.com" [] [] [] "POST"
         |> unwrapResult
 
     // Act
@@ -131,7 +131,7 @@ let ``Resource URL parameters update should generate correct event`` () =
     let initialParams = [ ("id", "1") ]
 
     let resource =
-        Resource.create "API Name" "Description" "https://api.example.com" initialParams [] []
+        Resource.create "API Name" "Description" "https://api.example.com" initialParams [] [] "PUT"
         |> unwrapResult
 
     let newParams = [ ("userId", "123"); ("format", "json"); ("limit", "10") ]
@@ -167,7 +167,7 @@ let ``Resource headers update should generate correct event`` () =
     let initialHeaders = [ ("Accept", "application/json") ]
 
     let resource =
-        Resource.create "API Name" "Description" "https://api.example.com" [] initialHeaders []
+        Resource.create "API Name" "Description" "https://api.example.com" [] initialHeaders [] "DELETE"
         |> unwrapResult
 
     let newHeaders = [ ("Authorization", "Bearer token"); ("Content-Type", "application/json") ]
@@ -201,7 +201,7 @@ let ``Resource body update should generate correct event`` () =
     let initialBody = [ ("name", "John") ]
 
     let resource =
-        Resource.create "API Name" "Description" "https://api.example.com" [] [] initialBody
+        Resource.create "API Name" "Description" "https://api.example.com" [] [] initialBody "PATCH"
         |> unwrapResult
 
     let newBody = [ ("firstName", "Jane"); ("lastName", "Doe"); ("age", "30") ]
@@ -232,7 +232,8 @@ let ``Resource body update should generate correct event`` () =
 [<Fact>]
 let ``Resource creation should reject empty name`` () =
     // Act
-    let result = Resource.create "" "Description" "https://api.example.com" [] [] []
+    let result =
+        Resource.create "" "Description" "https://api.example.com" [] [] [] "GET"
 
     // Assert
     match result with
@@ -242,7 +243,7 @@ let ``Resource creation should reject empty name`` () =
 [<Fact>]
 let ``Resource creation should reject empty description`` () =
     // Act
-    let result = Resource.create "API Name" "" "https://api.example.com" [] [] []
+    let result = Resource.create "API Name" "" "https://api.example.com" [] [] [] "GET"
 
     // Assert
     match result with
@@ -252,7 +253,8 @@ let ``Resource creation should reject empty description`` () =
 [<Fact>]
 let ``Resource creation should reject invalid URL`` () =
     // Act
-    let result = Resource.create "API Name" "Description" "not-a-valid-url" [] [] []
+    let result =
+        Resource.create "API Name" "Description" "not-a-valid-url" [] [] [] "GET"
 
     // Assert
     match result with
@@ -266,7 +268,7 @@ let ``Resource creation should reject invalid key-value pairs`` () =
 
     // Act
     let result =
-        Resource.create "API Name" "Description" "https://api.example.com" invalidParams [] []
+        Resource.create "API Name" "Description" "https://api.example.com" invalidParams [] [] "GET"
 
     // Assert
     match result with
@@ -277,7 +279,7 @@ let ``Resource creation should reject invalid key-value pairs`` () =
 let ``Resource deletion should generate ResourceDeletedEvent`` () =
     // Arrange
     let resource =
-        Resource.create "Test API" "Description" "https://api.example.com" [] [] []
+        Resource.create "Test API" "Description" "https://api.example.com" [] [] [] "GET"
         |> unwrapResult
 
     // Act

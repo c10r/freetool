@@ -1,6 +1,5 @@
 namespace Freetool.Infrastructure.Database
 
-open System
 open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
 

@@ -5,13 +5,16 @@ open Freetool.Domain.ValueObjects
 open Freetool.Infrastructure.Database
 
 module UserEntityMapper =
-    let fromEntity (entity: UserEntity) : UserData = {
-        Id = UserId.FromGuid(entity.Id)
-        Name = entity.Name
-        Email = entity.Email
-        ProfilePicUrl = entity.ProfilePicUrl
-        CreatedAt = entity.CreatedAt
-        UpdatedAt = entity.UpdatedAt
+    let fromEntity (entity: UserEntity) : ValidatedUser = {
+        State = {
+            Id = UserId.FromGuid(entity.Id)
+            Name = entity.Name
+            Email = entity.Email
+            ProfilePicUrl = entity.ProfilePicUrl
+            CreatedAt = entity.CreatedAt
+            UpdatedAt = entity.UpdatedAt
+        }
+        UncommittedEvents = []
     }
 
     let toEntity (user: User) : UserEntity =

@@ -6,17 +6,20 @@ type KeyValuePair =
     private
     | KeyValuePair of key: string * value: string
 
+    static member Create(key: string option, value: string option) : Result<KeyValuePair, DomainError> =
+        match key with
+        | None
+        | Some "" -> Error(ValidationError "Key cannot be empty")
+        | Some keyValue when keyValue.Length > 100 -> Error(ValidationError "Key cannot exceed 100 characters")
+        | Some keyValue ->
+            match value with
+            | None -> Error(ValidationError "Value cannot be null")
+            | Some "" -> Error(ValidationError "Value cannot be empty")
+            | Some v when v.Length > 1000 -> Error(ValidationError "Value cannot exceed 1000 characters")
+            | Some v -> Ok(KeyValuePair(keyValue.Trim(), v))
+
     static member Create(key: string, value: string) : Result<KeyValuePair, DomainError> =
-        if System.String.IsNullOrWhiteSpace(key) then
-            Error(ValidationError "Key cannot be empty")
-        elif key.Length > 100 then
-            Error(ValidationError "Key cannot exceed 100 characters")
-        elif System.String.IsNullOrEmpty(value) then
-            Error(ValidationError "Value cannot be null")
-        elif value.Length > 1000 then
-            Error(ValidationError "Value cannot exceed 1000 characters")
-        else
-            Ok(KeyValuePair(key.Trim(), value))
+        KeyValuePair.Create(Some key, Some value)
 
     member this.Key =
         let (KeyValuePair(key, _)) = this

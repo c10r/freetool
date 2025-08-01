@@ -15,7 +15,7 @@ module ResourceMapper =
         let headers = dto.Headers |> List.map keyValuePairFromDto
         let body = dto.Body |> List.map keyValuePairFromDto
 
-        Resource.create dto.Name dto.Description dto.BaseUrl urlParameters headers body
+        Resource.create dto.Name dto.Description dto.BaseUrl urlParameters headers body dto.HttpMethod
 
     let fromUpdateNameDto
         (dto: UpdateResourceNameDto)
@@ -62,6 +62,7 @@ module ResourceMapper =
         Name = Resource.getName resource
         Description = Resource.getDescription resource
         BaseUrl = Resource.getBaseUrl resource
+        HttpMethod = Resource.getHttpMethod resource
         UrlParameters =
             Resource.getUrlParameters resource
             |> List.map (fun (k, v) -> { Key = k; Value = v })

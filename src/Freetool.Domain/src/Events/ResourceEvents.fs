@@ -11,11 +11,13 @@ type ResourceChange =
     | UrlParametersChanged of oldValue: KeyValuePair list * newValue: KeyValuePair list
     | HeadersChanged of oldValue: KeyValuePair list * newValue: KeyValuePair list
     | BodyChanged of oldValue: KeyValuePair list * newValue: KeyValuePair list
+    | HttpMethodChanged of oldValue: HttpMethod * newValue: HttpMethod
 
 type ResourceCreatedEvent = {
     ResourceId: ResourceId
     Name: ResourceName
     Description: ResourceDescription
+    HttpMethod: HttpMethod
     BaseUrl: BaseUrl
     UrlParameters: KeyValuePair list
     Headers: KeyValuePair list
@@ -58,11 +60,13 @@ module ResourceEvents =
         (urlParameters: KeyValuePair list)
         (headers: KeyValuePair list)
         (body: KeyValuePair list)
+        (httpMethod: HttpMethod)
         =
         {
             ResourceId = resourceId
             Name = name
             Description = description
+            HttpMethod = httpMethod
             BaseUrl = baseUrl
             UrlParameters = urlParameters
             Headers = headers

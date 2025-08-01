@@ -1,6 +1,5 @@
 namespace Freetool.Infrastructure.Database
 
-open System
 open Microsoft.EntityFrameworkCore
 open Microsoft.EntityFrameworkCore.Storage.ValueConversion
 

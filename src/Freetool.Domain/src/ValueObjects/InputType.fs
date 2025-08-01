@@ -63,6 +63,6 @@ type InputType =
                     | Text maxLength -> sprintf "Text(%d)" maxLength
                     | Integer -> "Integer"
                     | Boolean -> "Boolean"
-                    | MultiChoice _ -> "MultiChoice") // This shouldn't happen due to validation
+                    | MultiChoice _ -> failwith "Should not be possible due to validation")
 
             sprintf "MultiChoice([%s])" (System.String.Join(", ", choiceStrings))

@@ -2,6 +2,7 @@ namespace Freetool.Application.DTOs
 
 open System
 open System.ComponentModel.DataAnnotations
+open System.Text.Json.Serialization
 
 type CreateUserDto = {
     [<Required>]
@@ -15,7 +16,8 @@ type CreateUserDto = {
 
     [<StringLength(2000, ErrorMessage = "Profile picture URL cannot exceed 2000 characters")>]
     [<Url(ErrorMessage = "Profile picture URL must be a valid URL")>]
-    ProfilePicUrl: string
+    [<JsonConverter(typeof<StringOptionConverter>)>]
+    ProfilePicUrl: string option
 }
 
 type UpdateUserNameDto = {

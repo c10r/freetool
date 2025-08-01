@@ -6,13 +6,13 @@ type FolderName =
     private
     | FolderName of string
 
-    static member Create(name: string) : Result<FolderName, DomainError> =
-        if System.String.IsNullOrWhiteSpace(name) then
-            Error(ValidationError "Folder name cannot be empty")
-        elif name.Length > 100 then
+    static member Create(name: string option) : Result<FolderName, DomainError> =
+        match name with
+        | None
+        | Some "" -> Error(ValidationError "Folder name cannot be empty")
+        | Some nameValue when nameValue.Length > 100 ->
             Error(ValidationError "Folder name cannot exceed 100 characters")
-        else
-            Ok(FolderName(name.Trim()))
+        | Some nameValue -> Ok(FolderName(nameValue.Trim()))
 
     member this.Value =
         let (FolderName name) = this

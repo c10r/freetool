@@ -6,13 +6,13 @@ type ResourceName =
     private
     | ResourceName of string
 
-    static member Create(name: string) : Result<ResourceName, DomainError> =
-        if System.String.IsNullOrWhiteSpace(name) then
-            Error(ValidationError "Resource name cannot be empty")
-        elif name.Length > 100 then
+    static member Create(name: string option) : Result<ResourceName, DomainError> =
+        match name with
+        | None
+        | Some "" -> Error(ValidationError "Resource name cannot be empty")
+        | Some nameValue when nameValue.Length > 100 ->
             Error(ValidationError "Resource name cannot exceed 100 characters")
-        else
-            Ok(ResourceName(name.Trim()))
+        | Some nameValue -> Ok(ResourceName(nameValue.Trim()))
 
     member this.Value =
         let (ResourceName name) = this

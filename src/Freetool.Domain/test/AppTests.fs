@@ -22,10 +22,12 @@ let ``App creation should generate AppCreatedEvent`` () =
         {
             Title = "Email"
             Type = InputType.Email()
+            Required = true
         }
         {
             Title = "Password"
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
+            Required = true
         }
     ]
 
@@ -84,6 +86,7 @@ let ``App inputs update should generate correct event`` () =
         {
             Title = "Name"
             Type = InputType.Text(100) |> Result.defaultValue (InputType.Email())
+            Required = true
         }
     ]
 
@@ -93,14 +96,17 @@ let ``App inputs update should generate correct event`` () =
         {
             Title = "First Name"
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
+            Required = true
         }
         {
             Title = "Last Name"
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
+            Required = false
         }
         {
             Title = "Age"
             Type = InputType.Integer()
+            Required = true
         }
     ]
 
@@ -177,7 +183,14 @@ let ``App deletion should generate AppDeletedEvent`` () =
 let ``App validation should reject invalid input title`` () =
     // Arrange
     let folderId = FolderId.NewId()
-    let invalidInputs = [ { Title = ""; Type = InputType.Email() } ] // Empty title
+
+    let invalidInputs = [
+        {
+            Title = ""
+            Type = InputType.Email()
+            Required = true
+        }
+    ] // Empty title
 
     // Act
     let result = App.create "Test App" folderId invalidInputs

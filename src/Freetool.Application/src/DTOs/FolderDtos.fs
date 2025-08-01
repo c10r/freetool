@@ -1,14 +1,18 @@
 namespace Freetool.Application.DTOs
 
 open System
+open System.ComponentModel
 open System.ComponentModel.DataAnnotations
+open System.Text.Json.Serialization
 
 type CreateFolderDto = {
     [<Required>]
     [<StringLength(100, MinimumLength = 1, ErrorMessage = "Name must be between 1 and 100 characters")>]
     Name: string
 
-    ParentId: string // Optional parent folder ID - null/empty for root folders
+    [<JsonConverter(typeof<FolderLocationConverter>)>]
+    [<Description("Parent folder ID. Leave null to create a root folder.")>]
+    Location: FolderLocation
 }
 
 type UpdateFolderNameDto = {
@@ -18,13 +22,15 @@ type UpdateFolderNameDto = {
 }
 
 type MoveFolderDto = {
-    ParentId: string // Optional parent folder ID - null/empty to move to root
+    [<JsonConverter(typeof<FolderLocationConverter>)>]
+    [<Description("Parent folder ID. Leave null or empty to move to the root folder.")>]
+    ParentId: FolderLocation
 }
 
 type FolderDto = {
     Id: string
     Name: string
-    ParentId: string // null if root folder
+    ParentId: FolderLocation
     CreatedAt: DateTime
     UpdatedAt: DateTime
 }
@@ -32,7 +38,7 @@ type FolderDto = {
 type FolderWithChildrenDto = {
     Id: string
     Name: string
-    ParentId: string // null if root folder
+    ParentId: FolderLocation
     Children: FolderDto list
     CreatedAt: DateTime
     UpdatedAt: DateTime

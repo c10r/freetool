@@ -5,7 +5,6 @@ open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 
-// Core folder data that's shared across all states
 type FolderData = {
     Id: FolderId
     Name: FolderName
@@ -14,7 +13,6 @@ type FolderData = {
     UpdatedAt: DateTime
 }
 
-// Folder type with event collection
 type Folder = EventSourcingAggregate<FolderData>
 
 module FolderAggregateHelpers =
@@ -25,20 +23,17 @@ module FolderAggregateHelpers =
             member _.Id = folder.State.Id
         }
 
-// Type aliases for clarity
 type UnvalidatedFolder = Folder // From DTOs - potentially unsafe
 type ValidatedFolder = Folder // Validated domain model and database data
 
 module Folder =
-    // Create folder from existing data without events (for loading from database)
     let fromData (folderData: FolderData) : ValidatedFolder = {
         State = folderData
         UncommittedEvents = []
     }
 
-    // Create a new validated folder with events
     let create (name: string) (parentId: FolderId option) : Result<ValidatedFolder, DomainError> =
-        match FolderName.Create(name) with
+        match FolderName.Create(Some name) with
         | Error err -> Error err
         | Ok validName ->
             let folderData = {
@@ -56,9 +51,8 @@ module Folder =
                 UncommittedEvents = [ folderCreatedEvent :> IDomainEvent ]
             }
 
-    // Business logic operations on validated folders with event tracking
     let updateName (newName: string) (folder: ValidatedFolder) : Result<ValidatedFolder, DomainError> =
-        match FolderName.Create(newName) with
+        match FolderName.Create(Some newName) with
         | Error err -> Error err
         | Ok validName ->
             let oldName = folder.State.Name
@@ -94,7 +88,6 @@ module Folder =
             UncommittedEvents = folder.UncommittedEvents @ [ parentChangedEvent :> IDomainEvent ]
         }
 
-    // Delete folder with event tracking
     let markForDeletion (folder: ValidatedFolder) : ValidatedFolder =
         let folderDeletedEvent = FolderEvents.folderDeleted folder.State.Id
 
@@ -103,12 +96,10 @@ module Folder =
                 UncommittedEvents = folder.UncommittedEvents @ [ folderDeletedEvent :> IDomainEvent ]
         }
 
-    // Event management functions
     let getUncommittedEvents (folder: ValidatedFolder) : IDomainEvent list = folder.UncommittedEvents
 
     let markEventsAsCommitted (folder: ValidatedFolder) : ValidatedFolder = { folder with UncommittedEvents = [] }
 
-    // Utility functions for accessing data from any state
     let getId (folder: Folder) : FolderId = folder.State.Id
 
     let getName (folder: Folder) : string = folder.State.Name.Value
@@ -119,5 +110,4 @@ module Folder =
 
     let getUpdatedAt (folder: Folder) : DateTime = folder.State.UpdatedAt
 
-    // Helper function to check if a folder is a root folder (no parent)
     let isRoot (folder: Folder) : bool = getParentId folder |> Option.isNone

@@ -22,7 +22,7 @@ module AppHandler =
             | CreateApp validatedApp ->
                 // Check if app name already exists in folder
                 let appName =
-                    AppName.Create(App.getName validatedApp)
+                    AppName.Create(Some(App.getName validatedApp))
                     |> function
                         | Ok name -> name
                         | Error _ -> failwith "ValidatedApp should have valid name"
@@ -69,7 +69,7 @@ module AppHandler =
                         | Ok validatedApp ->
                             // Check if new name conflicts with existing app in same folder
                             let newAppName =
-                                AppName.Create(dto.Name)
+                                AppName.Create(Some dto.Name)
                                 |> function
                                     | Ok name -> name
                                     | Error error -> failwith $"DTO validation should have caught this: {error}"

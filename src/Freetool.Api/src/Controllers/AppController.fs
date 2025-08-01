@@ -8,7 +8,6 @@ open Freetool.Application.DTOs
 open Freetool.Application.Commands
 open Freetool.Application.Interfaces
 open Freetool.Application.Mappers
-open Freetool.Application.Handlers
 
 [<ApiController>]
 [<Route("app")>]

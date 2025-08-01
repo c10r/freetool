@@ -8,6 +8,7 @@ open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Application.Commands
 open Freetool.Application.Mappers
+open Freetool.Application.DTOs
 
 module FolderHandler =
 
@@ -22,7 +23,7 @@ module FolderHandler =
             | CreateFolder validatedFolder ->
                 // Check if a folder with the same name already exists in the parent
                 let folderName =
-                    FolderName.Create(Folder.getName validatedFolder)
+                    FolderName.Create(Some(Folder.getName validatedFolder))
                     |> function
                         | Ok n -> n
                         | Error _ -> failwith "ValidatedFolder should have valid name"
@@ -83,7 +84,7 @@ module FolderHandler =
                     | Some folder ->
                         // Check if the new name already exists in the same parent (only if it's different from current name)
                         if Folder.getName folder <> dto.Name then
-                            match FolderName.Create(dto.Name) with
+                            match FolderName.Create(Some dto.Name) with
                             | Error error -> return Error error
                             | Ok newFolderName ->
                                 let parentId = Folder.getParentId folder
@@ -122,10 +123,10 @@ module FolderHandler =
                     | Some folder ->
                         // Parse and validate parent ID format first
                         let parseResult =
-                            if String.IsNullOrEmpty(dto.ParentId) then
-                                Ok(None)
-                            else
-                                match Guid.TryParse(dto.ParentId) with
+                            match dto.ParentId with
+                            | RootFolder -> Ok(None)
+                            | ChildFolder parentId ->
+                                match Guid.TryParse(parentId) with
                                 | true, parentGuid -> Ok(Some(FolderId.FromGuid(parentGuid)))
                                 | false, _ -> Error(ValidationError "Invalid parent folder ID format")
 
@@ -145,7 +146,7 @@ module FolderHandler =
                                 else
                                     // Check if folder name conflicts in new parent
                                     let folderName =
-                                        FolderName.Create(Folder.getName folder)
+                                        FolderName.Create(Some(Folder.getName folder))
                                         |> function
                                             | Ok n -> n
                                             | Error _ -> failwith "Folder should have valid name"
@@ -168,7 +169,7 @@ module FolderHandler =
                             | None ->
                                 // Moving to root - check if name conflicts with other root folders
                                 let folderName =
-                                    FolderName.Create(Folder.getName folder)
+                                    FolderName.Create(Some(Folder.getName folder))
                                     |> function
                                         | Ok n -> n
                                         | Error _ -> failwith "Folder should have valid name"

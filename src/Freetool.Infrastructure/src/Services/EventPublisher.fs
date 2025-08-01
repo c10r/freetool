@@ -1,6 +1,5 @@
 namespace Freetool.Infrastructure.Services
 
-open System.Threading.Tasks
 open Freetool.Domain
 open Freetool.Application.Interfaces
 

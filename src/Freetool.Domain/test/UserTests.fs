@@ -16,11 +16,11 @@ let unwrapResult result =
 [<Fact>]
 let ``User name update should generate correct event`` () =
     // Arrange
-    let email = Email.Create("john@example.com") |> unwrapResult
+    let email = Email.Create(Some "john@example.com") |> unwrapResult
     let user = User.create "John Doe" email None
 
     // Act
-    let result = User.updateName "Jane Doe" user
+    let result = User.updateName (Some "Jane Doe") user
 
     // Assert
     match result with
@@ -43,7 +43,7 @@ let ``User name update should generate correct event`` () =
 [<Fact>]
 let ``User creation should generate UserCreatedEvent`` () =
     // Arrange
-    let email = Email.Create("john@example.com") |> unwrapResult
+    let email = Email.Create(Some "john@example.com") |> unwrapResult
 
     // Act
     let user = User.create "John Doe" email None
@@ -62,7 +62,7 @@ let ``User creation should generate UserCreatedEvent`` () =
 [<Fact>]
 let ``User email update should generate correct event`` () =
     // Arrange
-    let oldEmail = Email.Create("john@example.com") |> unwrapResult
+    let oldEmail = Email.Create(Some "john@example.com") |> unwrapResult
     let user = User.create "John Doe" oldEmail None
 
     // Act
@@ -89,7 +89,7 @@ let ``User email update should generate correct event`` () =
 [<Fact>]
 let ``User validation should reject empty name`` () =
     // Arrange
-    let email = Email.Create("john@example.com") |> unwrapResult
+    let email = Email.Create(Some "john@example.com") |> unwrapResult
     let user = User.create "" email None
 
     // Act
@@ -104,7 +104,7 @@ let ``User validation should reject empty name`` () =
 let ``User validation should reject name longer than 100 characters`` () =
     // Arrange
     let longName = String.replicate 101 "a"
-    let email = Email.Create("john@example.com") |> unwrapResult
+    let email = Email.Create(Some "john@example.com") |> unwrapResult
     let user = User.create longName email None
 
     // Act

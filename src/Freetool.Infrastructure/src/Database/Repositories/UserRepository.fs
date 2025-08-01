@@ -18,29 +18,20 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
             let guidId = userId.Value
             let! userEntity = context.Users.FirstOrDefaultAsync(fun u -> u.Id = guidId)
 
-            return
-                userEntity
-                |> Option.ofObj
-                |> Option.map (UserEntityMapper.fromEntity >> User.fromData)
+            return userEntity |> Option.ofObj |> Option.map UserEntityMapper.fromEntity
         }
 
         member _.GetByEmailAsync(email: Email) : Task<ValidatedUser option> = task {
             let emailStr = email.Value
             let! userEntity = context.Users.FirstOrDefaultAsync(fun u -> u.Email = emailStr)
 
-            return
-                userEntity
-                |> Option.ofObj
-                |> Option.map (UserEntityMapper.fromEntity >> User.fromData)
+            return userEntity |> Option.ofObj |> Option.map UserEntityMapper.fromEntity
         }
 
         member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedUser list> = task {
             let! userEntities = context.Users.OrderBy(fun u -> u.CreatedAt).Skip(skip).Take(take).ToListAsync()
 
-            return
-                userEntities
-                |> Seq.map (UserEntityMapper.fromEntity >> User.fromData)
-                |> Seq.toList
+            return userEntities |> Seq.map UserEntityMapper.fromEntity |> Seq.toList
         }
 
         member _.AddAsync(user: ValidatedUser) : Task<Result<unit, DomainError>> = task {

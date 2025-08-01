@@ -22,7 +22,7 @@ module UserHandler =
             | CreateUser validatedUser ->
                 // Check if email already exists
                 let email =
-                    Email.Create(User.getEmail validatedUser)
+                    Email.Create(Some(User.getEmail validatedUser))
                     |> function
                         | Ok e -> e
                         | Error _ -> failwith "ValidatedUser should have valid email"
@@ -71,7 +71,7 @@ module UserHandler =
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
                         // Update name using domain method (automatically creates event)
-                        match User.updateName dto.Name user with
+                        match User.updateName (Some dto.Name) user with
                         | Error error -> return Error error
                         | Ok updatedUser ->
                             // Save user and events atomically
@@ -147,7 +147,7 @@ module UserHandler =
                     | Some user -> return Ok(UserResult(mapUserToDto user))
 
             | GetUserByEmail email ->
-                match Email.Create email with
+                match Email.Create(Some email) with
                 | Error error -> return Error error
                 | Ok emailObj ->
                     let! userOption = userRepository.GetByEmailAsync emailObj

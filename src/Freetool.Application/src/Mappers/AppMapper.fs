@@ -57,11 +57,13 @@ module AppMapper =
     let inputToDto (input: Input) : InputDto = {
         Title = input.Title
         Type = inputTypeToDtoType input.Type
+        Required = input.Required
     }
 
     let inputFromDto (inputDto: InputDto) : Input = {
         Title = inputDto.Title
         Type = inputTypeFromDtoType inputDto.Type
+        Required = inputDto.Required
     }
 
     let fromCreateDto (dto: CreateAppDto) : UnvalidatedApp =

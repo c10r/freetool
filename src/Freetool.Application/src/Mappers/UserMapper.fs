@@ -11,11 +11,7 @@ module UserMapper =
             Id = UserId.NewId()
             Name = dto.Name
             Email = dto.Email
-            ProfilePicUrl =
-                if String.IsNullOrEmpty(dto.ProfilePicUrl) then
-                    None
-                else
-                    Some(dto.ProfilePicUrl)
+            ProfilePicUrl = dto.ProfilePicUrl
             CreatedAt = DateTime.UtcNow
             UpdatedAt = DateTime.UtcNow
         }

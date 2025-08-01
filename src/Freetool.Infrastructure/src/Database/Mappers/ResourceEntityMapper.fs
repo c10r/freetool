@@ -8,7 +8,6 @@ open Freetool.Infrastructure.Database
 type KeyValuePairData = { Key: string; Value: string }
 
 module ResourceEntityMapper =
-    // Helper functions for JSON serialization/deserialization
     let serializeKeyValuePairs (pairs: (string * string) list) : string =
         let pairData = pairs |> List.map (fun (k, v) -> { Key = k; Value = v })
         JsonSerializer.Serialize(pairData)
@@ -24,25 +23,29 @@ module ResourceEntityMapper =
 
     // Entity -> Domain conversions (database data is trusted, so directly to ValidatedResource)
     let fromEntity (entity: ResourceEntity) : ValidatedResource =
-        // Since we're reading from the database, we trust the data is valid
-        // We reconstruct the value objects from their string representations
         let name =
-            ResourceName.Create(entity.Name)
+            ResourceName.Create(Some entity.Name)
             |> function
                 | Ok n -> n
                 | Error _ -> failwith "Invalid name in database"
 
         let description =
-            ResourceDescription.Create(entity.Description)
+            ResourceDescription.Create(Some entity.Description)
             |> function
                 | Ok d -> d
                 | Error _ -> failwith "Invalid description in database"
 
         let baseUrl =
-            BaseUrl.Create(entity.BaseUrl)
+            BaseUrl.Create(Some entity.BaseUrl)
             |> function
                 | Ok b -> b
                 | Error _ -> failwith "Invalid base URL in database"
+
+        let httpMethod =
+            HttpMethod.Create(entity.HttpMethod)
+            |> function
+                | Ok h -> h
+                | Error _ -> failwith "Invalid HTTP method in database"
 
         let urlParameters =
             deserializeKeyValuePairs entity.UrlParameters
@@ -72,6 +75,7 @@ module ResourceEntityMapper =
             Id = ResourceId.FromGuid(entity.Id)
             Name = name
             Description = description
+            HttpMethod = httpMethod
             BaseUrl = baseUrl
             UrlParameters = urlParameters
             Headers = headers
@@ -87,6 +91,7 @@ module ResourceEntityMapper =
         entity.Name <- resource.State.Name.Value
         entity.Description <- resource.State.Description.Value
         entity.BaseUrl <- resource.State.BaseUrl.Value
+        entity.HttpMethod <- resource.State.HttpMethod.ToString()
 
         entity.UrlParameters <-
             serializeKeyValuePairs (resource.State.UrlParameters |> List.map (fun kvp -> (kvp.Key, kvp.Value)))

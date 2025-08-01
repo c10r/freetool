@@ -6,13 +6,12 @@ open Freetool.Domain
 type AppName =
     | AppName of string
 
-    static member Create(name: string) : Result<AppName, DomainError> =
-        if System.String.IsNullOrWhiteSpace(name) then
-            Error(ValidationError "App name cannot be empty")
-        elif name.Length > 100 then
-            Error(ValidationError "App name cannot exceed 100 characters")
-        else
-            Ok(AppName(name.Trim()))
+    static member Create(name: string option) : Result<AppName, DomainError> =
+        match name with
+        | None
+        | Some "" -> Error(ValidationError "App name cannot be empty")
+        | Some nameValue when nameValue.Length > 100 -> Error(ValidationError "App name cannot exceed 100 characters")
+        | Some nameValue -> Ok(AppName(nameValue.Trim()))
 
     member this.Value =
         let (AppName name) = this

@@ -22,6 +22,10 @@ type ResourceEntity() =
     member val BaseUrl = "" with get, set
 
     [<Required>]
+    [<MaxLength(10)>]
+    member val HttpMethod = "GET" with get, set
+
+    [<Required>]
     member val UrlParameters = "[]" with get, set // JSON string
 
     [<Required>]

@@ -4,7 +4,11 @@ open System
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 
-type Input = { Title: string; Type: InputType }
+type Input = {
+    Title: string
+    Type: InputType
+    Required: bool
+}
 
 type AppChange =
     | NameChanged of oldValue: AppName * newValue: AppName
