@@ -59,11 +59,10 @@ module User =
     let validate (user: UnvalidatedUser) : Result<ValidatedUser, DomainError> =
         let userData = user.State
 
-        if String.IsNullOrWhiteSpace(userData.Name) then
-            Error(ValidationError "User name cannot be empty")
-        elif userData.Name.Length > 100 then
-            Error(ValidationError "User name cannot exceed 100 characters")
-        else
+        match userData.Name with
+        | "" -> Error(ValidationError "User name cannot be empty")
+        | name when name.Length > 100 -> Error(ValidationError "User name cannot exceed 100 characters")
+        | name ->
             // Validate email format
             match Email.Create(Some userData.Email) with
             | Error err -> Error err
@@ -74,7 +73,8 @@ module User =
                     Ok {
                         State = {
                             userData with
-                                Name = userData.Name.Trim()
+                                Name = name.Trim()
+                                Email = validEmail.Value
                         }
                         UncommittedEvents = user.UncommittedEvents
                     }
@@ -85,8 +85,9 @@ module User =
                         Ok {
                             State = {
                                 userData with
-                                    Name = userData.Name.Trim()
-                                    ProfilePicUrl = Some(validUrl.Value)
+                                    Name = name.Trim()
+                                    Email = validEmail.Value
+                                    ProfilePicUrl = Some validUrl.Value
                             }
                             UncommittedEvents = user.UncommittedEvents
                         }

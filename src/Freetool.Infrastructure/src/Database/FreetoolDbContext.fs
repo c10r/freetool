@@ -10,6 +10,12 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     val mutable private _users: DbSet<UserEntity>
 
     [<DefaultValue>]
+    val mutable private _groups: DbSet<GroupEntity>
+
+    [<DefaultValue>]
+    val mutable private _userGroups: DbSet<UserGroupEntity>
+
+    [<DefaultValue>]
     val mutable private _resources: DbSet<ResourceEntity>
 
     [<DefaultValue>]
@@ -24,6 +30,14 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     member this.Users
         with get () = this._users
         and set value = this._users <- value
+
+    member this.Groups
+        with get () = this._groups
+        and set value = this._groups <- value
+
+    member this.UserGroups
+        with get () = this._userGroups
+        and set value = this._userGroups <- value
 
     member this.Resources
         with get () = this._resources
@@ -46,8 +60,6 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
         modelBuilder.Entity<UserEntity>(fun entity ->
             entity.HasKey(fun u -> u.Id :> obj) |> ignore
-
-            entity.HasIndex(fun u -> u.Email :> obj).IsUnique() |> ignore
 
             entity.Property(fun u -> u.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
 
@@ -74,10 +86,38 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun u -> u.UpdatedAt :> obj).IsRequired() |> ignore)
         |> ignore
 
+        modelBuilder.Entity<GroupEntity>(fun entity ->
+            entity.HasKey(fun g -> g.Id :> obj) |> ignore
+
+            entity.Property(fun g -> g.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
+
+            entity.Property(fun g -> g.CreatedAt :> obj).IsRequired() |> ignore
+
+            entity.Property(fun g -> g.UpdatedAt :> obj).IsRequired() |> ignore)
+        |> ignore
+
+        modelBuilder.Entity<UserGroupEntity>(fun entity ->
+            entity.HasKey(fun ug -> ug.Id :> obj) |> ignore
+
+            entity.Property(fun ug -> ug.UserId :> obj).IsRequired() |> ignore
+
+            entity.Property(fun ug -> ug.GroupId :> obj).IsRequired() |> ignore
+
+            entity.Property(fun ug -> ug.CreatedAt :> obj).IsRequired() |> ignore
+
+            // Set up foreign keys
+            entity.HasOne<UserEntity>().WithMany().HasForeignKey(fun ug -> ug.UserId :> obj)
+            |> ignore
+
+            entity
+                .HasOne<GroupEntity>()
+                .WithMany()
+                .HasForeignKey(fun ug -> ug.GroupId :> obj)
+            |> ignore)
+        |> ignore
+
         modelBuilder.Entity<ResourceEntity>(fun entity ->
             entity.HasKey(fun r -> r.Id :> obj) |> ignore
-
-            entity.HasIndex(fun r -> r.Name :> obj).IsUnique() |> ignore
 
             entity.Property(fun r -> r.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
 
@@ -101,8 +141,6 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
         modelBuilder.Entity<FolderEntity>(fun entity ->
             entity.HasKey(fun f -> f.Id :> obj) |> ignore
 
-            entity.HasIndex([| "Name"; "ParentId" |]).IsUnique() |> ignore
-
             entity.Property(fun f -> f.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
 
             entity.Property(fun f -> f.ParentId :> obj) |> ignore
@@ -114,8 +152,6 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
         modelBuilder.Entity<AppEntity>(fun entity ->
             entity.HasKey(fun a -> a.Id :> obj) |> ignore
-
-            entity.HasIndex([| "Name"; "FolderId" |]).IsUnique() |> ignore
 
             entity.Property(fun a -> a.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
 
@@ -130,8 +166,6 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
         modelBuilder.Entity<EventEntity>(fun entity ->
             entity.HasKey(fun e -> e.Id :> obj) |> ignore
-
-            entity.HasIndex(fun e -> e.EventId :> obj).IsUnique() |> ignore
 
             entity.HasIndex([| "EntityType"; "EntityId" |]) |> ignore
 
@@ -159,6 +193,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
         // Add soft delete filters for all other entities
         modelBuilder.Entity<UserEntity>().HasQueryFilter(fun u -> not u.IsDeleted)
+        |> ignore
+
+        modelBuilder.Entity<GroupEntity>().HasQueryFilter(fun g -> not g.IsDeleted)
         |> ignore
 
         modelBuilder.Entity<ResourceEntity>().HasQueryFilter(fun r -> not r.IsDeleted)

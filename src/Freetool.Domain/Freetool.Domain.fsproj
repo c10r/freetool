@@ -11,6 +11,7 @@
     <Compile Include="src/ValueObjects/HttpMethod.fs" />
     <Compile Include="src/ValueObjects/Url.fs" />
     <Compile Include="src/ValueObjects/UserId.fs" />
+    <Compile Include="src/ValueObjects/GroupId.fs" />
     <Compile Include="src/ValueObjects/ResourceId.fs" />
     <Compile Include="src/ValueObjects/FolderId.fs" />
     <Compile Include="src/ValueObjects/AppId.fs" />
@@ -24,10 +25,12 @@
     <Compile Include="src/ValueObjects/BaseUrl.fs" />
     <Compile Include="src/ValueObjects/KeyValuePair.fs" />
     <Compile Include="src/Events/UserEvents.fs" />
+    <Compile Include="src/Events/GroupEvents.fs" />
     <Compile Include="src/Events/AppEvents.fs" />
     <Compile Include="src/Events/ResourceEvents.fs" />
     <Compile Include="src/Events/FolderEvents.fs" />
     <Compile Include="src/Entities/User.fs" />
+    <Compile Include="src/Entities/Group.fs" />
     <Compile Include="src/Entities/Resource.fs" />
     <Compile Include="src/Entities/Folder.fs" />
     <Compile Include="src/Entities/App.fs" />

@@ -39,7 +39,7 @@ module UserHandler =
                     // Save user and events atomically
                     match! userRepository.AddAsync eventAwareUser with
                     | Error error -> return Error error
-                    | Ok() -> return Ok(UserResult(mapUserToDto eventAwareUser))
+                    | Ok() -> return Ok(UserCommandResult.UserResult(mapUserToDto eventAwareUser))
 
             | DeleteUser userId ->
                 match Guid.TryParse userId with
@@ -58,7 +58,7 @@ module UserHandler =
                         // Delete user and save event atomically
                         match! userRepository.DeleteAsync userIdObj deleteEvent with
                         | Error error -> return Error error
-                        | Ok() -> return Ok(UnitResult())
+                        | Ok() -> return Ok(UserCommandResult.UnitResult())
 
             | UpdateUserName(userId, dto) ->
                 match Guid.TryParse userId with
@@ -77,7 +77,7 @@ module UserHandler =
                             // Save user and events atomically
                             match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
+                            | Ok() -> return Ok(UserCommandResult.UserResult(mapUserToDto updatedUser))
 
             | UpdateUserEmail(userId, dto) ->
                 match Guid.TryParse userId with
@@ -96,7 +96,7 @@ module UserHandler =
                             // Save user and events atomically
                             match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
+                            | Ok() -> return Ok(UserCommandResult.UserResult(mapUserToDto updatedUser))
 
             | SetProfilePicture(userId, dto) ->
                 match Guid.TryParse userId with
@@ -133,7 +133,7 @@ module UserHandler =
                         // Save user and events atomically
                         match! userRepository.UpdateAsync updatedUser with
                         | Error error -> return Error error
-                        | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
+                        | Ok() -> return Ok(UserCommandResult.UserResult(mapUserToDto updatedUser))
 
             | GetUserById userId ->
                 match Guid.TryParse userId with
@@ -144,7 +144,7 @@ module UserHandler =
 
                     match userOption with
                     | None -> return Error(NotFound "User not found")
-                    | Some user -> return Ok(UserResult(mapUserToDto user))
+                    | Some user -> return Ok(UserCommandResult.UserResult(mapUserToDto user))
 
             | GetUserByEmail email ->
                 match Email.Create(Some email) with
@@ -154,7 +154,7 @@ module UserHandler =
 
                     match userOption with
                     | None -> return Error(NotFound "User not found")
-                    | Some user -> return Ok(UserResult(mapUserToDto user))
+                    | Some user -> return Ok(UserCommandResult.UserResult(mapUserToDto user))
 
             | GetAllUsers(skip, take) ->
                 if skip < 0 then
@@ -166,10 +166,13 @@ module UserHandler =
                     let! totalCount = userRepository.GetCountAsync()
                     let result = UserMapper.toPagedDto users totalCount skip take
 
-                    return Ok(UsersResult result)
+                    return Ok(UserCommandResult.UsersResult result)
         }
 
 type UserHandler() =
     interface ICommandHandler with
-        member this.HandleCommand repository command =
+        member this.HandleCommand
+            (repository: IUserRepository)
+            (command: UserCommand)
+            : Task<Result<UserCommandResult, DomainError>> =
             UserHandler.handleCommand repository command

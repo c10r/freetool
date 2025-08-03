@@ -2,8 +2,10 @@ namespace Freetool.Infrastructure.Database
 
 open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
+open Microsoft.EntityFrameworkCore
 
 [<Table("Events")>]
+[<Index([| "EventId" |], IsUnique = true, Name = "IX_Events_EventId")>]
 type EventEntity() =
     [<Key>]
     [<Column("Id")>]

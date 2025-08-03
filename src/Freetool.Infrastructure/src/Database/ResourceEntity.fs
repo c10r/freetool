@@ -3,8 +3,10 @@ namespace Freetool.Infrastructure.Database
 open System
 open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
+open Microsoft.EntityFrameworkCore
 
 [<Table("Resources")>]
+[<Index([| "Name" |], IsUnique = true, Name = "IX_Resources_Name")>]
 type ResourceEntity() =
     [<Key>]
     member val Id = Guid.Empty with get, set

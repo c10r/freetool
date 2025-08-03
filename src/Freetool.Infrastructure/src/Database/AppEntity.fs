@@ -3,8 +3,10 @@ namespace Freetool.Infrastructure.Database
 open System
 open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
+open Microsoft.EntityFrameworkCore
 
 [<Table("Apps")>]
+[<Index([| "Name"; "FolderId" |], IsUnique = true, Name = "IX_Apps_Name_FolderId")>]
 type AppEntity() =
     [<Key>]
     member val Id = Guid.Empty with get, set

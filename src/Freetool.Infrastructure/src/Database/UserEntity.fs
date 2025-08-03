@@ -3,8 +3,10 @@ namespace Freetool.Infrastructure.Database
 open System
 open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
+open Microsoft.EntityFrameworkCore
 
 [<Table("Users")>]
+[<Index([| "Email" |], IsUnique = true, Name = "IX_Users_Email")>]
 type UserEntity() =
     [<Key>]
     member val Id = Guid.Empty with get, set
