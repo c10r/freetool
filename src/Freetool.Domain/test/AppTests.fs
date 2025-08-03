@@ -305,7 +305,11 @@ let ``App update URL parameters should generate correct event`` () =
     let newUrlParams = [ ("filter", "active"); ("sort", "name") ]
 
     // Act
-    let result = App.updateUrlParameters newUrlParams app
+    let emptyResource =
+        Resource.create "Test Resource" "Test" "https://test.com" [] [] [] "GET"
+        |> unwrapResult
+
+    let result = App.updateUrlParameters newUrlParams emptyResource app
 
     // Assert
     match result with
@@ -334,7 +338,11 @@ let ``App update headers should generate correct event`` () =
     let newHeaders = [ ("X-API-Key", "secret123") ]
 
     // Act
-    let result = App.updateHeaders newHeaders app
+    let emptyResource =
+        Resource.create "Test Resource" "Test" "https://test.com" [] [] [] "GET"
+        |> unwrapResult
+
+    let result = App.updateHeaders newHeaders emptyResource app
 
     // Assert
     match result with
@@ -363,7 +371,11 @@ let ``App update body should generate correct event`` () =
     let newBody = [ ("data", "test") ]
 
     // Act
-    let result = App.updateBody newBody app
+    let emptyResource =
+        Resource.create "Test Resource" "Test" "https://test.com" [] [] [] "GET"
+        |> unwrapResult
+
+    let result = App.updateBody newBody emptyResource app
 
     // Assert
     match result with
@@ -598,3 +610,168 @@ let ``App createWithResource should allow empty app parameters`` () =
         Assert.Empty(App.getBody app)
 
     | Error error -> Assert.True(false, $"Expected successful creation but got error: {error}")
+
+[<Fact>]
+let ``App updateUrlParameters should reject resource parameter conflicts`` () =
+    // Arrange - Resource with URL parameters
+    let resourceResult =
+        Resource.create "API" "Test API" "https://api.test.com" [ "version", "v1"; "format", "json" ] [] [] "GET"
+
+    let resource = unwrapResult resourceResult
+    let folderId = FolderId.NewId()
+
+    // Create app with no conflicts initially
+    let app =
+        App.createWithResource "Test App" folderId resource [] None [] [] []
+        |> unwrapResult
+
+    // Act - Try to update with conflicting URL parameter "format"
+    let result =
+        App.updateUrlParameters [ ("format", "xml"); ("new_param", "value") ] resource app
+
+    // Assert
+    match result with
+    | Error(InvalidOperation msg) ->
+        Assert.Contains("App cannot override existing Resource values", msg)
+        Assert.Contains("URL parameters: format", msg)
+    | Ok _ -> Assert.True(false, "Expected error for URL parameter conflicts")
+    | Error other -> Assert.True(false, $"Expected InvalidOperation but got: {other}")
+
+[<Fact>]
+let ``App updateHeaders should reject resource header conflicts`` () =
+    // Arrange - Resource with headers
+    let resourceResult =
+        Resource.create
+            "API"
+            "Test API"
+            "https://api.test.com"
+            []
+            [ "Content-Type", "application/json"; "Accept", "application/json" ]
+            []
+            "POST"
+
+    let resource = unwrapResult resourceResult
+    let folderId = FolderId.NewId()
+
+    // Create app with no conflicts initially
+    let app =
+        App.createWithResource "Test App" folderId resource [] None [] [] []
+        |> unwrapResult
+
+    // Act - Try to update with conflicting header "Content-Type"
+    let result =
+        App.updateHeaders [ ("Content-Type", "application/xml"); ("Authorization", "Bearer token") ] resource app
+
+    // Assert
+    match result with
+    | Error(InvalidOperation msg) ->
+        Assert.Contains("App cannot override existing Resource values", msg)
+        Assert.Contains("Headers: Content-Type", msg)
+    | Ok _ -> Assert.True(false, "Expected error for header conflicts")
+    | Error other -> Assert.True(false, $"Expected InvalidOperation but got: {other}")
+
+[<Fact>]
+let ``App updateBody should reject resource body parameter conflicts`` () =
+    // Arrange - Resource with body parameters
+    let resourceResult =
+        Resource.create "API" "Test API" "https://api.test.com" [] [] [ "client_id", "12345"; "scope", "read" ] "PUT"
+
+    let resource = unwrapResult resourceResult
+    let folderId = FolderId.NewId()
+
+    // Create app with no conflicts initially
+    let app =
+        App.createWithResource "Test App" folderId resource [] None [] [] []
+        |> unwrapResult
+
+    // Act - Try to update with conflicting body parameter "client_id"
+    let result =
+        App.updateBody [ ("client_id", "override"); ("new_param", "value") ] resource app
+
+    // Assert
+    match result with
+    | Error(InvalidOperation msg) ->
+        Assert.Contains("App cannot override existing Resource values", msg)
+        Assert.Contains("Body parameters: client_id", msg)
+    | Ok _ -> Assert.True(false, "Expected error for body parameter conflicts")
+    | Error other -> Assert.True(false, $"Expected InvalidOperation but got: {other}")
+
+[<Fact>]
+let ``App updateUrlParameters should allow new parameters with no conflicts`` () =
+    // Arrange - Resource with some URL parameters
+    let resourceResult =
+        Resource.create "API" "Test API" "https://api.test.com" [ "version", "v1" ] [] [] "GET"
+
+    let resource = unwrapResult resourceResult
+    let folderId = FolderId.NewId()
+
+    // Create app with no conflicts initially
+    let app =
+        App.createWithResource "Test App" folderId resource [] None [] [] []
+        |> unwrapResult
+
+    // Act - Update with only new parameters (no conflicts)
+    let result = App.updateUrlParameters [ ("page", "1"); ("size", "10") ] resource app
+
+    // Assert
+    match result with
+    | Ok updatedApp ->
+        let urlParams = App.getUrlParameters updatedApp
+        Assert.Equal(2, urlParams.Length)
+        Assert.Contains(("page", "1"), urlParams)
+        Assert.Contains(("size", "10"), urlParams)
+    | Error error -> Assert.True(false, $"Expected successful update but got error: {error}")
+
+[<Fact>]
+let ``App updateHeaders should allow new headers with no conflicts`` () =
+    // Arrange - Resource with some headers
+    let resourceResult =
+        Resource.create "API" "Test API" "https://api.test.com" [] [ "Content-Type", "application/json" ] [] "POST"
+
+    let resource = unwrapResult resourceResult
+    let folderId = FolderId.NewId()
+
+    // Create app with no conflicts initially
+    let app =
+        App.createWithResource "Test App" folderId resource [] None [] [] []
+        |> unwrapResult
+
+    // Act - Update with only new headers (no conflicts)
+    let result =
+        App.updateHeaders [ ("Authorization", "Bearer token"); ("X-API-Key", "secret") ] resource app
+
+    // Assert
+    match result with
+    | Ok updatedApp ->
+        let headers = App.getHeaders updatedApp
+        Assert.Equal(2, headers.Length)
+        Assert.Contains(("Authorization", "Bearer token"), headers)
+        Assert.Contains(("X-API-Key", "secret"), headers)
+    | Error error -> Assert.True(false, $"Expected successful update but got error: {error}")
+
+[<Fact>]
+let ``App updateBody should allow new body parameters with no conflicts`` () =
+    // Arrange - Resource with some body parameters
+    let resourceResult =
+        Resource.create "API" "Test API" "https://api.test.com" [] [] [ "client_id", "12345" ] "PUT"
+
+    let resource = unwrapResult resourceResult
+    let folderId = FolderId.NewId()
+
+    // Create app with no conflicts initially
+    let app =
+        App.createWithResource "Test App" folderId resource [] None [] [] []
+        |> unwrapResult
+
+    // Act - Update with only new body parameters (no conflicts)
+    let result =
+        App.updateBody [ ("include_metadata", "true"); ("format", "detailed") ] resource app
+
+    // Assert
+    match result with
+    | Ok updatedApp ->
+        let body = App.getBody updatedApp
+        Assert.Equal(2, body.Length)
+        Assert.Contains(("include_metadata", "true"), body)
+        Assert.Contains(("format", "detailed"), body)
+    | Error error -> Assert.True(false, $"Expected successful update but got error: {error}")

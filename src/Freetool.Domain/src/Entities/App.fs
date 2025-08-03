@@ -127,6 +127,41 @@ module App =
                 UncommittedEvents = app.UncommittedEvents @ [ inputsChangedEvent :> IDomainEvent ]
             }
 
+    let private checkResourceConflicts
+        (resource: ValidatedResource)
+        (urlParameters: (string * string) list option)
+        (headers: (string * string) list option)
+        (body: (string * string) list option)
+        : Result<unit, DomainError> =
+
+        let checkConflict resourceGetter appValues conflictType =
+            match appValues with
+            | None -> None
+            | Some values ->
+                let resourceKeys = resourceGetter resource |> List.map fst |> Set.ofList
+                let appKeys = values |> List.map fst |> Set.ofList
+                let conflicts = Set.intersect resourceKeys appKeys |> Set.toList
+
+                if not conflicts.IsEmpty then
+                    let conflictList = String.concat ", " conflicts
+                    Some $"{conflictType}: {conflictList}"
+                else
+                    None
+
+        let allConflicts =
+            [
+                checkConflict Resource.getUrlParameters urlParameters "URL parameters"
+                checkConflict Resource.getHeaders headers "Headers"
+                checkConflict Resource.getBody body "Body parameters"
+            ]
+            |> List.choose id
+
+        if not allConflicts.IsEmpty then
+            let combinedMessage = String.concat "; " allConflicts
+            Error(InvalidOperation $"App cannot override existing Resource values: {combinedMessage}")
+        else
+            Ok()
+
     let private create
         (name: string)
         (folderId: FolderId)
@@ -204,47 +239,9 @@ module App =
         : Result<ValidatedApp, DomainError> =
 
         // Business rule: App cannot override existing Resource parameters
-        let resourceUrlParams =
-            Resource.getUrlParameters resource |> List.map fst |> Set.ofList
-
-        let resourceHeaders = Resource.getHeaders resource |> List.map fst |> Set.ofList
-        let resourceBody = Resource.getBody resource |> List.map fst |> Set.ofList
-
-        let appUrlParams = urlParameters |> List.map fst |> Set.ofList
-        let appHeaders = headers |> List.map fst |> Set.ofList
-        let appBody = body |> List.map fst |> Set.ofList
-
-        let urlConflicts = Set.intersect resourceUrlParams appUrlParams |> Set.toList
-        let headerConflicts = Set.intersect resourceHeaders appHeaders |> Set.toList
-        let bodyConflicts = Set.intersect resourceBody appBody |> Set.toList
-
-        let allConflicts = []
-
-        let allConflicts =
-            if not urlConflicts.IsEmpty then
-                let paramList = String.concat ", " urlConflicts
-                $"URL parameters: {paramList}" :: allConflicts
-            else
-                allConflicts
-
-        let allConflicts =
-            if not headerConflicts.IsEmpty then
-                let headerList = String.concat ", " headerConflicts
-                $"Headers: {headerList}" :: allConflicts
-            else
-                allConflicts
-
-        let allConflicts =
-            if not bodyConflicts.IsEmpty then
-                let bodyList = String.concat ", " bodyConflicts
-                $"Body parameters: {bodyList}" :: allConflicts
-            else
-                allConflicts
-
-        if not allConflicts.IsEmpty then
-            let conflictMessage = String.concat "; " allConflicts
-            Error(InvalidOperation $"App cannot override existing Resource values: {conflictMessage}")
-        else
+        match checkResourceConflicts resource (Some urlParameters) (Some headers) (Some body) with
+        | Error err -> Error err
+        | Ok() ->
             // No conflicts, proceed with normal creation
             let resourceId = Resource.getId resource
             create name folderId resourceId inputs urlPath urlParameters headers body
@@ -303,6 +300,7 @@ module App =
 
     let updateUrlParameters
         (newUrlParameters: (string * string) list)
+        (resource: ValidatedResource)
         (app: ValidatedApp)
         : Result<ValidatedApp, DomainError> =
         let validateKeyValuePairs pairs =
@@ -321,23 +319,30 @@ module App =
         match validateKeyValuePairs newUrlParameters with
         | Error err -> Error err
         | Ok validUrlParams ->
-            let oldUrlParams = app.State.UrlParameters
+            match checkResourceConflicts resource (Some newUrlParameters) None None with
+            | Error err -> Error err
+            | Ok() ->
+                let oldUrlParams = app.State.UrlParameters
 
-            let updatedAppData = {
-                app.State with
-                    UrlParameters = validUrlParams
-                    UpdatedAt = DateTime.UtcNow
-            }
+                let updatedAppData = {
+                    app.State with
+                        UrlParameters = validUrlParams
+                        UpdatedAt = DateTime.UtcNow
+                }
 
-            let urlParamsChangedEvent =
-                AppEvents.appUpdated app.State.Id [ AppChange.UrlParametersChanged(oldUrlParams, validUrlParams) ]
+                let urlParamsChangedEvent =
+                    AppEvents.appUpdated app.State.Id [ AppChange.UrlParametersChanged(oldUrlParams, validUrlParams) ]
 
-            Ok {
-                State = updatedAppData
-                UncommittedEvents = app.UncommittedEvents @ [ urlParamsChangedEvent :> IDomainEvent ]
-            }
+                Ok {
+                    State = updatedAppData
+                    UncommittedEvents = app.UncommittedEvents @ [ urlParamsChangedEvent :> IDomainEvent ]
+                }
 
-    let updateHeaders (newHeaders: (string * string) list) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
+    let updateHeaders
+        (newHeaders: (string * string) list)
+        (resource: ValidatedResource)
+        (app: ValidatedApp)
+        : Result<ValidatedApp, DomainError> =
         let validateKeyValuePairs pairs =
             pairs
             |> List.fold
@@ -354,23 +359,30 @@ module App =
         match validateKeyValuePairs newHeaders with
         | Error err -> Error err
         | Ok validHeaders ->
-            let oldHeaders = app.State.Headers
+            match checkResourceConflicts resource None (Some newHeaders) None with
+            | Error err -> Error err
+            | Ok() ->
+                let oldHeaders = app.State.Headers
 
-            let updatedAppData = {
-                app.State with
-                    Headers = validHeaders
-                    UpdatedAt = DateTime.UtcNow
-            }
+                let updatedAppData = {
+                    app.State with
+                        Headers = validHeaders
+                        UpdatedAt = DateTime.UtcNow
+                }
 
-            let headersChangedEvent =
-                AppEvents.appUpdated app.State.Id [ AppChange.HeadersChanged(oldHeaders, validHeaders) ]
+                let headersChangedEvent =
+                    AppEvents.appUpdated app.State.Id [ AppChange.HeadersChanged(oldHeaders, validHeaders) ]
 
-            Ok {
-                State = updatedAppData
-                UncommittedEvents = app.UncommittedEvents @ [ headersChangedEvent :> IDomainEvent ]
-            }
+                Ok {
+                    State = updatedAppData
+                    UncommittedEvents = app.UncommittedEvents @ [ headersChangedEvent :> IDomainEvent ]
+                }
 
-    let updateBody (newBody: (string * string) list) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
+    let updateBody
+        (newBody: (string * string) list)
+        (resource: ValidatedResource)
+        (app: ValidatedApp)
+        : Result<ValidatedApp, DomainError> =
         let validateKeyValuePairs pairs =
             pairs
             |> List.fold
@@ -387,18 +399,21 @@ module App =
         match validateKeyValuePairs newBody with
         | Error err -> Error err
         | Ok validBody ->
-            let oldBody = app.State.Body
+            match checkResourceConflicts resource None None (Some newBody) with
+            | Error err -> Error err
+            | Ok() ->
+                let oldBody = app.State.Body
 
-            let updatedAppData = {
-                app.State with
-                    Body = validBody
-                    UpdatedAt = DateTime.UtcNow
-            }
+                let updatedAppData = {
+                    app.State with
+                        Body = validBody
+                        UpdatedAt = DateTime.UtcNow
+                }
 
-            let bodyChangedEvent =
-                AppEvents.appUpdated app.State.Id [ AppChange.BodyChanged(oldBody, validBody) ]
+                let bodyChangedEvent =
+                    AppEvents.appUpdated app.State.Id [ AppChange.BodyChanged(oldBody, validBody) ]
 
-            Ok {
-                State = updatedAppData
-                UncommittedEvents = app.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ]
-            }
+                Ok {
+                    State = updatedAppData
+                    UncommittedEvents = app.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ]
+                }
