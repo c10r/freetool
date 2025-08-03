@@ -203,3 +203,33 @@ module AutoTracing =
                             return result
                     })
         }
+
+    let createMultiRepositoryTracingDecorator<'TCommand, 'TResult>
+        (entityName: string)
+        (inner: IMultiRepositoryCommandHandler<'TCommand, 'TResult>)
+        (activitySource: ActivitySource)
+        =
+
+        { new IMultiRepositoryCommandHandler<'TCommand, 'TResult> with
+            member this.HandleCommand command =
+                let spanName = getSpanName entityName (box command)
+
+                Tracing.withSpan activitySource spanName (fun activity ->
+                    // Add command attributes automatically using reflection
+                    addObjectAttributes activity entityName (box command)
+
+                    task {
+                        let! result = inner.HandleCommand command
+
+                        match result with
+                        | Ok commandResult ->
+                            // Add result attributes automatically using reflection
+                            addResultAttributes activity (box commandResult)
+                            Tracing.setSpanStatus activity true None
+                            return result
+                        | Error error ->
+                            Tracing.addDomainErrorEvent activity error
+                            Tracing.setSpanStatus activity false None
+                            return result
+                    })
+        }

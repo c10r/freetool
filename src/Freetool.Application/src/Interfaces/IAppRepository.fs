@@ -27,3 +27,5 @@ type IAppRepository =
     abstract member GetCountAsync: unit -> Task<int>
 
     abstract member GetCountByFolderIdAsync: FolderId -> Task<int>
+
+    abstract member GetByResourceIdAsync: ResourceId -> Task<ValidatedApp list>

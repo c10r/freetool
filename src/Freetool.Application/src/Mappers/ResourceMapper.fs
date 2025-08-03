@@ -37,24 +37,27 @@ module ResourceMapper =
 
     let fromUpdateUrlParametersDto
         (dto: UpdateResourceUrlParametersDto)
+        (apps: AppResourceConflictData list)
         (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
         let urlParameters = dto.UrlParameters |> List.map keyValuePairFromDto
-        Resource.updateUrlParameters urlParameters resource
+        Resource.updateUrlParameters urlParameters apps resource
 
     let fromUpdateHeadersDto
         (dto: UpdateResourceHeadersDto)
+        (apps: AppResourceConflictData list)
         (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
         let headers = dto.Headers |> List.map keyValuePairFromDto
-        Resource.updateHeaders headers resource
+        Resource.updateHeaders headers apps resource
 
     let fromUpdateBodyDto
         (dto: UpdateResourceBodyDto)
+        (apps: AppResourceConflictData list)
         (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
         let body = dto.Body |> List.map keyValuePairFromDto
-        Resource.updateBody body resource
+        Resource.updateBody body apps resource
 
     // Domain -> DTO conversions (for API responses)
     let toDto (resource: ValidatedResource) : ResourceDto = {

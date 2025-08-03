@@ -15,6 +15,7 @@ module ResourceHandler =
 
     let handleCommand
         (resourceRepository: IResourceRepository)
+        (appRepository: IAppRepository)
         (command: ResourceCommand)
         : Task<Result<ResourceCommandResult, DomainError>> =
         task {
@@ -129,7 +130,18 @@ module ResourceHandler =
                     match resourceOption with
                     | None -> return Error(NotFound "Resource not found")
                     | Some resource ->
-                        match ResourceMapper.fromUpdateUrlParametersDto dto resource with
+                        let! apps = appRepository.GetByResourceIdAsync resourceIdObj
+
+                        let appConflictData =
+                            apps
+                            |> List.map (fun app -> {
+                                AppId = (App.getId app).Value.ToString()
+                                UrlParameters = App.getUrlParameters app
+                                Headers = App.getHeaders app
+                                Body = App.getBody app
+                            })
+
+                        match ResourceMapper.fromUpdateUrlParametersDto dto appConflictData resource with
                         | Error error -> return Error error
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
@@ -146,7 +158,18 @@ module ResourceHandler =
                     match resourceOption with
                     | None -> return Error(NotFound "Resource not found")
                     | Some resource ->
-                        match ResourceMapper.fromUpdateHeadersDto dto resource with
+                        let! apps = appRepository.GetByResourceIdAsync resourceIdObj
+
+                        let appConflictData =
+                            apps
+                            |> List.map (fun app -> {
+                                AppId = (App.getId app).Value.ToString()
+                                UrlParameters = App.getUrlParameters app
+                                Headers = App.getHeaders app
+                                Body = App.getBody app
+                            })
+
+                        match ResourceMapper.fromUpdateHeadersDto dto appConflictData resource with
                         | Error error -> return Error error
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
@@ -163,7 +186,18 @@ module ResourceHandler =
                     match resourceOption with
                     | None -> return Error(NotFound "Resource not found")
                     | Some resource ->
-                        match ResourceMapper.fromUpdateBodyDto dto resource with
+                        let! apps = appRepository.GetByResourceIdAsync resourceIdObj
+
+                        let appConflictData =
+                            apps
+                            |> List.map (fun app -> {
+                                AppId = (App.getId app).Value.ToString()
+                                UrlParameters = App.getUrlParameters app
+                                Headers = App.getHeaders app
+                                Body = App.getBody app
+                            })
+
+                        match ResourceMapper.fromUpdateBodyDto dto appConflictData resource with
                         | Error error -> return Error error
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
@@ -194,7 +228,7 @@ module ResourceHandler =
                     return Ok(ResourcesResult result)
         }
 
-type ResourceHandler() =
-    interface IGenericCommandHandler<IResourceRepository, ResourceCommand, ResourceCommandResult> with
-        member this.HandleCommand repository command =
-            ResourceHandler.handleCommand repository command
+type ResourceHandler(resourceRepository: IResourceRepository, appRepository: IAppRepository) =
+    interface IMultiRepositoryCommandHandler<ResourceCommand, ResourceCommandResult> with
+        member this.HandleCommand command =
+            ResourceHandler.handleCommand resourceRepository appRepository command

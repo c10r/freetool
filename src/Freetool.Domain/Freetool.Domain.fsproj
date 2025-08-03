@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="src/Types.fs" />
+    <Compile Include="src/BusinessRules.fs" />
     <Compile Include="src/ValueObjects/HttpMethod.fs" />
     <Compile Include="src/ValueObjects/Url.fs" />
     <Compile Include="src/ValueObjects/UserId.fs" />

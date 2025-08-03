@@ -118,3 +118,9 @@ type AppRepository(context: FreetoolDbContext) =
             let folderGuidId = folderId.Value
             return! context.Apps.CountAsync(fun a -> a.FolderId = folderGuidId)
         }
+
+        member _.GetByResourceIdAsync(resourceId: ResourceId) : Task<ValidatedApp list> = task {
+            let resourceGuidId = resourceId.Value
+            let! appEntities = context.Apps.Where(fun a -> a.ResourceId = resourceGuidId).ToListAsync()
+            return appEntities |> Seq.map AppEntityMapper.fromEntity |> Seq.toList
+        }

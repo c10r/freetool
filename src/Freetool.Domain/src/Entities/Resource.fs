@@ -182,8 +182,17 @@ module Resource =
                 UncommittedEvents = resource.UncommittedEvents @ [ baseUrlChangedEvent :> IDomainEvent ]
             }
 
+    let private checkAppConflicts
+        (apps: AppResourceConflictData list)
+        (urlParameters: (string * string) list option)
+        (headers: (string * string) list option)
+        (body: (string * string) list option)
+        : Result<unit, DomainError> =
+        BusinessRules.checkAppToResourceConflicts apps urlParameters headers body
+
     let updateUrlParameters
         (newUrlParameters: (string * string) list)
+        (apps: AppResourceConflictData list)
         (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
         let validateKeyValuePairs pairs =
@@ -202,26 +211,30 @@ module Resource =
         match validateKeyValuePairs newUrlParameters with
         | Error err -> Error err
         | Ok validUrlParams ->
-            let oldUrlParams = resource.State.UrlParameters
+            match checkAppConflicts apps (Some newUrlParameters) None None with
+            | Error err -> Error err
+            | Ok() ->
+                let oldUrlParams = resource.State.UrlParameters
 
-            let updatedResourceData = {
-                resource.State with
-                    UrlParameters = validUrlParams
-                    UpdatedAt = DateTime.UtcNow
-            }
+                let updatedResourceData = {
+                    resource.State with
+                        UrlParameters = validUrlParams
+                        UpdatedAt = DateTime.UtcNow
+                }
 
-            let urlParamsChangedEvent =
-                ResourceEvents.resourceUpdated resource.State.Id [
-                    ResourceChange.UrlParametersChanged(oldUrlParams, validUrlParams)
-                ]
+                let urlParamsChangedEvent =
+                    ResourceEvents.resourceUpdated resource.State.Id [
+                        ResourceChange.UrlParametersChanged(oldUrlParams, validUrlParams)
+                    ]
 
-            Ok {
-                State = updatedResourceData
-                UncommittedEvents = resource.UncommittedEvents @ [ urlParamsChangedEvent :> IDomainEvent ]
-            }
+                Ok {
+                    State = updatedResourceData
+                    UncommittedEvents = resource.UncommittedEvents @ [ urlParamsChangedEvent :> IDomainEvent ]
+                }
 
     let updateHeaders
         (newHeaders: (string * string) list)
+        (apps: AppResourceConflictData list)
         (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
         let validateKeyValuePairs pairs =
@@ -240,26 +253,30 @@ module Resource =
         match validateKeyValuePairs newHeaders with
         | Error err -> Error err
         | Ok validHeaders ->
-            let oldHeaders = resource.State.Headers
+            match checkAppConflicts apps None (Some newHeaders) None with
+            | Error err -> Error err
+            | Ok() ->
+                let oldHeaders = resource.State.Headers
 
-            let updatedResourceData = {
-                resource.State with
-                    Headers = validHeaders
-                    UpdatedAt = DateTime.UtcNow
-            }
+                let updatedResourceData = {
+                    resource.State with
+                        Headers = validHeaders
+                        UpdatedAt = DateTime.UtcNow
+                }
 
-            let headersChangedEvent =
-                ResourceEvents.resourceUpdated resource.State.Id [
-                    ResourceChange.HeadersChanged(oldHeaders, validHeaders)
-                ]
+                let headersChangedEvent =
+                    ResourceEvents.resourceUpdated resource.State.Id [
+                        ResourceChange.HeadersChanged(oldHeaders, validHeaders)
+                    ]
 
-            Ok {
-                State = updatedResourceData
-                UncommittedEvents = resource.UncommittedEvents @ [ headersChangedEvent :> IDomainEvent ]
-            }
+                Ok {
+                    State = updatedResourceData
+                    UncommittedEvents = resource.UncommittedEvents @ [ headersChangedEvent :> IDomainEvent ]
+                }
 
     let updateBody
         (newBody: (string * string) list)
+        (apps: AppResourceConflictData list)
         (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
         let validateKeyValuePairs pairs =
@@ -278,21 +295,24 @@ module Resource =
         match validateKeyValuePairs newBody with
         | Error err -> Error err
         | Ok validBody ->
-            let oldBody = resource.State.Body
+            match checkAppConflicts apps None None (Some newBody) with
+            | Error err -> Error err
+            | Ok() ->
+                let oldBody = resource.State.Body
 
-            let updatedResourceData = {
-                resource.State with
-                    Body = validBody
-                    UpdatedAt = DateTime.UtcNow
-            }
+                let updatedResourceData = {
+                    resource.State with
+                        Body = validBody
+                        UpdatedAt = DateTime.UtcNow
+                }
 
-            let bodyChangedEvent =
-                ResourceEvents.resourceUpdated resource.State.Id [ ResourceChange.BodyChanged(oldBody, validBody) ]
+                let bodyChangedEvent =
+                    ResourceEvents.resourceUpdated resource.State.Id [ ResourceChange.BodyChanged(oldBody, validBody) ]
 
-            Ok {
-                State = updatedResourceData
-                UncommittedEvents = resource.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ]
-            }
+                Ok {
+                    State = updatedResourceData
+                    UncommittedEvents = resource.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ]
+                }
 
     let markForDeletion (resource: ValidatedResource) : ValidatedResource =
         let resourceDeletedEvent = ResourceEvents.resourceDeleted resource.State.Id
@@ -331,3 +351,9 @@ module Resource =
     let getCreatedAt (resource: Resource) : DateTime = resource.State.CreatedAt
 
     let getUpdatedAt (resource: Resource) : DateTime = resource.State.UpdatedAt
+
+    let toConflictData (resource: Resource) : ResourceAppConflictData = {
+        UrlParameters = getUrlParameters resource
+        Headers = getHeaders resource
+        Body = getBody resource
+    }

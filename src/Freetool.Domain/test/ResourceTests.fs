@@ -137,7 +137,7 @@ let ``Resource URL parameters update should generate correct event`` () =
     let newParams = [ ("userId", "123"); ("format", "json"); ("limit", "10") ]
 
     // Act
-    let result = Resource.updateUrlParameters newParams resource
+    let result = Resource.updateUrlParameters newParams [] resource
 
     // Assert
     match result with
@@ -173,7 +173,7 @@ let ``Resource headers update should generate correct event`` () =
     let newHeaders = [ ("Authorization", "Bearer token"); ("Content-Type", "application/json") ]
 
     // Act
-    let result = Resource.updateHeaders newHeaders resource
+    let result = Resource.updateHeaders newHeaders [] resource
 
     // Assert
     match result with
@@ -207,7 +207,7 @@ let ``Resource body update should generate correct event`` () =
     let newBody = [ ("firstName", "Jane"); ("lastName", "Doe"); ("age", "30") ]
 
     // Act
-    let result = Resource.updateBody newBody resource
+    let result = Resource.updateBody newBody [] resource
 
     // Assert
     match result with

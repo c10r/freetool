@@ -10,11 +10,7 @@ open Freetool.Application.Mappers
 
 [<ApiController>]
 [<Route("resource")>]
-type ResourceController
-    (
-        resourceRepository: IResourceRepository,
-        commandHandler: IGenericCommandHandler<IResourceRepository, ResourceCommand, ResourceCommandResult>
-    ) =
+type ResourceController(commandHandler: IMultiRepositoryCommandHandler<ResourceCommand, ResourceCommandResult>) =
     inherit ControllerBase()
 
     [<HttpPost>]
@@ -22,7 +18,7 @@ type ResourceController
         match ResourceMapper.fromCreateDto createDto with
         | Error domainError -> return this.HandleDomainError(domainError)
         | Ok validatedResource ->
-            let! result = commandHandler.HandleCommand resourceRepository (CreateResource validatedResource)
+            let! result = commandHandler.HandleCommand(CreateResource validatedResource)
 
             return
                 match result with
@@ -35,7 +31,7 @@ type ResourceController
 
     [<HttpGet("{id}")>]
     member this.GetResourceById(id: string) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand resourceRepository (GetResourceById id)
+        let! result = commandHandler.HandleCommand(GetResourceById id)
 
         return
             match result with
@@ -53,7 +49,7 @@ type ResourceController
             elif take > 100 then 100
             else take
 
-        let! result = commandHandler.HandleCommand resourceRepository (GetAllResources(skipValue, takeValue))
+        let! result = commandHandler.HandleCommand(GetAllResources(skipValue, takeValue))
 
         return
             match result with
@@ -64,7 +60,7 @@ type ResourceController
 
     [<HttpPut("{id}/name")>]
     member this.UpdateResourceName(id: string, [<FromBody>] updateDto: UpdateResourceNameDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand resourceRepository (UpdateResourceName(id, updateDto))
+        let! result = commandHandler.HandleCommand(UpdateResourceName(id, updateDto))
 
         return
             match result with
@@ -78,7 +74,7 @@ type ResourceController
         (id: string, [<FromBody>] updateDto: UpdateResourceDescriptionDto)
         : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand resourceRepository (UpdateResourceDescription(id, updateDto))
+            let! result = commandHandler.HandleCommand(UpdateResourceDescription(id, updateDto))
 
             return
                 match result with
@@ -92,7 +88,7 @@ type ResourceController
         (id: string, [<FromBody>] updateDto: UpdateResourceBaseUrlDto)
         : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand resourceRepository (UpdateResourceBaseUrl(id, updateDto))
+            let! result = commandHandler.HandleCommand(UpdateResourceBaseUrl(id, updateDto))
 
             return
                 match result with
@@ -106,7 +102,7 @@ type ResourceController
         (id: string, [<FromBody>] updateDto: UpdateResourceUrlParametersDto)
         : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand resourceRepository (UpdateResourceUrlParameters(id, updateDto))
+            let! result = commandHandler.HandleCommand(UpdateResourceUrlParameters(id, updateDto))
 
             return
                 match result with
@@ -120,7 +116,7 @@ type ResourceController
         (id: string, [<FromBody>] updateDto: UpdateResourceHeadersDto)
         : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand resourceRepository (UpdateResourceHeaders(id, updateDto))
+            let! result = commandHandler.HandleCommand(UpdateResourceHeaders(id, updateDto))
 
             return
                 match result with
@@ -131,7 +127,7 @@ type ResourceController
 
     [<HttpPut("{id}/body")>]
     member this.UpdateResourceBody(id: string, [<FromBody>] updateDto: UpdateResourceBodyDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand resourceRepository (UpdateResourceBody(id, updateDto))
+        let! result = commandHandler.HandleCommand(UpdateResourceBody(id, updateDto))
 
         return
             match result with
@@ -142,7 +138,7 @@ type ResourceController
 
     [<HttpDelete("{id}")>]
     member this.DeleteResource(id: string) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand resourceRepository (DeleteResource id)
+        let! result = commandHandler.HandleCommand(DeleteResource id)
 
         return
             match result with

@@ -128,39 +128,12 @@ module App =
             }
 
     let private checkResourceConflicts
-        (resource: ValidatedResource)
+        (resource: ResourceAppConflictData)
         (urlParameters: (string * string) list option)
         (headers: (string * string) list option)
         (body: (string * string) list option)
         : Result<unit, DomainError> =
-
-        let checkConflict resourceGetter appValues conflictType =
-            match appValues with
-            | None -> None
-            | Some values ->
-                let resourceKeys = resourceGetter resource |> List.map fst |> Set.ofList
-                let appKeys = values |> List.map fst |> Set.ofList
-                let conflicts = Set.intersect resourceKeys appKeys |> Set.toList
-
-                if not conflicts.IsEmpty then
-                    let conflictList = String.concat ", " conflicts
-                    Some $"{conflictType}: {conflictList}"
-                else
-                    None
-
-        let allConflicts =
-            [
-                checkConflict Resource.getUrlParameters urlParameters "URL parameters"
-                checkConflict Resource.getHeaders headers "Headers"
-                checkConflict Resource.getBody body "Body parameters"
-            ]
-            |> List.choose id
-
-        if not allConflicts.IsEmpty then
-            let combinedMessage = String.concat "; " allConflicts
-            Error(InvalidOperation $"App cannot override existing Resource values: {combinedMessage}")
-        else
-            Ok()
+        BusinessRules.checkResourceToAppConflicts resource urlParameters headers body
 
     let private create
         (name: string)
@@ -239,7 +212,9 @@ module App =
         : Result<ValidatedApp, DomainError> =
 
         // Business rule: App cannot override existing Resource parameters
-        match checkResourceConflicts resource (Some urlParameters) (Some headers) (Some body) with
+        let resourceConflictData = Resource.toConflictData resource
+
+        match checkResourceConflicts resourceConflictData (Some urlParameters) (Some headers) (Some body) with
         | Error err -> Error err
         | Ok() ->
             // No conflicts, proceed with normal creation
@@ -283,6 +258,13 @@ module App =
     let getBody (app: App) : (string * string) list =
         app.State.Body |> List.map (fun kvp -> (kvp.Key, kvp.Value))
 
+    let toConflictData (app: App) : AppResourceConflictData = {
+        AppId = (getId app).ToString()
+        UrlParameters = getUrlParameters app
+        Headers = getHeaders app
+        Body = getBody app
+    }
+
     let updateUrlPath (newUrlPath: string option) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
         let updatedAppData = {
             app.State with
@@ -300,7 +282,7 @@ module App =
 
     let updateUrlParameters
         (newUrlParameters: (string * string) list)
-        (resource: ValidatedResource)
+        (resource: ResourceAppConflictData)
         (app: ValidatedApp)
         : Result<ValidatedApp, DomainError> =
         let validateKeyValuePairs pairs =
@@ -340,7 +322,7 @@ module App =
 
     let updateHeaders
         (newHeaders: (string * string) list)
-        (resource: ValidatedResource)
+        (resource: ResourceAppConflictData)
         (app: ValidatedApp)
         : Result<ValidatedApp, DomainError> =
         let validateKeyValuePairs pairs =
@@ -380,7 +362,7 @@ module App =
 
     let updateBody
         (newBody: (string * string) list)
-        (resource: ValidatedResource)
+        (resource: ResourceAppConflictData)
         (app: ValidatedApp)
         : Result<ValidatedApp, DomainError> =
         let validateKeyValuePairs pairs =

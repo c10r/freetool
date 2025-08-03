@@ -309,7 +309,9 @@ let ``App update URL parameters should generate correct event`` () =
         Resource.create "Test Resource" "Test" "https://test.com" [] [] [] "GET"
         |> unwrapResult
 
-    let result = App.updateUrlParameters newUrlParams emptyResource app
+    let resourceConflictData = Resource.toConflictData emptyResource
+
+    let result = App.updateUrlParameters newUrlParams resourceConflictData app
 
     // Assert
     match result with
@@ -342,7 +344,9 @@ let ``App update headers should generate correct event`` () =
         Resource.create "Test Resource" "Test" "https://test.com" [] [] [] "GET"
         |> unwrapResult
 
-    let result = App.updateHeaders newHeaders emptyResource app
+    let resourceConflictData = Resource.toConflictData emptyResource
+
+    let result = App.updateHeaders newHeaders resourceConflictData app
 
     // Assert
     match result with
@@ -375,7 +379,9 @@ let ``App update body should generate correct event`` () =
         Resource.create "Test Resource" "Test" "https://test.com" [] [] [] "GET"
         |> unwrapResult
 
-    let result = App.updateBody newBody emptyResource app
+    let resourceConflictData = Resource.toConflictData emptyResource
+
+    let result = App.updateBody newBody resourceConflictData app
 
     // Assert
     match result with
@@ -627,7 +633,9 @@ let ``App updateUrlParameters should reject resource parameter conflicts`` () =
 
     // Act - Try to update with conflicting URL parameter "format"
     let result =
-        App.updateUrlParameters [ ("format", "xml"); ("new_param", "value") ] resource app
+        let resourceConflictData = Resource.toConflictData resource
+
+        App.updateUrlParameters [ ("format", "xml"); ("new_param", "value") ] resourceConflictData app
 
     // Assert
     match result with
@@ -660,7 +668,12 @@ let ``App updateHeaders should reject resource header conflicts`` () =
 
     // Act - Try to update with conflicting header "Content-Type"
     let result =
-        App.updateHeaders [ ("Content-Type", "application/xml"); ("Authorization", "Bearer token") ] resource app
+        let resourceConflictData = Resource.toConflictData resource
+
+        App.updateHeaders
+            [ ("Content-Type", "application/xml"); ("Authorization", "Bearer token") ]
+            resourceConflictData
+            app
 
     // Assert
     match result with
@@ -686,7 +699,9 @@ let ``App updateBody should reject resource body parameter conflicts`` () =
 
     // Act - Try to update with conflicting body parameter "client_id"
     let result =
-        App.updateBody [ ("client_id", "override"); ("new_param", "value") ] resource app
+        let resourceConflictData = Resource.toConflictData resource
+
+        App.updateBody [ ("client_id", "override"); ("new_param", "value") ] resourceConflictData app
 
     // Assert
     match result with
@@ -711,7 +726,10 @@ let ``App updateUrlParameters should allow new parameters with no conflicts`` ()
         |> unwrapResult
 
     // Act - Update with only new parameters (no conflicts)
-    let result = App.updateUrlParameters [ ("page", "1"); ("size", "10") ] resource app
+    let resourceConflictData = Resource.toConflictData resource
+
+    let result =
+        App.updateUrlParameters [ ("page", "1"); ("size", "10") ] resourceConflictData app
 
     // Assert
     match result with
@@ -738,7 +756,9 @@ let ``App updateHeaders should allow new headers with no conflicts`` () =
 
     // Act - Update with only new headers (no conflicts)
     let result =
-        App.updateHeaders [ ("Authorization", "Bearer token"); ("X-API-Key", "secret") ] resource app
+        let resourceConflictData = Resource.toConflictData resource
+
+        App.updateHeaders [ ("Authorization", "Bearer token"); ("X-API-Key", "secret") ] resourceConflictData app
 
     // Assert
     match result with
@@ -765,7 +785,9 @@ let ``App updateBody should allow new body parameters with no conflicts`` () =
 
     // Act - Update with only new body parameters (no conflicts)
     let result =
-        App.updateBody [ ("include_metadata", "true"); ("format", "detailed") ] resource app
+        let resourceConflictData = Resource.toConflictData resource
+
+        App.updateBody [ ("include_metadata", "true"); ("format", "detailed") ] resourceConflictData app
 
     // Assert
     match result with

@@ -55,7 +55,12 @@ let main args =
 
     builder.Services.AddScoped<UserHandler>() |> ignore
 
-    builder.Services.AddScoped<ResourceHandler>() |> ignore
+    builder.Services.AddScoped<ResourceHandler>(fun serviceProvider ->
+        let resourceRepository = serviceProvider.GetRequiredService<IResourceRepository>()
+        let appRepository = serviceProvider.GetRequiredService<IAppRepository>()
+        ResourceHandler(resourceRepository, appRepository))
+    |> ignore
+
     builder.Services.AddScoped<FolderHandler>() |> ignore
     builder.Services.AddScoped<AppHandler>() |> ignore
 
@@ -65,11 +70,11 @@ let main args =
         TracingUserCommandHandlerDecorator(userHandler, activitySource))
     |> ignore
 
-    builder.Services.AddScoped<IGenericCommandHandler<IResourceRepository, ResourceCommand, ResourceCommandResult>>
+    builder.Services.AddScoped<IMultiRepositoryCommandHandler<ResourceCommand, ResourceCommandResult>>
         (fun serviceProvider ->
             let resourceHandler = serviceProvider.GetRequiredService<ResourceHandler>()
             let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-            AutoTracing.createTracingDecorator "resource" resourceHandler activitySource)
+            AutoTracing.createMultiRepositoryTracingDecorator "resource" resourceHandler activitySource)
     |> ignore
 
     builder.Services.AddScoped<IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>>
