@@ -12,6 +12,7 @@ type GroupChange =
 type GroupCreatedEvent = {
     GroupId: GroupId
     Name: string
+    InitialUserIds: UserId list
     OccurredAt: DateTime
     EventId: Guid
 } with
@@ -42,10 +43,11 @@ type GroupDeletedEvent = {
         member this.EventId = this.EventId
 
 module GroupEvents =
-    let groupCreated (groupId: GroupId) (name: string) =
+    let groupCreated (groupId: GroupId) (name: string) (initialUserIds: UserId list) =
         {
             GroupId = groupId
             Name = name
+            InitialUserIds = initialUserIds
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
         }

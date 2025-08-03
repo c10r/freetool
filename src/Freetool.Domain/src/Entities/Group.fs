@@ -28,20 +28,24 @@ type UnvalidatedGroup = Group // From DTOs - potentially unsafe
 type ValidatedGroup = Group // Validated domain model and database data
 
 module Group =
-    let create (name: string) : Result<ValidatedGroup, DomainError> =
+    let create (name: string) (userIds: UserId list option) : Result<ValidatedGroup, DomainError> =
         match name with
         | "" -> Error(ValidationError "Group name cannot be empty")
         | nameValue when nameValue.Length > 100 -> Error(ValidationError "Group name cannot exceed 100 characters")
         | nameValue ->
+            // Handle userIds - remove duplicates and default to empty list if None
+            let validatedUserIds = userIds |> Option.defaultValue [] |> List.distinct
+
             let groupData = {
                 Id = GroupId.NewId()
                 Name = nameValue.Trim()
-                UserIds = []
+                UserIds = validatedUserIds
                 CreatedAt = DateTime.UtcNow
                 UpdatedAt = DateTime.UtcNow
             }
 
-            let groupCreatedEvent = GroupEvents.groupCreated groupData.Id groupData.Name
+            let groupCreatedEvent =
+                GroupEvents.groupCreated groupData.Id groupData.Name validatedUserIds
 
             Ok {
                 State = groupData
@@ -60,10 +64,14 @@ module Group =
         | "" -> Error(ValidationError "Group name cannot be empty")
         | nameValue when nameValue.Length > 100 -> Error(ValidationError "Group name cannot exceed 100 characters")
         | nameValue ->
+            // Remove duplicates from UserIds
+            let distinctUserIds = groupData.UserIds |> List.distinct
+
             Ok {
                 State = {
                     groupData with
                         Name = nameValue.Trim()
+                        UserIds = distinctUserIds
                 }
                 UncommittedEvents = group.UncommittedEvents
             }
@@ -153,3 +161,20 @@ module Group =
 
     let hasUser (userId: UserId) (group: Group) : bool =
         List.contains userId group.State.UserIds
+
+    // Helper function to validate UserIds - to be used by application layer
+    let validateUserIds (userIds: UserId list) (userExistsFunc: UserId -> bool) : Result<UserId list, DomainError> =
+        let distinctUserIds = userIds |> List.distinct
+
+        let invalidUserIds =
+            distinctUserIds |> List.filter (fun userId -> not (userExistsFunc userId))
+
+        match invalidUserIds with
+        | [] -> Ok distinctUserIds
+        | invalidIds ->
+            let invalidIdStrings = invalidIds |> List.map (fun id -> id.Value.ToString())
+
+            let message =
+                sprintf "The following user IDs do not exist or are deleted: %s" (String.concat ", " invalidIdStrings)
+
+            Error(ValidationError message)

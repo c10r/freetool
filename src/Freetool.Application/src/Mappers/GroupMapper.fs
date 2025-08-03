@@ -6,16 +6,27 @@ open Freetool.Domain.ValueObjects
 open Freetool.Application.DTOs
 
 module GroupMapper =
-    let fromCreateDto (dto: CreateGroupDto) : UnvalidatedGroup = {
-        State = {
-            Id = GroupId.NewId()
-            Name = dto.Name
-            UserIds = []
-            CreatedAt = DateTime.UtcNow
-            UpdatedAt = DateTime.UtcNow
+    let fromCreateDto (dto: CreateGroupDto) : UnvalidatedGroup =
+        // Convert string UserIds to UserId list, filtering out invalid GUIDs
+        let userIds =
+            dto.UserIds
+            |> Option.defaultValue []
+            |> List.choose (fun userIdStr ->
+                match Guid.TryParse userIdStr with
+                | true, guid -> Some(UserId.FromGuid guid)
+                | false, _ -> None)
+            |> List.distinct
+
+        {
+            State = {
+                Id = GroupId.NewId()
+                Name = dto.Name
+                UserIds = userIds
+                CreatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow
+            }
+            UncommittedEvents = []
         }
-        UncommittedEvents = []
-    }
 
     let fromUpdateNameDto (dto: UpdateGroupNameDto) (group: ValidatedGroup) : UnvalidatedGroup = {
         State = {

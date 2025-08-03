@@ -27,14 +27,44 @@ module GroupHandler =
                 if existsByName then
                     return Error(Conflict "A group with this name already exists")
                 else
-                    // Create event-aware group from the validated group
-                    match Group.create (Group.getName validatedGroup) with
-                    | Error error -> return Error error
-                    | Ok eventAwareGroup ->
-                        // Save group and events atomically
-                        match! groupRepository.AddAsync eventAwareGroup with
+                    // Validate UserIds if any are provided
+                    let userIds = Group.getUserIds validatedGroup
+
+                    // Validate UserIds if any are provided
+                    let! validationResults =
+                        userIds
+                        |> List.map (fun userId -> task {
+                            let! exists = userRepository.ExistsAsync userId
+                            return (userId, exists)
+                        })
+                        |> Task.WhenAll
+
+                    let invalidUserIds =
+                        validationResults
+                        |> Array.filter (fun (_, exists) -> not exists)
+                        |> Array.map fst
+                        |> Array.toList
+
+                    match invalidUserIds with
+                    | [] ->
+                        let validatedUserIds = userIds |> List.distinct
+                        // Create event-aware group from the validated group with validated user IDs
+                        match Group.create (Group.getName validatedGroup) (Some validatedUserIds) with
                         | Error error -> return Error error
-                        | Ok() -> return Ok(GroupResult(mapGroupToDto eventAwareGroup))
+                        | Ok eventAwareGroup ->
+                            // Save group and events atomically
+                            match! groupRepository.AddAsync eventAwareGroup with
+                            | Error error -> return Error error
+                            | Ok() -> return Ok(GroupResult(mapGroupToDto eventAwareGroup))
+                    | invalidIds ->
+                        let invalidIdStrings = invalidIds |> List.map (fun id -> id.Value.ToString())
+
+                        let message =
+                            sprintf
+                                "The following user IDs do not exist or are deleted: %s"
+                                (String.concat ", " invalidIdStrings)
+
+                        return Error(ValidationError message)
 
             | DeleteGroup groupId ->
                 match Guid.TryParse groupId with

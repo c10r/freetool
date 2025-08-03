@@ -16,7 +16,7 @@ let unwrapResult result =
 [<Fact>]
 let ``Group creation should generate GroupCreatedEvent`` () =
     // Act
-    let result = Group.create "Development Team"
+    let result = Group.create "Development Team" None
 
     // Assert
     match result with
@@ -28,6 +28,7 @@ let ``Group creation should generate GroupCreatedEvent`` () =
         | :? GroupCreatedEvent as event ->
             Assert.Equal("Development Team", event.Name)
             Assert.Equal(group.State.Id, event.GroupId)
+            Assert.Empty(event.InitialUserIds) // No users for this test
         | _ -> Assert.True(false, "Expected GroupCreatedEvent")
 
         // Verify group state
@@ -38,7 +39,7 @@ let ``Group creation should generate GroupCreatedEvent`` () =
 [<Fact>]
 let ``Group creation with empty name should fail`` () =
     // Act
-    let result = Group.create ""
+    let result = Group.create "" None
 
     // Assert
     match result with
@@ -52,7 +53,7 @@ let ``Group creation with name exceeding 100 characters should fail`` () =
     let longName = String.replicate 101 "a"
 
     // Act
-    let result = Group.create longName
+    let result = Group.create longName None
 
     // Assert
     match result with
@@ -85,7 +86,7 @@ let ``Group validation should trim name and succeed`` () =
 [<Fact>]
 let ``Group name update should generate correct event`` () =
     // Arrange
-    let group = Group.create "Old Team Name" |> unwrapResult
+    let group = Group.create "Old Team Name" None |> unwrapResult
 
     // Act
     let result = Group.updateName "New Team Name" group
@@ -114,7 +115,7 @@ let ``Group name update should generate correct event`` () =
 [<Fact>]
 let ``Group name update with same name should not generate event`` () =
     // Arrange
-    let group = Group.create "Team Name" |> unwrapResult
+    let group = Group.create "Team Name" None |> unwrapResult
 
     // Act
     let result = Group.updateName "Team Name" group
@@ -129,7 +130,7 @@ let ``Group name update with same name should not generate event`` () =
 [<Fact>]
 let ``Group name update with empty name should fail`` () =
     // Arrange
-    let group = Group.create "Team Name" |> unwrapResult
+    let group = Group.create "Team Name" None |> unwrapResult
 
     // Act
     let result = Group.updateName "" group
@@ -143,7 +144,7 @@ let ``Group name update with empty name should fail`` () =
 [<Fact>]
 let ``Add user to group should generate correct event`` () =
     // Arrange
-    let group = Group.create "Development Team" |> unwrapResult
+    let group = Group.create "Development Team" None |> unwrapResult
     let userId = UserId.NewId()
 
     // Act
@@ -174,7 +175,7 @@ let ``Add user to group should generate correct event`` () =
 [<Fact>]
 let ``Add duplicate user to group should fail`` () =
     // Arrange
-    let group = Group.create "Development Team" |> unwrapResult
+    let group = Group.create "Development Team" None |> unwrapResult
     let userId = UserId.NewId()
     let groupWithUser = Group.addUser userId group |> unwrapResult
 
@@ -190,7 +191,7 @@ let ``Add duplicate user to group should fail`` () =
 [<Fact>]
 let ``Remove user from group should generate correct event`` () =
     // Arrange
-    let group = Group.create "Development Team" |> unwrapResult
+    let group = Group.create "Development Team" None |> unwrapResult
     let userId = UserId.NewId()
     let groupWithUser = Group.addUser userId group |> unwrapResult
 
@@ -221,7 +222,7 @@ let ``Remove user from group should generate correct event`` () =
 [<Fact>]
 let ``Remove non-member user from group should fail`` () =
     // Arrange
-    let group = Group.create "Development Team" |> unwrapResult
+    let group = Group.create "Development Team" None |> unwrapResult
     let userId = UserId.NewId()
 
     // Act
@@ -236,7 +237,7 @@ let ``Remove non-member user from group should fail`` () =
 [<Fact>]
 let ``Group with multiple users should track all members`` () =
     // Arrange
-    let group = Group.create "Development Team" |> unwrapResult
+    let group = Group.create "Development Team" None |> unwrapResult
     let user1 = UserId.NewId()
     let user2 = UserId.NewId()
     let user3 = UserId.NewId()
@@ -264,7 +265,7 @@ let ``Group with multiple users should track all members`` () =
 [<Fact>]
 let ``Mark group for deletion should generate GroupDeletedEvent`` () =
     // Arrange
-    let group = Group.create "Development Team" |> unwrapResult
+    let group = Group.create "Development Team" None |> unwrapResult
 
     // Act
     let groupForDeletion = Group.markForDeletion group
@@ -299,7 +300,7 @@ let ``Group created from data should have no uncommitted events`` () =
 [<Fact>]
 let ``Mark events as committed should clear uncommitted events`` () =
     // Arrange
-    let group = Group.create "Development Team" |> unwrapResult
+    let group = Group.create "Development Team" None |> unwrapResult
     let userId = UserId.NewId()
     let groupWithUser = Group.addUser userId group |> unwrapResult
 
@@ -317,3 +318,204 @@ let ``Mark events as committed should clear uncommitted events`` () =
     // Verify state is preserved
     Assert.Equal("Development Team", Group.getName committedGroup)
     Assert.True(Group.hasUser userId committedGroup)
+
+[<Fact>]
+let ``Group creation with single user should succeed`` () =
+    // Arrange
+    let userId = UserId.NewId()
+    let userIds = Some [ userId ]
+
+    // Act
+    let result = Group.create "Development Team" userIds
+
+    // Assert
+    match result with
+    | Ok group ->
+        let events = Group.getUncommittedEvents group
+        Assert.Single(events) |> ignore
+
+        match events.[0] with
+        | :? GroupCreatedEvent as event ->
+            Assert.Equal("Development Team", event.Name)
+            Assert.Equal(group.State.Id, event.GroupId)
+            Assert.Single(event.InitialUserIds) |> ignore
+            Assert.Equal(userId, event.InitialUserIds.[0])
+        | _ -> Assert.True(false, "Expected GroupCreatedEvent")
+
+        // Verify group state
+        Assert.Equal("Development Team", Group.getName group)
+        let groupUserIds = Group.getUserIds group
+        Assert.Single(groupUserIds) |> ignore
+        Assert.Equal(userId, groupUserIds.[0])
+        Assert.True(Group.hasUser userId group)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Group creation with multiple users should succeed`` () =
+    // Arrange
+    let user1 = UserId.NewId()
+    let user2 = UserId.NewId()
+    let user3 = UserId.NewId()
+    let userIds = Some [ user1; user2; user3 ]
+
+    // Act
+    let result = Group.create "Marketing Team" userIds
+
+    // Assert
+    match result with
+    | Ok group ->
+        // Verify group state
+        Assert.Equal("Marketing Team", Group.getName group)
+        let groupUserIds = Group.getUserIds group
+        Assert.Equal(3, groupUserIds.Length)
+        Assert.Contains(user1, groupUserIds)
+        Assert.Contains(user2, groupUserIds)
+        Assert.Contains(user3, groupUserIds)
+
+        Assert.True(Group.hasUser user1 group)
+        Assert.True(Group.hasUser user2 group)
+        Assert.True(Group.hasUser user3 group)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Group creation with duplicate users should remove duplicates`` () =
+    // Arrange
+    let user1 = UserId.NewId()
+    let user2 = UserId.NewId()
+    let userIds = Some [ user1; user2; user1; user2; user1 ] // Duplicates
+
+    // Act
+    let result = Group.create "QA Team" userIds
+
+    // Assert
+    match result with
+    | Ok group ->
+        // Verify duplicates are removed
+        let groupUserIds = Group.getUserIds group
+        Assert.Equal(2, groupUserIds.Length) // Should only have 2 unique users
+        Assert.Contains(user1, groupUserIds)
+        Assert.Contains(user2, groupUserIds)
+
+        Assert.True(Group.hasUser user1 group)
+        Assert.True(Group.hasUser user2 group)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Group creation with empty user list should succeed`` () =
+    // Arrange
+    let userIds = Some []
+
+    // Act
+    let result = Group.create "Empty Team" userIds
+
+    // Assert
+    match result with
+    | Ok group ->
+        Assert.Equal("Empty Team", Group.getName group)
+        let groupUserIds = Group.getUserIds group
+        Assert.Empty(groupUserIds)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Group validation with duplicate UserIds should remove duplicates`` () =
+    // Arrange
+    let user1 = UserId.NewId()
+    let user2 = UserId.NewId()
+
+    let group = {
+        State = {
+            Id = GroupId.NewId()
+            Name = "Test Team"
+            UserIds = [ user1; user2; user1; user2 ] // Duplicates
+            CreatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow
+        }
+        UncommittedEvents = []
+    }
+
+    // Act
+    let result = Group.validate group
+
+    // Assert
+    match result with
+    | Ok validatedGroup ->
+        let userIds = Group.getUserIds validatedGroup
+        Assert.Equal(2, userIds.Length) // Should only have 2 unique users
+        Assert.Contains(user1, userIds)
+        Assert.Contains(user2, userIds)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Group validateUserIds with valid users should succeed`` () =
+    // Arrange
+    let user1 = UserId.NewId()
+    let user2 = UserId.NewId()
+    let userIds = [ user1; user2 ]
+    let userExistsFunc userId = true // All users exist
+
+    // Act
+    let result = Group.validateUserIds userIds userExistsFunc
+
+    // Assert
+    match result with
+    | Ok validatedIds ->
+        Assert.Equal(2, validatedIds.Length)
+        Assert.Contains(user1, validatedIds)
+        Assert.Contains(user2, validatedIds)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Group validateUserIds with invalid users should fail`` () =
+    // Arrange
+    let user1 = UserId.NewId()
+    let user2 = UserId.NewId()
+    let user3 = UserId.NewId()
+    let userIds = [ user1; user2; user3 ]
+
+    // user2 and user3 don't exist
+    let userExistsFunc userId = userId = user1
+
+    // Act
+    let result = Group.validateUserIds userIds userExistsFunc
+
+    // Assert
+    match result with
+    | Error(ValidationError message) ->
+        Assert.Contains(user2.Value.ToString(), message)
+        Assert.Contains(user3.Value.ToString(), message)
+        Assert.Contains("do not exist or are deleted", message)
+    | Ok _ -> Assert.True(false, "Expected validation error for invalid users")
+    | Error error -> Assert.True(false, $"Expected ValidationError but got: {error}")
+
+[<Fact>]
+let ``Group validateUserIds with duplicate users should remove duplicates`` () =
+    // Arrange
+    let user1 = UserId.NewId()
+    let user2 = UserId.NewId()
+    let userIds = [ user1; user2; user1; user2 ] // Duplicates
+    let userExistsFunc userId = true // All users exist
+
+    // Act
+    let result = Group.validateUserIds userIds userExistsFunc
+
+    // Assert
+    match result with
+    | Ok validatedIds ->
+        Assert.Equal(2, validatedIds.Length) // Should only have 2 unique users
+        Assert.Contains(user1, validatedIds)
+        Assert.Contains(user2, validatedIds)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Group validateUserIds with empty list should succeed`` () =
+    // Arrange
+    let userIds = []
+    let userExistsFunc userId = true
+
+    // Act
+    let result = Group.validateUserIds userIds userExistsFunc
+
+    // Assert
+    match result with
+    | Ok validatedIds -> Assert.Empty(validatedIds)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
