@@ -4,6 +4,7 @@ open System.Threading.Tasks
 open Microsoft.AspNetCore.Mvc
 open Freetool.Domain
 open Freetool.Domain.Entities
+open Freetool.Domain.ValueObjects
 open Freetool.Application.DTOs
 open Freetool.Application.Commands
 open Freetool.Application.Interfaces
@@ -12,25 +13,60 @@ open Freetool.Application.Mappers
 [<ApiController>]
 [<Route("app")>]
 type AppController
-    (appRepository: IAppRepository, commandHandler: IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>)
-    =
+    (
+        appRepository: IAppRepository,
+        resourceRepository: IResourceRepository,
+        commandHandler: IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>
+    ) =
     inherit ControllerBase()
 
     [<HttpPost>]
     member this.CreateApp([<FromBody>] createDto: CreateAppDto) : Task<IActionResult> = task {
-        let unvalidatedApp = AppMapper.fromCreateDto createDto
+        let createRequest = AppMapper.fromCreateDto createDto
 
-        match App.validate unvalidatedApp with
-        | Error domainError -> return this.HandleDomainError(domainError)
-        | Ok validatedApp ->
-            let! result = commandHandler.HandleCommand appRepository (CreateApp validatedApp)
+        // Parse FolderId and ResourceId
+        let folderIdResult =
+            match System.Guid.TryParse createRequest.FolderId with
+            | true, guid -> Ok(FolderId.FromGuid(guid))
+            | false, _ -> Error(ValidationError "Invalid folder ID format")
 
-            return
-                match result with
-                | Ok(AppResult appDto) ->
-                    this.CreatedAtAction(nameof this.GetAppById, {| id = appDto.Id |}, appDto) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+        let resourceIdResult =
+            match System.Guid.TryParse createRequest.ResourceId with
+            | true, guid -> Ok(ResourceId.FromGuid(guid))
+            | false, _ -> Error(ValidationError "Invalid resource ID format")
+
+        match folderIdResult, resourceIdResult with
+        | Error error, _
+        | _, Error error -> return this.HandleDomainError(error)
+        | Ok folderId, Ok resourceId ->
+            // Fetch the resource to validate against
+            let! resourceOption = resourceRepository.GetByIdAsync resourceId
+
+            match resourceOption with
+            | None -> return this.HandleDomainError(NotFound "Resource not found")
+            | Some resource ->
+                // Use Domain method that enforces no-override business rule
+                match
+                    App.createWithResource
+                        createRequest.Name
+                        folderId
+                        resource
+                        createRequest.Inputs
+                        createRequest.UrlPath
+                        createRequest.UrlParameters
+                        createRequest.Headers
+                        createRequest.Body
+                with
+                | Error domainError -> return this.HandleDomainError(domainError)
+                | Ok validatedApp ->
+                    let! result = commandHandler.HandleCommand appRepository (CreateApp validatedApp)
+
+                    return
+                        match result with
+                        | Ok(AppResult appDto) ->
+                            this.CreatedAtAction(nameof this.GetAppById, {| id = appDto.Id |}, appDto) :> IActionResult
+                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                        | Error error -> this.HandleDomainError(error)
     }
 
     [<HttpGet("{id}")>]

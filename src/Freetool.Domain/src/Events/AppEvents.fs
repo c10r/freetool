@@ -14,11 +14,16 @@ type AppChange =
     | NameChanged of oldValue: AppName * newValue: AppName
     | InputsChanged of oldInputs: Input list * newInputs: Input list
     | FolderChanged of oldFolderId: FolderId option * newFolderId: FolderId option
+    | UrlPathChanged of oldValue: string option * newValue: string option
+    | UrlParametersChanged of oldUrlParams: KeyValuePair list * newUrlParams: KeyValuePair list
+    | HeadersChanged of oldHeaders: KeyValuePair list * newHeaders: KeyValuePair list
+    | BodyChanged of oldBody: KeyValuePair list * newBody: KeyValuePair list
 
 type AppCreatedEvent = {
     AppId: AppId
     Name: AppName
     FolderId: FolderId option
+    ResourceId: ResourceId
     Inputs: Input list
     OccurredAt: DateTime
     EventId: Guid
@@ -50,11 +55,18 @@ type AppDeletedEvent = {
         member this.EventId = this.EventId
 
 module AppEvents =
-    let appCreated (appId: AppId) (name: AppName) (folderId: FolderId option) (inputs: Input list) =
+    let appCreated
+        (appId: AppId)
+        (name: AppName)
+        (folderId: FolderId option)
+        (resourceId: ResourceId)
+        (inputs: Input list)
+        =
         {
             AppId = appId
             Name = name
             FolderId = folderId
+            ResourceId = resourceId
             Inputs = inputs
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()

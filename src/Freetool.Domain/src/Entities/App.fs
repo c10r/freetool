@@ -9,7 +9,12 @@ type AppData = {
     Id: AppId
     Name: string
     FolderId: FolderId
+    ResourceId: ResourceId
     Inputs: Input list
+    UrlPath: string option
+    UrlParameters: KeyValuePair list
+    Headers: KeyValuePair list
+    Body: KeyValuePair list
     CreatedAt: DateTime
     UpdatedAt: DateTime
 }
@@ -122,33 +127,127 @@ module App =
                 UncommittedEvents = app.UncommittedEvents @ [ inputsChangedEvent :> IDomainEvent ]
             }
 
-    let create (name: string) (folderId: FolderId) (inputs: Input list) : Result<ValidatedApp, DomainError> =
-        let appData = {
-            Id = AppId.NewId()
-            Name = name
-            FolderId = folderId
-            Inputs = inputs
-            CreatedAt = DateTime.UtcNow
-            UpdatedAt = DateTime.UtcNow
-        }
+    let private create
+        (name: string)
+        (folderId: FolderId)
+        (resourceId: ResourceId)
+        (inputs: Input list)
+        (urlPath: string option)
+        (urlParameters: (string * string) list)
+        (headers: (string * string) list)
+        (body: (string * string) list)
+        : Result<ValidatedApp, DomainError> =
+        // Validate headers
+        let validateKeyValuePairs pairs =
+            pairs
+            |> List.fold
+                (fun acc (key: string, value: string) ->
+                    match acc with
+                    | Error err -> Error err
+                    | Ok validPairs ->
+                        match KeyValuePair.Create(key, value) with
+                        | Error err -> Error err
+                        | Ok validPair -> Ok(validPair :: validPairs))
+                (Ok [])
+            |> Result.map List.rev
 
-        let unvalidatedApp = {
-            State = appData
-            UncommittedEvents = []
-        }
-
-        match validate unvalidatedApp with
+        match validateKeyValuePairs urlParameters with
         | Error err -> Error err
-        | Ok validatedApp ->
-            let validName = AppName.Create(Some name) |> Result.defaultValue (AppName(""))
+        | Ok validUrlParameters ->
+            match validateKeyValuePairs headers with
+            | Error err -> Error err
+            | Ok validHeaders ->
+                match validateKeyValuePairs body with
+                | Error err -> Error err
+                | Ok validBody ->
+                    let appData = {
+                        Id = AppId.NewId()
+                        Name = name
+                        FolderId = folderId
+                        ResourceId = resourceId
+                        Inputs = inputs
+                        UrlPath = urlPath
+                        UrlParameters = validUrlParameters
+                        Headers = validHeaders
+                        Body = validBody
+                        CreatedAt = DateTime.UtcNow
+                        UpdatedAt = DateTime.UtcNow
+                    }
 
-            let appCreatedEvent =
-                AppEvents.appCreated appData.Id validName (Some folderId) inputs
+                    let unvalidatedApp = {
+                        State = appData
+                        UncommittedEvents = []
+                    }
 
-            Ok {
-                validatedApp with
-                    UncommittedEvents = [ appCreatedEvent :> IDomainEvent ]
-            }
+                    match validate unvalidatedApp with
+                    | Error err -> Error err
+                    | Ok validatedApp ->
+                        let validName = AppName.Create(Some name) |> Result.defaultValue (AppName(""))
+
+                        let appCreatedEvent =
+                            AppEvents.appCreated appData.Id validName (Some folderId) resourceId inputs
+
+                        Ok {
+                            validatedApp with
+                                UncommittedEvents = [ appCreatedEvent :> IDomainEvent ]
+                        }
+
+    let createWithResource
+        (name: string)
+        (folderId: FolderId)
+        (resource: ValidatedResource)
+        (inputs: Input list)
+        (urlPath: string option)
+        (urlParameters: (string * string) list)
+        (headers: (string * string) list)
+        (body: (string * string) list)
+        : Result<ValidatedApp, DomainError> =
+
+        // Business rule: App cannot override existing Resource parameters
+        let resourceUrlParams =
+            Resource.getUrlParameters resource |> List.map fst |> Set.ofList
+
+        let resourceHeaders = Resource.getHeaders resource |> List.map fst |> Set.ofList
+        let resourceBody = Resource.getBody resource |> List.map fst |> Set.ofList
+
+        let appUrlParams = urlParameters |> List.map fst |> Set.ofList
+        let appHeaders = headers |> List.map fst |> Set.ofList
+        let appBody = body |> List.map fst |> Set.ofList
+
+        let urlConflicts = Set.intersect resourceUrlParams appUrlParams |> Set.toList
+        let headerConflicts = Set.intersect resourceHeaders appHeaders |> Set.toList
+        let bodyConflicts = Set.intersect resourceBody appBody |> Set.toList
+
+        let allConflicts = []
+
+        let allConflicts =
+            if not urlConflicts.IsEmpty then
+                let paramList = String.concat ", " urlConflicts
+                $"URL parameters: {paramList}" :: allConflicts
+            else
+                allConflicts
+
+        let allConflicts =
+            if not headerConflicts.IsEmpty then
+                let headerList = String.concat ", " headerConflicts
+                $"Headers: {headerList}" :: allConflicts
+            else
+                allConflicts
+
+        let allConflicts =
+            if not bodyConflicts.IsEmpty then
+                let bodyList = String.concat ", " bodyConflicts
+                $"Body parameters: {bodyList}" :: allConflicts
+            else
+                allConflicts
+
+        if not allConflicts.IsEmpty then
+            let conflictMessage = String.concat "; " allConflicts
+            Error(InvalidOperation $"App cannot override existing Resource values: {conflictMessage}")
+        else
+            // No conflicts, proceed with normal creation
+            let resourceId = Resource.getId resource
+            create name folderId resourceId inputs urlPath urlParameters headers body
 
     let markForDeletion (app: ValidatedApp) : ValidatedApp =
         let appDeletedEvent = AppEvents.appDeleted app.State.Id
@@ -168,8 +267,138 @@ module App =
 
     let getFolderId (app: App) : FolderId = app.State.FolderId
 
+    let getResourceId (app: App) : ResourceId = app.State.ResourceId
+
     let getInputs (app: App) : Input list = app.State.Inputs
 
     let getCreatedAt (app: App) : DateTime = app.State.CreatedAt
 
     let getUpdatedAt (app: App) : DateTime = app.State.UpdatedAt
+
+    let getUrlPath (app: App) : string option = app.State.UrlPath
+
+    let getUrlParameters (app: App) : (string * string) list =
+        app.State.UrlParameters |> List.map (fun kvp -> (kvp.Key, kvp.Value))
+
+    let getHeaders (app: App) : (string * string) list =
+        app.State.Headers |> List.map (fun kvp -> (kvp.Key, kvp.Value))
+
+    let getBody (app: App) : (string * string) list =
+        app.State.Body |> List.map (fun kvp -> (kvp.Key, kvp.Value))
+
+    let updateUrlPath (newUrlPath: string option) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
+        let updatedAppData = {
+            app.State with
+                UrlPath = newUrlPath
+                UpdatedAt = DateTime.UtcNow
+        }
+
+        let urlPathChangedEvent =
+            AppEvents.appUpdated app.State.Id [ AppChange.UrlPathChanged(app.State.UrlPath, newUrlPath) ]
+
+        Ok {
+            State = updatedAppData
+            UncommittedEvents = app.UncommittedEvents @ [ urlPathChangedEvent :> IDomainEvent ]
+        }
+
+    let updateUrlParameters
+        (newUrlParameters: (string * string) list)
+        (app: ValidatedApp)
+        : Result<ValidatedApp, DomainError> =
+        let validateKeyValuePairs pairs =
+            pairs
+            |> List.fold
+                (fun acc (key: string, value: string) ->
+                    match acc with
+                    | Error err -> Error err
+                    | Ok validPairs ->
+                        match KeyValuePair.Create(key, value) with
+                        | Error err -> Error err
+                        | Ok validPair -> Ok(validPair :: validPairs))
+                (Ok [])
+            |> Result.map List.rev
+
+        match validateKeyValuePairs newUrlParameters with
+        | Error err -> Error err
+        | Ok validUrlParams ->
+            let oldUrlParams = app.State.UrlParameters
+
+            let updatedAppData = {
+                app.State with
+                    UrlParameters = validUrlParams
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let urlParamsChangedEvent =
+                AppEvents.appUpdated app.State.Id [ AppChange.UrlParametersChanged(oldUrlParams, validUrlParams) ]
+
+            Ok {
+                State = updatedAppData
+                UncommittedEvents = app.UncommittedEvents @ [ urlParamsChangedEvent :> IDomainEvent ]
+            }
+
+    let updateHeaders (newHeaders: (string * string) list) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
+        let validateKeyValuePairs pairs =
+            pairs
+            |> List.fold
+                (fun acc (key: string, value: string) ->
+                    match acc with
+                    | Error err -> Error err
+                    | Ok validPairs ->
+                        match KeyValuePair.Create(key, value) with
+                        | Error err -> Error err
+                        | Ok validPair -> Ok(validPair :: validPairs))
+                (Ok [])
+            |> Result.map List.rev
+
+        match validateKeyValuePairs newHeaders with
+        | Error err -> Error err
+        | Ok validHeaders ->
+            let oldHeaders = app.State.Headers
+
+            let updatedAppData = {
+                app.State with
+                    Headers = validHeaders
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let headersChangedEvent =
+                AppEvents.appUpdated app.State.Id [ AppChange.HeadersChanged(oldHeaders, validHeaders) ]
+
+            Ok {
+                State = updatedAppData
+                UncommittedEvents = app.UncommittedEvents @ [ headersChangedEvent :> IDomainEvent ]
+            }
+
+    let updateBody (newBody: (string * string) list) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
+        let validateKeyValuePairs pairs =
+            pairs
+            |> List.fold
+                (fun acc (key: string, value: string) ->
+                    match acc with
+                    | Error err -> Error err
+                    | Ok validPairs ->
+                        match KeyValuePair.Create(key, value) with
+                        | Error err -> Error err
+                        | Ok validPair -> Ok(validPair :: validPairs))
+                (Ok [])
+            |> Result.map List.rev
+
+        match validateKeyValuePairs newBody with
+        | Error err -> Error err
+        | Ok validBody ->
+            let oldBody = app.State.Body
+
+            let updatedAppData = {
+                app.State with
+                    Body = validBody
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let bodyChangedEvent =
+                AppEvents.appUpdated app.State.Id [ AppChange.BodyChanged(oldBody, validBody) ]
+
+            Ok {
+                State = updatedAppData
+                UncommittedEvents = app.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ]
+            }

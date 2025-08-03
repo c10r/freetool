@@ -33,7 +33,19 @@ type CreateAppDto = {
     [<Required>]
     FolderId: string
 
+    [<Required>]
+    ResourceId: string
+
     Inputs: InputDto list
+
+    [<StringLength(500, ErrorMessage = "URL path cannot exceed 500 characters")>]
+    UrlPath: string option
+
+    UrlParameters: KeyValuePairDto list
+
+    Headers: KeyValuePairDto list
+
+    Body: KeyValuePairDto list
 }
 
 type UpdateAppNameDto = {
@@ -51,7 +63,12 @@ type AppDto = {
     Id: string
     Name: string
     FolderId: string
+    ResourceId: string
     Inputs: InputDto list
+    UrlPath: string option
+    UrlParameters: KeyValuePairDto list
+    Headers: KeyValuePairDto list
+    Body: KeyValuePairDto list
     CreatedAt: DateTime
     UpdatedAt: DateTime
 }

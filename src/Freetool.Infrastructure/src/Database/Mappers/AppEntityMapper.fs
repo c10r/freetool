@@ -20,6 +20,8 @@ type InputJson = {
     Required: bool
 }
 
+type KeyValuePairJson = { Key: string; Value: string }
+
 module AppEntityMapper =
     let rec inputTypeFromDomain (inputType: InputType) : InputTypeJson =
         match inputType.Value with
@@ -80,16 +82,45 @@ module AppEntityMapper =
         Required = inputJson.Required
     }
 
+    let keyValuePairFromJson (kvpJson: KeyValuePairJson) : KeyValuePair =
+        match KeyValuePair.Create(kvpJson.Key, kvpJson.Value) with
+        | Ok kvp -> kvp
+        | Error _ -> failwith $"Invalid key-value pair: {kvpJson.Key}={kvpJson.Value}"
+
+    let keyValuePairToJson (kvp: KeyValuePair) : KeyValuePairJson = { Key = kvp.Key; Value = kvp.Value }
+
     // Entity -> Domain conversions (database data is trusted, so directly to ValidatedApp)
     let fromEntity (entity: AppEntity) : ValidatedApp =
         let inputsJson = JsonSerializer.Deserialize<InputJson list>(entity.Inputs)
         let inputs = inputsJson |> List.map inputToDomain
 
+        let urlParametersJson =
+            JsonSerializer.Deserialize<KeyValuePairJson list>(entity.UrlParameters)
+
+        let urlParameters = urlParametersJson |> List.map keyValuePairFromJson
+
+        let headersJson = JsonSerializer.Deserialize<KeyValuePairJson list>(entity.Headers)
+        let headers = headersJson |> List.map keyValuePairFromJson
+
+        let bodyJson = JsonSerializer.Deserialize<KeyValuePairJson list>(entity.Body)
+        let body = bodyJson |> List.map keyValuePairFromJson
+
+        let urlPath =
+            if System.String.IsNullOrEmpty(entity.UrlPath) then
+                None
+            else
+                Some(entity.UrlPath)
+
         let appData = {
             Id = AppId.FromGuid(entity.Id)
             Name = entity.Name
             FolderId = FolderId.FromGuid(entity.FolderId)
+            ResourceId = ResourceId.FromGuid(entity.ResourceId)
             Inputs = inputs
+            UrlPath = urlPath
+            UrlParameters = urlParameters
+            Headers = headers
+            Body = body
             CreatedAt = entity.CreatedAt
             UpdatedAt = entity.UpdatedAt
         }
@@ -102,11 +133,25 @@ module AppEntityMapper =
         let inputsJson = appData.Inputs |> List.map inputFromDomain
         let inputsJsonString = JsonSerializer.Serialize(inputsJson)
 
+        let urlParametersJson = appData.UrlParameters |> List.map keyValuePairToJson
+        let urlParametersJsonString = JsonSerializer.Serialize(urlParametersJson)
+
+        let headersJson = appData.Headers |> List.map keyValuePairToJson
+        let headersJsonString = JsonSerializer.Serialize(headersJson)
+
+        let bodyJson = appData.Body |> List.map keyValuePairToJson
+        let bodyJsonString = JsonSerializer.Serialize(bodyJson)
+
         let entity = AppEntity()
         entity.Id <- appData.Id.Value
         entity.Name <- appData.Name
         entity.FolderId <- appData.FolderId.Value
+        entity.ResourceId <- appData.ResourceId.Value
         entity.Inputs <- inputsJsonString
+        entity.UrlPath <- (appData.UrlPath |> Option.defaultValue "")
+        entity.UrlParameters <- urlParametersJsonString
+        entity.Headers <- headersJsonString
+        entity.Body <- bodyJsonString
         entity.CreatedAt <- appData.CreatedAt
         entity.UpdatedAt <- appData.UpdatedAt
         entity

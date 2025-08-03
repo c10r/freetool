@@ -66,24 +66,36 @@ module AppMapper =
         Required = inputDto.Required
     }
 
-    let fromCreateDto (dto: CreateAppDto) : UnvalidatedApp =
-        let folderId =
-            match Guid.TryParse dto.FolderId with
-            | true, guid -> FolderId.FromGuid(guid)
-            | false, _ -> failwith "Invalid folder ID format"
+    let keyValuePairToDto (kvp: KeyValuePair) : KeyValuePairDto = { Key = kvp.Key; Value = kvp.Value }
 
+    let keyValuePairFromDto (dto: KeyValuePairDto) : (string * string) = (dto.Key, dto.Value)
+
+    type CreateAppRequest = {
+        Name: string
+        FolderId: string
+        ResourceId: string
+        Inputs: Input list
+        UrlPath: string option
+        UrlParameters: (string * string) list
+        Headers: (string * string) list
+        Body: (string * string) list
+    }
+
+    let fromCreateDto (dto: CreateAppDto) : CreateAppRequest =
         let inputs = dto.Inputs |> List.map inputFromDto
+        let urlParameters = dto.UrlParameters |> List.map keyValuePairFromDto
+        let headers = dto.Headers |> List.map keyValuePairFromDto
+        let body = dto.Body |> List.map keyValuePairFromDto
 
         {
-            State = {
-                Id = AppId.NewId()
-                Name = dto.Name
-                FolderId = folderId
-                Inputs = inputs
-                CreatedAt = DateTime.UtcNow
-                UpdatedAt = DateTime.UtcNow
-            }
-            UncommittedEvents = []
+            Name = dto.Name
+            FolderId = dto.FolderId
+            ResourceId = dto.ResourceId
+            Inputs = inputs
+            UrlPath = dto.UrlPath
+            UrlParameters = urlParameters
+            Headers = headers
+            Body = body
         }
 
     let fromUpdateNameDto (dto: UpdateAppNameDto) (app: ValidatedApp) : UnvalidatedApp = {
@@ -111,7 +123,12 @@ module AppMapper =
         Id = app.State.Id.Value.ToString()
         Name = app.State.Name
         FolderId = app.State.FolderId.Value.ToString()
+        ResourceId = app.State.ResourceId.Value.ToString()
         Inputs = app.State.Inputs |> List.map inputToDto
+        UrlPath = app.State.UrlPath
+        UrlParameters = app.State.UrlParameters |> List.map keyValuePairToDto
+        Headers = app.State.Headers |> List.map keyValuePairToDto
+        Body = app.State.Body |> List.map keyValuePairToDto
         CreatedAt = app.State.CreatedAt
         UpdatedAt = app.State.UpdatedAt
     }

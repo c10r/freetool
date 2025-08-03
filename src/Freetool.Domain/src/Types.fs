@@ -19,3 +19,11 @@ type EventSourcingAggregate<'T> = {
     State: 'T
     UncommittedEvents: IDomainEvent list
 }
+
+type ExecutableHttpRequest = {
+    BaseUrl: string
+    UrlParameters: (string * string) list
+    Headers: (string * string) list
+    Body: (string * string) list
+    HttpMethod: string
+}

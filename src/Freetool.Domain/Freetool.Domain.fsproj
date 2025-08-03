@@ -30,6 +30,7 @@
     <Compile Include="src/Entities/Resource.fs" />
     <Compile Include="src/Entities/Folder.fs" />
     <Compile Include="src/Entities/App.fs" />
+    <Compile Include="src/Services/RequestComposer.fs" />
   </ItemGroup>
 
 </Project>
