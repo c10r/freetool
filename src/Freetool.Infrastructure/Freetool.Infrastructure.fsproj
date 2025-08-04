@@ -26,6 +26,8 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.004_CreateAppsTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.005_CreateEventsTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.006_CreateGroupsAndUserGroupsTables.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.007_AddResourceColumnsToAppsTable.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.008_CreateRunsTable.sql" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,12 +37,14 @@
     <Compile Include="src/Database/FolderEntity.fs" />
     <Compile Include="src/Database/AppEntity.fs" />
     <Compile Include="src/Database/EventEntity.fs" />
+    <Compile Include="src/Database/RunEntity.fs" />
     <Compile Include="src/Database/FreetoolDbContext.fs" />
     <Compile Include="src/Database/Mappers/UserEntityMapper.fs" />
     <Compile Include="src/Database/Mappers/GroupEntityMapper.fs" />
     <Compile Include="src/Database/Mappers/ResourceEntityMapper.fs" />
     <Compile Include="src/Database/Mappers/FolderEntityMapper.fs" />
     <Compile Include="src/Database/Mappers/AppEntityMapper.fs" />
+    <Compile Include="src/Database/Mappers/RunEntityMapper.fs" />
     <Compile Include="src/Database/Persistence.fs" />
     <Compile Include="src/Database/Repositories/UserRepository.fs" />
     <Compile Include="src/Database/Repositories/GroupRepository.fs" />
@@ -48,6 +52,7 @@
     <Compile Include="src/Database/Repositories/FolderRepository.fs" />
     <Compile Include="src/Database/Repositories/AppRepository.fs" />
     <Compile Include="src/Database/Repositories/EventRepository.fs" />
+    <Compile Include="src/Database/Repositories/RunRepository.fs" />
     <Compile Include="src/Services/EventPublisher.fs" />
   </ItemGroup>
 

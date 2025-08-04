@@ -9,6 +9,7 @@ open Freetool.Application.DTOs
 open Freetool.Application.Commands
 open Freetool.Application.Interfaces
 open Freetool.Application.Mappers
+open Freetool.Application.Handlers
 
 [<ApiController>]
 [<Route("app")>]
@@ -16,6 +17,7 @@ type AppController
     (
         appRepository: IAppRepository,
         resourceRepository: IResourceRepository,
+        runRepository: IRunRepository,
         commandHandler: IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>
     ) =
     inherit ControllerBase()
@@ -148,6 +150,18 @@ type AppController
         return
             match result with
             | Ok(AppUnitResult _) -> this.NoContent() :> IActionResult
+            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+            | Error error -> this.HandleDomainError(error)
+    }
+
+    [<HttpPost("{id}/run")>]
+    member this.RunApp(id: string, [<FromBody>] createRunDto: CreateRunDto) : Task<IActionResult> = task {
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository (CreateRun(id, createRunDto))
+
+        return
+            match result with
+            | Ok(RunResult runDto) -> this.Ok(runDto) :> IActionResult
             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
             | Error error -> this.HandleDomainError(error)
     }

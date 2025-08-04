@@ -30,6 +30,11 @@
     <Compile Include="RequestComposerTests.fs" />
     <Compile Include="FolderTests.fs" />
     <Compile Include="ResourceTests.fs" />
+    <Compile Include="BusinessRulesTests.fs" />
+    <Compile Include="RunIdTests.fs" />
+    <Compile Include="RunStatusTests.fs" />
+    <Compile Include="HttpExecutionServiceTests.fs" />
+    <Compile Include="RunTests.fs" />
   </ItemGroup>
 
 </Project>

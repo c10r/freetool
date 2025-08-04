@@ -18,6 +18,7 @@
     <Compile Include="src/DTOs/FolderDtos.fs" />
     <Compile Include="src/DTOs/AppDtos.fs" />
     <Compile Include="src/DTOs/EventDtos.fs" />
+    <Compile Include="src/DTOs/RunDtos.fs" />
     <Compile Include="src/Interfaces/IUserRepository.fs" />
     <Compile Include="src/Interfaces/IGroupRepository.fs" />
     <Compile Include="src/Interfaces/IResourceRepository.fs" />
@@ -25,23 +26,27 @@
     <Compile Include="src/Interfaces/IAppRepository.fs" />
     <Compile Include="src/Interfaces/IEventRepository.fs" />
     <Compile Include="src/Interfaces/IEventPublisher.fs" />
+    <Compile Include="src/Interfaces/IRunRepository.fs" />
     <Compile Include="src/Interfaces/IGenericCommandHandler.fs" />
     <Compile Include="src/Commands/UserCommands.fs" />
     <Compile Include="src/Commands/GroupCommands.fs" />
     <Compile Include="src/Commands/ResourceCommands.fs" />
     <Compile Include="src/Commands/FolderCommands.fs" />
     <Compile Include="src/Commands/AppCommands.fs" />
+    <Compile Include="src/Commands/RunCommands.fs" />
     <Compile Include="src/Interfaces/ICommandHandler.fs" />
     <Compile Include="src/Mappers/UserMapper.fs" />
     <Compile Include="src/Mappers/GroupMapper.fs" />
     <Compile Include="src/Mappers/ResourceMapper.fs" />
     <Compile Include="src/Mappers/FolderMapper.fs" />
     <Compile Include="src/Mappers/AppMapper.fs" />
+    <Compile Include="src/Mappers/RunMapper.fs" />
     <Compile Include="src/Handlers/UserHandler.fs" />
     <Compile Include="src/Handlers/GroupHandler.fs" />
     <Compile Include="src/Handlers/ResourceHandler.fs" />
     <Compile Include="src/Handlers/FolderHandler.fs" />
     <Compile Include="src/Handlers/AppHandler.fs" />
+    <Compile Include="src/Handlers/RunHandler.fs" />
   </ItemGroup>
 
 </Project>

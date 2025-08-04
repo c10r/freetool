@@ -27,6 +27,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     [<DefaultValue>]
     val mutable private _events: DbSet<EventEntity>
 
+    [<DefaultValue>]
+    val mutable private _runs: DbSet<RunEntity>
+
     member this.Users
         with get () = this._users
         and set value = this._users <- value
@@ -54,6 +57,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     member this.Events
         with get () = this._events
         and set value = this._events <- value
+
+    member this.Runs
+        with get () = this._runs
+        and set value = this._runs <- value
 
     override this.OnModelCreating(modelBuilder: ModelBuilder) =
         base.OnModelCreating modelBuilder
@@ -205,4 +212,31 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
         |> ignore
 
         modelBuilder.Entity<AppEntity>().HasQueryFilter(fun a -> not a.IsDeleted)
+        |> ignore
+
+        modelBuilder.Entity<RunEntity>(fun entity ->
+            entity.HasKey(fun r -> r.Id :> obj) |> ignore
+
+            entity.Property(fun r -> r.AppId :> obj).IsRequired() |> ignore
+
+            entity.Property(fun r -> r.Status :> obj).IsRequired().HasMaxLength(50)
+            |> ignore
+
+            entity.Property(fun r -> r.InputValues :> obj).IsRequired() |> ignore
+
+            entity.Property(fun r -> r.ExecutableRequest :> obj) |> ignore
+
+            entity.Property(fun r -> r.Response :> obj) |> ignore
+
+            entity.Property(fun r -> r.ErrorMessage :> obj) |> ignore
+
+            entity.Property(fun r -> r.StartedAt :> obj) |> ignore
+
+            entity.Property(fun r -> r.CompletedAt :> obj) |> ignore
+
+            entity.Property(fun r -> r.CreatedAt :> obj).IsRequired() |> ignore
+
+            // Set up foreign key to Apps
+            entity.HasOne<AppEntity>().WithMany().HasForeignKey(fun r -> r.AppId :> obj)
+            |> ignore)
         |> ignore

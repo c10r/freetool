@@ -28,6 +28,8 @@ type ExecutableHttpRequest = {
     HttpMethod: string
 }
 
+type RunInputValue = { Title: string; Value: string }
+
 module DomainValidation =
     let checkKeyValueConflicts
         (resourceValues: (string * string) list option)
