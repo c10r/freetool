@@ -71,8 +71,72 @@ module Run =
                 let invalidList = String.concat ", " invalidInputs
                 Error(ValidationError $"Invalid inputs not defined in app: {invalidList}")
             else
-                // TODO: Add type validation based on InputType (Email, Integer, etc.)
-                Ok inputValues
+                // Validate each input value against its type
+                let validateInputValue (inputValue: RunInputValue) (input: Input) : Result<RunInputValue, DomainError> =
+                    let value = inputValue.Value
+
+                    match input.Type.Value with
+                    | Email ->
+                        match Email.Create(Some value) with
+                        | Ok _ -> Ok inputValue
+                        | Error err -> Error err
+                    | Integer ->
+                        match System.Int32.TryParse(value) with
+                        | true, _ -> Ok inputValue
+                        | false, _ -> Error(ValidationError $"Input '{input.Title}' must be a valid integer")
+                    | Boolean ->
+                        match System.Boolean.TryParse(value) with
+                        | true, _ -> Ok inputValue
+                        | false, _ ->
+                            Error(ValidationError $"Input '{input.Title}' must be a valid boolean (true/false)")
+                    | Date ->
+                        match System.DateTime.TryParse(value) with
+                        | true, _ -> Ok inputValue
+                        | false, _ -> Error(ValidationError $"Input '{input.Title}' must be a valid date")
+                    | Text maxLength ->
+                        if value.Length > maxLength then
+                            Error(
+                                ValidationError
+                                    $"Input '{input.Title}' exceeds maximum length of {maxLength} characters"
+                            )
+                        else
+                            Ok inputValue
+                    | MultiChoice choices ->
+                        let isValidChoice =
+                            choices
+                            |> List.exists (fun choice ->
+                                match choice with
+                                | Email -> Email.Create(Some value) |> Result.isOk
+                                | Integer -> fst (System.Int32.TryParse(value))
+                                | Boolean -> fst (System.Boolean.TryParse(value))
+                                | Date -> fst (System.DateTime.TryParse(value))
+                                | Text _ -> true // Text is always valid for MultiChoice
+                                | MultiChoice _ -> false // Should not happen due to validation in InputType
+                            )
+
+                        if isValidChoice then
+                            Ok inputValue
+                        else
+                            Error(ValidationError $"Input '{input.Title}' does not match any of the allowed choices")
+
+                // Validate all input values against their types
+                let zippedInputs =
+                    inputValues
+                    |> List.map (fun (value: RunInputValue) ->
+                        match appInputsMap.TryFind value.Title with
+                        | Some input -> Some(value, input)
+                        | _ -> None)
+                    |> List.choose id
+
+                zippedInputs
+                |> List.map (fun (input, inputDef) -> validateInputValue input inputDef)
+                |> List.fold
+                    (fun acc result ->
+                        match acc, result with
+                        | Ok xs, Ok x -> Ok(xs @ [ x ])
+                        | Ok _, Error e -> Error e
+                        | Error e, _ -> Error e)
+                    (Ok [])
 
     let createWithValidation (app: ValidatedApp) (inputValues: RunInputValue list) : Result<ValidatedRun, DomainError> =
 

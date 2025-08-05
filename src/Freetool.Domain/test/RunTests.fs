@@ -282,3 +282,462 @@ let ``Run executable request composition should substitute input values`` () =
 
         | None -> Assert.True(false, "Expected executable request to be set")
     | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+// Input Type Validation Tests
+
+[<Fact>]
+let ``Run creation should validate Email input type with valid email`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "userEmail"
+            Type = InputType.Email()
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "email", "{userEmail}" ] "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [
+        {
+            Title = "userEmail"
+            Value = "test@example.com"
+        }
+    ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Ok _ -> Assert.True(true)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run creation should reject Email input type with invalid email`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "userEmail"
+            Type = InputType.Email()
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "email", "{userEmail}" ] "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [
+        {
+            Title = "userEmail"
+            Value = "invalid-email"
+        }
+    ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Error(ValidationError message) -> Assert.Contains("Invalid email format", message)
+    | _ -> Assert.True(false, "Expected validation error for invalid email")
+
+[<Fact>]
+let ``Run creation should validate Integer input type with valid integer`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "age"
+            Type = InputType.Integer()
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "age", "{age}" ] "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [ { Title = "age"; Value = "25" } ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Ok _ -> Assert.True(true)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run creation should reject Integer input type with invalid integer`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "age"
+            Type = InputType.Integer()
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "age", "{age}" ] "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [
+        {
+            Title = "age"
+            Value = "not-a-number"
+        }
+    ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Error(ValidationError message) ->
+        Assert.Contains("age", message)
+        Assert.Contains("valid integer", message)
+    | _ -> Assert.True(false, "Expected validation error for invalid integer")
+
+[<Fact>]
+let ``Run creation should validate Boolean input type with valid boolean`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "isActive"
+            Type = InputType.Boolean()
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "active", "{isActive}" ] "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [ { Title = "isActive"; Value = "true" } ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Ok _ -> Assert.True(true)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run creation should reject Boolean input type with invalid boolean`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "isActive"
+            Type = InputType.Boolean()
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "active", "{isActive}" ] "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [ { Title = "isActive"; Value = "maybe" } ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Error(ValidationError message) ->
+        Assert.Contains("isActive", message)
+        Assert.Contains("valid boolean", message)
+    | _ -> Assert.True(false, "Expected validation error for invalid boolean")
+
+[<Fact>]
+let ``Run creation should validate Date input type with valid date`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "birthDate"
+            Type = InputType.Date()
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "birth_date", "{birthDate}" ]
+            "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [
+        {
+            Title = "birthDate"
+            Value = "2023-01-15"
+        }
+    ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Ok _ -> Assert.True(true)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run creation should reject Date input type with invalid date`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "birthDate"
+            Type = InputType.Date()
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "birth_date", "{birthDate}" ]
+            "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [
+        {
+            Title = "birthDate"
+            Value = "not-a-date"
+        }
+    ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Error(ValidationError message) ->
+        Assert.Contains("birthDate", message)
+        Assert.Contains("valid date", message)
+    | _ -> Assert.True(false, "Expected validation error for invalid date")
+
+[<Fact>]
+let ``Run creation should validate Text input type within length limit`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "description"
+            Type = InputType.Text(50) |> unwrapResult
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "desc", "{description}" ] "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [
+        {
+            Title = "description"
+            Value = "Short description"
+        }
+    ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Ok _ -> Assert.True(true)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run creation should reject Text input type exceeding length limit`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "description"
+            Type = InputType.Text(10) |> unwrapResult
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "desc", "{description}" ] "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [
+        {
+            Title = "description"
+            Value = "This description is way too long for the limit"
+        }
+    ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Error(ValidationError message) ->
+        Assert.Contains("description", message)
+        Assert.Contains("maximum length", message)
+        Assert.Contains("10", message)
+    | _ -> Assert.True(false, "Expected validation error for text exceeding length limit")
+
+[<Fact>]
+let ``Run creation should validate MultiChoice input type with valid choice`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "priority"
+            Type =
+                InputType.MultiChoice([ InputTypeValue.Text(20); InputTypeValue.Integer ])
+                |> unwrapResult
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "priority", "{priority}" ]
+            "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [
+        { Title = "priority"; Value = "42" } // Valid as integer
+    ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Ok _ -> Assert.True(true)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run creation should reject MultiChoice input type with invalid choice`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+
+    let inputs = [
+        {
+            Title = "priority"
+            Type =
+                InputType.MultiChoice([ InputTypeValue.Email; InputTypeValue.Integer ])
+                |> unwrapResult
+            Required = true
+        }
+    ]
+
+    let resource =
+        Resource.create
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "priority", "{priority}" ]
+            "POST"
+        |> unwrapResult
+
+    let app =
+        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        |> unwrapResult
+
+    let inputValues = [
+        {
+            Title = "priority"
+            Value = "not-email-or-integer"
+        }
+    ]
+
+    // Act
+    let result = Run.createWithValidation app inputValues
+
+    // Assert
+    match result with
+    | Error(ValidationError message) ->
+        Assert.Contains("priority", message)
+        Assert.Contains("allowed choices", message)
+    | _ -> Assert.True(false, "Expected validation error for invalid multichoice")
