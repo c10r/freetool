@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <Compile Include="src/DTOs/Types.fs" />
+    <Compile Include="src/DTOs/SharedDtos.fs" />
     <Compile Include="src/DTOs/JsonConverters.fs" />
     <Compile Include="src/DTOs/UserDtos.fs" />
     <Compile Include="src/DTOs/GroupDtos.fs" />

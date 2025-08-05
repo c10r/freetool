@@ -5,9 +5,9 @@ open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 
 module RunMapper =
-    let runInputValueFromDto (dto: RunInputValueDto) : RunInputValue = { Title = dto.Title; Value = dto.Value }
+    let runInputValueFromDto (dto: RunInputDto) : RunInputValue = { Title = dto.Title; Value = dto.Value }
 
-    let runInputValueToDto (inputValue: RunInputValue) : RunInputValueDto = {
+    let runInputValueToDto (inputValue: RunInputValue) : RunInputDto = {
         Title = inputValue.Title
         Value = inputValue.Value
     }

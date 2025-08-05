@@ -131,7 +131,7 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun r -> r.Description :> obj).IsRequired().HasMaxLength(500)
             |> ignore
 
-            entity.Property(fun r -> r.BaseUrl :> obj).IsRequired().HasMaxLength(1000)
+            entity.Property(fun r -> r.BaseUrl :> obj).IsRequired().HasMaxLength(1_000)
             |> ignore
 
             entity.Property(fun r -> r.UrlParameters :> obj).IsRequired() |> ignore

@@ -54,15 +54,17 @@ module AppMapper =
             | Ok inputType -> inputType
             | Error _ -> failwith "Invalid MultiChoice configuration"
 
-    let inputToDto (input: Input) : InputDto = {
-        Title = input.Title
-        Type = inputTypeToDtoType input.Type
+    let inputToDto (input: Input) : AppInputDto = {
+        Input = {
+            Title = input.Title
+            Type = inputTypeToDtoType input.Type
+        }
         Required = input.Required
     }
 
-    let inputFromDto (inputDto: InputDto) : Input = {
-        Title = inputDto.Title
-        Type = inputTypeFromDtoType inputDto.Type
+    let inputFromDto (inputDto: AppInputDto) : Input = {
+        Title = inputDto.Input.Title
+        Type = inputTypeFromDtoType inputDto.Input.Type
         Required = inputDto.Required
     }
 

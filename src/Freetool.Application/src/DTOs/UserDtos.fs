@@ -6,15 +6,17 @@ open System.Text.Json.Serialization
 
 type CreateUserDto = {
     [<Required>]
-    [<StringLength(100, MinimumLength = 1, ErrorMessage = "Name must be between 1 and 100 characters")>]
+    [<StringLength(ValidationConstants.NameMaxLength,
+                   MinimumLength = ValidationConstants.NameMinLength,
+                   ErrorMessage = ValidationConstants.NameErrorMessage)>]
     Name: string
 
     [<Required>]
-    [<StringLength(254, ErrorMessage = "Email cannot exceed 254 characters")>]
+    [<StringLength(ValidationConstants.EmailMaxLength, ErrorMessage = ValidationConstants.EmailErrorMessage)>]
     [<EmailAddress(ErrorMessage = "Invalid email format")>]
     Email: string
 
-    [<StringLength(2000, ErrorMessage = "Profile picture URL cannot exceed 2000 characters")>]
+    [<StringLength(ValidationConstants.URLMaxLength, ErrorMessage = ValidationConstants.URLErrorMessage)>]
     [<Url(ErrorMessage = "Profile picture URL must be a valid URL")>]
     [<JsonConverter(typeof<StringOptionConverter>)>]
     ProfilePicUrl: string option
@@ -22,20 +24,24 @@ type CreateUserDto = {
 
 type UpdateUserNameDto = {
     [<Required>]
-    [<StringLength(100, MinimumLength = 1, ErrorMessage = "Name must be between 1 and 100 characters")>]
+    [<StringLength(ValidationConstants.NameMaxLength,
+                   MinimumLength = ValidationConstants.NameMinLength,
+                   ErrorMessage = ValidationConstants.NameErrorMessage)>]
     Name: string
 }
 
 type UpdateUserEmailDto = {
     [<Required>]
-    [<StringLength(254, ErrorMessage = "Email cannot exceed 254 characters")>]
+    [<StringLength(ValidationConstants.EmailMaxLength, ErrorMessage = ValidationConstants.EmailErrorMessage)>]
     [<EmailAddress(ErrorMessage = "Invalid email format")>]
     Email: string
 }
 
 type SetProfilePictureDto = {
     [<Required>]
-    [<StringLength(2000, MinimumLength = 1, ErrorMessage = "Profile picture URL must be between 1 and 2000 characters")>]
+    [<StringLength(ValidationConstants.URLMaxLength,
+                   MinimumLength = ValidationConstants.URLMinLength,
+                   ErrorMessage = ValidationConstants.URLErrorMessage)>]
     [<Url(ErrorMessage = "Profile picture URL must be a valid URL")>]
     ProfilePicUrl: string
 }

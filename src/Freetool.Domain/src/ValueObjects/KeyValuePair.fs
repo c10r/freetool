@@ -15,7 +15,7 @@ type KeyValuePair =
             match value with
             | None -> Error(ValidationError "Value cannot be null")
             | Some "" -> Error(ValidationError "Value cannot be empty")
-            | Some v when v.Length > 1000 -> Error(ValidationError "Value cannot exceed 1000 characters")
+            | Some v when v.Length > 1_000 -> Error(ValidationError "Value cannot exceed 1_000 characters")
             | Some v -> Ok(KeyValuePair(keyValue.Trim(), v))
 
     static member Create(key: string, value: string) : Result<KeyValuePair, DomainError> =

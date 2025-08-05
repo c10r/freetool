@@ -3,31 +3,19 @@ namespace Freetool.Application.DTOs
 open System
 open System.ComponentModel.DataAnnotations
 
-// Input DTOs
-type InputTypeDto =
-    | Email
-    | Date
-    | Text of MaxLength: int
-    | Integer
-    | Boolean
-    | MultiChoice of Choices: InputTypeDto list
-
-type InputDto = {
+type AppInputDto = {
     [<Required>]
-    [<StringLength(255, MinimumLength = 1, ErrorMessage = "Input title must be between 1 and 255 characters")>]
-    Title: string
-
-    [<Required>]
-    Type: InputTypeDto
+    Input: InputDto
 
     [<Required>]
     Required: bool
 }
 
-// App DTOs
 type CreateAppDto = {
     [<Required>]
-    [<StringLength(100, MinimumLength = 1, ErrorMessage = "App name must be between 1 and 100 characters")>]
+    [<StringLength(ValidationConstants.NameMaxLength,
+                   MinimumLength = ValidationConstants.NameMinLength,
+                   ErrorMessage = ValidationConstants.NameErrorMessage)>]
     Name: string
 
     [<Required>]
@@ -36,8 +24,9 @@ type CreateAppDto = {
     [<Required>]
     ResourceId: string
 
-    Inputs: InputDto list
+    Inputs: AppInputDto list
 
+    // Intentionally not moved to SharedDtos yet - this is only the first usage
     [<StringLength(500, ErrorMessage = "URL path cannot exceed 500 characters")>]
     UrlPath: string option
 
@@ -50,13 +39,15 @@ type CreateAppDto = {
 
 type UpdateAppNameDto = {
     [<Required>]
-    [<StringLength(100, MinimumLength = 1, ErrorMessage = "App name must be between 1 and 100 characters")>]
+    [<StringLength(ValidationConstants.NameMaxLength,
+                   MinimumLength = ValidationConstants.NameMinLength,
+                   ErrorMessage = ValidationConstants.NameErrorMessage)>]
     Name: string
 }
 
 type UpdateAppInputsDto = {
     [<Required>]
-    Inputs: InputDto list
+    Inputs: AppInputDto list
 }
 
 type AppDto = {
@@ -64,7 +55,7 @@ type AppDto = {
     Name: string
     FolderId: string
     ResourceId: string
-    Inputs: InputDto list
+    Inputs: AppInputDto list
     UrlPath: string option
     UrlParameters: KeyValuePairDto list
     Headers: KeyValuePairDto list

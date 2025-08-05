@@ -7,7 +7,9 @@ open System.Text.Json.Serialization
 
 type CreateFolderDto = {
     [<Required>]
-    [<StringLength(100, MinimumLength = 1, ErrorMessage = "Name must be between 1 and 100 characters")>]
+    [<StringLength(ValidationConstants.NameMaxLength,
+                   MinimumLength = ValidationConstants.NameMinLength,
+                   ErrorMessage = ValidationConstants.NameErrorMessage)>]
     Name: string
 
     [<JsonConverter(typeof<FolderLocationConverter>)>]
@@ -17,7 +19,9 @@ type CreateFolderDto = {
 
 type UpdateFolderNameDto = {
     [<Required>]
-    [<StringLength(100, MinimumLength = 1, ErrorMessage = "Name must be between 1 and 100 characters")>]
+    [<StringLength(ValidationConstants.NameMaxLength,
+                   MinimumLength = ValidationConstants.NameMinLength,
+                   ErrorMessage = ValidationConstants.NameErrorMessage)>]
     Name: string
 }
 

@@ -20,7 +20,7 @@ type ResourceEntity() =
     member val Description = "" with get, set
 
     [<Required>]
-    [<MaxLength(1000)>]
+    [<MaxLength(1_000)>]
     member val BaseUrl = "" with get, set
 
     [<Required>]

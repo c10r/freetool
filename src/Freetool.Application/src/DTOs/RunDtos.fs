@@ -3,19 +3,21 @@ namespace Freetool.Application.DTOs
 open System
 open System.ComponentModel.DataAnnotations
 
-// Input DTOs
-type RunInputValueDto = {
+type RunInputDto = {
     [<Required>]
-    [<StringLength(255, MinimumLength = 1, ErrorMessage = "Input title must be between 1 and 255 characters")>]
+    [<StringLength(ValidationConstants.InputTitleMaxLength,
+                   MinimumLength = ValidationConstants.InputTitleMinLength,
+                   ErrorMessage = ValidationConstants.InputTitleErrorMessage)>]
     Title: string
 
     [<Required>]
+    [<StringLength(ValidationConstants.InputValueMaxLength, ErrorMessage = ValidationConstants.InputValueErrorMessage)>]
     Value: string
 }
 
 type CreateRunDto = {
     [<Required>]
-    InputValues: RunInputValueDto list
+    InputValues: RunInputDto list
 }
 
 // Output DTOs
@@ -31,7 +33,7 @@ type RunDto = {
     Id: string
     AppId: string
     Status: string
-    InputValues: RunInputValueDto list
+    InputValues: RunInputDto list
     ExecutableRequest: ExecutableHttpRequestDto option
     Response: string option
     ErrorMessage: string option

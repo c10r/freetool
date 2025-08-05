@@ -11,7 +11,7 @@ type BaseUrl =
         match url with
         | None
         | Some "" -> Error(ValidationError "Base URL cannot be empty")
-        | Some urlValue when urlValue.Length > 1000 -> Error(ValidationError "Base URL cannot exceed 1000 characters")
+        | Some urlValue when urlValue.Length > 1_000 -> Error(ValidationError "Base URL cannot exceed 1_000 characters")
         | Some urlValue when not (BaseUrl.isValidFormat urlValue) -> Error(ValidationError "Invalid URL format")
         | Some urlValue -> Ok(BaseUrl(urlValue.Trim()))
 

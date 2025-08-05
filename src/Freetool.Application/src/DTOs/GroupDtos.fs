@@ -5,14 +5,18 @@ open System.ComponentModel.DataAnnotations
 
 type CreateGroupDto = {
     [<Required>]
-    [<StringLength(100, MinimumLength = 1, ErrorMessage = "Group name must be between 1 and 100 characters")>]
+    [<StringLength(ValidationConstants.NameMaxLength,
+                   MinimumLength = ValidationConstants.NameMinLength,
+                   ErrorMessage = ValidationConstants.NameErrorMessage)>]
     Name: string
     UserIds: string list option
 }
 
 type UpdateGroupNameDto = {
     [<Required>]
-    [<StringLength(100, MinimumLength = 1, ErrorMessage = "Group name must be between 1 and 100 characters")>]
+    [<StringLength(ValidationConstants.NameMaxLength,
+                   MinimumLength = ValidationConstants.NameMinLength,
+                   ErrorMessage = ValidationConstants.NameErrorMessage)>]
     Name: string
 }
 
