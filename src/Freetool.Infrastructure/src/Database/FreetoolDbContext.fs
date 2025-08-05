@@ -1,34 +1,36 @@
 namespace Freetool.Infrastructure.Database
 
+open System
 open Microsoft.EntityFrameworkCore
 open Microsoft.EntityFrameworkCore.Storage.ValueConversion
+open Freetool.Domain.Entities
 
 type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     inherit DbContext(options)
 
     [<DefaultValue>]
-    val mutable private _users: DbSet<UserEntity>
+    val mutable private _users: DbSet<UserData>
 
     [<DefaultValue>]
-    val mutable private _groups: DbSet<GroupEntity>
+    val mutable private _groups: DbSet<GroupData>
 
     [<DefaultValue>]
-    val mutable private _userGroups: DbSet<UserGroupEntity>
+    val mutable private _userGroups: DbSet<UserGroupData>
 
     [<DefaultValue>]
-    val mutable private _resources: DbSet<ResourceEntity>
+    val mutable private _resources: DbSet<ResourceData>
 
     [<DefaultValue>]
-    val mutable private _folders: DbSet<FolderEntity>
+    val mutable private _folders: DbSet<FolderData>
 
     [<DefaultValue>]
-    val mutable private _apps: DbSet<AppEntity>
+    val mutable private _apps: DbSet<AppData>
 
     [<DefaultValue>]
-    val mutable private _events: DbSet<EventEntity>
+    val mutable private _events: DbSet<EventData>
 
     [<DefaultValue>]
-    val mutable private _runs: DbSet<RunEntity>
+    val mutable private _runs: DbSet<RunData>
 
     member this.Users
         with get () = this._users
@@ -65,178 +67,76 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     override this.OnModelCreating(modelBuilder: ModelBuilder) =
         base.OnModelCreating modelBuilder
 
-        modelBuilder.Entity<UserEntity>(fun entity ->
-            entity.HasKey(fun u -> u.Id :> obj) |> ignore
+        // Set up value converters for custom types and complex objects
+        let optionStringConverter =
+            ValueConverter<string option, string>(
+                (fun opt ->
+                    match opt with
+                    | Some s -> s
+                    | None -> null),
+                (fun str -> if isNull str then None else Some str)
+            )
 
-            entity.Property(fun u -> u.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
-
-            entity.Property(fun u -> u.Email :> obj).IsRequired().HasMaxLength(254)
-            |> ignore
-
-            let optionStringConverter =
-                ValueConverter<string option, string>(
-                    (fun opt ->
-                        match opt with
-                        | Some s -> s
-                        | None -> null),
-                    (fun str -> if isNull str then None else Some str)
-                )
-
-            entity
-                .Property(fun u -> u.ProfilePicUrl)
-                .HasMaxLength(500)
-                .HasConversion(optionStringConverter)
-            |> ignore
-
-            entity.Property(fun u -> u.CreatedAt :> obj).IsRequired() |> ignore
-
-            entity.Property(fun u -> u.UpdatedAt :> obj).IsRequired() |> ignore)
-        |> ignore
-
-        modelBuilder.Entity<GroupEntity>(fun entity ->
-            entity.HasKey(fun g -> g.Id :> obj) |> ignore
-
-            entity.Property(fun g -> g.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
-
-            entity.Property(fun g -> g.CreatedAt :> obj).IsRequired() |> ignore
-
-            entity.Property(fun g -> g.UpdatedAt :> obj).IsRequired() |> ignore)
-        |> ignore
-
-        modelBuilder.Entity<UserGroupEntity>(fun entity ->
-            entity.HasKey(fun ug -> ug.Id :> obj) |> ignore
-
-            entity.Property(fun ug -> ug.UserId :> obj).IsRequired() |> ignore
-
-            entity.Property(fun ug -> ug.GroupId :> obj).IsRequired() |> ignore
-
-            entity.Property(fun ug -> ug.CreatedAt :> obj).IsRequired() |> ignore
-
-            // Set up foreign keys
-            entity.HasOne<UserEntity>().WithMany().HasForeignKey(fun ug -> ug.UserId :> obj)
-            |> ignore
-
-            entity
-                .HasOne<GroupEntity>()
-                .WithMany()
-                .HasForeignKey(fun ug -> ug.GroupId :> obj)
+        // Configure UserData
+        modelBuilder.Entity<UserData>(fun entity ->
+            entity.Property(fun u -> u.ProfilePicUrl).HasConversion(optionStringConverter)
             |> ignore)
         |> ignore
 
-        modelBuilder.Entity<ResourceEntity>(fun entity ->
-            entity.HasKey(fun r -> r.Id :> obj) |> ignore
+        // Configure FolderData
+        modelBuilder.Entity<FolderData>(fun entity ->
+            let optionFolderIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.FolderId option, System.Nullable<System.Guid>>(
+                    (fun opt ->
+                        match opt with
+                        | Some folderId -> System.Nullable(folderId.Value)
+                        | None -> System.Nullable()),
+                    (fun nullable ->
+                        if nullable.HasValue then
+                            Some(Freetool.Domain.ValueObjects.FolderId(nullable.Value))
+                        else
+                            None)
+                )
 
-            entity.Property(fun r -> r.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
+            entity.Property(fun f -> f.ParentId).HasConversion(optionFolderIdConverter)
+            |> ignore)
+        |> ignore
 
-            entity.Property(fun r -> r.Description :> obj).IsRequired().HasMaxLength(500)
+        // Configure RunData
+        modelBuilder.Entity<RunData>(fun entity ->
+            let optionDateTimeConverter =
+                ValueConverter<DateTime option, System.Nullable<DateTime>>(
+                    (fun opt ->
+                        match opt with
+                        | Some dt -> System.Nullable(dt)
+                        | None -> System.Nullable()),
+                    (fun nullable -> if nullable.HasValue then Some(nullable.Value) else None)
+                )
+
+            entity
+                .Property(fun r -> r.StartedAt)
+                .HasConversion<System.Nullable<DateTime>>(optionDateTimeConverter)
             |> ignore
 
-            entity.Property(fun r -> r.BaseUrl :> obj).IsRequired().HasMaxLength(1_000)
+            entity
+                .Property(fun r -> r.CompletedAt)
+                .HasConversion<System.Nullable<DateTime>>(optionDateTimeConverter)
+            |> ignore)
+        |> ignore
+
+        // Configure foreign key relationships
+        modelBuilder.Entity<UserGroupData>(fun entity ->
+            entity.HasOne<UserData>().WithMany().HasForeignKey(fun ug -> ug.UserId :> obj)
             |> ignore
 
-            entity.Property(fun r -> r.UrlParameters :> obj).IsRequired() |> ignore
-
-            entity.Property(fun r -> r.Headers :> obj).IsRequired() |> ignore
-
-            entity.Property(fun r -> r.Body :> obj).IsRequired() |> ignore
-
-            entity.Property(fun r -> r.CreatedAt :> obj).IsRequired() |> ignore
-
-            entity.Property(fun r -> r.UpdatedAt :> obj).IsRequired() |> ignore)
+            entity.HasOne<GroupData>().WithMany().HasForeignKey(fun ug -> ug.GroupId :> obj)
+            |> ignore)
         |> ignore
 
-        modelBuilder.Entity<FolderEntity>(fun entity ->
-            entity.HasKey(fun f -> f.Id :> obj) |> ignore
-
-            entity.Property(fun f -> f.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
-
-            entity.Property(fun f -> f.ParentId :> obj) |> ignore
-
-            entity.Property(fun f -> f.CreatedAt :> obj).IsRequired() |> ignore
-
-            entity.Property(fun f -> f.UpdatedAt :> obj).IsRequired() |> ignore)
-        |> ignore
-
-        modelBuilder.Entity<AppEntity>(fun entity ->
-            entity.HasKey(fun a -> a.Id :> obj) |> ignore
-
-            entity.Property(fun a -> a.Name :> obj).IsRequired().HasMaxLength(100) |> ignore
-
-            entity.Property(fun a -> a.FolderId :> obj).IsRequired() |> ignore
-
-            entity.Property(fun a -> a.Inputs :> obj).IsRequired() |> ignore
-
-            entity.Property(fun a -> a.CreatedAt :> obj).IsRequired() |> ignore
-
-            entity.Property(fun a -> a.UpdatedAt :> obj).IsRequired() |> ignore)
-        |> ignore
-
-        modelBuilder.Entity<EventEntity>(fun entity ->
-            entity.HasKey(fun e -> e.Id :> obj) |> ignore
-
-            entity.HasIndex([| "EntityType"; "EntityId" |]) |> ignore
-
-            entity.Property(fun e -> e.EventId :> obj).IsRequired().HasMaxLength(36)
-            |> ignore
-
-            entity.Property(fun e -> e.EventType :> obj).IsRequired().HasMaxLength(100)
-            |> ignore
-
-            entity.Property(fun e -> e.EntityType :> obj).IsRequired().HasMaxLength(100)
-            |> ignore
-
-            entity.Property(fun e -> e.EntityId :> obj).IsRequired().HasMaxLength(36)
-            |> ignore
-
-            entity.Property(fun e -> e.EventData :> obj).IsRequired() |> ignore
-
-            entity.Property(fun e -> e.OccurredAt :> obj).IsRequired() |> ignore
-
-            entity.Property(fun e -> e.CreatedAt :> obj).IsRequired() |> ignore
-
-            // Prevent all delete operations on Events table - audit log should be immutable
-            entity.HasQueryFilter(fun _ -> false) |> ignore)
-        |> ignore
-
-        // Add soft delete filters for all other entities
-        modelBuilder.Entity<UserEntity>().HasQueryFilter(fun u -> not u.IsDeleted)
-        |> ignore
-
-        modelBuilder.Entity<GroupEntity>().HasQueryFilter(fun g -> not g.IsDeleted)
-        |> ignore
-
-        modelBuilder.Entity<ResourceEntity>().HasQueryFilter(fun r -> not r.IsDeleted)
-        |> ignore
-
-        modelBuilder.Entity<FolderEntity>().HasQueryFilter(fun f -> not f.IsDeleted)
-        |> ignore
-
-        modelBuilder.Entity<AppEntity>().HasQueryFilter(fun a -> not a.IsDeleted)
-        |> ignore
-
-        modelBuilder.Entity<RunEntity>(fun entity ->
-            entity.HasKey(fun r -> r.Id :> obj) |> ignore
-
-            entity.Property(fun r -> r.AppId :> obj).IsRequired() |> ignore
-
-            entity.Property(fun r -> r.Status :> obj).IsRequired().HasMaxLength(50)
-            |> ignore
-
-            entity.Property(fun r -> r.InputValues :> obj).IsRequired() |> ignore
-
-            entity.Property(fun r -> r.ExecutableRequest :> obj) |> ignore
-
-            entity.Property(fun r -> r.Response :> obj) |> ignore
-
-            entity.Property(fun r -> r.ErrorMessage :> obj) |> ignore
-
-            entity.Property(fun r -> r.StartedAt :> obj) |> ignore
-
-            entity.Property(fun r -> r.CompletedAt :> obj) |> ignore
-
-            entity.Property(fun r -> r.CreatedAt :> obj).IsRequired() |> ignore
-
-            // Set up foreign key to Apps
-            entity.HasOne<AppEntity>().WithMany().HasForeignKey(fun r -> r.AppId :> obj)
+        modelBuilder.Entity<RunData>(fun entity ->
+            entity
+                .HasOne<AppData>()
+                .WithMany()
+                .HasForeignKey(fun r -> (r.AppId.Value) :> obj)
             |> ignore)
         |> ignore

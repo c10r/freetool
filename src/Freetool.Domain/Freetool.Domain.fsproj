@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="src/Types.fs" />
     <Compile Include="src/BusinessRules.fs" />
     <Compile Include="src/ValueObjects/HttpMethod.fs" />
@@ -37,6 +41,7 @@
     <Compile Include="src/Entities/Resource.fs" />
     <Compile Include="src/Entities/Folder.fs" />
     <Compile Include="src/Entities/App.fs" />
+    <Compile Include="src/Entities/Event.fs" />
     <Compile Include="src/Services/RequestComposer.fs" />
     <Compile Include="src/Entities/Run.fs" />
     <Compile Include="src/Services/HttpExecutionService.fs" />

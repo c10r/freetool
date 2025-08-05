@@ -14,6 +14,7 @@ module UserMapper =
             ProfilePicUrl = dto.ProfilePicUrl
             CreatedAt = DateTime.UtcNow
             UpdatedAt = DateTime.UtcNow
+            IsDeleted = false
         }
         UncommittedEvents = []
     }

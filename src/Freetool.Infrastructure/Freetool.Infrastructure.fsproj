@@ -31,20 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="src/Database/UserEntity.fs" />
-    <Compile Include="src/Database/GroupEntity.fs" />
-    <Compile Include="src/Database/ResourceEntity.fs" />
-    <Compile Include="src/Database/FolderEntity.fs" />
-    <Compile Include="src/Database/AppEntity.fs" />
-    <Compile Include="src/Database/EventEntity.fs" />
-    <Compile Include="src/Database/RunEntity.fs" />
     <Compile Include="src/Database/FreetoolDbContext.fs" />
-    <Compile Include="src/Database/Mappers/UserEntityMapper.fs" />
-    <Compile Include="src/Database/Mappers/GroupEntityMapper.fs" />
-    <Compile Include="src/Database/Mappers/ResourceEntityMapper.fs" />
-    <Compile Include="src/Database/Mappers/FolderEntityMapper.fs" />
-    <Compile Include="src/Database/Mappers/AppEntityMapper.fs" />
-    <Compile Include="src/Database/Mappers/RunEntityMapper.fs" />
     <Compile Include="src/Database/Persistence.fs" />
     <Compile Include="src/Database/Repositories/UserRepository.fs" />
     <Compile Include="src/Database/Repositories/GroupRepository.fs" />

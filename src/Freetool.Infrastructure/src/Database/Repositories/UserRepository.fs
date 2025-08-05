@@ -8,7 +8,6 @@ open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Infrastructure.Database
-open Freetool.Infrastructure.Database.Mappers
 
 type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepository) =
 
@@ -16,22 +15,22 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
 
         member _.GetByIdAsync(userId: UserId) : Task<ValidatedUser option> = task {
             let guidId = userId.Value
-            let! userEntity = context.Users.FirstOrDefaultAsync(fun u -> u.Id = guidId)
+            let! userData = context.Users.FirstOrDefaultAsync(fun u -> u.Id.Value = guidId)
 
-            return userEntity |> Option.ofObj |> Option.map UserEntityMapper.fromEntity
+            return userData |> Option.ofObj |> Option.map (fun data -> User.fromData data)
         }
 
         member _.GetByEmailAsync(email: Email) : Task<ValidatedUser option> = task {
             let emailStr = email.Value
-            let! userEntity = context.Users.FirstOrDefaultAsync(fun u -> u.Email = emailStr)
+            let! userData = context.Users.FirstOrDefaultAsync(fun u -> u.Email = emailStr)
 
-            return userEntity |> Option.ofObj |> Option.map UserEntityMapper.fromEntity
+            return userData |> Option.ofObj |> Option.map (fun data -> User.fromData data)
         }
 
         member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedUser list> = task {
-            let! userEntities = context.Users.OrderBy(fun u -> u.CreatedAt).Skip(skip).Take(take).ToListAsync()
+            let! userDatas = context.Users.OrderBy(fun u -> u.CreatedAt).Skip(skip).Take(take).ToListAsync()
 
-            return userEntities |> Seq.map UserEntityMapper.fromEntity |> Seq.toList
+            return userDatas |> Seq.map (fun data -> User.fromData data) |> Seq.toList
         }
 
         member _.AddAsync(user: ValidatedUser) : Task<Result<unit, DomainError>> = task {
@@ -39,8 +38,7 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
 
             try
                 // 1. Save user to database
-                let userEntity = UserEntityMapper.toEntity user
-                context.Users.Add userEntity |> ignore
+                context.Users.Add user.State |> ignore
                 let! _ = context.SaveChangesAsync()
 
                 // 2. Save events to audit log in SAME transaction
@@ -67,20 +65,15 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
 
             try
                 let guidId = (User.getId user).Value
-                let! existingEntity = context.Users.FirstOrDefaultAsync(fun u -> u.Id = guidId)
+                let! existingUserData = context.Users.FirstOrDefaultAsync(fun u -> u.Id.Value = guidId)
 
-                match Option.ofObj existingEntity with
+                match Option.ofObj existingUserData with
                 | None ->
                     transaction.Rollback()
                     return Error(NotFound "User not found")
-                | Some entity ->
-                    // Update entity properties
-                    let userData = user.State
-                    entity.Name <- userData.Name
-                    entity.Email <- userData.Email
-                    entity.ProfilePicUrl <- userData.ProfilePicUrl
-                    entity.UpdatedAt <- userData.UpdatedAt
-
+                | Some _ ->
+                    // Update the entity directly
+                    context.Users.Update(user.State) |> ignore
                     let! _ = context.SaveChangesAsync()
 
                     // Save events to audit log in SAME transaction
@@ -105,16 +98,25 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
 
             try
                 let guidId = userId.Value
-                let! userEntity = context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(fun u -> u.Id = guidId)
 
-                match Option.ofObj userEntity with
+                let! userData =
+                    context.Users
+                        .IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(fun u -> u.Id.Value = guidId)
+
+                match Option.ofObj userData with
                 | None ->
                     transaction.Rollback()
                     return Error(NotFound "User not found")
-                | Some entity ->
-                    // Soft delete: set IsDeleted flag instead of removing entity
-                    entity.IsDeleted <- true
-                    entity.UpdatedAt <- System.DateTime.UtcNow
+                | Some data ->
+                    // Soft delete: create updated record with IsDeleted flag
+                    let updatedData = {
+                        data with
+                            IsDeleted = true
+                            UpdatedAt = System.DateTime.UtcNow
+                    }
+
+                    context.Users.Update(updatedData) |> ignore
                     let! _ = context.SaveChangesAsync()
 
                     // Save delete event if provided
@@ -135,7 +137,7 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
 
         member _.ExistsAsync(userId: UserId) : Task<bool> = task {
             let guidId = userId.Value
-            return! context.Users.AnyAsync(fun u -> u.Id = guidId)
+            return! context.Users.AnyAsync(fun u -> u.Id.Value = guidId)
         }
 
         member _.ExistsByEmailAsync(email: Email) : Task<bool> = task {

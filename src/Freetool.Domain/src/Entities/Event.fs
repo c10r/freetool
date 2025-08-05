@@ -1,40 +1,42 @@
-namespace Freetool.Infrastructure.Database
+namespace Freetool.Domain.Entities
 
+open System
 open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
 open Microsoft.EntityFrameworkCore
 
 [<Table("Events")>]
 [<Index([| "EventId" |], IsUnique = true, Name = "IX_Events_EventId")>]
-type EventEntity() =
+type EventData = {
     [<Key>]
     [<Column("Id")>]
-    member val Id = "" with get, set
+    Id: Guid
 
     [<Required>]
     [<Column("EventId")>]
-    member val EventId = "" with get, set
+    EventId: string
 
     [<Required>]
     [<Column("EventType")>]
-    member val EventType = "" with get, set
+    EventType: string
 
     [<Required>]
     [<Column("EntityType")>]
-    member val EntityType = "" with get, set
+    EntityType: string
 
     [<Required>]
     [<Column("EntityId")>]
-    member val EntityId = "" with get, set
+    EntityId: string
 
     [<Required>]
     [<Column("EventData")>]
-    member val EventData = "" with get, set
+    EventData: string
 
     [<Required>]
     [<Column("OccurredAt")>]
-    member val OccurredAt = "" with get, set
+    OccurredAt: DateTime
 
     [<Required>]
     [<Column("CreatedAt")>]
-    member val CreatedAt = "" with get, set
+    CreatedAt: DateTime
+}

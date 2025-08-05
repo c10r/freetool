@@ -1,16 +1,32 @@
 namespace Freetool.Domain.Entities
 
 open System
+open System.ComponentModel.DataAnnotations
+open System.ComponentModel.DataAnnotations.Schema
+open Microsoft.EntityFrameworkCore
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 
+[<Table("Folders")>]
+[<Index([| "Name"; "ParentId" |], IsUnique = true, Name = "IX_Folders_Name_ParentId")>]
 type FolderData = {
+    [<Key>]
     Id: FolderId
+
+    [<Required>]
+    [<MaxLength(100)>]
     Name: FolderName
+
     ParentId: FolderId option
+
+    [<Required>]
     CreatedAt: DateTime
+
+    [<Required>]
     UpdatedAt: DateTime
+
+    IsDeleted: bool
 }
 
 type Folder = EventSourcingAggregate<FolderData>
@@ -42,6 +58,7 @@ module Folder =
                 ParentId = parentId
                 CreatedAt = DateTime.UtcNow
                 UpdatedAt = DateTime.UtcNow
+                IsDeleted = false
             }
 
             let folderCreatedEvent = FolderEvents.folderCreated folderData.Id validName parentId

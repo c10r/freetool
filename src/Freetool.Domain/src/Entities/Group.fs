@@ -1,16 +1,50 @@
 namespace Freetool.Domain.Entities
 
 open System
+open System.ComponentModel.DataAnnotations
+open System.ComponentModel.DataAnnotations.Schema
+open Microsoft.EntityFrameworkCore
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 
+[<Table("Groups")>]
+[<Index([| "Name" |], IsUnique = true, Name = "IX_Groups_Name")>]
 type GroupData = {
+    [<Key>]
     Id: GroupId
+
+    [<Required>]
+    [<MaxLength(100)>]
     Name: string
+
+    [<NotMapped>] // UserIds will be handled via separate UserGroups table
     UserIds: UserId list
+
+    [<Required>]
     CreatedAt: DateTime
+
+    [<Required>]
     UpdatedAt: DateTime
+
+    IsDeleted: bool
+}
+
+// Junction entity for many-to-many relationship
+[<Table("UserGroups")>]
+[<Index([| "UserId"; "GroupId" |], IsUnique = true, Name = "IX_UserGroups_UserId_GroupId")>]
+type UserGroupData = {
+    [<Key>]
+    Id: System.Guid
+
+    [<Required>]
+    UserId: System.Guid
+
+    [<Required>]
+    GroupId: System.Guid
+
+    [<Required>]
+    CreatedAt: DateTime
 }
 
 type Group = EventSourcingAggregate<GroupData>
@@ -42,6 +76,7 @@ module Group =
                 UserIds = validatedUserIds
                 CreatedAt = DateTime.UtcNow
                 UpdatedAt = DateTime.UtcNow
+                IsDeleted = false
             }
 
             let groupCreatedEvent =

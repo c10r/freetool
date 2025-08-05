@@ -1,22 +1,47 @@
 namespace Freetool.Domain.Entities
 
 open System
+open System.ComponentModel.DataAnnotations
+open System.ComponentModel.DataAnnotations.Schema
+open Microsoft.EntityFrameworkCore
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 open Freetool.Domain.Services
 
+[<Table("Runs")>]
 type RunData = {
+    [<Key>]
     Id: RunId
+
+    [<Required>]
     AppId: AppId
+
+    [<Required>]
+    [<MaxLength(50)>]
     Status: RunStatus
+
+    [<Required>]
+    [<Column(TypeName = "TEXT")>] // JSON serialized list of RunInputValue
     InputValues: RunInputValue list
+
+    [<Column(TypeName = "TEXT")>] // JSON serialized ExecutableHttpRequest (null until composed)
     ExecutableRequest: ExecutableHttpRequest option
+
+    [<Column(TypeName = "TEXT")>] // HTTP response body (null until completed successfully)
     Response: string option
+
+    [<Column(TypeName = "TEXT")>] // Error message (null unless failed)
     ErrorMessage: string option
-    StartedAt: DateTime option
-    CompletedAt: DateTime option
+
+    StartedAt: DateTime option // When the run was started (null if not started)
+
+    CompletedAt: DateTime option // When the run was completed (null if not completed)
+
+    [<Required>]
     CreatedAt: DateTime
+
+    IsDeleted: bool
 }
 
 type Run = EventSourcingAggregate<RunData>
@@ -156,6 +181,7 @@ module Run =
                 StartedAt = None
                 CompletedAt = None
                 CreatedAt = DateTime.UtcNow
+                IsDeleted = false
             }
 
             let runCreatedEvent =

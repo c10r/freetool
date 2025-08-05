@@ -9,7 +9,6 @@ open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Infrastructure.Database
-open Freetool.Infrastructure.Database.Mappers
 
 type FolderRepository(context: FreetoolDbContext) =
 
@@ -17,59 +16,58 @@ type FolderRepository(context: FreetoolDbContext) =
 
         member _.GetByIdAsync(folderId: FolderId) : Task<ValidatedFolder option> = task {
             let guidId = folderId.Value
-            let! folderEntity = context.Folders.FirstOrDefaultAsync(fun f -> f.Id = guidId)
+            let! folderData = context.Folders.FirstOrDefaultAsync(fun f -> f.Id.Value = guidId)
 
-            return folderEntity |> Option.ofObj |> Option.map FolderEntityMapper.fromEntity
+            return folderData |> Option.ofObj |> Option.map (fun data -> Folder.fromData data)
         }
 
         member _.GetChildrenAsync(folderId: FolderId) : Task<ValidatedFolder list> = task {
             let guidId = folderId.Value
 
-            let! folderEntities =
+            let! folderDatas =
                 context.Folders
-                    .Where(fun f -> f.ParentId.HasValue && f.ParentId.Value = guidId)
+                    .Where(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
                     .OrderBy(fun f -> f.Name)
                     .ToListAsync()
 
-            return folderEntities |> Seq.map FolderEntityMapper.fromEntity |> Seq.toList
+            return folderDatas |> Seq.map (fun data -> Folder.fromData data) |> Seq.toList
         }
 
         member _.GetRootFoldersAsync (skip: int) (take: int) : Task<ValidatedFolder list> = task {
-            let! folderEntities =
+            let! folderDatas =
                 context.Folders
-                    .Where(fun f -> not f.ParentId.HasValue)
+                    .Where(fun f -> f.ParentId.IsNone)
                     .OrderBy(fun f -> f.Name)
                     .Skip(skip)
                     .Take(take)
                     .ToListAsync()
 
-            return folderEntities |> Seq.map FolderEntityMapper.fromEntity |> Seq.toList
+            return folderDatas |> Seq.map (fun data -> Folder.fromData data) |> Seq.toList
         }
 
         member _.GetChildFoldersAsync (parentId: FolderId) (skip: int) (take: int) : Task<ValidatedFolder list> = task {
             let guidId = parentId.Value
 
-            let! folderEntities =
+            let! folderDatas =
                 context.Folders
-                    .Where(fun f -> f.ParentId.HasValue && f.ParentId.Value = guidId)
+                    .Where(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
                     .OrderBy(fun f -> f.Name)
                     .Skip(skip)
                     .Take(take)
                     .ToListAsync()
 
-            return folderEntities |> Seq.map FolderEntityMapper.fromEntity |> Seq.toList
+            return folderDatas |> Seq.map (fun data -> Folder.fromData data) |> Seq.toList
         }
 
         member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedFolder list> = task {
-            let! folderEntities = context.Folders.OrderBy(fun f -> f.Name).Skip(skip).Take(take).ToListAsync()
+            let! folderDatas = context.Folders.OrderBy(fun f -> f.Name).Skip(skip).Take(take).ToListAsync()
 
-            return folderEntities |> Seq.map FolderEntityMapper.fromEntity |> Seq.toList
+            return folderDatas |> Seq.map (fun data -> Folder.fromData data) |> Seq.toList
         }
 
         member _.AddAsync(folder: ValidatedFolder) : Task<Result<unit, DomainError>> = task {
             try
-                let folderEntity = FolderEntityMapper.toEntity folder
-                context.Folders.Add folderEntity |> ignore
+                context.Folders.Add folder.State |> ignore
                 let! _ = context.SaveChangesAsync()
                 return Ok()
             with
@@ -80,20 +78,13 @@ type FolderRepository(context: FreetoolDbContext) =
         member _.UpdateAsync(folder: ValidatedFolder) : Task<Result<unit, DomainError>> = task {
             try
                 let guidId = (Folder.getId folder).Value
-                let! existingEntity = context.Folders.FirstOrDefaultAsync(fun f -> f.Id = guidId)
+                let! existingData = context.Folders.FirstOrDefaultAsync(fun f -> f.Id.Value = guidId)
 
-                match Option.ofObj existingEntity with
+                match Option.ofObj existingData with
                 | None -> return Error(NotFound "Folder not found")
-                | Some entity ->
-                    entity.Name <- folder.State.Name.Value
-
-                    entity.ParentId <-
-                        match folder.State.ParentId with
-                        | Some pid -> Nullable(pid.Value)
-                        | None -> Nullable()
-
-                    entity.UpdatedAt <- folder.State.UpdatedAt
-
+                | Some _ ->
+                    // Update entity directly
+                    context.Folders.Update(folder.State) |> ignore
                     let! _ = context.SaveChangesAsync()
                     return Ok()
             with
@@ -104,14 +95,23 @@ type FolderRepository(context: FreetoolDbContext) =
         member _.DeleteAsync(folderId: FolderId) : Task<Result<unit, DomainError>> = task {
             try
                 let guidId = folderId.Value
-                let! folderEntity = context.Folders.IgnoreQueryFilters().FirstOrDefaultAsync(fun f -> f.Id = guidId)
 
-                match Option.ofObj folderEntity with
+                let! folderData =
+                    context.Folders
+                        .IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(fun f -> f.Id.Value = guidId)
+
+                match Option.ofObj folderData with
                 | None -> return Error(NotFound "Folder not found")
-                | Some entity ->
-                    // Soft delete: set IsDeleted flag instead of removing entity
-                    entity.IsDeleted <- true
-                    entity.UpdatedAt <- System.DateTime.UtcNow
+                | Some data ->
+                    // Soft delete: create updated record with IsDeleted flag
+                    let updatedData = {
+                        data with
+                            IsDeleted = true
+                            UpdatedAt = System.DateTime.UtcNow
+                    }
+
+                    context.Folders.Update(updatedData) |> ignore
                     let! _ = context.SaveChangesAsync()
                     return Ok()
             with
@@ -121,7 +121,7 @@ type FolderRepository(context: FreetoolDbContext) =
 
         member _.ExistsAsync(folderId: FolderId) : Task<bool> = task {
             let guidId = folderId.Value
-            return! context.Folders.AnyAsync(fun f -> f.Id = guidId)
+            return! context.Folders.AnyAsync(fun f -> f.Id.Value = guidId)
         }
 
         member _.ExistsByNameInParentAsync (folderName: FolderName) (parentId: FolderId option) : Task<bool> = task {
@@ -130,23 +130,23 @@ type FolderRepository(context: FreetoolDbContext) =
             match parentId with
             | None ->
                 // Check root folders
-                return! context.Folders.AnyAsync(fun f -> f.Name = nameStr && not f.ParentId.HasValue)
+                return! context.Folders.AnyAsync(fun f -> f.Name.Value = nameStr && f.ParentId.IsNone)
             | Some pid ->
                 // Check folders with specific parent
                 let guidId = pid.Value
 
                 return!
                     context.Folders.AnyAsync(fun f ->
-                        f.Name = nameStr && f.ParentId.HasValue && f.ParentId.Value = guidId)
+                        f.Name.Value = nameStr && f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
         }
 
         member _.GetCountAsync() : Task<int> = task { return! context.Folders.CountAsync() }
 
         member _.GetRootCountAsync() : Task<int> = task {
-            return! context.Folders.CountAsync(fun f -> not f.ParentId.HasValue)
+            return! context.Folders.CountAsync(fun f -> f.ParentId.IsNone)
         }
 
         member _.GetChildCountAsync(parentId: FolderId) : Task<int> = task {
             let guidId = parentId.Value
-            return! context.Folders.CountAsync(fun f -> f.ParentId.HasValue && f.ParentId.Value = guidId)
+            return! context.Folders.CountAsync(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
         }

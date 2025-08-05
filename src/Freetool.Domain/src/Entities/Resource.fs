@@ -1,21 +1,54 @@
 namespace Freetool.Domain.Entities
 
 open System
+open System.ComponentModel.DataAnnotations
+open System.ComponentModel.DataAnnotations.Schema
+open Microsoft.EntityFrameworkCore
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 
+[<Table("Resources")>]
+[<Index([| "Name" |], IsUnique = true, Name = "IX_Resources_Name")>]
 type ResourceData = {
+    [<Key>]
     Id: ResourceId
+
+    [<Required>]
+    [<MaxLength(100)>]
     Name: ResourceName
+
+    [<Required>]
+    [<MaxLength(500)>]
     Description: ResourceDescription
+
+    [<Required>]
+    [<MaxLength(10)>]
     HttpMethod: HttpMethod
+
+    [<Required>]
+    [<MaxLength(1_000)>]
     BaseUrl: BaseUrl
+
+    [<Required>]
+    [<Column(TypeName = "TEXT")>] // JSON string
     UrlParameters: KeyValuePair list
+
+    [<Required>]
+    [<Column(TypeName = "TEXT")>] // JSON string
     Headers: KeyValuePair list
+
+    [<Required>]
+    [<Column(TypeName = "TEXT")>] // JSON string
     Body: KeyValuePair list
+
+    [<Required>]
     CreatedAt: DateTime
+
+    [<Required>]
     UpdatedAt: DateTime
+
+    IsDeleted: bool
 }
 
 type Resource = EventSourcingAggregate<ResourceData>
@@ -97,6 +130,7 @@ module Resource =
                                         Body = validBody
                                         CreatedAt = DateTime.UtcNow
                                         UpdatedAt = DateTime.UtcNow
+                                        IsDeleted = false
                                     }
 
                                     let resourceCreatedEvent =

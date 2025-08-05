@@ -24,6 +24,7 @@ module GroupMapper =
                 UserIds = userIds
                 CreatedAt = DateTime.UtcNow
                 UpdatedAt = DateTime.UtcNow
+                IsDeleted = false
             }
             UncommittedEvents = []
         }

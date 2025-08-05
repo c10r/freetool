@@ -8,6 +8,7 @@ open Freetool.Domain
 open Freetool.Domain.Events
 open Freetool.Application.Interfaces
 open Freetool.Application.DTOs
+open Freetool.Domain.Entities
 open Freetool.Infrastructure.Database
 
 type EventRepository(context: FreetoolDbContext) =
@@ -41,17 +42,18 @@ type EventRepository(context: FreetoolDbContext) =
 
             let eventData = JsonSerializer.Serialize(event)
 
-            let eventEntity = EventEntity()
-            eventEntity.Id <- Guid.NewGuid().ToString()
-            eventEntity.EventId <- event.EventId.ToString()
-            eventEntity.EventType <- eventType
-            eventEntity.EntityType <- entityType
-            eventEntity.EntityId <- entityId
-            eventEntity.EventData <- eventData
-            eventEntity.OccurredAt <- event.OccurredAt.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")
-            eventEntity.CreatedAt <- DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")
+            let eventDataRecord: Entities.EventData = {
+                Id = Guid.NewGuid()
+                EventId = event.EventId.ToString()
+                EventType = eventType
+                EntityType = entityType
+                EntityId = entityId
+                EventData = eventData
+                OccurredAt = event.OccurredAt
+                CreatedAt = DateTime.UtcNow
+            }
 
-            context.Events.Add(eventEntity) |> ignore
+            context.Events.Add(eventDataRecord) |> ignore
             let! _ = context.SaveChangesAsync()
             return ()
         }
@@ -107,13 +109,13 @@ type EventRepository(context: FreetoolDbContext) =
             }
         }
 
-    member private this.MapToDto(entity: EventEntity) : EventDto = {
-        Id = entity.Id
-        EventId = entity.EventId
-        EventType = entity.EventType
-        EntityType = entity.EntityType
-        EntityId = entity.EntityId
-        EventData = entity.EventData
-        OccurredAt = DateTime.Parse(entity.OccurredAt)
-        CreatedAt = DateTime.Parse(entity.CreatedAt)
+    member private this.MapToDto(eventData: Entities.EventData) : EventDto = {
+        Id = eventData.Id.ToString()
+        EventId = eventData.EventId
+        EventType = eventData.EventType
+        EntityType = eventData.EntityType
+        EntityId = eventData.EntityId
+        EventData = eventData.EventData
+        OccurredAt = eventData.OccurredAt
+        CreatedAt = eventData.CreatedAt
     }

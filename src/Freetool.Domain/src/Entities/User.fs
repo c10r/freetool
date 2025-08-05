@@ -1,17 +1,37 @@
 namespace Freetool.Domain.Entities
 
 open System
+open System.ComponentModel.DataAnnotations
+open System.ComponentModel.DataAnnotations.Schema
+open Microsoft.EntityFrameworkCore
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 
+[<Table("Users")>]
+[<Index([| "Email" |], IsUnique = true, Name = "IX_Users_Email")>]
 type UserData = {
+    [<Key>]
     Id: UserId
+
+    [<Required>]
+    [<MaxLength(100)>]
     Name: string
+
+    [<Required>]
+    [<MaxLength(254)>]
     Email: string
+
+    [<MaxLength(2_000)>]
     ProfilePicUrl: string option
+
+    [<Required>]
     CreatedAt: DateTime
+
+    [<Required>]
     UpdatedAt: DateTime
+
+    IsDeleted: bool
 }
 
 type User = EventSourcingAggregate<UserData>
@@ -37,6 +57,7 @@ module User =
             ProfilePicUrl = profilePicUrl
             CreatedAt = DateTime.UtcNow
             UpdatedAt = DateTime.UtcNow
+            IsDeleted = false
         }
 
         let userCreatedEvent =

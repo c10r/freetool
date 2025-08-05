@@ -1,22 +1,55 @@
 namespace Freetool.Domain.Entities
 
 open System
+open System.ComponentModel.DataAnnotations
+open System.ComponentModel.DataAnnotations.Schema
+open Microsoft.EntityFrameworkCore
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 
+[<Table("Apps")>]
+[<Index([| "Name"; "FolderId" |], IsUnique = true, Name = "IX_Apps_Name_FolderId")>]
 type AppData = {
+    [<Key>]
     Id: AppId
+
+    [<Required>]
+    [<MaxLength(100)>]
     Name: string
+
+    [<Required>]
     FolderId: FolderId
+
+    [<Required>]
     ResourceId: ResourceId
+
+    [<Required>]
+    [<Column(TypeName = "TEXT")>] // JSON serialized list of inputs
     Inputs: Input list
+
+    [<MaxLength(500)>]
     UrlPath: string option
+
+    [<Required>]
+    [<Column(TypeName = "TEXT")>] // JSON serialized key-value pairs
     UrlParameters: KeyValuePair list
+
+    [<Required>]
+    [<Column(TypeName = "TEXT")>] // JSON serialized key-value pairs
     Headers: KeyValuePair list
+
+    [<Required>]
+    [<Column(TypeName = "TEXT")>] // JSON serialized key-value pairs
     Body: KeyValuePair list
+
+    [<Required>]
     CreatedAt: DateTime
+
+    [<Required>]
     UpdatedAt: DateTime
+
+    IsDeleted: bool
 }
 
 type App = EventSourcingAggregate<AppData>
@@ -180,6 +213,7 @@ module App =
                         Body = validBody
                         CreatedAt = DateTime.UtcNow
                         UpdatedAt = DateTime.UtcNow
+                        IsDeleted = false
                     }
 
                     let unvalidatedApp = {

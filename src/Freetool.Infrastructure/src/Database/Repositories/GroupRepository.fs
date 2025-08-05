@@ -8,7 +8,6 @@ open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Infrastructure.Database
-open Freetool.Infrastructure.Database.Mappers
 
 type GroupRepository(context: FreetoolDbContext, eventRepository: IEventRepository) =
 
@@ -16,39 +15,66 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
 
         member _.GetByIdAsync(groupId: GroupId) : Task<ValidatedGroup option> = task {
             let guidId = groupId.Value
-            let! groupEntity = context.Groups.FirstOrDefaultAsync(fun g -> g.Id = guidId)
+            let! groupData = context.Groups.FirstOrDefaultAsync(fun g -> g.Id.Value = guidId)
 
-            match Option.ofObj groupEntity with
+            match Option.ofObj groupData with
             | None -> return None
-            | Some entity ->
+            | Some data ->
                 // Get associated user-group relationships
                 let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = guidId).ToListAsync()
 
-                return Some(GroupEntityMapper.fromEntity entity (userGroupEntities |> Seq.toList))
+                // Convert UserGroup entities to UserIds
+                let userIds =
+                    userGroupEntities
+                    |> Seq.map (fun ug -> Freetool.Domain.ValueObjects.UserId(ug.UserId))
+                    |> Seq.toList
+
+                // Create GroupData with UserIds from relationships
+                let groupDataWithUsers = { data with UserIds = userIds }
+
+                return Some(Group.fromData groupDataWithUsers)
         }
 
         member _.GetByNameAsync(name: string) : Task<ValidatedGroup option> = task {
-            let! groupEntity = context.Groups.FirstOrDefaultAsync(fun g -> g.Name = name)
+            let! groupData = context.Groups.FirstOrDefaultAsync(fun g -> g.Name = name)
 
-            match Option.ofObj groupEntity with
+            match Option.ofObj groupData with
             | None -> return None
-            | Some entity ->
+            | Some data ->
                 // Get associated user-group relationships
-                let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = entity.Id).ToListAsync()
+                let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = data.Id.Value).ToListAsync()
 
-                return Some(GroupEntityMapper.fromEntity entity (userGroupEntities |> Seq.toList))
+                // Convert UserGroup entities to UserIds
+                let userIds =
+                    userGroupEntities
+                    |> Seq.map (fun ug -> Freetool.Domain.ValueObjects.UserId(ug.UserId))
+                    |> Seq.toList
+
+                // Create GroupData with UserIds from relationships
+                let groupDataWithUsers = { data with UserIds = userIds }
+
+                return Some(Group.fromData groupDataWithUsers)
         }
 
         member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedGroup list> = task {
-            let! groupEntities = context.Groups.OrderBy(fun g -> g.CreatedAt).Skip(skip).Take(take).ToListAsync()
+            let! groupDatas = context.Groups.OrderBy(fun g -> g.CreatedAt).Skip(skip).Take(take).ToListAsync()
 
             let groups = []
             let mutable groupList = groups
 
-            for entity in groupEntities do
-                let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = entity.Id).ToListAsync()
+            for data in groupDatas do
+                let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = data.Id.Value).ToListAsync()
 
-                let group = GroupEntityMapper.fromEntity entity (userGroupEntities |> Seq.toList)
+                // Convert UserGroup entities to UserIds
+                let userIds =
+                    userGroupEntities
+                    |> Seq.map (fun ug -> Freetool.Domain.ValueObjects.UserId(ug.UserId))
+                    |> Seq.toList
+
+                // Create GroupData with UserIds from relationships
+                let groupDataWithUsers = { data with UserIds = userIds }
+
+                let group = Group.fromData groupDataWithUsers
                 groupList <- group :: groupList
 
             return List.rev groupList
@@ -63,15 +89,23 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
             let mutable groupList = groups
 
             for userGroup in userGroupEntities do
-                let! groupEntity = context.Groups.FirstOrDefaultAsync(fun g -> g.Id = userGroup.GroupId)
+                let! groupData = context.Groups.FirstOrDefaultAsync(fun g -> g.Id.Value = userGroup.GroupId)
 
-                match Option.ofObj groupEntity with
-                | Some entity ->
+                match Option.ofObj groupData with
+                | Some data ->
                     let! allUserGroupsForGroup =
-                        context.UserGroups.Where(fun ug -> ug.GroupId = entity.Id).ToListAsync()
+                        context.UserGroups.Where(fun ug -> ug.GroupId = data.Id.Value).ToListAsync()
 
-                    let group =
-                        GroupEntityMapper.fromEntity entity (allUserGroupsForGroup |> Seq.toList)
+                    // Convert UserGroup entities to UserIds
+                    let userIds =
+                        allUserGroupsForGroup
+                        |> Seq.map (fun ug -> Freetool.Domain.ValueObjects.UserId(ug.UserId))
+                        |> Seq.toList
+
+                    // Create GroupData with UserIds from relationships
+                    let groupDataWithUsers = { data with UserIds = userIds }
+
+                    let group = Group.fromData groupDataWithUsers
 
                     groupList <- group :: groupList
                 | None -> ()
@@ -84,12 +118,18 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
 
             try
                 // 1. Save group to database
-                let groupEntity = GroupEntityMapper.toEntity group
-                context.Groups.Add groupEntity |> ignore
+                context.Groups.Add group.State |> ignore
                 let! _ = context.SaveChangesAsync()
 
                 // 2. Save user-group relationships
-                let userGroupEntities = GroupEntityMapper.toUserGroupEntities group
+                let userGroupEntities =
+                    group.State.UserIds
+                    |> List.map (fun userId -> {
+                        Id = System.Guid.NewGuid()
+                        UserId = userId.Value
+                        GroupId = group.State.Id.Value
+                        CreatedAt = System.DateTime.UtcNow
+                    })
 
                 for userGroupEntity in userGroupEntities do
                     context.UserGroups.Add userGroupEntity |> ignore
@@ -120,18 +160,15 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
 
             try
                 let guidId = (Group.getId group).Value
-                let! existingEntity = context.Groups.FirstOrDefaultAsync(fun g -> g.Id = guidId)
+                let! existingData = context.Groups.FirstOrDefaultAsync(fun g -> g.Id.Value = guidId)
 
-                match Option.ofObj existingEntity with
+                match Option.ofObj existingData with
                 | None ->
                     transaction.Rollback()
                     return Error(NotFound "Group not found")
-                | Some entity ->
-                    // Update entity properties
-                    let groupData = group.State
-                    entity.Name <- groupData.Name
-                    entity.UpdatedAt <- groupData.UpdatedAt
-
+                | Some _ ->
+                    // Update the entity directly
+                    context.Groups.Update(group.State) |> ignore
                     let! _ = context.SaveChangesAsync()
 
                     // Update user-group relationships
@@ -141,7 +178,14 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                     context.UserGroups.RemoveRange(existingUserGroups)
 
                     // Add new relationships
-                    let userGroupEntities = GroupEntityMapper.toUserGroupEntities group
+                    let userGroupEntities =
+                        group.State.UserIds
+                        |> List.map (fun userId -> {
+                            Id = System.Guid.NewGuid()
+                            UserId = userId.Value
+                            GroupId = group.State.Id.Value
+                            CreatedAt = System.DateTime.UtcNow
+                        })
 
                     for userGroupEntity in userGroupEntities do
                         context.UserGroups.Add userGroupEntity |> ignore
@@ -170,21 +214,30 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
 
             try
                 let guidId = groupId.Value
-                let! groupEntity = context.Groups.IgnoreQueryFilters().FirstOrDefaultAsync(fun g -> g.Id = guidId)
 
-                match Option.ofObj groupEntity with
+                let! groupData =
+                    context.Groups
+                        .IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(fun g -> g.Id.Value = guidId)
+
+                match Option.ofObj groupData with
                 | None ->
                     transaction.Rollback()
                     return Error(NotFound "Group not found")
-                | Some entity ->
+                | Some data ->
                     // Remove all user-group relationships first
                     let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = guidId).ToListAsync()
 
                     context.UserGroups.RemoveRange(userGroupEntities)
 
-                    // Soft delete: set IsDeleted flag instead of removing entity
-                    entity.IsDeleted <- true
-                    entity.UpdatedAt <- System.DateTime.UtcNow
+                    // Soft delete: create updated record with IsDeleted flag
+                    let updatedData = {
+                        data with
+                            IsDeleted = true
+                            UpdatedAt = System.DateTime.UtcNow
+                    }
+
+                    context.Groups.Update(updatedData) |> ignore
                     let! _ = context.SaveChangesAsync()
 
                     // Save delete event if provided
@@ -205,7 +258,7 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
 
         member _.ExistsAsync(groupId: GroupId) : Task<bool> = task {
             let guidId = groupId.Value
-            return! context.Groups.AnyAsync(fun g -> g.Id = guidId)
+            return! context.Groups.AnyAsync(fun g -> g.Id.Value = guidId)
         }
 
         member _.ExistsByNameAsync(name: string) : Task<bool> = task {

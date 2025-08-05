@@ -8,7 +8,6 @@ open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Infrastructure.Database
-open Freetool.Infrastructure.Database.Mappers
 
 type AppRepository(context: FreetoolDbContext) =
 
@@ -16,43 +15,44 @@ type AppRepository(context: FreetoolDbContext) =
 
         member _.GetByIdAsync(appId: AppId) : Task<ValidatedApp option> = task {
             let guidId = appId.Value
-            let! appEntity = context.Apps.FirstOrDefaultAsync(fun a -> a.Id = guidId)
+            let! appData = context.Apps.FirstOrDefaultAsync(fun a -> a.Id.Value = guidId)
 
-            return appEntity |> Option.ofObj |> Option.map AppEntityMapper.fromEntity
+            return appData |> Option.ofObj |> Option.map (fun data -> App.fromData data)
         }
 
         member _.GetByNameAndFolderIdAsync (appName: AppName) (folderId: FolderId) : Task<ValidatedApp option> = task {
             let nameStr = appName.Value
             let folderGuidId = folderId.Value
-            let! appEntity = context.Apps.FirstOrDefaultAsync(fun a -> a.Name = nameStr && a.FolderId = folderGuidId)
 
-            return appEntity |> Option.ofObj |> Option.map AppEntityMapper.fromEntity
+            let! appData =
+                context.Apps.FirstOrDefaultAsync(fun a -> a.Name = nameStr && a.FolderId.Value = folderGuidId)
+
+            return appData |> Option.ofObj |> Option.map (fun data -> App.fromData data)
         }
 
         member _.GetByFolderIdAsync (folderId: FolderId) (skip: int) (take: int) : Task<ValidatedApp list> = task {
             let folderGuidId = folderId.Value
 
-            let! appEntities =
+            let! appDatas =
                 context.Apps
-                    .Where(fun a -> a.FolderId = folderGuidId)
+                    .Where(fun a -> a.FolderId.Value = folderGuidId)
                     .OrderBy(fun a -> a.CreatedAt)
                     .Skip(skip)
                     .Take(take)
                     .ToListAsync()
 
-            return appEntities |> Seq.map AppEntityMapper.fromEntity |> Seq.toList
+            return appDatas |> Seq.map (fun data -> App.fromData data) |> Seq.toList
         }
 
         member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedApp list> = task {
-            let! appEntities = context.Apps.OrderBy(fun a -> a.CreatedAt).Skip(skip).Take(take).ToListAsync()
+            let! appDatas = context.Apps.OrderBy(fun a -> a.CreatedAt).Skip(skip).Take(take).ToListAsync()
 
-            return appEntities |> Seq.map AppEntityMapper.fromEntity |> Seq.toList
+            return appDatas |> Seq.map (fun data -> App.fromData data) |> Seq.toList
         }
 
         member _.AddAsync(app: ValidatedApp) : Task<Result<unit, DomainError>> = task {
             try
-                let appEntity = AppEntityMapper.toEntity app
-                context.Apps.Add appEntity |> ignore
+                context.Apps.Add app.State |> ignore
                 let! _ = context.SaveChangesAsync()
                 return Ok()
             with
@@ -63,19 +63,13 @@ type AppRepository(context: FreetoolDbContext) =
         member _.UpdateAsync(app: ValidatedApp) : Task<Result<unit, DomainError>> = task {
             try
                 let guidId = (App.getId app).Value
-                let! existingEntity = context.Apps.FirstOrDefaultAsync(fun a -> a.Id = guidId)
+                let! existingData = context.Apps.FirstOrDefaultAsync(fun a -> a.Id.Value = guidId)
 
-                match Option.ofObj existingEntity with
+                match Option.ofObj existingData with
                 | None -> return Error(NotFound "App not found")
-                | Some entity ->
-                    let appData = app.State
-                    let inputsJson = appData.Inputs |> List.map AppEntityMapper.inputFromDomain
-                    let inputsJsonString = System.Text.Json.JsonSerializer.Serialize(inputsJson)
-
-                    entity.Name <- appData.Name
-                    entity.Inputs <- inputsJsonString
-                    entity.UpdatedAt <- appData.UpdatedAt
-
+                | Some _ ->
+                    // Update entity directly
+                    context.Apps.Update(app.State) |> ignore
                     let! _ = context.SaveChangesAsync()
                     return Ok()
             with
@@ -86,14 +80,23 @@ type AppRepository(context: FreetoolDbContext) =
         member _.DeleteAsync(appId: AppId) : Task<Result<unit, DomainError>> = task {
             try
                 let guidId = appId.Value
-                let! appEntity = context.Apps.IgnoreQueryFilters().FirstOrDefaultAsync(fun a -> a.Id = guidId)
 
-                match Option.ofObj appEntity with
+                let! appData =
+                    context.Apps
+                        .IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(fun a -> a.Id.Value = guidId)
+
+                match Option.ofObj appData with
                 | None -> return Error(NotFound "App not found")
-                | Some entity ->
-                    // Soft delete: set IsDeleted flag instead of removing entity
-                    entity.IsDeleted <- true
-                    entity.UpdatedAt <- System.DateTime.UtcNow
+                | Some data ->
+                    // Soft delete: create updated record with IsDeleted flag
+                    let updatedData = {
+                        data with
+                            IsDeleted = true
+                            UpdatedAt = System.DateTime.UtcNow
+                    }
+
+                    context.Apps.Update(updatedData) |> ignore
                     let! _ = context.SaveChangesAsync()
                     return Ok()
             with
@@ -103,24 +106,24 @@ type AppRepository(context: FreetoolDbContext) =
 
         member _.ExistsAsync(appId: AppId) : Task<bool> = task {
             let guidId = appId.Value
-            return! context.Apps.AnyAsync(fun a -> a.Id = guidId)
+            return! context.Apps.AnyAsync(fun a -> a.Id.Value = guidId)
         }
 
         member _.ExistsByNameAndFolderIdAsync (appName: AppName) (folderId: FolderId) : Task<bool> = task {
             let nameStr = appName.Value
             let folderGuidId = folderId.Value
-            return! context.Apps.AnyAsync(fun a -> a.Name = nameStr && a.FolderId = folderGuidId)
+            return! context.Apps.AnyAsync(fun a -> a.Name = nameStr && a.FolderId.Value = folderGuidId)
         }
 
         member _.GetCountAsync() : Task<int> = task { return! context.Apps.CountAsync() }
 
         member _.GetCountByFolderIdAsync(folderId: FolderId) : Task<int> = task {
             let folderGuidId = folderId.Value
-            return! context.Apps.CountAsync(fun a -> a.FolderId = folderGuidId)
+            return! context.Apps.CountAsync(fun a -> a.FolderId.Value = folderGuidId)
         }
 
         member _.GetByResourceIdAsync(resourceId: ResourceId) : Task<ValidatedApp list> = task {
             let resourceGuidId = resourceId.Value
-            let! appEntities = context.Apps.Where(fun a -> a.ResourceId = resourceGuidId).ToListAsync()
-            return appEntities |> Seq.map AppEntityMapper.fromEntity |> Seq.toList
+            let! appDatas = context.Apps.Where(fun a -> a.ResourceId.Value = resourceGuidId).ToListAsync()
+            return appDatas |> Seq.map (fun data -> App.fromData data) |> Seq.toList
         }

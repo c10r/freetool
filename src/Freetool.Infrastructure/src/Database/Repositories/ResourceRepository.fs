@@ -8,7 +8,6 @@ open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Infrastructure.Database
-open Freetool.Infrastructure.Database.Mappers
 
 type ResourceRepository(context: FreetoolDbContext) =
 
@@ -16,26 +15,25 @@ type ResourceRepository(context: FreetoolDbContext) =
 
         member _.GetByIdAsync(resourceId: ResourceId) : Task<ValidatedResource option> = task {
             let guidId = resourceId.Value
-            let! resourceEntity = context.Resources.FirstOrDefaultAsync(fun r -> r.Id = guidId)
+            let! resourceData = context.Resources.FirstOrDefaultAsync(fun r -> r.Id.Value = guidId)
 
-            return resourceEntity |> Option.ofObj |> Option.map ResourceEntityMapper.fromEntity
+            return resourceData |> Option.ofObj |> Option.map (fun data -> Resource.fromData data)
         }
 
         member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedResource list> = task {
-            let! resourceEntities =
+            let! resourceDatas =
                 context.Resources
                     .OrderBy(fun r -> r.CreatedAt)
                     .Skip(skip)
                     .Take(take)
                     .ToListAsync()
 
-            return resourceEntities |> Seq.map ResourceEntityMapper.fromEntity |> Seq.toList
+            return resourceDatas |> Seq.map (fun data -> Resource.fromData data) |> Seq.toList
         }
 
         member _.AddAsync(resource: ValidatedResource) : Task<Result<unit, DomainError>> = task {
             try
-                let resourceEntity = ResourceEntityMapper.toEntity resource
-                context.Resources.Add resourceEntity |> ignore
+                context.Resources.Add resource.State |> ignore
                 let! _ = context.SaveChangesAsync()
                 return Ok()
             with
@@ -46,33 +44,13 @@ type ResourceRepository(context: FreetoolDbContext) =
         member _.UpdateAsync(resource: ValidatedResource) : Task<Result<unit, DomainError>> = task {
             try
                 let guidId = (Resource.getId resource).Value
-                let! existingEntity = context.Resources.FirstOrDefaultAsync(fun r -> r.Id = guidId)
+                let! existingData = context.Resources.FirstOrDefaultAsync(fun r -> r.Id.Value = guidId)
 
-                match Option.ofObj existingEntity with
+                match Option.ofObj existingData with
                 | None -> return Error(NotFound "Resource not found")
-                | Some entity ->
-                    let resourceData = resource.State
-                    entity.Name <- resourceData.Name.Value
-                    entity.Description <- resourceData.Description.Value
-                    entity.BaseUrl <- resourceData.BaseUrl.Value
-
-                    entity.UrlParameters <-
-                        ResourceEntityMapper.serializeKeyValuePairs (
-                            resourceData.UrlParameters |> List.map (fun kvp -> (kvp.Key, kvp.Value))
-                        )
-
-                    entity.Headers <-
-                        ResourceEntityMapper.serializeKeyValuePairs (
-                            resourceData.Headers |> List.map (fun kvp -> (kvp.Key, kvp.Value))
-                        )
-
-                    entity.Body <-
-                        ResourceEntityMapper.serializeKeyValuePairs (
-                            resourceData.Body |> List.map (fun kvp -> (kvp.Key, kvp.Value))
-                        )
-
-                    entity.UpdatedAt <- resourceData.UpdatedAt
-
+                | Some _ ->
+                    // Update the entity directly
+                    context.Resources.Update(resource.State) |> ignore
                     let! _ = context.SaveChangesAsync()
                     return Ok()
             with
@@ -84,17 +62,22 @@ type ResourceRepository(context: FreetoolDbContext) =
             try
                 let guidId = resourceId.Value
 
-                let! resourceEntity =
+                let! resourceData =
                     context.Resources
                         .IgnoreQueryFilters()
-                        .FirstOrDefaultAsync(fun r -> r.Id = guidId)
+                        .FirstOrDefaultAsync(fun r -> r.Id.Value = guidId)
 
-                match Option.ofObj resourceEntity with
+                match Option.ofObj resourceData with
                 | None -> return Error(NotFound "Resource not found")
-                | Some entity ->
-                    // Soft delete: set IsDeleted flag instead of removing entity
-                    entity.IsDeleted <- true
-                    entity.UpdatedAt <- System.DateTime.UtcNow
+                | Some data ->
+                    // Soft delete: create updated record with IsDeleted flag
+                    let updatedData = {
+                        data with
+                            IsDeleted = true
+                            UpdatedAt = System.DateTime.UtcNow
+                    }
+
+                    context.Resources.Update(updatedData) |> ignore
                     let! _ = context.SaveChangesAsync()
                     return Ok()
             with
@@ -104,12 +87,12 @@ type ResourceRepository(context: FreetoolDbContext) =
 
         member _.ExistsAsync(resourceId: ResourceId) : Task<bool> = task {
             let guidId = resourceId.Value
-            return! context.Resources.AnyAsync(fun r -> r.Id = guidId)
+            return! context.Resources.AnyAsync(fun r -> r.Id.Value = guidId)
         }
 
         member _.ExistsByNameAsync(resourceName: ResourceName) : Task<bool> = task {
             let nameStr = resourceName.Value
-            return! context.Resources.AnyAsync(fun r -> r.Name = nameStr)
+            return! context.Resources.AnyAsync(fun r -> r.Name.Value = nameStr)
         }
 
         member _.GetCountAsync() : Task<int> = task { return! context.Resources.CountAsync() }

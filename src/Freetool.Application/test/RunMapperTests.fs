@@ -141,6 +141,7 @@ let createTestRun () =
         StartedAt = Some(DateTime(2024, 1, 15, 10, 30, 0))
         CompletedAt = Some(DateTime(2024, 1, 15, 10, 30, 5))
         CreatedAt = DateTime(2024, 1, 15, 10, 29, 0)
+        IsDeleted = false
     }
 
     Run.fromData runData

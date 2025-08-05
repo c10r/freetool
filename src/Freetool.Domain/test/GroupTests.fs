@@ -71,6 +71,7 @@ let ``Group validation should trim name and succeed`` () =
             UserIds = []
             CreatedAt = DateTime.UtcNow
             UpdatedAt = DateTime.UtcNow
+            IsDeleted = false
         }
         UncommittedEvents = []
     }
@@ -287,6 +288,7 @@ let ``Group created from data should have no uncommitted events`` () =
         UserIds = []
         CreatedAt = DateTime.UtcNow
         UpdatedAt = DateTime.UtcNow
+        IsDeleted = false
     }
 
     // Act
@@ -429,6 +431,7 @@ let ``Group validation with duplicate UserIds should remove duplicates`` () =
             UserIds = [ user1; user2; user1; user2 ] // Duplicates
             CreatedAt = DateTime.UtcNow
             UpdatedAt = DateTime.UtcNow
+            IsDeleted = false
         }
         UncommittedEvents = []
     }
