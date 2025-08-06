@@ -10,4 +10,7 @@ type InputTypeDto =
     | Text of MaxLength: int
     | Integer
     | Boolean
-    | MultiChoice of Choices: InputTypeDto list
+    | MultiEmail of AllowedEmails: string list
+    | MultiDate of AllowedDates: string list
+    | MultiText of MaxLength: int * AllowedValues: string list
+    | MultiInteger of AllowedIntegers: int list

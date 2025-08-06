@@ -654,16 +654,14 @@ let ``Run creation should reject Text input type exceeding length limit`` () =
     | _ -> Assert.True(false, "Expected validation error for text exceeding length limit")
 
 [<Fact>]
-let ``Run creation should validate MultiChoice input type with valid choice`` () =
+let ``Run creation should validate MultiText input type with valid choice`` () =
     // Arrange
     let folderId = FolderId.NewId()
 
     let inputs = [
         {
             Title = "priority"
-            Type =
-                InputType.MultiChoice([ InputTypeValue.Text(20); InputTypeValue.Integer ])
-                |> unwrapResult
+            Type = InputType.MultiText(20, [ "high"; "medium"; "low" ]) |> unwrapResult
             Required = true
         }
     ]
@@ -684,7 +682,7 @@ let ``Run creation should validate MultiChoice input type with valid choice`` ()
         |> unwrapResult
 
     let inputValues = [
-        { Title = "priority"; Value = "42" } // Valid as integer
+        { Title = "priority"; Value = "high" } // Valid text choice
     ]
 
     // Act
@@ -696,16 +694,14 @@ let ``Run creation should validate MultiChoice input type with valid choice`` ()
     | Error error -> Assert.True(false, $"Expected success but got error: {error}")
 
 [<Fact>]
-let ``Run creation should reject MultiChoice input type with invalid choice`` () =
+let ``Run creation should reject MultiText input type with invalid choice`` () =
     // Arrange
     let folderId = FolderId.NewId()
 
     let inputs = [
         {
             Title = "priority"
-            Type =
-                InputType.MultiChoice([ InputTypeValue.Email; InputTypeValue.Integer ])
-                |> unwrapResult
+            Type = InputType.MultiText(20, [ "high"; "medium"; "low" ]) |> unwrapResult
             Required = true
         }
     ]
@@ -728,7 +724,7 @@ let ``Run creation should reject MultiChoice input type with invalid choice`` ()
     let inputValues = [
         {
             Title = "priority"
-            Value = "not-email-or-integer"
+            Value = "invalid-choice"
         }
     ]
 
@@ -739,5 +735,5 @@ let ``Run creation should reject MultiChoice input type with invalid choice`` ()
     match result with
     | Error(ValidationError message) ->
         Assert.Contains("priority", message)
-        Assert.Contains("allowed choices", message)
-    | _ -> Assert.True(false, "Expected validation error for invalid multichoice")
+        Assert.Contains("allowed text values", message)
+    | _ -> Assert.True(false, "Expected validation error for invalid MultiText choice")

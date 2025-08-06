@@ -14,19 +14,15 @@ module AppMapper =
         | InputTypeValue.Text maxLength -> Text(MaxLength = maxLength)
         | InputTypeValue.Integer -> Integer
         | InputTypeValue.Boolean -> Boolean
-        | InputTypeValue.MultiChoice choices ->
-            let dtoChoices =
-                choices
-                |> List.map (fun choice ->
-                    match choice with
-                    | InputTypeValue.Email -> Email
-                    | InputTypeValue.Date -> Date
-                    | InputTypeValue.Text maxLength -> Text(MaxLength = maxLength)
-                    | InputTypeValue.Integer -> Integer
-                    | InputTypeValue.Boolean -> Boolean
-                    | InputTypeValue.MultiChoice _ -> failwith "Nested MultiChoice not allowed")
-
-            MultiChoice(Choices = dtoChoices)
+        | InputTypeValue.MultiEmail allowedEmails ->
+            let emailStrings = allowedEmails |> List.map (fun e -> e.ToString())
+            MultiEmail(AllowedEmails = emailStrings)
+        | InputTypeValue.MultiDate allowedDates ->
+            let dateStrings = allowedDates |> List.map (fun d -> d.ToString("yyyy-MM-dd"))
+            MultiDate(AllowedDates = dateStrings)
+        | InputTypeValue.MultiText(maxLength, allowedValues) ->
+            MultiText(MaxLength = maxLength, AllowedValues = allowedValues)
+        | InputTypeValue.MultiInteger allowedIntegers -> MultiInteger(AllowedIntegers = allowedIntegers)
 
     let rec inputTypeFromDtoType (inputTypeDto: InputTypeDto) : InputType =
         match inputTypeDto with
@@ -38,21 +34,36 @@ module AppMapper =
             | Error _ -> failwith (sprintf "Invalid text max length: %d" maxLength)
         | Integer -> InputType.Integer()
         | Boolean -> InputType.Boolean()
-        | MultiChoice choices ->
-            let domainChoices =
-                choices
-                |> List.map (fun choice ->
-                    match choice with
-                    | Email -> InputTypeValue.Email
-                    | Date -> InputTypeValue.Date
-                    | Text maxLength -> InputTypeValue.Text(maxLength)
-                    | Integer -> InputTypeValue.Integer
-                    | Boolean -> InputTypeValue.Boolean
-                    | MultiChoice _ -> failwith "Nested MultiChoice not allowed")
+        | MultiEmail emailStrings ->
+            let emails =
+                emailStrings
+                |> List.map (fun emailStr ->
+                    match Email.Create(Some emailStr) with
+                    | Ok email -> email
+                    | Error _ -> failwith (sprintf "Invalid email: %s" emailStr))
 
-            match InputType.MultiChoice(domainChoices) with
+            match InputType.MultiEmail(emails) with
             | Ok inputType -> inputType
-            | Error _ -> failwith "Invalid MultiChoice configuration"
+            | Error _ -> failwith "Invalid MultiEmail configuration"
+        | MultiDate dateStrings ->
+            let dates =
+                dateStrings
+                |> List.map (fun dateStr ->
+                    match DateTime.TryParse(dateStr) with
+                    | (true, date) -> date
+                    | (false, _) -> failwith (sprintf "Invalid date: %s" dateStr))
+
+            match InputType.MultiDate(dates) with
+            | Ok inputType -> inputType
+            | Error _ -> failwith "Invalid MultiDate configuration"
+        | MultiText(maxLength, allowedValues) ->
+            match InputType.MultiText(maxLength, allowedValues) with
+            | Ok inputType -> inputType
+            | Error _ -> failwith "Invalid MultiText configuration"
+        | MultiInteger allowedIntegers ->
+            match InputType.MultiInteger(allowedIntegers) with
+            | Ok inputType -> inputType
+            | Error _ -> failwith "Invalid MultiInteger configuration"
 
     let inputToDto (input: Input) : AppInputDto = {
         Input = {

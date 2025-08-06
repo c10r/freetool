@@ -1,6 +1,7 @@
 namespace Freetool.Domain.ValueObjects
 
 open Freetool.Domain
+open System
 
 type InputTypeValue =
     | Email
@@ -8,7 +9,10 @@ type InputTypeValue =
     | Text of maxLength: int
     | Integer
     | Boolean
-    | MultiChoice of choices: InputTypeValue list
+    | MultiEmail of allowedEmails: Email list
+    | MultiDate of allowedDates: DateTime list
+    | MultiText of maxLength: int * allowedValues: string list
+    | MultiInteger of allowedIntegers: int list
 
 [<Struct>]
 type InputType =
@@ -26,21 +30,33 @@ type InputType =
     static member Integer() = InputType(Integer)
     static member Boolean() = InputType(Boolean)
 
-    static member MultiChoice(choices: InputTypeValue list) : Result<InputType, DomainError> =
-        if List.isEmpty choices then
-            Error(ValidationError "MultiChoice must have at least one choice")
+    static member MultiEmail(allowedEmails: Email list) : Result<InputType, DomainError> =
+        if List.isEmpty allowedEmails then
+            Error(ValidationError "MultiEmail must have at least one allowed email")
         else
-            // Validate that no choice is itself a MultiChoice
-            let hasNestedMultiChoice =
-                choices
-                |> List.exists (function
-                    | MultiChoice _ -> true
-                    | _ -> false)
+            Ok(InputType(MultiEmail(allowedEmails)))
 
-            if hasNestedMultiChoice then
-                Error(ValidationError "MultiChoice cannot contain another MultiChoice")
-            else
-                Ok(InputType(MultiChoice(choices)))
+    static member MultiDate(allowedDates: DateTime list) : Result<InputType, DomainError> =
+        if List.isEmpty allowedDates then
+            Error(ValidationError "MultiDate must have at least one allowed date")
+        else
+            Ok(InputType(MultiDate(allowedDates)))
+
+    static member MultiText(maxLength: int, allowedValues: string list) : Result<InputType, DomainError> =
+        if maxLength <= 0 || maxLength > 500 then
+            Error(ValidationError "MultiText max length must be between 1 and 500 characters")
+        elif List.isEmpty allowedValues then
+            Error(ValidationError "MultiText must have at least one allowed value")
+        elif allowedValues |> List.exists (fun v -> v.Length > maxLength) then
+            Error(ValidationError "All MultiText allowed values must not exceed max length")
+        else
+            Ok(InputType(MultiText(maxLength, allowedValues)))
+
+    static member MultiInteger(allowedIntegers: int list) : Result<InputType, DomainError> =
+        if List.isEmpty allowedIntegers then
+            Error(ValidationError "MultiInteger must have at least one allowed integer")
+        else
+            Ok(InputType(MultiInteger(allowedIntegers)))
 
     member this.Value =
         let (InputType inputType) = this
@@ -53,16 +69,14 @@ type InputType =
         | Text maxLength -> sprintf "Text(%d)" maxLength
         | Integer -> "Integer"
         | Boolean -> "Boolean"
-        | MultiChoice choices ->
-            let choiceStrings =
-                choices
-                |> List.map (fun c ->
-                    match c with
-                    | Email -> "Email"
-                    | Date -> "Date"
-                    | Text maxLength -> sprintf "Text(%d)" maxLength
-                    | Integer -> "Integer"
-                    | Boolean -> "Boolean"
-                    | MultiChoice _ -> failwith "Should not be possible due to validation")
-
-            sprintf "MultiChoice([%s])" (System.String.Join(", ", choiceStrings))
+        | MultiEmail allowedEmails ->
+            let emailStrings = allowedEmails |> List.map (fun e -> e.ToString())
+            sprintf "MultiEmail([%s])" (String.Join(", ", emailStrings))
+        | MultiDate allowedDates ->
+            let dateStrings = allowedDates |> List.map (fun d -> d.ToString("yyyy-MM-dd"))
+            sprintf "MultiDate([%s])" (String.Join(", ", dateStrings))
+        | MultiText(maxLength, allowedValues) ->
+            sprintf "MultiText(%d, [%s])" maxLength (String.Join(", ", allowedValues))
+        | MultiInteger allowedIntegers ->
+            let intStrings = allowedIntegers |> List.map string
+            sprintf "MultiInteger([%s])" (String.Join(", ", intStrings))

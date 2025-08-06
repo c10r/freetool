@@ -169,16 +169,15 @@ module AutoTracing =
                                 // Add attributes from the first item if available and it's a record
                                 let items = collection :?> System.Collections.IEnumerable
                                 let firstItem = items |> Seq.cast<obj> |> Seq.tryHead
+
                                 match firstItem with
                                 | Some item when FSharpType.IsRecord(item.GetType()) ->
                                     addObjectAttributes activity "result.sample" item
                                 | _ -> ()
                             | "totalcount", (:? int as total) ->
                                 Tracing.addIntAttribute activity "result.total_count" total
-                            | "skip", (:? int as skip) ->
-                                Tracing.addIntAttribute activity "result.skip" skip
-                            | "take", (:? int as take) ->
-                                Tracing.addIntAttribute activity "result.take" take
+                            | "skip", (:? int as skip) -> Tracing.addIntAttribute activity "result.skip" skip
+                            | "take", (:? int as take) -> Tracing.addIntAttribute activity "result.take" take
                             | _ -> ())
                 | _ -> ()
 

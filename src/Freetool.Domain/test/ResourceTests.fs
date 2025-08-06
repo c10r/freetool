@@ -1,10 +1,8 @@
 module Freetool.Domain.Tests.ResourceTests
 
-open System
 open Xunit
 open Freetool.Domain
 open Freetool.Domain.Entities
-open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 
 // Helper function for test assertions

@@ -129,23 +129,47 @@ module Run =
                             )
                         else
                             Ok inputValue
-                    | MultiChoice choices ->
-                        let isValidChoice =
-                            choices
-                            |> List.exists (fun choice ->
-                                match choice with
-                                | Email -> Email.Create(Some value) |> Result.isOk
-                                | Integer -> fst (System.Int32.TryParse(value))
-                                | Boolean -> fst (System.Boolean.TryParse(value))
-                                | Date -> fst (System.DateTime.TryParse(value))
-                                | Text _ -> true // Text is always valid for MultiChoice
-                                | MultiChoice _ -> false // Should not happen due to validation in InputType
+                    | MultiEmail allowedEmails ->
+                        match Email.Create(Some value) with
+                        | Ok email ->
+                            if
+                                allowedEmails
+                                |> List.exists (fun allowedEmail -> allowedEmail.ToString() = email.ToString())
+                            then
+                                Ok inputValue
+                            else
+                                Error(
+                                    ValidationError $"Input '{input.Title}' must be one of the allowed email addresses"
+                                )
+                        | Error err -> Error err
+                    | MultiDate allowedDates ->
+                        match System.DateTime.TryParse(value) with
+                        | true, date ->
+                            if allowedDates |> List.exists (fun allowedDate -> allowedDate.Date = date.Date) then
+                                Ok inputValue
+                            else
+                                Error(ValidationError $"Input '{input.Title}' must be one of the allowed dates")
+                        | false, _ -> Error(ValidationError $"Input '{input.Title}' must be a valid date")
+                    | MultiText(maxLength, allowedValues) ->
+                        if value.Length > maxLength then
+                            Error(
+                                ValidationError
+                                    $"Input '{input.Title}' exceeds maximum length of {maxLength} characters"
                             )
-
-                        if isValidChoice then
+                        elif allowedValues |> List.exists (fun allowedValue -> allowedValue = value) then
                             Ok inputValue
                         else
-                            Error(ValidationError $"Input '{input.Title}' does not match any of the allowed choices")
+                            Error(ValidationError $"Input '{input.Title}' must be one of the allowed text values")
+                    | MultiInteger allowedIntegers ->
+                        match System.Int32.TryParse(value) with
+                        | true, intValue ->
+                            if allowedIntegers |> List.exists (fun allowedInt -> allowedInt = intValue) then
+                                Ok inputValue
+                            else
+                                Error(
+                                    ValidationError $"Input '{input.Title}' must be one of the allowed integer values"
+                                )
+                        | false, _ -> Error(ValidationError $"Input '{input.Title}' must be a valid integer")
 
                 // Validate all input values against their types
                 let zippedInputs =
