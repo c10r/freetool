@@ -153,13 +153,10 @@ module AutoTracing =
 
                 match case.Name, fields with
                 | name, [| actualResult |] when name.EndsWith("Result") && not (name.EndsWith("sResult")) ->
-                    // Single result (e.g., UserResult containing UserDto)
+                    // Single result (e.g., UserResult containing UserData entity)
                     addObjectAttributes activity "result" actualResult
                 | name, [| pagedResult |] when name.EndsWith("sResult") ->
-                    // Paged result (e.g., UsersResult containing PagedUsersDto)
-                    addObjectAttributes activity "result" pagedResult
-
-                    // Add count attribute for paged results
+                    // Paged result (e.g., UsersResult containing PagedResult<UserData>)
                     if FSharpType.IsRecord(pagedResult.GetType()) then
                         let fields = FSharpType.GetRecordFields(pagedResult.GetType())
                         let values = FSharpValue.GetRecordFields(pagedResult)
@@ -167,10 +164,21 @@ module AutoTracing =
                         Array.zip fields values
                         |> Array.iter (fun (field, value) ->
                             match field.Name.ToLowerInvariant(), value with
-                            | name, (:? System.Collections.ICollection as collection) when name.Contains("s") ->
+                            | "items", (:? System.Collections.ICollection as collection) ->
                                 Tracing.addIntAttribute activity "result.count" collection.Count
+                                // Add attributes from the first item if available and it's a record
+                                let items = collection :?> System.Collections.IEnumerable
+                                let firstItem = items |> Seq.cast<obj> |> Seq.tryHead
+                                match firstItem with
+                                | Some item when FSharpType.IsRecord(item.GetType()) ->
+                                    addObjectAttributes activity "result.sample" item
+                                | _ -> ()
                             | "totalcount", (:? int as total) ->
                                 Tracing.addIntAttribute activity "result.total_count" total
+                            | "skip", (:? int as skip) ->
+                                Tracing.addIntAttribute activity "result.skip" skip
+                            | "take", (:? int as take) ->
+                                Tracing.addIntAttribute activity "result.take" take
                             | _ -> ())
                 | _ -> ()
 
