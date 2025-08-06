@@ -4,8 +4,8 @@ open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 
 type RunCommandResult =
-    | RunResult of RunDto
-    | RunsResult of PagedRunsDto
+    | RunResult of RunData
+    | RunsResult of PagedResult<RunData>
     | RunUnitResult of unit
 
 type RunCommand =

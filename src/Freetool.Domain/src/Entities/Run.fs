@@ -3,6 +3,7 @@ namespace Freetool.Domain.Entities
 open System
 open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
+open System.Text.Json.Serialization
 open Microsoft.EntityFrameworkCore
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
@@ -39,8 +40,10 @@ type RunData = {
     CompletedAt: DateTime option // When the run was completed (null if not completed)
 
     [<Required>]
+    [<JsonIgnore>]
     CreatedAt: DateTime
 
+    [<JsonIgnore>]
     IsDeleted: bool
 }
 

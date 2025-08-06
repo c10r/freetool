@@ -78,16 +78,16 @@ type TracingUserCommandHandlerDecorator(inner: ICommandHandler, activitySource: 
     member private this.AddSuccessAttributes activity command result =
         match result with
         | UserResult userDto ->
-            Tracing.addUserAttributes activity (Some userDto.Id) (Some userDto.Email)
+            Tracing.addUserAttributes activity (Some(userDto.Id.ToString())) (Some userDto.Email)
 
             match command with
             | GetAllUsers _ -> ()
             | _ -> ()
         | UsersResult pagedUsers ->
-            Tracing.addIntAttribute activity "result.count" pagedUsers.Users.Length
+            Tracing.addIntAttribute activity "result.count" pagedUsers.Items.Length
 
             match command with
             | GetAllUsers(skip, take) ->
-                Tracing.addPaginationAttributes activity skip take (Some pagedUsers.Users.Length)
+                Tracing.addPaginationAttributes activity skip take (Some pagedUsers.Items.Length)
             | _ -> ()
         | UnitResult _ -> ()

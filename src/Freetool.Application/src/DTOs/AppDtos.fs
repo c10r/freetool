@@ -1,6 +1,5 @@
 namespace Freetool.Application.DTOs
 
-open System
 open System.ComponentModel.DataAnnotations
 
 type AppInputDto = {
@@ -48,25 +47,4 @@ type UpdateAppNameDto = {
 type UpdateAppInputsDto = {
     [<Required>]
     Inputs: AppInputDto list
-}
-
-type AppDto = {
-    Id: string
-    Name: string
-    FolderId: string
-    ResourceId: string
-    Inputs: AppInputDto list
-    UrlPath: string option
-    UrlParameters: KeyValuePairDto list
-    Headers: KeyValuePairDto list
-    Body: KeyValuePairDto list
-    CreatedAt: DateTime
-    UpdatedAt: DateTime
-}
-
-type PagedAppsDto = {
-    Apps: AppDto list
-    TotalCount: int
-    Skip: int
-    Take: int
 }

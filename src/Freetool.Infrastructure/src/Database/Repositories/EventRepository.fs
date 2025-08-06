@@ -65,7 +65,7 @@ type EventRepository(context: FreetoolDbContext) =
                     .OrderBy(fun e -> e.OccurredAt)
                     .ToListAsync()
 
-            return events |> List.ofSeq |> List.map this.MapToDto
+            return events |> List.ofSeq
         }
 
         member this.GetAllEventsAsync (skip: int) (take: int) = task {
@@ -78,10 +78,8 @@ type EventRepository(context: FreetoolDbContext) =
                     .Take(take)
                     .ToListAsync()
 
-            let eventDtos = events |> List.ofSeq |> List.map this.MapToDto
-
             return {
-                Events = eventDtos
+                Items = events |> List.ofSeq
                 TotalCount = totalCount
                 Skip = skip
                 Take = take
@@ -99,23 +97,10 @@ type EventRepository(context: FreetoolDbContext) =
                     .Take(take)
                     .ToListAsync()
 
-            let eventDtos = events |> List.ofSeq |> List.map this.MapToDto
-
             return {
-                Events = eventDtos
+                Items = events |> List.ofSeq
                 TotalCount = totalCount
                 Skip = skip
                 Take = take
             }
         }
-
-    member private this.MapToDto(eventData: Entities.EventData) : EventDto = {
-        Id = eventData.Id.ToString()
-        EventId = eventData.EventId
-        EventType = eventData.EventType
-        EntityType = eventData.EntityType
-        EntityId = eventData.EntityId
-        EventData = eventData.EventData
-        OccurredAt = eventData.OccurredAt
-        CreatedAt = eventData.CreatedAt
-    }

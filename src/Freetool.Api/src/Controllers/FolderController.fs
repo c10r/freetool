@@ -49,7 +49,7 @@ type FolderController
 
         return
             match result with
-            | Ok(FolderWithChildrenResult folderWithChildrenDto) -> this.Ok(folderWithChildrenDto) :> IActionResult
+            | Ok(FolderResult folderWithChildrenData) -> this.Ok(folderWithChildrenData) :> IActionResult
             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
             | Error error -> this.HandleDomainError(error)
     }

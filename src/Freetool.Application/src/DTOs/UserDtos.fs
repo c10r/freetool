@@ -45,19 +45,3 @@ type SetProfilePictureDto = {
     [<Url(ErrorMessage = "Profile picture URL must be a valid URL")>]
     ProfilePicUrl: string
 }
-
-type UserDto = {
-    Id: string
-    Name: string
-    Email: string
-    ProfilePicUrl: string
-    CreatedAt: DateTime
-    UpdatedAt: DateTime
-}
-
-type PagedUsersDto = {
-    Users: UserDto list
-    TotalCount: int
-    Skip: int
-    Take: int
-}

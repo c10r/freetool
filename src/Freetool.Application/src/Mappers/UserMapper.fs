@@ -45,20 +45,3 @@ module UserMapper =
         }
         UncommittedEvents = []
     }
-
-    // Domain -> DTO conversions (for API responses)
-    let toDto (user: ValidatedUser) : UserDto = {
-        Id = user.State.Id.Value.ToString()
-        Name = user.State.Name
-        Email = user.State.Email
-        ProfilePicUrl = user.State.ProfilePicUrl |> Option.defaultValue ""
-        CreatedAt = user.State.CreatedAt
-        UpdatedAt = user.State.UpdatedAt
-    }
-
-    let toPagedDto (users: ValidatedUser list) (totalCount: int) (skip: int) (take: int) : PagedUsersDto = {
-        Users = users |> List.map toDto
-        TotalCount = totalCount
-        Skip = skip
-        Take = take
-    }

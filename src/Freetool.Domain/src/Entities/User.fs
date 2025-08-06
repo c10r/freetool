@@ -3,6 +3,7 @@ namespace Freetool.Domain.Entities
 open System
 open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
+open System.Text.Json.Serialization
 open Microsoft.EntityFrameworkCore
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
@@ -26,11 +27,14 @@ type UserData = {
     ProfilePicUrl: string option
 
     [<Required>]
+    [<JsonIgnore>]
     CreatedAt: DateTime
 
     [<Required>]
+    [<JsonIgnore>]
     UpdatedAt: DateTime
 
+    [<JsonIgnore>]
     IsDeleted: bool
 }
 

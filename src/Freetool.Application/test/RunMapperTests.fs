@@ -145,38 +145,3 @@ let createTestRun () =
     }
 
     Run.fromData runData
-
-[<Fact>]
-let ``toDto should convert run domain model to DTO correctly`` () =
-    // Arrange
-    let run = createTestRun ()
-
-    // Act
-    let result = RunMapper.toDto run
-
-    // Assert
-    Assert.Equal((Run.getId run).ToString(), result.Id)
-    Assert.Equal((Run.getAppId run).ToString(), result.AppId)
-    Assert.Equal("Success", result.Status)
-
-    Assert.Equal(2, result.InputValues.Length)
-    Assert.Contains({ Title = "userId"; Value = "123" }, result.InputValues)
-
-    Assert.Contains(
-        {
-            Title = "email"
-            Value = "test@example.com"
-        },
-        result.InputValues
-    )
-
-    Assert.True(result.ExecutableRequest.IsSome)
-    let execRequestDto = result.ExecutableRequest.Value
-    Assert.Equal("https://api.example.com/users/123", execRequestDto.BaseUrl)
-    Assert.Equal("GET", execRequestDto.HttpMethod)
-
-    Assert.Equal(Some """{"id": 123, "name": "John Doe"}""", result.Response)
-    Assert.Equal(None, result.ErrorMessage)
-    Assert.Equal(Some(DateTime(2024, 1, 15, 10, 30, 0)), result.StartedAt)
-    Assert.Equal(Some(DateTime(2024, 1, 15, 10, 30, 5)), result.CompletedAt)
-    Assert.Equal(DateTime(2024, 1, 15, 10, 29, 0), result.CreatedAt)

@@ -8,10 +8,9 @@ open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Application.Commands
 open Freetool.Application.Mappers
+open Freetool.Application.DTOs
 
 module ResourceHandler =
-
-    let private mapResourceToDto = ResourceMapper.toDto
 
     let handleCommand
         (resourceRepository: IResourceRepository)
@@ -35,7 +34,7 @@ module ResourceHandler =
                 else
                     match! resourceRepository.AddAsync validatedResource with
                     | Error error -> return Error error
-                    | Ok() -> return Ok(ResourceResult(mapResourceToDto validatedResource))
+                    | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
             | DeleteResource resourceId ->
                 match Guid.TryParse resourceId with
@@ -76,7 +75,7 @@ module ResourceHandler =
                                     | Ok validatedResource ->
                                         match! resourceRepository.UpdateAsync validatedResource with
                                         | Error error -> return Error error
-                                        | Ok() -> return Ok(ResourceResult(mapResourceToDto validatedResource))
+                                        | Ok() -> return Ok(ResourceResult(validatedResource.State))
                         else
                             // Name hasn't changed, just update normally
                             match ResourceMapper.fromUpdateNameDto dto resource with
@@ -84,7 +83,7 @@ module ResourceHandler =
                             | Ok validatedResource ->
                                 match! resourceRepository.UpdateAsync validatedResource with
                                 | Error error -> return Error error
-                                | Ok() -> return Ok(ResourceResult(mapResourceToDto validatedResource))
+                                | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
             | UpdateResourceDescription(resourceId, dto) ->
                 match Guid.TryParse resourceId with
@@ -101,7 +100,7 @@ module ResourceHandler =
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(ResourceResult(mapResourceToDto validatedResource))
+                            | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
             | UpdateResourceBaseUrl(resourceId, dto) ->
                 match Guid.TryParse resourceId with
@@ -118,7 +117,7 @@ module ResourceHandler =
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(ResourceResult(mapResourceToDto validatedResource))
+                            | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
             | UpdateResourceUrlParameters(resourceId, dto) ->
                 match Guid.TryParse resourceId with
@@ -146,7 +145,7 @@ module ResourceHandler =
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(ResourceResult(mapResourceToDto validatedResource))
+                            | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
             | UpdateResourceHeaders(resourceId, dto) ->
                 match Guid.TryParse resourceId with
@@ -174,7 +173,7 @@ module ResourceHandler =
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(ResourceResult(mapResourceToDto validatedResource))
+                            | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
             | UpdateResourceBody(resourceId, dto) ->
                 match Guid.TryParse resourceId with
@@ -202,7 +201,7 @@ module ResourceHandler =
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(ResourceResult(mapResourceToDto validatedResource))
+                            | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
             | GetResourceById resourceId ->
                 match Guid.TryParse resourceId with
@@ -213,7 +212,7 @@ module ResourceHandler =
 
                     match resourceOption with
                     | None -> return Error(NotFound "Resource not found")
-                    | Some resource -> return Ok(ResourceResult(mapResourceToDto resource))
+                    | Some resource -> return Ok(ResourceResult(resource.State))
 
             | GetAllResources(skip, take) ->
                 if skip < 0 then
@@ -223,7 +222,13 @@ module ResourceHandler =
                 else
                     let! resources = resourceRepository.GetAllAsync skip take
                     let! totalCount = resourceRepository.GetCountAsync()
-                    let result = ResourceMapper.toPagedDto resources totalCount skip take
+
+                    let result = {
+                        Items = resources |> List.map (fun resource -> resource.State)
+                        TotalCount = totalCount
+                        Skip = skip
+                        Take = take
+                    }
 
                     return Ok(ResourcesResult result)
         }

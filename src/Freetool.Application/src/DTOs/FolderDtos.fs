@@ -1,6 +1,5 @@
 namespace Freetool.Application.DTOs
 
-open System
 open System.ComponentModel
 open System.ComponentModel.DataAnnotations
 open System.Text.Json.Serialization
@@ -29,28 +28,4 @@ type MoveFolderDto = {
     [<JsonConverter(typeof<FolderLocationConverter>)>]
     [<Description("Parent folder ID. Leave null or empty to move to the root folder.")>]
     ParentId: FolderLocation
-}
-
-type FolderDto = {
-    Id: string
-    Name: string
-    ParentId: FolderLocation
-    CreatedAt: DateTime
-    UpdatedAt: DateTime
-}
-
-type FolderWithChildrenDto = {
-    Id: string
-    Name: string
-    ParentId: FolderLocation
-    Children: FolderDto list
-    CreatedAt: DateTime
-    UpdatedAt: DateTime
-}
-
-type PagedFoldersDto = {
-    Folders: FolderDto list
-    TotalCount: int
-    Skip: int
-    Take: int
 }

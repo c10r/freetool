@@ -4,9 +4,8 @@ open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 
 type GroupCommandResult =
-    | GroupResult of GroupDto
-    | GroupWithUsersResult of GroupWithUsersDto
-    | GroupsResult of PagedGroupsDto
+    | GroupResult of GroupData
+    | GroupsResult of PagedResult<GroupData>
     | UnitResult of unit
 
 type GroupCommand =

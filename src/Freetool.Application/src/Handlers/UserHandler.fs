@@ -7,11 +7,9 @@ open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Application.Commands
-open Freetool.Application.Mappers
+open Freetool.Application.DTOs
 
 module UserHandler =
-
-    let private mapUserToDto = UserMapper.toDto
 
     let handleCommand
         (userRepository: IUserRepository)
@@ -39,7 +37,7 @@ module UserHandler =
                     // Save user and events atomically
                     match! userRepository.AddAsync eventAwareUser with
                     | Error error -> return Error error
-                    | Ok() -> return Ok(UserCommandResult.UserResult(mapUserToDto eventAwareUser))
+                    | Ok() -> return Ok(UserCommandResult.UserResult(eventAwareUser.State))
 
             | DeleteUser userId ->
                 match Guid.TryParse userId with
@@ -77,7 +75,7 @@ module UserHandler =
                             // Save user and events atomically
                             match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(UserCommandResult.UserResult(mapUserToDto updatedUser))
+                            | Ok() -> return Ok(UserCommandResult.UserResult(updatedUser.State))
 
             | UpdateUserEmail(userId, dto) ->
                 match Guid.TryParse userId with
@@ -96,7 +94,7 @@ module UserHandler =
                             // Save user and events atomically
                             match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(UserCommandResult.UserResult(mapUserToDto updatedUser))
+                            | Ok() -> return Ok(UserCommandResult.UserResult(updatedUser.State))
 
             | SetProfilePicture(userId, dto) ->
                 match Guid.TryParse userId with
@@ -115,7 +113,7 @@ module UserHandler =
                             // Save user and events atomically
                             match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(UserResult(mapUserToDto updatedUser))
+                            | Ok() -> return Ok(UserResult(updatedUser.State))
 
             | RemoveProfilePicture userId ->
                 match Guid.TryParse userId with
@@ -133,7 +131,7 @@ module UserHandler =
                         // Save user and events atomically
                         match! userRepository.UpdateAsync updatedUser with
                         | Error error -> return Error error
-                        | Ok() -> return Ok(UserCommandResult.UserResult(mapUserToDto updatedUser))
+                        | Ok() -> return Ok(UserCommandResult.UserResult(updatedUser.State))
 
             | GetUserById userId ->
                 match Guid.TryParse userId with
@@ -144,7 +142,7 @@ module UserHandler =
 
                     match userOption with
                     | None -> return Error(NotFound "User not found")
-                    | Some user -> return Ok(UserCommandResult.UserResult(mapUserToDto user))
+                    | Some user -> return Ok(UserCommandResult.UserResult(user.State))
 
             | GetUserByEmail email ->
                 match Email.Create(Some email) with
@@ -154,7 +152,7 @@ module UserHandler =
 
                     match userOption with
                     | None -> return Error(NotFound "User not found")
-                    | Some user -> return Ok(UserCommandResult.UserResult(mapUserToDto user))
+                    | Some user -> return Ok(UserCommandResult.UserResult(user.State))
 
             | GetAllUsers(skip, take) ->
                 if skip < 0 then
@@ -164,7 +162,13 @@ module UserHandler =
                 else
                     let! users = userRepository.GetAllAsync skip take
                     let! totalCount = userRepository.GetCountAsync()
-                    let result = UserMapper.toPagedDto users totalCount skip take
+
+                    let result = {
+                        Items = users |> List.map (fun user -> user.State)
+                        TotalCount = totalCount
+                        Skip = skip
+                        Take = take
+                    }
 
                     return Ok(UserCommandResult.UsersResult result)
         }

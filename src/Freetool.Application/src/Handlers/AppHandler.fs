@@ -8,10 +8,9 @@ open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Application.Commands
 open Freetool.Application.Mappers
+open Freetool.Application.DTOs
 
 module AppHandler =
-
-    let private mapAppToDto = AppMapper.toDto
 
     let handleCommand
         (appRepository: IAppRepository)
@@ -36,7 +35,7 @@ module AppHandler =
                 else
                     match! appRepository.AddAsync validatedApp with
                     | Error error -> return Error error
-                    | Ok() -> return Ok(AppResult(mapAppToDto validatedApp))
+                    | Ok() -> return Ok(AppResult(validatedApp.State))
 
             | DeleteApp appId ->
                 match Guid.TryParse appId with
@@ -82,7 +81,7 @@ module AppHandler =
                             else
                                 match! appRepository.UpdateAsync validatedApp with
                                 | Error error -> return Error error
-                                | Ok() -> return Ok(AppResult(mapAppToDto validatedApp))
+                                | Ok() -> return Ok(AppResult(validatedApp.State))
 
             | UpdateAppInputs(appId, dto) ->
                 match Guid.TryParse appId with
@@ -101,7 +100,7 @@ module AppHandler =
                         | Ok validatedApp ->
                             match! appRepository.UpdateAsync validatedApp with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(AppResult(mapAppToDto validatedApp))
+                            | Ok() -> return Ok(AppResult(validatedApp.State))
 
             | GetAppById appId ->
                 match Guid.TryParse appId with
@@ -112,7 +111,7 @@ module AppHandler =
 
                     match appOption with
                     | None -> return Error(NotFound "App not found")
-                    | Some app -> return Ok(AppResult(mapAppToDto app))
+                    | Some app -> return Ok(AppResult(app.State))
 
             | GetAppsByFolderId(folderId, skip, take) ->
                 match Guid.TryParse folderId with
@@ -126,7 +125,13 @@ module AppHandler =
                         let folderIdObj = FolderId.FromGuid guid
                         let! apps = appRepository.GetByFolderIdAsync folderIdObj skip take
                         let! totalCount = appRepository.GetCountByFolderIdAsync folderIdObj
-                        let result = AppMapper.toPagedDto apps totalCount skip take
+
+                        let result = {
+                            Items = apps |> List.map (fun app -> app.State)
+                            TotalCount = totalCount
+                            Skip = skip
+                            Take = take
+                        }
 
                         return Ok(AppsResult result)
 
@@ -138,7 +143,13 @@ module AppHandler =
                 else
                     let! apps = appRepository.GetAllAsync skip take
                     let! totalCount = appRepository.GetCountAsync()
-                    let result = AppMapper.toPagedDto apps totalCount skip take
+
+                    let result = {
+                        Items = apps |> List.map (fun app -> app.State)
+                        TotalCount = totalCount
+                        Skip = skip
+                        Take = take
+                    }
 
                     return Ok(AppsResult result)
         }

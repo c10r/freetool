@@ -1,6 +1,5 @@
 namespace Freetool.Application.DTOs
 
-open System
 open System.ComponentModel.DataAnnotations
 
 type RunInputDto = {
@@ -27,24 +26,4 @@ type ExecutableHttpRequestDto = {
     Headers: KeyValuePairDto list
     Body: KeyValuePairDto list
     HttpMethod: string
-}
-
-type RunDto = {
-    Id: string
-    AppId: string
-    Status: string
-    InputValues: RunInputDto list
-    ExecutableRequest: ExecutableHttpRequestDto option
-    Response: string option
-    ErrorMessage: string option
-    StartedAt: DateTime option
-    CompletedAt: DateTime option
-    CreatedAt: DateTime
-}
-
-type PagedRunsDto = {
-    Runs: RunDto list
-    TotalCount: int
-    Skip: int
-    Take: int
 }

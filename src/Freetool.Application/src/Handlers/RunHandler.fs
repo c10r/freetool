@@ -13,8 +13,6 @@ open Freetool.Domain.Services
 
 module RunHandler =
 
-    let private mapRunToDto = RunMapper.toDto
-
     let handleCommand
         (runRepository: IRunRepository)
         (appRepository: IAppRepository)
@@ -49,7 +47,7 @@ module RunHandler =
 
                                 match! runRepository.AddAsync runWithError with
                                 | Error error -> return Error error
-                                | Ok() -> return Ok(RunResult(mapRunToDto runWithError))
+                                | Ok() -> return Ok(RunResult(runWithError.State))
                             | Some resource ->
                                 // Compose executable request with input substitution
                                 match Run.composeExecutableRequestFromAppAndResource validatedRun app resource with
@@ -58,7 +56,7 @@ module RunHandler =
 
                                     match! runRepository.AddAsync runWithError with
                                     | Error error -> return Error error
-                                    | Ok() -> return Ok(RunResult(mapRunToDto runWithError))
+                                    | Ok() -> return Ok(RunResult(runWithError.State))
                                 | Ok runWithExecutableRequest ->
                                     // Save the run first
                                     match! runRepository.AddAsync runWithExecutableRequest with
@@ -79,7 +77,7 @@ module RunHandler =
                                         // Update the run with final status
                                         match! runRepository.UpdateAsync finalRun with
                                         | Error error -> return Error error
-                                        | Ok() -> return Ok(RunResult(mapRunToDto finalRun))
+                                        | Ok() -> return Ok(RunResult(finalRun.State))
 
             | GetRunById runId ->
                 match Guid.TryParse runId with
@@ -90,7 +88,7 @@ module RunHandler =
 
                     match runOption with
                     | None -> return Error(NotFound "Run not found")
-                    | Some run -> return Ok(RunResult(mapRunToDto run))
+                    | Some run -> return Ok(RunResult(run.State))
 
             | GetRunsByAppId(appId, skip, take) ->
                 match Guid.TryParse appId with
@@ -100,8 +98,8 @@ module RunHandler =
                     let! runs = runRepository.GetByAppIdAsync appIdObj skip take
                     let! totalCount = runRepository.GetCountByAppIdAsync appIdObj
 
-                    let pagedResult: PagedRunsDto = {
-                        Runs = runs |> List.map mapRunToDto
+                    let pagedResult = {
+                        Items = runs |> List.map (fun run -> run.State)
                         TotalCount = totalCount
                         Skip = skip
                         Take = take
@@ -116,8 +114,8 @@ module RunHandler =
                     let! runs = runRepository.GetByStatusAsync statusObj skip take
                     let! totalCount = runRepository.GetCountByStatusAsync statusObj
 
-                    let pagedResult: PagedRunsDto = {
-                        Runs = runs |> List.map mapRunToDto
+                    let pagedResult = {
+                        Items = runs |> List.map (fun run -> run.State)
                         TotalCount = totalCount
                         Skip = skip
                         Take = take
@@ -136,8 +134,8 @@ module RunHandler =
                         let! runs = runRepository.GetByAppIdAndStatusAsync appIdObj statusObj skip take
                         let! totalCount = runRepository.GetCountByAppIdAndStatusAsync appIdObj statusObj
 
-                        let pagedResult: PagedRunsDto = {
-                            Runs = runs |> List.map mapRunToDto
+                        let pagedResult = {
+                            Items = runs |> List.map (fun run -> run.State)
                             TotalCount = totalCount
                             Skip = skip
                             Take = take

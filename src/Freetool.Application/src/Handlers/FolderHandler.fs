@@ -12,8 +12,6 @@ open Freetool.Application.DTOs
 
 module FolderHandler =
 
-    let private mapFolderToDto = FolderMapper.toDto
-
     let handleCommand
         (folderRepository: IFolderRepository)
         (command: FolderCommand)
@@ -40,7 +38,7 @@ module FolderHandler =
                         // Root folder - proceed with creation
                         match! folderRepository.AddAsync validatedFolder with
                         | Error error -> return Error error
-                        | Ok() -> return Ok(FolderResult(mapFolderToDto validatedFolder))
+                        | Ok() -> return Ok(FolderResult(validatedFolder.State))
                     | Some parentFolderId ->
                         // Check if parent exists
                         let! parentExists = folderRepository.ExistsAsync parentFolderId
@@ -50,7 +48,7 @@ module FolderHandler =
                         else
                             match! folderRepository.AddAsync validatedFolder with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(FolderResult(mapFolderToDto validatedFolder))
+                            | Ok() -> return Ok(FolderResult(validatedFolder.State))
 
             | DeleteFolder folderId ->
                 match Guid.TryParse folderId with
@@ -101,7 +99,7 @@ module FolderHandler =
                                     | Ok validatedFolder ->
                                         match! folderRepository.UpdateAsync validatedFolder with
                                         | Error error -> return Error error
-                                        | Ok() -> return Ok(FolderResult(mapFolderToDto validatedFolder))
+                                        | Ok() -> return Ok(FolderResult(validatedFolder.State))
                         else
                             // Name hasn't changed, just update normally
                             match FolderMapper.fromUpdateNameDto dto folder with
@@ -109,7 +107,7 @@ module FolderHandler =
                             | Ok validatedFolder ->
                                 match! folderRepository.UpdateAsync validatedFolder with
                                 | Error error -> return Error error
-                                | Ok() -> return Ok(FolderResult(mapFolderToDto validatedFolder))
+                                | Ok() -> return Ok(FolderResult(validatedFolder.State))
 
             | MoveFolder(folderId, dto) ->
                 match Guid.TryParse folderId with
@@ -165,7 +163,7 @@ module FolderHandler =
 
                                         match! folderRepository.UpdateAsync movedFolder with
                                         | Error error -> return Error error
-                                        | Ok() -> return Ok(FolderResult(mapFolderToDto movedFolder))
+                                        | Ok() -> return Ok(FolderResult(movedFolder.State))
                             | None ->
                                 // Moving to root - check if name conflicts with other root folders
                                 let folderName =
@@ -184,7 +182,7 @@ module FolderHandler =
 
                                     match! folderRepository.UpdateAsync movedFolder with
                                     | Error error -> return Error error
-                                    | Ok() -> return Ok(FolderResult(mapFolderToDto movedFolder))
+                                    | Ok() -> return Ok(FolderResult(movedFolder.State))
 
             | GetFolderById folderId ->
                 match Guid.TryParse folderId with
@@ -195,7 +193,7 @@ module FolderHandler =
 
                     match folderOption with
                     | None -> return Error(NotFound "Folder not found")
-                    | Some folder -> return Ok(FolderResult(mapFolderToDto folder))
+                    | Some folder -> return Ok(FolderResult(folder.State))
 
             | GetFolderWithChildren folderId ->
                 match Guid.TryParse folderId with
@@ -208,7 +206,7 @@ module FolderHandler =
                     | None -> return Error(NotFound "Folder not found")
                     | Some folder ->
                         let! children = folderRepository.GetChildrenAsync folderIdObj
-                        return Ok(FolderWithChildrenResult(FolderMapper.toWithChildrenDto folder children))
+                        return Ok(FolderResult(FolderMapper.toDataWithChildren folder children))
 
             | GetRootFolders(skip, take) ->
                 if skip < 0 then
@@ -218,7 +216,14 @@ module FolderHandler =
                 else
                     let! folders = folderRepository.GetRootFoldersAsync skip take
                     let! totalCount = folderRepository.GetRootCountAsync()
-                    let result = FolderMapper.toPagedDto folders totalCount skip take
+
+                    let result = {
+                        Items = folders |> List.map (fun folder -> folder.State)
+                        TotalCount = totalCount
+                        Skip = skip
+                        Take = take
+                    }
+
                     return Ok(FoldersResult result)
 
             | GetChildFolders(parentId, skip, take) ->
@@ -238,7 +243,14 @@ module FolderHandler =
                         else
                             let! folders = folderRepository.GetChildFoldersAsync parentIdObj skip take
                             let! totalCount = folderRepository.GetChildCountAsync parentIdObj
-                            let result = FolderMapper.toPagedDto folders totalCount skip take
+
+                            let result = {
+                                Items = folders |> List.map (fun folder -> folder.State)
+                                TotalCount = totalCount
+                                Skip = skip
+                                Take = take
+                            }
+
                             return Ok(FoldersResult result)
 
             | GetAllFolders(skip, take) ->
@@ -249,7 +261,14 @@ module FolderHandler =
                 else
                     let! folders = folderRepository.GetAllAsync skip take
                     let! totalCount = folderRepository.GetCountAsync()
-                    let result = FolderMapper.toPagedDto folders totalCount skip take
+
+                    let result = {
+                        Items = folders |> List.map (fun folder -> folder.State)
+                        TotalCount = totalCount
+                        Skip = skip
+                        Take = take
+                    }
+
                     return Ok(FoldersResult result)
         }
 

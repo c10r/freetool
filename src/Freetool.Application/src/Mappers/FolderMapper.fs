@@ -33,33 +33,11 @@ module FolderMapper =
 
         Folder.moveToParent parentId folder
 
-    // Domain -> DTO conversions (for API responses)
-    let toDto (folder: ValidatedFolder) : FolderDto = {
-        Id = (Folder.getId folder).Value.ToString()
-        Name = Folder.getName folder
-        ParentId =
-            match Folder.getParentId folder with
-            | Some parentId -> ChildFolder(parentId.Value.ToString())
-            | None -> RootFolder
-        CreatedAt = Folder.getCreatedAt folder
-        UpdatedAt = Folder.getUpdatedAt folder
-    }
+    let toDataWithChildren (folder: ValidatedFolder) (children: ValidatedFolder list) : FolderData =
+        let childrenData =
+            children |> List.map (fun child -> { child.State with Children = None })
 
-    let toWithChildrenDto (folder: ValidatedFolder) (children: ValidatedFolder list) : FolderWithChildrenDto = {
-        Id = (Folder.getId folder).Value.ToString()
-        Name = Folder.getName folder
-        ParentId =
-            match Folder.getParentId folder with
-            | Some parentId -> ChildFolder(parentId.Value.ToString())
-            | None -> RootFolder
-        Children = children |> List.map toDto
-        CreatedAt = Folder.getCreatedAt folder
-        UpdatedAt = Folder.getUpdatedAt folder
-    }
-
-    let toPagedDto (folders: ValidatedFolder list) (totalCount: int) (skip: int) (take: int) : PagedFoldersDto = {
-        Folders = folders |> List.map toDto
-        TotalCount = totalCount
-        Skip = skip
-        Take = take
-    }
+        {
+            folder.State with
+                Children = Some childrenData
+        }

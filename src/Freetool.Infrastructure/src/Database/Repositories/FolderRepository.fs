@@ -1,6 +1,5 @@
 namespace Freetool.Infrastructure.Database.Repositories
 
-open System
 open System.Linq
 open System.Threading.Tasks
 open Microsoft.EntityFrameworkCore

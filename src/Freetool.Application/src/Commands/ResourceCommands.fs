@@ -4,8 +4,8 @@ open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 
 type ResourceCommandResult =
-    | ResourceResult of ResourceDto
-    | ResourcesResult of PagedResourcesDto
+    | ResourceResult of ResourceData
+    | ResourcesResult of PagedResult<ResourceData>
     | ResourceUnitResult of unit
 
 type ResourceCommand =

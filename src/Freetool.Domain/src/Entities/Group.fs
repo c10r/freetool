@@ -3,6 +3,7 @@ namespace Freetool.Domain.Entities
 open System
 open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
+open System.Text.Json.Serialization
 open Microsoft.EntityFrameworkCore
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
@@ -18,15 +19,18 @@ type GroupData = {
     [<MaxLength(100)>]
     Name: string
 
-    [<NotMapped>] // UserIds will be handled via separate UserGroups table
+    [<NotMapped>]
     UserIds: UserId list
 
     [<Required>]
+    [<JsonIgnore>]
     CreatedAt: DateTime
 
     [<Required>]
+    [<JsonIgnore>]
     UpdatedAt: DateTime
 
+    [<JsonIgnore>]
     IsDeleted: bool
 }
 
@@ -44,6 +48,7 @@ type UserGroupData = {
     GroupId: System.Guid
 
     [<Required>]
+    [<JsonIgnore>]
     CreatedAt: DateTime
 }
 

@@ -7,11 +7,9 @@ open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Application.Commands
-open Freetool.Application.Mappers
+open Freetool.Application.DTOs
 
 module GroupHandler =
-
-    let private mapGroupToDto = GroupMapper.toDto
 
     let handleCommand
         (groupRepository: IGroupRepository)
@@ -55,7 +53,7 @@ module GroupHandler =
                             // Save group and events atomically
                             match! groupRepository.AddAsync eventAwareGroup with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(GroupResult(mapGroupToDto eventAwareGroup))
+                            | Ok() -> return Ok(GroupResult(eventAwareGroup.State))
                     | invalidIds ->
                         let invalidIdStrings = invalidIds |> List.map (fun id -> id.Value.ToString())
 
@@ -109,9 +107,9 @@ module GroupHandler =
                                     // Save group and events atomically
                                     match! groupRepository.UpdateAsync updatedGroup with
                                     | Error error -> return Error error
-                                    | Ok() -> return Ok(GroupResult(mapGroupToDto updatedGroup))
+                                    | Ok() -> return Ok(GroupResult(updatedGroup.State))
                         else
-                            return Ok(GroupResult(mapGroupToDto group))
+                            return Ok(GroupResult(group.State))
 
             | AddUserToGroup(groupId, dto) ->
                 match Guid.TryParse groupId, Guid.TryParse dto.UserId with
@@ -140,7 +138,7 @@ module GroupHandler =
                                 // Save group and events atomically
                                 match! groupRepository.UpdateAsync updatedGroup with
                                 | Error error -> return Error error
-                                | Ok() -> return Ok(GroupResult(mapGroupToDto updatedGroup))
+                                | Ok() -> return Ok(GroupResult(updatedGroup.State))
 
             | RemoveUserFromGroup(groupId, dto) ->
                 match Guid.TryParse groupId, Guid.TryParse dto.UserId with
@@ -162,7 +160,7 @@ module GroupHandler =
                             // Save group and events atomically
                             match! groupRepository.UpdateAsync updatedGroup with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(GroupResult(mapGroupToDto updatedGroup))
+                            | Ok() -> return Ok(GroupResult(updatedGroup.State))
 
             | GetGroupById groupId ->
                 match Guid.TryParse groupId with
@@ -173,14 +171,14 @@ module GroupHandler =
 
                     match groupOption with
                     | None -> return Error(NotFound "Group not found")
-                    | Some group -> return Ok(GroupResult(mapGroupToDto group))
+                    | Some group -> return Ok(GroupResult(group.State))
 
             | GetGroupByName name ->
                 let! groupOption = groupRepository.GetByNameAsync name
 
                 match groupOption with
                 | None -> return Error(NotFound "Group not found")
-                | Some group -> return Ok(GroupResult(mapGroupToDto group))
+                | Some group -> return Ok(GroupResult(group.State))
 
             | GetGroupsByUserId userId ->
                 match Guid.TryParse userId with
@@ -195,9 +193,14 @@ module GroupHandler =
                         return Error(NotFound "User not found")
                     else
                         let! groups = groupRepository.GetByUserIdAsync userIdObj
+                        let numGroups = List.length groups
 
-                        let result =
-                            GroupMapper.toPagedDto groups (List.length groups) 0 (List.length groups)
+                        let result = {
+                            Items = groups |> List.map (fun group -> group.State)
+                            TotalCount = numGroups
+                            Skip = 0
+                            Take = numGroups
+                        }
 
                         return Ok(GroupsResult result)
 
@@ -209,7 +212,13 @@ module GroupHandler =
                 else
                     let! groups = groupRepository.GetAllAsync skip take
                     let! totalCount = groupRepository.GetCountAsync()
-                    let result = GroupMapper.toPagedDto groups totalCount skip take
+
+                    let result = {
+                        Items = groups |> List.map (fun group -> group.State)
+                        TotalCount = totalCount
+                        Skip = skip
+                        Take = take
+                    }
 
                     return Ok(GroupsResult result)
         }

@@ -4,9 +4,8 @@ open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 
 type FolderCommandResult =
-    | FolderResult of FolderDto
-    | FolderWithChildrenResult of FolderWithChildrenDto
-    | FoldersResult of PagedFoldersDto
+    | FolderResult of FolderData
+    | FoldersResult of PagedResult<FolderData>
     | FolderUnitResult of unit
 
 type FolderCommand =

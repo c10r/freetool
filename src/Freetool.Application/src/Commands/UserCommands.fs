@@ -4,8 +4,8 @@ open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 
 type UserCommandResult =
-    | UserResult of UserDto
-    | UsersResult of PagedUsersDto
+    | UserResult of UserData
+    | UsersResult of PagedResult<UserData>
     | UnitResult of unit
 
 type UserCommand =

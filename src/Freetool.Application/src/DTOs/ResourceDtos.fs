@@ -1,6 +1,5 @@
 namespace Freetool.Application.DTOs
 
-open System
 open System.ComponentModel.DataAnnotations
 
 type KeyValuePairDto = {
@@ -76,23 +75,3 @@ type UpdateResourceUrlParametersDto = { UrlParameters: KeyValuePairDto list }
 type UpdateResourceHeadersDto = { Headers: KeyValuePairDto list }
 
 type UpdateResourceBodyDto = { Body: KeyValuePairDto list }
-
-type ResourceDto = {
-    Id: string
-    Name: string
-    Description: string
-    BaseUrl: string
-    HttpMethod: string
-    UrlParameters: KeyValuePairDto list
-    Headers: KeyValuePairDto list
-    Body: KeyValuePairDto list
-    CreatedAt: DateTime
-    UpdatedAt: DateTime
-}
-
-type PagedResourcesDto = {
-    Resources: ResourceDto list
-    TotalCount: int
-    Skip: int
-    Take: int
-}

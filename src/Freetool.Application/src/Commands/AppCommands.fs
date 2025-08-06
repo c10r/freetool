@@ -4,8 +4,8 @@ open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 
 type AppCommandResult =
-    | AppResult of AppDto
-    | AppsResult of PagedAppsDto
+    | AppResult of AppData
+    | AppsResult of PagedResult<AppData>
     | AppUnitResult of unit
 
 type AppCommand =

@@ -1,7 +1,6 @@
 namespace Freetool.Application.Mappers
 
 open Freetool.Domain
-open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 
 module RunMapper =
@@ -22,16 +21,3 @@ module RunMapper =
 
     let fromCreateDto (dto: CreateRunDto) : RunInputValue list =
         dto.InputValues |> List.map runInputValueFromDto
-
-    let toDto (run: ValidatedRun) : RunDto = {
-        Id = (Run.getId run).ToString()
-        AppId = (Run.getAppId run).ToString()
-        Status = (Run.getStatus run).ToString()
-        InputValues = Run.getInputValues run |> List.map runInputValueToDto
-        ExecutableRequest = Run.getExecutableRequest run |> Option.map executableHttpRequestToDto
-        Response = Run.getResponse run
-        ErrorMessage = Run.getErrorMessage run
-        StartedAt = Run.getStartedAt run
-        CompletedAt = Run.getCompletedAt run
-        CreatedAt = Run.getCreatedAt run
-    }

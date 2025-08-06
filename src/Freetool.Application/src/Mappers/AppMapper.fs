@@ -120,24 +120,3 @@ module AppMapper =
             }
             UncommittedEvents = app.UncommittedEvents
         }
-
-    let toDto (app: ValidatedApp) : AppDto = {
-        Id = app.State.Id.Value.ToString()
-        Name = app.State.Name
-        FolderId = app.State.FolderId.Value.ToString()
-        ResourceId = app.State.ResourceId.Value.ToString()
-        Inputs = app.State.Inputs |> List.map inputToDto
-        UrlPath = app.State.UrlPath
-        UrlParameters = app.State.UrlParameters |> List.map keyValuePairToDto
-        Headers = app.State.Headers |> List.map keyValuePairToDto
-        Body = app.State.Body |> List.map keyValuePairToDto
-        CreatedAt = app.State.CreatedAt
-        UpdatedAt = app.State.UpdatedAt
-    }
-
-    let toPagedDto (apps: ValidatedApp list) (totalCount: int) (skip: int) (take: int) : PagedAppsDto = {
-        Apps = apps |> List.map toDto
-        TotalCount = totalCount
-        Skip = skip
-        Take = take
-    }

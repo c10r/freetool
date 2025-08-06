@@ -18,7 +18,6 @@
     <Compile Include="src/DTOs/ResourceDtos.fs" />
     <Compile Include="src/DTOs/FolderDtos.fs" />
     <Compile Include="src/DTOs/AppDtos.fs" />
-    <Compile Include="src/DTOs/EventDtos.fs" />
     <Compile Include="src/DTOs/RunDtos.fs" />
     <Compile Include="src/Interfaces/IUserRepository.fs" />
     <Compile Include="src/Interfaces/IGroupRepository.fs" />
