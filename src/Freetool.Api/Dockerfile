@@ -3,11 +3,13 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0-bookworm-slim AS build
 WORKDIR /source
 
 # Copy project files and restore as distinct layers
-COPY ./Freetool.sln ./
+COPY ./Freetool.Production.sln ./
 COPY ./src/Freetool.Domain/Freetool.Domain.fsproj ./src/Freetool.Domain/
 COPY ./src/Freetool.Application/Freetool.Application.fsproj ./src/Freetool.Application/
 COPY ./src/Freetool.Infrastructure/Freetool.Infrastructure.fsproj ./src/Freetool.Infrastructure/
 COPY ./src/Freetool.Api/Freetool.Api.fsproj ./src/Freetool.Api/
+COPY ./src/Freetool.Domain/test/Freetool.Domain.Tests.fsproj ./src/Freetool.Domain/test/
+COPY ./src/Freetool.Application/test/Freetool.Application.Tests.fsproj ./src/Freetool.Application/test/
 RUN dotnet restore
 
 # Copy and publish app
