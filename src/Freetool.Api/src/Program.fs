@@ -15,6 +15,7 @@ open Freetool.Application.Interfaces
 open Freetool.Application.Handlers
 open Freetool.Application.Commands
 open Freetool.Api.Tracing
+open Freetool.Api.Middleware
 
 [<EntryPoint>]
 let main args =
@@ -139,7 +140,9 @@ let main args =
     app.UseSwaggerUI() |> ignore
 
     app.UseHttpsRedirection() |> ignore
-    app.UseAuthorization() |> ignore
+
+    app.UseMiddleware<TailscaleAuthMiddleware>() |> ignore
+
     app.MapControllers() |> ignore
 
     app.Run()

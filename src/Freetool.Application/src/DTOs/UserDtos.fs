@@ -1,6 +1,5 @@
 namespace Freetool.Application.DTOs
 
-open System
 open System.ComponentModel.DataAnnotations
 open System.Text.Json.Serialization
 
