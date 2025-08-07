@@ -8,7 +8,8 @@ CREATE TABLE Resources (
     Headers TEXT NOT NULL DEFAULT '[]',        -- JSON array of key-value pairs
     Body TEXT NOT NULL DEFAULT '[]',           -- JSON array of key-value pairs
     CreatedAt TEXT NOT NULL,
-    UpdatedAt TEXT NOT NULL
+    UpdatedAt TEXT NOT NULL,
+    IsDeleted INTEGER NOT NULL DEFAULT 0
 );
 
 -- Create unique index on Name

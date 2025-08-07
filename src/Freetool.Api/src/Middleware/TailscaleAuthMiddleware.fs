@@ -50,32 +50,46 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                 let userRepository = context.RequestServices.GetRequiredService<IUserRepository>()
                 let! userExists = userRepository.ExistsByEmailAsync validEmail
 
-                if userExists then
-                    // User is authorized, add user info to context for downstream use
+                if not userExists then
+                    // Auto-create new user on first login
                     let userNameOption = extractHeader TAILSCALE_USER_NAME context
                     let profilePicOption = extractHeader TAILSCALE_USER_PROFILE context
+                    let userName = userNameOption |> Option.defaultValue userEmail
 
-                    context.Items.[TAILSCALE_USER_LOGIN] <- userEmail
-                    context.Items.[TAILSCALE_USER_NAME] <- (userNameOption |> Option.defaultValue "")
-                    context.Items.["TailscaleUserProfilePic"] <- (profilePicOption |> Option.defaultValue "")
+                    let newUser =
+                        Freetool.Domain.Entities.User.create userName validEmail profilePicOption
 
-                    // Add successful auth attributes to span
-                    Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
-                    Tracing.addUserAttributes currentActivity None (Some userEmail)
+                    match! userRepository.AddAsync newUser with
+                    | Error err ->
+                        Tracing.addAttribute currentActivity "tailscale.auth.error" "user_creation_failed"
+                        Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
+                        Tracing.setSpanStatus currentActivity false (Some "Failed to create user")
+                        context.Response.StatusCode <- 500
+                        do! context.Response.WriteAsync "Internal Server Error: Failed to create user"
+                        return ()
+                    | Ok _ ->
+                        Tracing.addAttribute currentActivity "tailscale.auth.user_created" "true"
+                        Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
 
-                    userNameOption
-                    |> Option.iter (Tracing.addAttribute currentActivity "tailscale.auth.user_name")
+                // User is authorized (either existing or newly created), add user info to context
+                let userNameOption = extractHeader TAILSCALE_USER_NAME context
+                let profilePicOption = extractHeader TAILSCALE_USER_PROFILE context
 
-                    profilePicOption
-                    |> Option.iter (Tracing.addAttribute currentActivity "tailscale.auth.user_profile_pic")
+                context.Items.[TAILSCALE_USER_LOGIN] <- userEmail
+                context.Items.[TAILSCALE_USER_NAME] <- (userNameOption |> Option.defaultValue "")
+                context.Items.["TailscaleUserProfilePic"] <- (profilePicOption |> Option.defaultValue "")
 
-                    Tracing.setSpanStatus currentActivity true None
+                // Add successful auth attributes to span
+                Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
+                Tracing.addUserAttributes currentActivity None (Some userEmail)
 
-                    do! next.Invoke context
-                else
-                    Tracing.addAttribute currentActivity "tailscale.auth.error" "user_not_found"
-                    Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
-                    Tracing.setSpanStatus currentActivity false (Some "User not found in database")
-                    context.Response.StatusCode <- 403
-                    do! context.Response.WriteAsync "Forbidden: User not authorized"
+                userNameOption
+                |> Option.iter (Tracing.addAttribute currentActivity "tailscale.auth.user_name")
+
+                profilePicOption
+                |> Option.iter (Tracing.addAttribute currentActivity "tailscale.auth.user_profile_pic")
+
+                Tracing.setSpanStatus currentActivity true None
+
+                do! next.Invoke context
     }

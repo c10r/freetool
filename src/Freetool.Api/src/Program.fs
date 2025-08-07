@@ -57,6 +57,7 @@ let main args =
     builder.Services.AddScoped<IResourceRepository, ResourceRepository>() |> ignore
     builder.Services.AddScoped<IFolderRepository, FolderRepository>() |> ignore
     builder.Services.AddScoped<IAppRepository, AppRepository>() |> ignore
+    builder.Services.AddScoped<IRunRepository, RunRepository>() |> ignore
     builder.Services.AddScoped<IEventRepository, EventRepository>() |> ignore
     builder.Services.AddScoped<IEventPublisher, EventPublisher>() |> ignore
 

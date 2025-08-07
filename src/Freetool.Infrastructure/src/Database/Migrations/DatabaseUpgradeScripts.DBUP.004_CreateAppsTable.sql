@@ -6,6 +6,7 @@ CREATE TABLE Apps (
     Inputs TEXT NOT NULL, -- JSON serialized list of inputs
     CreatedAt TEXT NOT NULL,
     UpdatedAt TEXT NOT NULL,
+    IsDeleted INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (FolderId) REFERENCES Folders(Id)
 );
 

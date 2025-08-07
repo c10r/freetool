@@ -5,7 +5,8 @@ CREATE TABLE Users (
     Email TEXT NOT NULL,
     ProfilePicUrl TEXT NULL,
     CreatedAt TEXT NOT NULL,
-    UpdatedAt TEXT NOT NULL
+    UpdatedAt TEXT NOT NULL,
+    IsDeleted INTEGER NOT NULL DEFAULT 0
 );
 
 -- Create unique index on Email

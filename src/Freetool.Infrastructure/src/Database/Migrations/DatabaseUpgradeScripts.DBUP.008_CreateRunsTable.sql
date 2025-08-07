@@ -10,6 +10,7 @@ CREATE TABLE Runs (
     StartedAt TEXT, -- When the run was started (null if not started)
     CompletedAt TEXT, -- When the run was completed (null if not completed)
     CreatedAt TEXT NOT NULL,
+    IsDeleted INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (AppId) REFERENCES Apps(Id)
 );
 

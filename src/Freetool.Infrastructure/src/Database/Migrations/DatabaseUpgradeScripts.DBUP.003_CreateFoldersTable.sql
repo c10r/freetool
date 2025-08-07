@@ -5,6 +5,7 @@ CREATE TABLE Folders (
     ParentId TEXT NULL, -- Self-reference for parent-child hierarchy
     CreatedAt TEXT NOT NULL,
     UpdatedAt TEXT NOT NULL,
+    IsDeleted INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (ParentId) REFERENCES Folders(Id) ON DELETE CASCADE
 );
 
