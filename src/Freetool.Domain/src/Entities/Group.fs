@@ -11,6 +11,8 @@ open Freetool.Domain.Events
 
 [<Table("Groups")>]
 [<Index([| "Name" |], IsUnique = true, Name = "IX_Groups_Name")>]
+// CLIMutable for EntityFramework
+[<CLIMutable>]
 type GroupData = {
     [<Key>]
     Id: GroupId
@@ -18,9 +20,6 @@ type GroupData = {
     [<Required>]
     [<MaxLength(100)>]
     Name: string
-
-    [<NotMapped>]
-    UserIds: UserId list
 
     [<Required>]
     [<JsonIgnore>]
@@ -32,20 +31,30 @@ type GroupData = {
 
     [<JsonIgnore>]
     IsDeleted: bool
-}
+
+    // Internal storage for UserIds - not mapped to database
+    [<NotMapped>]
+    [<JsonIgnore>]
+    mutable _userIds: UserId list
+} with
+
+    [<NotMapped>]
+    member this.UserIds: UserId list = this._userIds
 
 // Junction entity for many-to-many relationship
 [<Table("UserGroups")>]
 [<Index([| "UserId"; "GroupId" |], IsUnique = true, Name = "IX_UserGroups_UserId_GroupId")>]
+// CLIMutable for EntityFramework
+[<CLIMutable>]
 type UserGroupData = {
     [<Key>]
     Id: System.Guid
 
     [<Required>]
-    UserId: System.Guid
+    UserId: UserId
 
     [<Required>]
-    GroupId: System.Guid
+    GroupId: GroupId
 
     [<Required>]
     [<JsonIgnore>]
@@ -78,10 +87,10 @@ module Group =
             let groupData = {
                 Id = GroupId.NewId()
                 Name = nameValue.Trim()
-                UserIds = validatedUserIds
                 CreatedAt = DateTime.UtcNow
                 UpdatedAt = DateTime.UtcNow
                 IsDeleted = false
+                _userIds = validatedUserIds
             }
 
             let groupCreatedEvent =
@@ -107,12 +116,14 @@ module Group =
             // Remove duplicates from UserIds
             let distinctUserIds = groupData.UserIds |> List.distinct
 
+            let updatedGroupData = {
+                groupData with
+                    Name = nameValue.Trim()
+                    _userIds = distinctUserIds
+            }
+
             Ok {
-                State = {
-                    groupData with
-                        Name = nameValue.Trim()
-                        UserIds = distinctUserIds
-                }
+                State = updatedGroupData
                 UncommittedEvents = group.UncommittedEvents
             }
 
@@ -147,8 +158,8 @@ module Group =
         else
             let updatedGroupData = {
                 group.State with
-                    UserIds = userId :: group.State.UserIds
                     UpdatedAt = DateTime.UtcNow
+                    _userIds = userId :: group.State.UserIds
             }
 
             let userAddedEvent =
@@ -165,8 +176,8 @@ module Group =
         else
             let updatedGroupData = {
                 group.State with
-                    UserIds = List.filter (fun id -> id <> userId) group.State.UserIds
                     UpdatedAt = DateTime.UtcNow
+                    _userIds = List.filter (fun id -> id <> userId) group.State.UserIds
             }
 
             let userRemovedEvent =

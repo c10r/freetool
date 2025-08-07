@@ -11,6 +11,8 @@ open Freetool.Domain.Events
 
 [<Table("Folders")>]
 [<Index([| "Name"; "ParentId" |], IsUnique = true, Name = "IX_Folders_Name_ParentId")>]
+// CLIMutable for EntityFramework
+[<CLIMutable>]
 type FolderData = {
     [<Key>]
     Id: FolderId
@@ -29,12 +31,12 @@ type FolderData = {
     [<JsonIgnore>]
     UpdatedAt: DateTime
 
-    [<NotMapped>]
-    Children: FolderData list option
-
     [<JsonIgnore>]
     IsDeleted: bool
-}
+} with
+
+    [<NotMapped>]
+    member _.Children: FolderData list option = None
 
 type Folder = EventSourcingAggregate<FolderData>
 
@@ -65,7 +67,6 @@ module Folder =
                 ParentId = parentId
                 CreatedAt = DateTime.UtcNow
                 UpdatedAt = DateTime.UtcNow
-                Children = None
                 IsDeleted = false
             }
 

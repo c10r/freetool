@@ -21,10 +21,10 @@ module GroupMapper =
             State = {
                 Id = GroupId.NewId()
                 Name = dto.Name
-                UserIds = userIds
                 CreatedAt = DateTime.UtcNow
                 UpdatedAt = DateTime.UtcNow
                 IsDeleted = false
+                _userIds = userIds
             }
             UncommittedEvents = []
         }

@@ -11,6 +11,8 @@ open Freetool.Domain.Events
 
 [<Table("Users")>]
 [<Index([| "Email" |], IsUnique = true, Name = "IX_Users_Email")>]
+// CLIMutable for EntityFramework
+[<CLIMutable>]
 type UserData = {
     [<Key>]
     Id: UserId

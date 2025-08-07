@@ -11,6 +11,8 @@ open Freetool.Domain.Events
 
 [<Table("Apps")>]
 [<Index([| "Name"; "FolderId" |], IsUnique = true, Name = "IX_Apps_Name_FolderId")>]
+// CLIMutable for EntityFramework
+[<CLIMutable>]
 type AppData = {
     [<Key>]
     Id: AppId

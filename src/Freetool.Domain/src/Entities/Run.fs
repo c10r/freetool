@@ -4,13 +4,14 @@ open System
 open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
 open System.Text.Json.Serialization
-open Microsoft.EntityFrameworkCore
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 open Freetool.Domain.Services
 
 [<Table("Runs")>]
+// CLIMutable for EntityFramework
+[<CLIMutable>]
 type RunData = {
     [<Key>]
     Id: RunId

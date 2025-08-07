@@ -4,6 +4,8 @@ open System
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 
+// CLIMutable for EntityFramework
+[<CLIMutable>]
 type Input = {
     Title: string
     Type: InputType

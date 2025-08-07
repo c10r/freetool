@@ -28,6 +28,8 @@ type ExecutableHttpRequest = {
     HttpMethod: string
 }
 
+// CLIMutable for EntityFramework
+[<CLIMutable>]
 type RunInputValue = { Title: string; Value: string }
 
 module DomainValidation =

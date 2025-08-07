@@ -68,10 +68,10 @@ let ``Group validation should trim name and succeed`` () =
         State = {
             Id = GroupId.NewId()
             Name = "  Marketing Team  "
-            UserIds = []
             CreatedAt = DateTime.UtcNow
             UpdatedAt = DateTime.UtcNow
             IsDeleted = false
+            _userIds = []
         }
         UncommittedEvents = []
     }
@@ -285,10 +285,10 @@ let ``Group created from data should have no uncommitted events`` () =
     let groupData = {
         Id = GroupId.NewId()
         Name = "Test Group"
-        UserIds = []
         CreatedAt = DateTime.UtcNow
         UpdatedAt = DateTime.UtcNow
         IsDeleted = false
+        _userIds = []
     }
 
     // Act
@@ -428,10 +428,10 @@ let ``Group validation with duplicate UserIds should remove duplicates`` () =
         State = {
             Id = GroupId.NewId()
             Name = "Test Team"
-            UserIds = [ user1; user2; user1; user2 ] // Duplicates
             CreatedAt = DateTime.UtcNow
             UpdatedAt = DateTime.UtcNow
             IsDeleted = false
+            _userIds = [ user1; user2; user1; user2 ] // Duplicates for testing
         }
         UncommittedEvents = []
     }

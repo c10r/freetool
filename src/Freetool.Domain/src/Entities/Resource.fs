@@ -11,6 +11,8 @@ open Freetool.Domain.Events
 
 [<Table("Resources")>]
 [<Index([| "Name" |], IsUnique = true, Name = "IX_Resources_Name")>]
+// CLIMutable for EntityFramework
+[<CLIMutable>]
 type ResourceData = {
     [<Key>]
     Id: ResourceId

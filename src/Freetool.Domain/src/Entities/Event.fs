@@ -7,6 +7,8 @@ open Microsoft.EntityFrameworkCore
 
 [<Table("Events")>]
 [<Index([| "EventId" |], IsUnique = true, Name = "IX_Events_EventId")>]
+// CLIMutable for EntityFramework
+[<CLIMutable>]
 type EventData = {
     [<Key>]
     [<Column("Id")>]
