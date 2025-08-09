@@ -12,6 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Endpoint, EndpointMethod } from "../types";
 import KeyValueList from "./KeyValueList";
+import HttpMethodBadge from "./HttpMethodBadge";
 import { Trash2, Plus, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -87,20 +88,7 @@ export default function EndpointManager({
                 <CardTitle className="text-base font-medium">
                   {ep.name}
                 </CardTitle>
-                <span
-                  className={cn(
-                    "px-2 py-1 rounded text-xs font-medium",
-                    ep.method === "GET" && "bg-green-100 text-green-800",
-                    ep.method === "POST" && "bg-blue-100 text-blue-800",
-                    ep.method === "PUT" && "bg-orange-100 text-orange-800",
-                    ep.method === "PATCH" && "bg-yellow-100 text-yellow-800",
-                    ep.method === "DELETE" && "bg-red-100 text-red-800",
-                    (ep.method === "HEAD" || ep.method === "OPTIONS") &&
-                      "bg-gray-100 text-gray-800",
-                  )}
-                >
-                  {ep.method}
-                </span>
+                <HttpMethodBadge method={ep.method} />
               </div>
               <Button
                 variant="secondary"

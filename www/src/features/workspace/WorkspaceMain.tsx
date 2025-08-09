@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Plus, FolderPlus, FilePlus2, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import {
 } from "./types";
 import AppFormRenderer from "./components/AppFormRenderer";
 import ResourcesView from "./components/ResourcesView";
+import HttpMethodBadge from "./components/HttpMethodBadge";
 import {
   Select,
   SelectContent,
@@ -180,6 +181,14 @@ function AppView({
   endpoints,
 }: WorkspaceMainProps & { app: AppNode }) {
   const [tab, setTab] = useState("build");
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(app.name);
+
+  // Update name when app changes
+  useEffect(() => {
+    setName(app.name);
+    setEditing(false);
+  }, [app.id, app.name]);
 
   const updateField = (id: string, patch: Partial<AppField>) => {
     updateNode({
@@ -208,7 +217,35 @@ function AppView({
   return (
     <section className="p-6 space-y-4 overflow-y-auto flex-1">
       <header className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">{app.name}</h2>
+        <div className="flex items-center gap-3">
+          {editing ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-64"
+              />
+              <Button
+                onClick={() => {
+                  updateNode({ ...app, name });
+                  setEditing(false);
+                }}
+              >
+                Save
+              </Button>
+            </div>
+          ) : (
+            <h2 className="text-2xl font-semibold">{app.name}</h2>
+          )}
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={() => setEditing((v) => !v)}
+            aria-label="Rename app"
+          >
+            <Edit size={16} />
+          </Button>
+        </div>
         <div className="flex gap-2 items-center">
           <div className="w-64">
             <Select
@@ -223,7 +260,10 @@ function AppView({
               <SelectContent>
                 {endpointList.map((ep) => (
                   <SelectItem key={ep.id} value={ep.id}>
-                    {ep.name} • {ep.method}
+                    <div className="flex items-center gap-2">
+                      <span>{ep.name}</span>
+                      <HttpMethodBadge method={ep.method} />
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
