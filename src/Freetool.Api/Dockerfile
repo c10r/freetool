@@ -1,3 +1,11 @@
+# Build frontend
+FROM node:22-alpine AS frontend-build
+WORKDIR /frontend
+COPY ./www/package*.json ./
+RUN npm ci
+COPY ./www .
+RUN npm run build
+
 # Build .NET App
 FROM mcr.microsoft.com/dotnet/sdk:9.0-bookworm-slim AS build
 WORKDIR /source
@@ -20,6 +28,7 @@ RUN dotnet publish src/Freetool.Api/Freetool.Api.fsproj -c release -o /app
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-bookworm-slim
 WORKDIR /app
 COPY --from=build /app .
+COPY --from=frontend-build /frontend/dist ./wwwroot
 
 EXPOSE 8080
 ENV HTTP_PORTS=8080

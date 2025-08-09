@@ -142,9 +142,13 @@ let main args =
 
     app.UseHttpsRedirection() |> ignore
 
+    app.UseStaticFiles() |> ignore
+
     app.UseMiddleware<TailscaleAuthMiddleware>() |> ignore
 
     app.MapControllers() |> ignore
+
+    app.MapFallbackToFile("index.html") |> ignore
 
     app.Run()
     0
