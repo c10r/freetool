@@ -32,12 +32,9 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
         }
 
         member _.AddAsync(resource: ValidatedResource) : Task<Result<unit, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 // 1. Save resource to database
                 context.Resources.Add resource.State |> ignore
-                let! _ = context.SaveChangesAsync()
 
                 // 2. Save event to database
                 let events = Resource.getUncommittedEvents resource
@@ -46,32 +43,23 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
                     do! eventRepository.SaveEventAsync event
 
                 // 3. Save to database
-                transaction.Commit()
+                let! _ = context.SaveChangesAsync()
                 return Ok()
             with
-            | :? DbUpdateException as ex ->
-                transaction.Rollback()
-                return Error(Conflict $"Failed to add resource: {ex.Message}")
-            | ex ->
-                transaction.Rollback()
-                return Error(InvalidOperation $"Database error: {ex.Message}")
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to add resource: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
         member _.UpdateAsync(resource: ValidatedResource) : Task<Result<unit, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 let guidId = (Resource.getId resource).Value
                 let! existingData = context.Resources.FirstOrDefaultAsync(fun r -> r.Id.Value = guidId)
 
                 match Option.ofObj existingData with
-                | None ->
-                    transaction.Rollback()
-                    return Error(NotFound "Resource not found")
+                | None -> return Error(NotFound "Resource not found")
                 | Some _ ->
                     // Update the entity directly
                     context.Resources.Update(resource.State) |> ignore
-                    let! _ = context.SaveChangesAsync()
 
                     // Save event to database
                     let events = Resource.getUncommittedEvents resource
@@ -80,15 +68,11 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
                         do! eventRepository.SaveEventAsync event
 
                     // Commit transaction
-                    transaction.Commit()
+                    let! _ = context.SaveChangesAsync()
                     return Ok()
             with
-            | :? DbUpdateException as ex ->
-                transaction.Rollback()
-                return Error(Conflict $"Failed to update resource: {ex.Message}")
-            | ex ->
-                transaction.Rollback()
-                return Error(InvalidOperation $"Database error: {ex.Message}")
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to update resource: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
         member _.DeleteAsync
@@ -96,8 +80,6 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
             (deleteEvent: IDomainEvent option)
             : Task<Result<unit, DomainError>> =
             task {
-                use transaction = context.Database.BeginTransaction()
-
                 try
                     let guidId = resourceId.Value
 
@@ -117,7 +99,6 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
                         }
 
                         context.Resources.Update(updatedData) |> ignore
-                        let! _ = context.SaveChangesAsync()
 
                         // Save delete event if provided
                         match deleteEvent with
@@ -125,15 +106,11 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
                         | None -> ()
 
                         // Commit transaction
-                        transaction.Commit()
+                        let! _ = context.SaveChangesAsync()
                         return Ok()
                 with
-                | :? DbUpdateException as ex ->
-                    transaction.Rollback()
-                    return Error(Conflict $"Failed to delete resource: {ex.Message}")
-                | ex ->
-                    transaction.Rollback()
-                    return Error(InvalidOperation $"Database error: {ex.Message}")
+                | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete resource: {ex.Message}")
+                | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
             }
 
         member _.ExistsAsync(resourceId: ResourceId) : Task<bool> = task {

@@ -67,14 +67,9 @@ type RunRepository(context: FreetoolDbContext, eventRepository: IEventRepository
             }
 
         member _.AddAsync(run: ValidatedRun) : Task<Result<unit, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 // Add domain entity directly to context
                 context.Runs.Add(run.State) |> ignore
-
-                // Save changes to database
-                let! _ = context.SaveChangesAsync()
 
                 // Save domain events
                 let events = Run.getUncommittedEvents run
@@ -82,17 +77,14 @@ type RunRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                 for event in events do
                     do! eventRepository.SaveEventAsync event
 
-                // Commit transaction
-                transaction.Commit()
+                // Save changes to database
+                let! _ = context.SaveChangesAsync()
                 return Ok()
             with ex ->
-                transaction.Rollback()
                 return Error(InvalidOperation $"Failed to save run: {ex.Message}")
         }
 
         member _.UpdateAsync(run: ValidatedRun) : Task<Result<unit, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 let runId = (Run.getId run).Value
 
@@ -100,15 +92,10 @@ type RunRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                 let existingDataOption = Option.ofObj existingData
 
                 match existingDataOption with
-                | None ->
-                    transaction.Rollback()
-                    return Error(NotFound "Run not found")
+                | None -> return Error(NotFound "Run not found")
                 | Some _ ->
                     // Update entity directly
                     context.Runs.Update(run.State) |> ignore
-
-                    // Save changes to database
-                    let! _ = context.SaveChangesAsync()
 
                     // Save domain events
                     let events = Run.getUncommittedEvents run
@@ -116,11 +103,11 @@ type RunRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                     for event in events do
                         do! eventRepository.SaveEventAsync event
 
-                    // Commit transaction
-                    transaction.Commit()
+                    // Save changes to database
+                    let! _ = context.SaveChangesAsync()
+
                     return Ok()
             with ex ->
-                transaction.Rollback()
                 return Error(InvalidOperation $"Failed to update run: {ex.Message}")
         }
 

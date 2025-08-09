@@ -51,12 +51,9 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
         }
 
         member _.AddAsync(app: ValidatedApp) : Task<Result<unit, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 // 1. Save app to database
                 context.Apps.Add app.State |> ignore
-                let! _ = context.SaveChangesAsync()
 
                 // 2. Save events to audit log in SAME transaction
                 let events = App.getUncommittedEvents app
@@ -65,32 +62,23 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                     do! eventRepository.SaveEventAsync event
 
                 // 3. Commit everything atomically
-                transaction.Commit()
+                let! _ = context.SaveChangesAsync()
                 return Ok()
             with
-            | :? DbUpdateException as ex ->
-                transaction.Commit()
-                return Error(Conflict $"Failed to add app: {ex.Message}")
-            | ex ->
-                transaction.Commit()
-                return Error(InvalidOperation $"Database error: {ex.Message}")
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to add app: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
         member _.UpdateAsync(app: ValidatedApp) : Task<Result<unit, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 let guidId = (App.getId app).Value
                 let! existingData = context.Apps.FirstOrDefaultAsync(fun a -> a.Id.Value = guidId)
 
                 match Option.ofObj existingData with
-                | None ->
-                    transaction.Rollback()
-                    return Error(NotFound "App not found")
+                | None -> return Error(NotFound "App not found")
                 | Some _ ->
                     // Update entity directly
                     context.Apps.Update(app.State) |> ignore
-                    let! _ = context.SaveChangesAsync()
 
                     // Save events to audit log in SAME transaction
                     let events = App.getUncommittedEvents app
@@ -98,20 +86,15 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                     for event in events do
                         do! eventRepository.SaveEventAsync event
 
-                    transaction.Commit()
+                    // Save to the database
+                    let! _ = context.SaveChangesAsync()
                     return Ok()
             with
-            | :? DbUpdateException as ex ->
-                transaction.Rollback()
-                return Error(Conflict $"Failed to update app: {ex.Message}")
-            | ex ->
-                transaction.Rollback()
-                return Error(InvalidOperation $"Database error: {ex.Message}")
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to update app: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
         member _.DeleteAsync (appId: AppId) (deleteEvent: IDomainEvent option) : Task<Result<unit, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 let guidId = appId.Value
 
@@ -121,9 +104,7 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                         .FirstOrDefaultAsync(fun a -> a.Id.Value = guidId)
 
                 match Option.ofObj appData with
-                | None ->
-                    transaction.Rollback()
-                    return Error(NotFound "App not found")
+                | None -> return Error(NotFound "App not found")
                 | Some data ->
                     // Soft delete: create updated record with IsDeleted flag
                     let updatedData = {
@@ -133,22 +114,18 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                     }
 
                     context.Apps.Update(updatedData) |> ignore
-                    let! _ = context.SaveChangesAsync()
 
                     // Save delete event if provided
                     match deleteEvent with
                     | Some event -> do! eventRepository.SaveEventAsync event
                     | None -> ()
 
-                    transaction.Commit()
+                    // Save to the database
+                    let! _ = context.SaveChangesAsync()
                     return Ok()
             with
-            | :? DbUpdateException as ex ->
-                transaction.Rollback()
-                return Error(Conflict $"Failed to delete app: {ex.Message}")
-            | ex ->
-                transaction.Rollback()
-                return Error(InvalidOperation $"Database error: {ex.Message}")
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete app: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
         member _.ExistsAsync(appId: AppId) : Task<bool> = task {

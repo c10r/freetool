@@ -34,68 +34,49 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
         }
 
         member _.AddAsync(user: ValidatedUser) : Task<Result<ValidatedUser, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 // 1. Save user to database
                 context.Users.Add user.State |> ignore
-                let! _ = context.SaveChangesAsync()
 
-                // 2. Save events to audit log in SAME transaction
+                // 2. Save events as well
                 let events = User.getUncommittedEvents user
 
                 for event in events do
                     do! eventRepository.SaveEventAsync event
 
                 // 3. Commit everything atomically
-                transaction.Commit()
+                let! _ = context.SaveChangesAsync()
                 return Ok user
-
             with
-            | :? DbUpdateException as ex ->
-                transaction.Rollback()
-                return Error(Conflict $"Failed to add user: {ex.Message}")
-            | ex ->
-                transaction.Rollback()
-                return Error(InvalidOperation $"Transaction failed: {ex.Message}")
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to add user: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Transaction failed: {ex.Message}")
         }
 
         member _.UpdateAsync(user: ValidatedUser) : Task<Result<ValidatedUser, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 let guidId = (User.getId user).Value
                 let! existingUserData = context.Users.FirstOrDefaultAsync(fun u -> u.Id.Value = guidId)
 
                 match Option.ofObj existingUserData with
-                | None ->
-                    transaction.Rollback()
-                    return Error(NotFound "User not found")
+                | None -> return Error(NotFound "User not found")
                 | Some _ ->
                     // Update the entity directly
                     context.Users.Update(user.State) |> ignore
-                    let! _ = context.SaveChangesAsync()
 
-                    // Save events to audit log in SAME transaction
+                    // Save events to audit log
                     let events = User.getUncommittedEvents user
 
                     for event in events do
                         do! eventRepository.SaveEventAsync event
 
-                    transaction.Commit()
+                    let! _ = context.SaveChangesAsync()
                     return Ok user
             with
-            | :? DbUpdateException as ex ->
-                transaction.Rollback()
-                return Error(Conflict $"Failed to update user: {ex.Message}")
-            | ex ->
-                transaction.Rollback()
-                return Error(InvalidOperation $"Update transaction failed: {ex.Message}")
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to update user: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Update transaction failed: {ex.Message}")
         }
 
         member _.DeleteAsync (userId: UserId) (deleteEvent: IDomainEvent option) : Task<Result<unit, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 let guidId = userId.Value
 
@@ -105,9 +86,7 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
                         .FirstOrDefaultAsync(fun u -> u.Id.Value = guidId)
 
                 match Option.ofObj userData with
-                | None ->
-                    transaction.Rollback()
-                    return Error(NotFound "User not found")
+                | None -> return Error(NotFound "User not found")
                 | Some data ->
                     // Soft delete: create updated record with IsDeleted flag
                     let updatedData = {
@@ -117,22 +96,17 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
                     }
 
                     context.Users.Update(updatedData) |> ignore
-                    let! _ = context.SaveChangesAsync()
 
                     // Save delete event if provided
                     match deleteEvent with
                     | Some event -> do! eventRepository.SaveEventAsync event
                     | None -> ()
 
-                    transaction.Commit()
+                    let! _ = context.SaveChangesAsync()
                     return Ok()
             with
-            | :? DbUpdateException as ex ->
-                transaction.Rollback()
-                return Error(Conflict $"Failed to delete user: {ex.Message}")
-            | ex ->
-                transaction.Rollback()
-                return Error(InvalidOperation $"Delete transaction failed: {ex.Message}")
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete user: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Delete transaction failed: {ex.Message}")
         }
 
         member _.ExistsAsync(userId: UserId) : Task<bool> = task {

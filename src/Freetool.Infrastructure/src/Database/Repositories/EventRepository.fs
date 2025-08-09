@@ -60,7 +60,6 @@ type EventRepository(context: FreetoolDbContext) =
             }
 
             context.Events.Add(eventDataRecord) |> ignore
-            let! _ = context.SaveChangesAsync()
             return ()
         }
 

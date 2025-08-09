@@ -96,12 +96,9 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
         }
 
         member _.AddAsync(group: ValidatedGroup) : Task<Result<unit, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 // 1. Save group to database
                 context.Groups.Add group.State |> ignore
-                let! _ = context.SaveChangesAsync()
 
                 // 2. Save user-group relationships
                 let userGroupEntities =
@@ -125,29 +122,21 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                     do! eventRepository.SaveEventAsync event
 
                 // 4. Commit everything atomically
-                transaction.Commit()
+                let! _ = context.SaveChangesAsync()
                 return Ok()
 
             with
-            | :? DbUpdateException as ex ->
-                transaction.Rollback()
-                return Error(Conflict $"Failed to add group: {ex.Message}")
-            | ex ->
-                transaction.Rollback()
-                return Error(InvalidOperation $"Transaction failed: {ex.Message}")
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to add group: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Transaction failed: {ex.Message}")
         }
 
         member _.UpdateAsync(group: ValidatedGroup) : Task<Result<unit, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 let guidId = (Group.getId group).Value
                 let! existingData = context.Groups.FirstOrDefaultAsync(fun g -> g.Id.Value = guidId)
 
                 match Option.ofObj existingData with
-                | None ->
-                    transaction.Rollback()
-                    return Error(NotFound "Group not found")
+                | None -> return Error(NotFound "Group not found")
                 | Some _ ->
                     // Update the entity directly
                     context.Groups.Update(group.State) |> ignore
@@ -173,28 +162,20 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                     for userGroupEntity in userGroupEntities do
                         context.UserGroups.Add userGroupEntity |> ignore
 
-                    let! _ = context.SaveChangesAsync()
-
-                    // Save events to audit log in SAME transaction
+                    // Save events to audit log
                     let events = Group.getUncommittedEvents group
 
                     for event in events do
                         do! eventRepository.SaveEventAsync event
 
-                    transaction.Commit()
+                    let! _ = context.SaveChangesAsync()
                     return Ok()
             with
-            | :? DbUpdateException as ex ->
-                transaction.Rollback()
-                return Error(Conflict $"Failed to update group: {ex.Message}")
-            | ex ->
-                transaction.Rollback()
-                return Error(InvalidOperation $"Update transaction failed: {ex.Message}")
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to update group: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Update transaction failed: {ex.Message}")
         }
 
         member _.DeleteAsync (groupId: GroupId) (deleteEvent: IDomainEvent option) : Task<Result<unit, DomainError>> = task {
-            use transaction = context.Database.BeginTransaction()
-
             try
                 let guidId = groupId.Value
 
@@ -204,9 +185,7 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                         .FirstOrDefaultAsync(fun g -> g.Id.Value = guidId)
 
                 match Option.ofObj groupData with
-                | None ->
-                    transaction.Rollback()
-                    return Error(NotFound "Group not found")
+                | None -> return Error(NotFound "Group not found")
                 | Some data ->
                     // Remove all user-group relationships first
                     let! userGroupEntities =
@@ -222,22 +201,17 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                     }
 
                     context.Groups.Update(updatedData) |> ignore
-                    let! _ = context.SaveChangesAsync()
 
                     // Save delete event if provided
                     match deleteEvent with
                     | Some event -> do! eventRepository.SaveEventAsync event
                     | None -> ()
 
-                    transaction.Commit()
+                    let! _ = context.SaveChangesAsync()
                     return Ok()
             with
-            | :? DbUpdateException as ex ->
-                transaction.Rollback()
-                return Error(Conflict $"Failed to delete group: {ex.Message}")
-            | ex ->
-                transaction.Rollback()
-                return Error(InvalidOperation $"Delete transaction failed: {ex.Message}")
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete group: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Delete transaction failed: {ex.Message}")
         }
 
         member _.ExistsAsync(groupId: GroupId) : Task<bool> = task {
