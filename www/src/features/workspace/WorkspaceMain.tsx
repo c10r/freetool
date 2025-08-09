@@ -14,6 +14,7 @@ import {
   Endpoint,
 } from "./types";
 import AppFormRenderer from "./components/AppFormRenderer";
+import ResourcesView from "./components/ResourcesView";
 import {
   Select,
   SelectContent,
@@ -22,7 +23,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import EndpointManager from "./components/EndpointManager";
 
 interface WorkspaceMainProps {
   nodes: Record<string, WorkspaceNode>;
@@ -41,6 +41,18 @@ interface WorkspaceMainProps {
 export default function WorkspaceMain(props: WorkspaceMainProps) {
   const { nodes, selectedId } = props;
   const selected = nodes[selectedId];
+
+  // Handle special sections from sidebar
+  if (selectedId === "resources") {
+    return (
+      <ResourcesView
+        endpoints={props.endpoints}
+        createEndpoint={props.createEndpoint}
+        updateEndpoint={props.updateEndpoint}
+        deleteEndpoint={props.deleteEndpoint}
+      />
+    );
+  }
 
   if (!selected) return null;
 
@@ -162,9 +174,6 @@ function AppView({
   app,
   updateNode,
   endpoints,
-  createEndpoint,
-  updateEndpoint,
-  deleteEndpoint,
 }: WorkspaceMainProps & { app: AppNode }) {
   const [tab, setTab] = useState("build");
 
@@ -228,22 +237,6 @@ function AppView({
           <TabsTrigger value="fill">Fill</TabsTrigger>
         </TabsList>
         <TabsContent value="build" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-medium">
-                Manage Endpoints
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <EndpointManager
-                endpoints={endpoints}
-                createEndpoint={createEndpoint}
-                updateEndpoint={updateEndpoint}
-                deleteEndpoint={deleteEndpoint}
-              />
-            </CardContent>
-          </Card>
-
           {app.fields.length === 0 && (
             <Card>
               <CardContent className="py-10 text-center text-muted-foreground">

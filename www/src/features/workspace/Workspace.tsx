@@ -160,6 +160,17 @@ export default function Workspace() {
 }
 
 function buildBreadcrumb(nodes: Record<string, WorkspaceNode>, id: string) {
+  // Handle special sections
+  if (id === "resources") {
+    return [{ id: "resources", name: "Resources" }];
+  }
+  if (id === "users-&-teams") {
+    return [{ id: "users-&-teams", name: "Users & Teams" }];
+  }
+  if (id === "audit-log") {
+    return [{ id: "audit-log", name: "Audit Log" }];
+  }
+
   const list: { id: string; name: string }[] = [];
   let cur = nodes[id];
   while (cur) {
