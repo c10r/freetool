@@ -51,10 +51,9 @@ module UserHandler =
                     | Some user ->
                         // Mark user for deletion to create the delete event with actorUserId
                         let userWithDeleteEvent = User.markForDeletion actorUserId user
-                        let deleteEvent = User.getUncommittedEvents userWithDeleteEvent |> List.tryHead
 
                         // Delete user and save event atomically
-                        match! userRepository.DeleteAsync userIdObj deleteEvent with
+                        match! userRepository.DeleteAsync userWithDeleteEvent with
                         | Error error -> return Error error
                         | Ok() -> return Ok(UserCommandResult.UnitResult())
 

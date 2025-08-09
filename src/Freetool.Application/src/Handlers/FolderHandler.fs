@@ -68,10 +68,9 @@ module FolderHandler =
                         else
                             // Mark folder for deletion to create the delete event
                             let folderWithDeleteEvent = Folder.markForDeletion actorUserId folder
-                            let deleteEvent = Folder.getUncommittedEvents folderWithDeleteEvent |> List.tryHead
 
                             // Delete folder and save event atomically
-                            match! folderRepository.DeleteAsync folderIdObj deleteEvent with
+                            match! folderRepository.DeleteAsync folderWithDeleteEvent with
                             | Error error -> return Error error
                             | Ok() -> return Ok(FolderUnitResult())
 

@@ -16,7 +16,7 @@ type IUserRepository =
 
     abstract member UpdateAsync: ValidatedUser -> Task<Result<ValidatedUser, DomainError>>
 
-    abstract member DeleteAsync: UserId -> IDomainEvent option -> Task<Result<unit, DomainError>>
+    abstract member DeleteAsync: ValidatedUser -> Task<Result<unit, DomainError>>
 
     abstract member ExistsAsync: UserId -> Task<bool>
 

@@ -76,10 +76,9 @@ module GroupHandler =
                     | Some group ->
                         // Mark group for deletion to create the delete event
                         let groupWithDeleteEvent = Group.markForDeletion actorUserId group
-                        let deleteEvent = Group.getUncommittedEvents groupWithDeleteEvent |> List.tryHead
 
                         // Delete group and save event atomically
-                        match! groupRepository.DeleteAsync groupIdObj deleteEvent with
+                        match! groupRepository.DeleteAsync groupWithDeleteEvent with
                         | Error error -> return Error error
                         | Ok() -> return Ok(UnitResult())
 

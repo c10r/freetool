@@ -75,43 +75,30 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
             | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
-        member _.DeleteAsync
-            (resourceId: ResourceId)
-            (deleteEvent: IDomainEvent option)
-            : Task<Result<unit, DomainError>> =
-            task {
-                try
-                    let guidId = resourceId.Value
+        member _.DeleteAsync(resourceWithDeleteEvent: ValidatedResource) : Task<Result<unit, DomainError>> = task {
+            try
+                // Soft delete: create updated record with IsDeleted flag
+                let updatedData = {
+                    resourceWithDeleteEvent.State with
+                        IsDeleted = true
+                        UpdatedAt = System.DateTime.UtcNow
+                }
 
-                    let! resourceData =
-                        context.Resources
-                            .IgnoreQueryFilters()
-                            .FirstOrDefaultAsync(fun r -> r.Id.Value = guidId)
+                context.Resources.Update(updatedData) |> ignore
 
-                    match Option.ofObj resourceData with
-                    | None -> return Error(NotFound "Resource not found")
-                    | Some data ->
-                        // Soft delete: create updated record with IsDeleted flag
-                        let updatedData = {
-                            data with
-                                IsDeleted = true
-                                UpdatedAt = System.DateTime.UtcNow
-                        }
+                // Save all uncommitted events
+                let events = Resource.getUncommittedEvents resourceWithDeleteEvent
 
-                        context.Resources.Update(updatedData) |> ignore
+                for event in events do
+                    do! eventRepository.SaveEventAsync event
 
-                        // Save delete event if provided
-                        match deleteEvent with
-                        | Some event -> do! eventRepository.SaveEventAsync event
-                        | None -> ()
-
-                        // Commit transaction
-                        let! _ = context.SaveChangesAsync()
-                        return Ok()
-                with
-                | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete resource: {ex.Message}")
-                | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
-            }
+                // Commit transaction
+                let! _ = context.SaveChangesAsync()
+                return Ok()
+            with
+            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete resource: {ex.Message}")
+            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
+        }
 
         member _.ExistsAsync(resourceId: ResourceId) : Task<bool> = task {
             let guidId = resourceId.Value

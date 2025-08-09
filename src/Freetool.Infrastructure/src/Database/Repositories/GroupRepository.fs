@@ -175,40 +175,32 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
             | ex -> return Error(InvalidOperation $"Update transaction failed: {ex.Message}")
         }
 
-        member _.DeleteAsync (groupId: GroupId) (deleteEvent: IDomainEvent option) : Task<Result<unit, DomainError>> = task {
+        member _.DeleteAsync(groupWithDeleteEvent: ValidatedGroup) : Task<Result<unit, DomainError>> = task {
             try
-                let guidId = groupId.Value
+                let guidId = (Group.getId groupWithDeleteEvent).Value
 
-                let! groupData =
-                    context.Groups
-                        .IgnoreQueryFilters()
-                        .FirstOrDefaultAsync(fun g -> g.Id.Value = guidId)
+                // Remove all user-group relationships first
+                let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = GroupId(guidId)).ToListAsync()
 
-                match Option.ofObj groupData with
-                | None -> return Error(NotFound "Group not found")
-                | Some data ->
-                    // Remove all user-group relationships first
-                    let! userGroupEntities =
-                        context.UserGroups.Where(fun ug -> ug.GroupId = GroupId(guidId)).ToListAsync()
+                context.UserGroups.RemoveRange(userGroupEntities)
 
-                    context.UserGroups.RemoveRange(userGroupEntities)
+                // Soft delete: create updated record with IsDeleted flag
+                let updatedData = {
+                    groupWithDeleteEvent.State with
+                        IsDeleted = true
+                        UpdatedAt = System.DateTime.UtcNow
+                }
 
-                    // Soft delete: create updated record with IsDeleted flag
-                    let updatedData = {
-                        data with
-                            IsDeleted = true
-                            UpdatedAt = System.DateTime.UtcNow
-                    }
+                context.Groups.Update(updatedData) |> ignore
 
-                    context.Groups.Update(updatedData) |> ignore
+                // Save all uncommitted events
+                let events = Group.getUncommittedEvents groupWithDeleteEvent
 
-                    // Save delete event if provided
-                    match deleteEvent with
-                    | Some event -> do! eventRepository.SaveEventAsync event
-                    | None -> ()
+                for event in events do
+                    do! eventRepository.SaveEventAsync event
 
-                    let! _ = context.SaveChangesAsync()
-                    return Ok()
+                let! _ = context.SaveChangesAsync()
+                return Ok()
             with
             | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete group: {ex.Message}")
             | ex -> return Error(InvalidOperation $"Delete transaction failed: {ex.Message}")

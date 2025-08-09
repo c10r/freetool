@@ -108,35 +108,26 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
             | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
-        member _.DeleteAsync (folderId: FolderId) (deleteEvent: IDomainEvent option) : Task<Result<unit, DomainError>> = task {
+        member _.DeleteAsync(folderWithDeleteEvent: ValidatedFolder) : Task<Result<unit, DomainError>> = task {
             try
-                let guidId = folderId.Value
+                // Soft delete: create updated record with IsDeleted flag
+                let updatedData = {
+                    folderWithDeleteEvent.State with
+                        IsDeleted = true
+                        UpdatedAt = System.DateTime.UtcNow
+                }
 
-                let! folderData =
-                    context.Folders
-                        .IgnoreQueryFilters()
-                        .FirstOrDefaultAsync(fun f -> f.Id.Value = guidId)
+                context.Folders.Update(updatedData) |> ignore
 
-                match Option.ofObj folderData with
-                | None -> return Error(NotFound "Folder not found")
-                | Some data ->
-                    // Soft delete: create updated record with IsDeleted flag
-                    let updatedData = {
-                        data with
-                            IsDeleted = true
-                            UpdatedAt = System.DateTime.UtcNow
-                    }
+                // Save all uncommitted events
+                let events = Folder.getUncommittedEvents folderWithDeleteEvent
 
-                    context.Folders.Update(updatedData) |> ignore
+                for event in events do
+                    do! eventRepository.SaveEventAsync event
 
-                    // Save delete event if provided
-                    match deleteEvent with
-                    | Some event -> do! eventRepository.SaveEventAsync event
-                    | None -> ()
-
-                    // Commit transaction
-                    let! _ = context.SaveChangesAsync()
-                    return Ok()
+                // Commit transaction
+                let! _ = context.SaveChangesAsync()
+                return Ok()
             with
             | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete folder: {ex.Message}")
             | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")

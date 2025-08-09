@@ -49,10 +49,9 @@ module AppHandler =
                     | Some app ->
                         // Mark app for deletion to create the delete event
                         let appWithDeleteEvent = App.markForDeletion actorUserId app
-                        let deleteEvent = App.getUncommittedEvents appWithDeleteEvent |> List.tryHead
 
                         // Delete app and save event atomically
-                        match! appRepository.DeleteAsync appIdObj deleteEvent with
+                        match! appRepository.DeleteAsync appWithDeleteEvent with
                         | Error error -> return Error error
                         | Ok() -> return Ok(AppUnitResult())
 

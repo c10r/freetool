@@ -20,7 +20,7 @@ type IFolderRepository =
 
     abstract member UpdateAsync: ValidatedFolder -> Task<Result<unit, DomainError>>
 
-    abstract member DeleteAsync: FolderId -> IDomainEvent option -> Task<Result<unit, DomainError>>
+    abstract member DeleteAsync: ValidatedFolder -> Task<Result<unit, DomainError>>
 
     abstract member ExistsAsync: FolderId -> Task<bool>
 

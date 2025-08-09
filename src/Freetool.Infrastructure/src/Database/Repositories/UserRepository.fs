@@ -76,34 +76,25 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
             | ex -> return Error(InvalidOperation $"Update transaction failed: {ex.Message}")
         }
 
-        member _.DeleteAsync (userId: UserId) (deleteEvent: IDomainEvent option) : Task<Result<unit, DomainError>> = task {
+        member _.DeleteAsync(userWithDeleteEvent: ValidatedUser) : Task<Result<unit, DomainError>> = task {
             try
-                let guidId = userId.Value
+                // Soft delete: create updated record with IsDeleted flag
+                let updatedData = {
+                    userWithDeleteEvent.State with
+                        IsDeleted = true
+                        UpdatedAt = System.DateTime.UtcNow
+                }
 
-                let! userData =
-                    context.Users
-                        .IgnoreQueryFilters()
-                        .FirstOrDefaultAsync(fun u -> u.Id.Value = guidId)
+                context.Users.Update(updatedData) |> ignore
 
-                match Option.ofObj userData with
-                | None -> return Error(NotFound "User not found")
-                | Some data ->
-                    // Soft delete: create updated record with IsDeleted flag
-                    let updatedData = {
-                        data with
-                            IsDeleted = true
-                            UpdatedAt = System.DateTime.UtcNow
-                    }
+                // Save all uncommitted events
+                let events = User.getUncommittedEvents userWithDeleteEvent
 
-                    context.Users.Update(updatedData) |> ignore
+                for event in events do
+                    do! eventRepository.SaveEventAsync event
 
-                    // Save delete event if provided
-                    match deleteEvent with
-                    | Some event -> do! eventRepository.SaveEventAsync event
-                    | None -> ()
-
-                    let! _ = context.SaveChangesAsync()
-                    return Ok()
+                let! _ = context.SaveChangesAsync()
+                return Ok()
             with
             | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete user: {ex.Message}")
             | ex -> return Error(InvalidOperation $"Delete transaction failed: {ex.Message}")

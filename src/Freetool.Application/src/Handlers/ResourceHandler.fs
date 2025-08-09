@@ -49,11 +49,8 @@ module ResourceHandler =
                         // Mark resource for deletion to create the delete event
                         let resourceWithDeleteEvent = Resource.markForDeletion actorUserId resource
 
-                        let deleteEvent =
-                            Resource.getUncommittedEvents resourceWithDeleteEvent |> List.tryHead
-
                         // Delete resource and save event atomically
-                        match! resourceRepository.DeleteAsync resourceIdObj deleteEvent with
+                        match! resourceRepository.DeleteAsync resourceWithDeleteEvent with
                         | Error error -> return Error error
                         | Ok() -> return Ok(ResourceUnitResult())
 

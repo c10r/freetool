@@ -18,7 +18,7 @@ type IGroupRepository =
 
     abstract member UpdateAsync: ValidatedGroup -> Task<Result<unit, DomainError>>
 
-    abstract member DeleteAsync: GroupId -> IDomainEvent option -> Task<Result<unit, DomainError>>
+    abstract member DeleteAsync: ValidatedGroup -> Task<Result<unit, DomainError>>
 
     abstract member ExistsAsync: GroupId -> Task<bool>
 
