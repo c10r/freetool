@@ -15,8 +15,11 @@ let unwrapResult result =
 
 [<Fact>]
 let ``Group creation should generate GroupCreatedEvent`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     // Act
-    let result = Group.create "Development Team" None
+    let result = Group.create actorUserId "Development Team" None
 
     // Assert
     match result with
@@ -38,8 +41,11 @@ let ``Group creation should generate GroupCreatedEvent`` () =
 
 [<Fact>]
 let ``Group creation with empty name should fail`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     // Act
-    let result = Group.create "" None
+    let result = Group.create actorUserId "" None
 
     // Assert
     match result with
@@ -50,10 +56,11 @@ let ``Group creation with empty name should fail`` () =
 [<Fact>]
 let ``Group creation with name exceeding 100 characters should fail`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let longName = String.replicate 101 "a"
 
     // Act
-    let result = Group.create longName None
+    let result = Group.create actorUserId longName None
 
     // Assert
     match result with
@@ -87,10 +94,11 @@ let ``Group validation should trim name and succeed`` () =
 [<Fact>]
 let ``Group name update should generate correct event`` () =
     // Arrange
-    let group = Group.create "Old Team Name" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let group = Group.create actorUserId "Old Team Name" None |> unwrapResult
 
     // Act
-    let result = Group.updateName "New Team Name" group
+    let result = Group.updateName actorUserId "New Team Name" group
 
     // Assert
     match result with
@@ -116,10 +124,11 @@ let ``Group name update should generate correct event`` () =
 [<Fact>]
 let ``Group name update with same name should not generate event`` () =
     // Arrange
-    let group = Group.create "Team Name" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let group = Group.create actorUserId "Team Name" None |> unwrapResult
 
     // Act
-    let result = Group.updateName "Team Name" group
+    let result = Group.updateName actorUserId "Team Name" group
 
     // Assert
     match result with
@@ -131,10 +140,11 @@ let ``Group name update with same name should not generate event`` () =
 [<Fact>]
 let ``Group name update with empty name should fail`` () =
     // Arrange
-    let group = Group.create "Team Name" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let group = Group.create actorUserId "Team Name" None |> unwrapResult
 
     // Act
-    let result = Group.updateName "" group
+    let result = Group.updateName actorUserId "" group
 
     // Assert
     match result with
@@ -145,11 +155,12 @@ let ``Group name update with empty name should fail`` () =
 [<Fact>]
 let ``Add user to group should generate correct event`` () =
     // Arrange
-    let group = Group.create "Development Team" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let group = Group.create actorUserId "Development Team" None |> unwrapResult
     let userId = UserId.NewId()
 
     // Act
-    let result = Group.addUser userId group
+    let result = Group.addUser actorUserId userId group
 
     // Assert
     match result with
@@ -176,12 +187,13 @@ let ``Add user to group should generate correct event`` () =
 [<Fact>]
 let ``Add duplicate user to group should fail`` () =
     // Arrange
-    let group = Group.create "Development Team" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let group = Group.create actorUserId "Development Team" None |> unwrapResult
     let userId = UserId.NewId()
-    let groupWithUser = Group.addUser userId group |> unwrapResult
+    let groupWithUser = Group.addUser actorUserId userId group |> unwrapResult
 
     // Act
-    let result = Group.addUser userId groupWithUser
+    let result = Group.addUser actorUserId userId groupWithUser
 
     // Assert
     match result with
@@ -192,12 +204,13 @@ let ``Add duplicate user to group should fail`` () =
 [<Fact>]
 let ``Remove user from group should generate correct event`` () =
     // Arrange
-    let group = Group.create "Development Team" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let group = Group.create actorUserId "Development Team" None |> unwrapResult
     let userId = UserId.NewId()
-    let groupWithUser = Group.addUser userId group |> unwrapResult
+    let groupWithUser = Group.addUser actorUserId userId group |> unwrapResult
 
     // Act
-    let result = Group.removeUser userId groupWithUser
+    let result = Group.removeUser actorUserId userId groupWithUser
 
     // Assert
     match result with
@@ -223,11 +236,12 @@ let ``Remove user from group should generate correct event`` () =
 [<Fact>]
 let ``Remove non-member user from group should fail`` () =
     // Arrange
-    let group = Group.create "Development Team" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let group = Group.create actorUserId "Development Team" None |> unwrapResult
     let userId = UserId.NewId()
 
     // Act
-    let result = Group.removeUser userId group
+    let result = Group.removeUser actorUserId userId group
 
     // Assert
     match result with
@@ -238,15 +252,16 @@ let ``Remove non-member user from group should fail`` () =
 [<Fact>]
 let ``Group with multiple users should track all members`` () =
     // Arrange
-    let group = Group.create "Development Team" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let group = Group.create actorUserId "Development Team" None |> unwrapResult
     let user1 = UserId.NewId()
     let user2 = UserId.NewId()
     let user3 = UserId.NewId()
 
     // Act
-    let groupWith1 = Group.addUser user1 group |> unwrapResult
-    let groupWith2 = Group.addUser user2 groupWith1 |> unwrapResult
-    let groupWith3 = Group.addUser user3 groupWith2 |> unwrapResult
+    let groupWith1 = Group.addUser actorUserId user1 group |> unwrapResult
+    let groupWith2 = Group.addUser actorUserId user2 groupWith1 |> unwrapResult
+    let groupWith3 = Group.addUser actorUserId user3 groupWith2 |> unwrapResult
 
     // Assert
     let userIds = Group.getUserIds groupWith3
@@ -266,10 +281,11 @@ let ``Group with multiple users should track all members`` () =
 [<Fact>]
 let ``Mark group for deletion should generate GroupDeletedEvent`` () =
     // Arrange
-    let group = Group.create "Development Team" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let group = Group.create actorUserId "Development Team" None |> unwrapResult
 
     // Act
-    let groupForDeletion = Group.markForDeletion group
+    let groupForDeletion = Group.markForDeletion actorUserId group
 
     // Assert
     let events = Group.getUncommittedEvents groupForDeletion
@@ -302,9 +318,10 @@ let ``Group created from data should have no uncommitted events`` () =
 [<Fact>]
 let ``Mark events as committed should clear uncommitted events`` () =
     // Arrange
-    let group = Group.create "Development Team" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let group = Group.create actorUserId "Development Team" None |> unwrapResult
     let userId = UserId.NewId()
-    let groupWithUser = Group.addUser userId group |> unwrapResult
+    let groupWithUser = Group.addUser actorUserId userId group |> unwrapResult
 
     // Verify we have events before committing
     let eventsBefore = Group.getUncommittedEvents groupWithUser
@@ -324,11 +341,12 @@ let ``Mark events as committed should clear uncommitted events`` () =
 [<Fact>]
 let ``Group creation with single user should succeed`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let userId = UserId.NewId()
     let userIds = Some [ userId ]
 
     // Act
-    let result = Group.create "Development Team" userIds
+    let result = Group.create actorUserId "Development Team" userIds
 
     // Assert
     match result with
@@ -355,13 +373,14 @@ let ``Group creation with single user should succeed`` () =
 [<Fact>]
 let ``Group creation with multiple users should succeed`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let user1 = UserId.NewId()
     let user2 = UserId.NewId()
     let user3 = UserId.NewId()
     let userIds = Some [ user1; user2; user3 ]
 
     // Act
-    let result = Group.create "Marketing Team" userIds
+    let result = Group.create actorUserId "Marketing Team" userIds
 
     // Assert
     match result with
@@ -382,12 +401,13 @@ let ``Group creation with multiple users should succeed`` () =
 [<Fact>]
 let ``Group creation with duplicate users should remove duplicates`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let user1 = UserId.NewId()
     let user2 = UserId.NewId()
     let userIds = Some [ user1; user2; user1; user2; user1 ] // Duplicates
 
     // Act
-    let result = Group.create "QA Team" userIds
+    let result = Group.create actorUserId "QA Team" userIds
 
     // Assert
     match result with
@@ -405,10 +425,11 @@ let ``Group creation with duplicate users should remove duplicates`` () =
 [<Fact>]
 let ``Group creation with empty user list should succeed`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let userIds = Some []
 
     // Act
-    let result = Group.create "Empty Team" userIds
+    let result = Group.create actorUserId "Empty Team" userIds
 
     // Assert
     match result with

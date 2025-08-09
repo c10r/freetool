@@ -14,7 +14,7 @@ type IResourceRepository =
 
     abstract member UpdateAsync: ValidatedResource -> Task<Result<unit, DomainError>>
 
-    abstract member DeleteAsync: ResourceId -> Task<Result<unit, DomainError>>
+    abstract member DeleteAsync: ResourceId -> IDomainEvent option -> Task<Result<unit, DomainError>>
 
     abstract member ExistsAsync: ResourceId -> Task<bool>
 

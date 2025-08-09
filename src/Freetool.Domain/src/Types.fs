@@ -11,15 +11,6 @@ type DomainError =
 type IEntity<'TId> =
     abstract member Id: 'TId
 
-type IDomainEvent =
-    abstract member OccurredAt: DateTime
-    abstract member EventId: Guid
-
-type EventSourcingAggregate<'T> = {
-    State: 'T
-    UncommittedEvents: IDomainEvent list
-}
-
 type ExecutableHttpRequest = {
     BaseUrl: string
     UrlParameters: (string * string) list

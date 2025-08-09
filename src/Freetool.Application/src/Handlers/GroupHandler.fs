@@ -18,7 +18,7 @@ module GroupHandler =
         : Task<Result<GroupCommandResult, DomainError>> =
         task {
             match command with
-            | CreateGroup validatedGroup ->
+            | CreateGroup(actorUserId, validatedGroup) ->
                 // Check if group name already exists
                 let! existsByName = groupRepository.ExistsByNameAsync(Group.getName validatedGroup)
 
@@ -47,7 +47,7 @@ module GroupHandler =
                     | [] ->
                         let validatedUserIds = userIds |> List.distinct
                         // Create event-aware group from the validated group with validated user IDs
-                        match Group.create (Group.getName validatedGroup) (Some validatedUserIds) with
+                        match Group.create actorUserId (Group.getName validatedGroup) (Some validatedUserIds) with
                         | Error error -> return Error error
                         | Ok eventAwareGroup ->
                             // Save group and events atomically
@@ -64,7 +64,7 @@ module GroupHandler =
 
                         return Error(ValidationError message)
 
-            | DeleteGroup groupId ->
+            | DeleteGroup(actorUserId, groupId) ->
                 match Guid.TryParse groupId with
                 | false, _ -> return Error(ValidationError "Invalid group ID format")
                 | true, guid ->
@@ -75,7 +75,7 @@ module GroupHandler =
                     | None -> return Error(NotFound "Group not found")
                     | Some group ->
                         // Mark group for deletion to create the delete event
-                        let groupWithDeleteEvent = Group.markForDeletion group
+                        let groupWithDeleteEvent = Group.markForDeletion actorUserId group
                         let deleteEvent = Group.getUncommittedEvents groupWithDeleteEvent |> List.tryHead
 
                         // Delete group and save event atomically
@@ -83,7 +83,7 @@ module GroupHandler =
                         | Error error -> return Error error
                         | Ok() -> return Ok(UnitResult())
 
-            | UpdateGroupName(groupId, dto) ->
+            | UpdateGroupName(actorUserId, groupId, dto) ->
                 match Guid.TryParse groupId with
                 | false, _ -> return Error(ValidationError "Invalid group ID format")
                 | true, guid ->
@@ -101,7 +101,7 @@ module GroupHandler =
                                 return Error(Conflict "A group with this name already exists")
                             else
                                 // Update name using domain method (automatically creates event)
-                                match Group.updateName dto.Name group with
+                                match Group.updateName actorUserId dto.Name group with
                                 | Error error -> return Error error
                                 | Ok updatedGroup ->
                                     // Save group and events atomically
@@ -111,7 +111,7 @@ module GroupHandler =
                         else
                             return Ok(GroupResult(group.State))
 
-            | AddUserToGroup(groupId, dto) ->
+            | AddUserToGroup(actorUserId, groupId, dto) ->
                 match Guid.TryParse groupId, Guid.TryParse dto.UserId with
                 | (false, _), _ -> return Error(ValidationError "Invalid group ID format")
                 | _, (false, _) -> return Error(ValidationError "Invalid user ID format")
@@ -132,7 +132,7 @@ module GroupHandler =
                             return Error(NotFound "User not found")
                         else
                             // Add user using domain method (automatically creates event)
-                            match Group.addUser userIdObj group with
+                            match Group.addUser actorUserId userIdObj group with
                             | Error error -> return Error error
                             | Ok updatedGroup ->
                                 // Save group and events atomically
@@ -140,7 +140,7 @@ module GroupHandler =
                                 | Error error -> return Error error
                                 | Ok() -> return Ok(GroupResult(updatedGroup.State))
 
-            | RemoveUserFromGroup(groupId, dto) ->
+            | RemoveUserFromGroup(actorUserId, groupId, dto) ->
                 match Guid.TryParse groupId, Guid.TryParse dto.UserId with
                 | (false, _), _ -> return Error(ValidationError "Invalid group ID format")
                 | _, (false, _) -> return Error(ValidationError "Invalid user ID format")
@@ -154,7 +154,7 @@ module GroupHandler =
                     | None -> return Error(NotFound "Group not found")
                     | Some group ->
                         // Remove user using domain method (automatically creates event)
-                        match Group.removeUser userIdObj group with
+                        match Group.removeUser actorUserId userIdObj group with
                         | Error error -> return Error error
                         | Ok updatedGroup ->
                             // Save group and events atomically

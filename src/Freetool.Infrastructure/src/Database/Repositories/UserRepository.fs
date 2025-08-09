@@ -33,7 +33,7 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
             return userDatas |> Seq.map (fun data -> User.fromData data) |> Seq.toList
         }
 
-        member _.AddAsync(user: ValidatedUser) : Task<Result<unit, DomainError>> = task {
+        member _.AddAsync(user: ValidatedUser) : Task<Result<ValidatedUser, DomainError>> = task {
             use transaction = context.Database.BeginTransaction()
 
             try
@@ -49,7 +49,7 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
 
                 // 3. Commit everything atomically
                 transaction.Commit()
-                return Ok()
+                return Ok user
 
             with
             | :? DbUpdateException as ex ->
@@ -60,7 +60,7 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
                 return Error(InvalidOperation $"Transaction failed: {ex.Message}")
         }
 
-        member _.UpdateAsync(user: ValidatedUser) : Task<Result<unit, DomainError>> = task {
+        member _.UpdateAsync(user: ValidatedUser) : Task<Result<ValidatedUser, DomainError>> = task {
             use transaction = context.Database.BeginTransaction()
 
             try
@@ -83,7 +83,7 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
                         do! eventRepository.SaveEventAsync event
 
                     transaction.Commit()
-                    return Ok()
+                    return Ok user
             with
             | :? DbUpdateException as ex ->
                 transaction.Rollback()

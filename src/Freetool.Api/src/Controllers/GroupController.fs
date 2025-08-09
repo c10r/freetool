@@ -12,16 +12,17 @@ open Freetool.Application.Mappers
 [<ApiController>]
 [<Route("group")>]
 type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand, GroupCommandResult>) =
-    inherit ControllerBase()
+    inherit AuthenticatedControllerBase()
 
     [<HttpPost>]
     member this.CreateGroup([<FromBody>] createDto: CreateGroupDto) : Task<IActionResult> = task {
+        let userId = this.CurrentUserId
         let unvalidatedGroup = GroupMapper.fromCreateDto createDto
 
         match Group.validate unvalidatedGroup with
         | Error domainError -> return this.HandleDomainError(domainError)
         | Ok validatedGroup ->
-            let! result = commandHandler.HandleCommand(CreateGroup validatedGroup)
+            let! result = commandHandler.HandleCommand(CreateGroup(userId, validatedGroup))
 
             return
                 match result with
@@ -84,7 +85,8 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
 
     [<HttpPut("{id}/name")>]
     member this.UpdateGroupName(id: string, [<FromBody>] updateDto: UpdateGroupNameDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand(UpdateGroupName(id, updateDto))
+        let userId = this.CurrentUserId
+        let! result = commandHandler.HandleCommand(UpdateGroupName(userId, id, updateDto))
 
         return
             match result with
@@ -95,7 +97,8 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
 
     [<HttpPost("{id}/users")>]
     member this.AddUserToGroup(id: string, [<FromBody>] addUserDto: AddUserToGroupDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand(AddUserToGroup(id, addUserDto))
+        let userId = this.CurrentUserId
+        let! result = commandHandler.HandleCommand(AddUserToGroup(userId, id, addUserDto))
 
         return
             match result with
@@ -109,7 +112,8 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
         (id: string, [<FromBody>] removeUserDto: RemoveUserFromGroupDto)
         : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand(RemoveUserFromGroup(id, removeUserDto))
+            let userId = this.CurrentUserId
+            let! result = commandHandler.HandleCommand(RemoveUserFromGroup(userId, id, removeUserDto))
 
             return
                 match result with
@@ -120,7 +124,8 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
 
     [<HttpDelete("{id}")>]
     member this.DeleteGroup(id: string) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand(DeleteGroup id)
+        let userId = this.CurrentUserId
+        let! result = commandHandler.HandleCommand(DeleteGroup(userId, id))
 
         return
             match result with

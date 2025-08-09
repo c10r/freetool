@@ -30,6 +30,7 @@
     <Compile Include="src/Tracing/AutoTracing.fs" />
     <Compile Include="src/Tracing/TracingUserCommandHandlerDecorator.fs" />
     <Compile Include="src/Middleware/TailscaleAuthMiddleware.fs" />
+    <Compile Include="src/Controllers/AuthenticatedControllerBase.fs" />
     <Compile Include="src/Controllers/UserController.fs" />
     <Compile Include="src/Controllers/GroupController.fs" />
     <Compile Include="src/Controllers/ResourceController.fs" />

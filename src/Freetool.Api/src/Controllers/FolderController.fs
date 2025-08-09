@@ -15,14 +15,16 @@ type FolderController
         folderRepository: IFolderRepository,
         commandHandler: IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>
     ) =
-    inherit ControllerBase()
+    inherit AuthenticatedControllerBase()
 
     [<HttpPost>]
     member this.CreateFolder([<FromBody>] createDto: CreateFolderDto) : Task<IActionResult> = task {
-        match FolderMapper.fromCreateDto createDto with
+        let userId = this.CurrentUserId
+
+        match FolderMapper.fromCreateDto userId createDto with
         | Error domainError -> return this.HandleDomainError(domainError)
         | Ok validatedFolder ->
-            let! result = commandHandler.HandleCommand folderRepository (CreateFolder validatedFolder)
+            let! result = commandHandler.HandleCommand folderRepository (CreateFolder(userId, validatedFolder))
 
             return
                 match result with
@@ -114,7 +116,8 @@ type FolderController
 
     [<HttpPut("{id}/name")>]
     member this.UpdateFolderName(id: string, [<FromBody>] updateDto: UpdateFolderNameDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand folderRepository (UpdateFolderName(id, updateDto))
+        let userId = this.CurrentUserId
+        let! result = commandHandler.HandleCommand folderRepository (UpdateFolderName(userId, id, updateDto))
 
         return
             match result with
@@ -125,7 +128,8 @@ type FolderController
 
     [<HttpPut("{id}/move")>]
     member this.MoveFolder(id: string, [<FromBody>] moveDto: MoveFolderDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand folderRepository (MoveFolder(id, moveDto))
+        let userId = this.CurrentUserId
+        let! result = commandHandler.HandleCommand folderRepository (MoveFolder(userId, id, moveDto))
 
         return
             match result with
@@ -136,7 +140,8 @@ type FolderController
 
     [<HttpDelete("{id}")>]
     member this.DeleteFolder(id: string) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand folderRepository (DeleteFolder id)
+        let userId = this.CurrentUserId
+        let! result = commandHandler.HandleCommand folderRepository (DeleteFolder(userId, id))
 
         return
             match result with

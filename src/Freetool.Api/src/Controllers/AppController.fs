@@ -20,10 +20,11 @@ type AppController
         runRepository: IRunRepository,
         commandHandler: IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>
     ) =
-    inherit ControllerBase()
+    inherit AuthenticatedControllerBase()
 
     [<HttpPost>]
     member this.CreateApp([<FromBody>] createDto: CreateAppDto) : Task<IActionResult> = task {
+        let userId = this.CurrentUserId
         let createRequest = AppMapper.fromCreateDto createDto
 
         // Parse FolderId and ResourceId
@@ -50,6 +51,7 @@ type AppController
                 // Use Domain method that enforces no-override business rule
                 match
                     App.createWithResource
+                        userId
                         createRequest.Name
                         folderId
                         resource
@@ -61,7 +63,7 @@ type AppController
                 with
                 | Error domainError -> return this.HandleDomainError(domainError)
                 | Ok validatedApp ->
-                    let! result = commandHandler.HandleCommand appRepository (CreateApp validatedApp)
+                    let! result = commandHandler.HandleCommand appRepository (CreateApp(userId, validatedApp))
 
                     return
                         match result with
@@ -123,7 +125,8 @@ type AppController
 
     [<HttpPut("{id}/name")>]
     member this.UpdateAppName(id: string, [<FromBody>] updateDto: UpdateAppNameDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand appRepository (UpdateAppName(id, updateDto))
+        let userId = this.CurrentUserId
+        let! result = commandHandler.HandleCommand appRepository (UpdateAppName(userId, id, updateDto))
 
         return
             match result with
@@ -134,7 +137,8 @@ type AppController
 
     [<HttpPut("{id}/inputs")>]
     member this.UpdateAppInputs(id: string, [<FromBody>] updateDto: UpdateAppInputsDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand appRepository (UpdateAppInputs(id, updateDto))
+        let userId = this.CurrentUserId
+        let! result = commandHandler.HandleCommand appRepository (UpdateAppInputs(userId, id, updateDto))
 
         return
             match result with
@@ -145,7 +149,8 @@ type AppController
 
     [<HttpDelete("{id}")>]
     member this.DeleteApp(id: string) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand appRepository (DeleteApp id)
+        let userId = this.CurrentUserId
+        let! result = commandHandler.HandleCommand appRepository (DeleteApp(userId, id))
 
         return
             match result with
@@ -156,8 +161,14 @@ type AppController
 
     [<HttpPost("{id}/run")>]
     member this.RunApp(id: string, [<FromBody>] createRunDto: CreateRunDto) : Task<IActionResult> = task {
+        let userId = this.CurrentUserId
+
         let! result =
-            RunHandler.handleCommand runRepository appRepository resourceRepository (CreateRun(id, createRunDto))
+            RunHandler.handleCommand
+                runRepository
+                appRepository
+                resourceRepository
+                (CreateRun(userId, id, createRunDto))
 
         return
             match result with

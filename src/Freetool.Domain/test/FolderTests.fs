@@ -16,7 +16,8 @@ let unwrapResult result =
 [<Fact>]
 let ``Folder creation should generate FolderCreatedEvent`` () =
     // Arrange & Act
-    let result = Folder.create "My Documents" None
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let result = Folder.create actorUserId "My Documents" None
 
     // Assert
     match result with
@@ -34,10 +35,11 @@ let ``Folder creation should generate FolderCreatedEvent`` () =
 [<Fact>]
 let ``Folder creation with parent should generate correct event`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let parentId = FolderId.NewId()
 
     // Act
-    let result = Folder.create "Sub Folder" (Some parentId)
+    let result = Folder.create actorUserId "Sub Folder" (Some parentId)
 
     // Assert
     match result with
@@ -55,10 +57,11 @@ let ``Folder creation with parent should generate correct event`` () =
 [<Fact>]
 let ``Folder name update should generate correct event`` () =
     // Arrange
-    let folder = Folder.create "Old Folder Name" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let folder = Folder.create actorUserId "Old Folder Name" None |> unwrapResult
 
     // Act
-    let result = Folder.updateName "New Folder Name" folder
+    let result = Folder.updateName actorUserId "New Folder Name" folder
 
     // Assert
     match result with
@@ -81,11 +84,12 @@ let ``Folder name update should generate correct event`` () =
 [<Fact>]
 let ``Folder move to parent should generate correct event`` () =
     // Arrange
-    let folder = Folder.create "Mobile Folder" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let folder = Folder.create actorUserId "Mobile Folder" None |> unwrapResult
     let newParentId = FolderId.NewId()
 
     // Act
-    let movedFolder = Folder.moveToParent (Some newParentId) folder
+    let movedFolder = Folder.moveToParent actorUserId (Some newParentId) folder
 
     // Assert
     let events = Folder.getUncommittedEvents movedFolder
@@ -105,11 +109,14 @@ let ``Folder move to parent should generate correct event`` () =
 [<Fact>]
 let ``Folder move to root should generate correct event`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let parentId = FolderId.NewId()
-    let folder = Folder.create "Child Folder" (Some parentId) |> unwrapResult
+
+    let folder =
+        Folder.create actorUserId "Child Folder" (Some parentId) |> unwrapResult
 
     // Act
-    let movedFolder = Folder.moveToParent None folder
+    let movedFolder = Folder.moveToParent actorUserId None folder
 
     // Assert
     let events = Folder.getUncommittedEvents movedFolder
@@ -129,7 +136,8 @@ let ``Folder move to root should generate correct event`` () =
 [<Fact>]
 let ``Folder creation should reject empty name`` () =
     // Act
-    let result = Folder.create "" None
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let result = Folder.create actorUserId "" None
 
     // Assert
     match result with
@@ -139,10 +147,11 @@ let ``Folder creation should reject empty name`` () =
 [<Fact>]
 let ``Folder creation should reject name longer than 100 characters`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let longName = String.replicate 101 "a"
 
     // Act
-    let result = Folder.create longName None
+    let result = Folder.create actorUserId longName None
 
     // Assert
     match result with
@@ -152,10 +161,11 @@ let ``Folder creation should reject name longer than 100 characters`` () =
 [<Fact>]
 let ``Folder deletion should generate FolderDeletedEvent`` () =
     // Arrange
-    let folder = Folder.create "Test Folder" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let folder = Folder.create actorUserId "Test Folder" None |> unwrapResult
 
     // Act
-    let deletedFolder = Folder.markForDeletion folder
+    let deletedFolder = Folder.markForDeletion actorUserId folder
 
     // Assert
     let events = Folder.getUncommittedEvents deletedFolder
@@ -168,9 +178,12 @@ let ``Folder deletion should generate FolderDeletedEvent`` () =
 [<Fact>]
 let ``Root folder should be identified correctly`` () =
     // Arrange
-    let rootFolder = Folder.create "Root Folder" None |> unwrapResult
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let rootFolder = Folder.create actorUserId "Root Folder" None |> unwrapResult
     let parentId = FolderId.NewId()
-    let childFolder = Folder.create "Child Folder" (Some parentId) |> unwrapResult
+
+    let childFolder =
+        Folder.create actorUserId "Child Folder" (Some parentId) |> unwrapResult
 
     // Act & Assert
     Assert.True(Folder.isRoot rootFolder)

@@ -9,7 +9,7 @@ open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Infrastructure.Database
 
-type ResourceRepository(context: FreetoolDbContext) =
+type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepository) =
 
     interface IResourceRepository with
 
@@ -32,58 +32,109 @@ type ResourceRepository(context: FreetoolDbContext) =
         }
 
         member _.AddAsync(resource: ValidatedResource) : Task<Result<unit, DomainError>> = task {
+            use transaction = context.Database.BeginTransaction()
+
             try
+                // 1. Save resource to database
                 context.Resources.Add resource.State |> ignore
                 let! _ = context.SaveChangesAsync()
+
+                // 2. Save event to database
+                let events = Resource.getUncommittedEvents resource
+
+                for event in events do
+                    do! eventRepository.SaveEventAsync event
+
+                // 3. Save to database
+                transaction.Commit()
                 return Ok()
             with
-            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to add resource: {ex.Message}")
-            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
+            | :? DbUpdateException as ex ->
+                transaction.Rollback()
+                return Error(Conflict $"Failed to add resource: {ex.Message}")
+            | ex ->
+                transaction.Rollback()
+                return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
         member _.UpdateAsync(resource: ValidatedResource) : Task<Result<unit, DomainError>> = task {
+            use transaction = context.Database.BeginTransaction()
+
             try
                 let guidId = (Resource.getId resource).Value
                 let! existingData = context.Resources.FirstOrDefaultAsync(fun r -> r.Id.Value = guidId)
 
                 match Option.ofObj existingData with
-                | None -> return Error(NotFound "Resource not found")
+                | None ->
+                    transaction.Rollback()
+                    return Error(NotFound "Resource not found")
                 | Some _ ->
                     // Update the entity directly
                     context.Resources.Update(resource.State) |> ignore
                     let! _ = context.SaveChangesAsync()
+
+                    // Save event to database
+                    let events = Resource.getUncommittedEvents resource
+
+                    for event in events do
+                        do! eventRepository.SaveEventAsync event
+
+                    // Commit transaction
+                    transaction.Commit()
                     return Ok()
             with
-            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to update resource: {ex.Message}")
-            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
+            | :? DbUpdateException as ex ->
+                transaction.Rollback()
+                return Error(Conflict $"Failed to update resource: {ex.Message}")
+            | ex ->
+                transaction.Rollback()
+                return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
-        member _.DeleteAsync(resourceId: ResourceId) : Task<Result<unit, DomainError>> = task {
-            try
-                let guidId = resourceId.Value
+        member _.DeleteAsync
+            (resourceId: ResourceId)
+            (deleteEvent: IDomainEvent option)
+            : Task<Result<unit, DomainError>> =
+            task {
+                use transaction = context.Database.BeginTransaction()
 
-                let! resourceData =
-                    context.Resources
-                        .IgnoreQueryFilters()
-                        .FirstOrDefaultAsync(fun r -> r.Id.Value = guidId)
+                try
+                    let guidId = resourceId.Value
 
-                match Option.ofObj resourceData with
-                | None -> return Error(NotFound "Resource not found")
-                | Some data ->
-                    // Soft delete: create updated record with IsDeleted flag
-                    let updatedData = {
-                        data with
-                            IsDeleted = true
-                            UpdatedAt = System.DateTime.UtcNow
-                    }
+                    let! resourceData =
+                        context.Resources
+                            .IgnoreQueryFilters()
+                            .FirstOrDefaultAsync(fun r -> r.Id.Value = guidId)
 
-                    context.Resources.Update(updatedData) |> ignore
-                    let! _ = context.SaveChangesAsync()
-                    return Ok()
-            with
-            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete resource: {ex.Message}")
-            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
-        }
+                    match Option.ofObj resourceData with
+                    | None -> return Error(NotFound "Resource not found")
+                    | Some data ->
+                        // Soft delete: create updated record with IsDeleted flag
+                        let updatedData = {
+                            data with
+                                IsDeleted = true
+                                UpdatedAt = System.DateTime.UtcNow
+                        }
+
+                        context.Resources.Update(updatedData) |> ignore
+                        let! _ = context.SaveChangesAsync()
+
+                        // Save delete event if provided
+                        match deleteEvent with
+                        | Some event -> do! eventRepository.SaveEventAsync event
+                        | None -> ()
+
+                        // Commit transaction
+                        transaction.Commit()
+                        return Ok()
+                with
+                | :? DbUpdateException as ex ->
+                    transaction.Rollback()
+                    return Error(Conflict $"Failed to delete resource: {ex.Message}")
+                | ex ->
+                    transaction.Rollback()
+                    return Error(InvalidOperation $"Database error: {ex.Message}")
+            }
 
         member _.ExistsAsync(resourceId: ResourceId) : Task<bool> = task {
             let guidId = resourceId.Value

@@ -1,6 +1,7 @@
 namespace Freetool.Application.Commands
 
 open Freetool.Domain.Entities
+open Freetool.Domain.ValueObjects
 open Freetool.Application.DTOs
 
 type ResourceCommandResult =
@@ -9,13 +10,13 @@ type ResourceCommandResult =
     | ResourceUnitResult of unit
 
 type ResourceCommand =
-    | CreateResource of ValidatedResource
+    | CreateResource of actorUserId: UserId * ValidatedResource
     | GetResourceById of resourceId: string
     | GetAllResources of skip: int * take: int
-    | DeleteResource of resourceId: string
-    | UpdateResourceName of resourceId: string * UpdateResourceNameDto
-    | UpdateResourceDescription of resourceId: string * UpdateResourceDescriptionDto
-    | UpdateResourceBaseUrl of resourceId: string * UpdateResourceBaseUrlDto
-    | UpdateResourceUrlParameters of resourceId: string * UpdateResourceUrlParametersDto
-    | UpdateResourceHeaders of resourceId: string * UpdateResourceHeadersDto
-    | UpdateResourceBody of resourceId: string * UpdateResourceBodyDto
+    | DeleteResource of actorUserId: UserId * resourceId: string
+    | UpdateResourceName of actorUserId: UserId * resourceId: string * UpdateResourceNameDto
+    | UpdateResourceDescription of actorUserId: UserId * resourceId: string * UpdateResourceDescriptionDto
+    | UpdateResourceBaseUrl of actorUserId: UserId * resourceId: string * UpdateResourceBaseUrlDto
+    | UpdateResourceUrlParameters of actorUserId: UserId * resourceId: string * UpdateResourceUrlParametersDto
+    | UpdateResourceHeaders of actorUserId: UserId * resourceId: string * UpdateResourceHeadersDto
+    | UpdateResourceBody of actorUserId: UserId * resourceId: string * UpdateResourceBodyDto

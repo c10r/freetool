@@ -3,6 +3,7 @@ namespace Freetool.Domain.Entities
 open System
 open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
+open Freetool.Domain.ValueObjects
 open Microsoft.EntityFrameworkCore
 
 [<Table("Events")>]
@@ -41,4 +42,8 @@ type EventData = {
     [<Required>]
     [<Column("CreatedAt")>]
     CreatedAt: DateTime
+
+    [<Required>]
+    [<Column("UserId")>]
+    UserId: UserId
 }

@@ -1,6 +1,7 @@
 namespace Freetool.Application.Commands
 
 open Freetool.Domain.Entities
+open Freetool.Domain.ValueObjects
 open Freetool.Application.DTOs
 
 type AppCommandResult =
@@ -9,10 +10,10 @@ type AppCommandResult =
     | AppUnitResult of unit
 
 type AppCommand =
-    | CreateApp of ValidatedApp
+    | CreateApp of actorUserId: UserId * ValidatedApp
     | GetAppById of appId: string
     | GetAppsByFolderId of folderId: string * skip: int * take: int
     | GetAllApps of skip: int * take: int
-    | DeleteApp of appId: string
-    | UpdateAppName of appId: string * UpdateAppNameDto
-    | UpdateAppInputs of appId: string * UpdateAppInputsDto
+    | DeleteApp of actorUserId: UserId * appId: string
+    | UpdateAppName of actorUserId: UserId * appId: string * UpdateAppNameDto
+    | UpdateAppInputs of actorUserId: UserId * appId: string * UpdateAppInputsDto

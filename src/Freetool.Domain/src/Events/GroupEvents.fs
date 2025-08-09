@@ -15,57 +15,66 @@ type GroupCreatedEvent = {
     InitialUserIds: UserId list
     OccurredAt: DateTime
     EventId: Guid
+    ActorUserId: UserId
 } with
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
 
 type GroupUpdatedEvent = {
     GroupId: GroupId
     Changes: GroupChange list
     OccurredAt: DateTime
     EventId: Guid
+    ActorUserId: UserId
 } with
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
 
 type GroupDeletedEvent = {
     GroupId: GroupId
     OccurredAt: DateTime
     EventId: Guid
+    ActorUserId: UserId
 } with
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
 
 module GroupEvents =
-    let groupCreated (groupId: GroupId) (name: string) (initialUserIds: UserId list) =
+    let groupCreated (actorUserId: UserId) (groupId: GroupId) (name: string) (initialUserIds: UserId list) =
         {
             GroupId = groupId
             Name = name
             InitialUserIds = initialUserIds
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
+            ActorUserId = actorUserId
         }
         : GroupCreatedEvent
 
-    let groupUpdated (groupId: GroupId) (changes: GroupChange list) =
+    let groupUpdated (actorUserId: UserId) (groupId: GroupId) (changes: GroupChange list) =
         {
             GroupId = groupId
             Changes = changes
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
+            ActorUserId = actorUserId
         }
         : GroupUpdatedEvent
 
-    let groupDeleted (groupId: GroupId) =
+    let groupDeleted (actorUserId: UserId) (groupId: GroupId) =
         {
             GroupId = groupId
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
+            ActorUserId = actorUserId
         }
         : GroupDeletedEvent

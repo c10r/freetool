@@ -76,7 +76,11 @@ type UnvalidatedGroup = Group // From DTOs - potentially unsafe
 type ValidatedGroup = Group // Validated domain model and database data
 
 module Group =
-    let create (name: string) (userIds: UserId list option) : Result<ValidatedGroup, DomainError> =
+    let create
+        (actorUserId: UserId)
+        (name: string)
+        (userIds: UserId list option)
+        : Result<ValidatedGroup, DomainError> =
         match name with
         | "" -> Error(ValidationError "Group name cannot be empty")
         | nameValue when nameValue.Length > 100 -> Error(ValidationError "Group name cannot exceed 100 characters")
@@ -94,7 +98,7 @@ module Group =
             }
 
             let groupCreatedEvent =
-                GroupEvents.groupCreated groupData.Id groupData.Name validatedUserIds
+                GroupEvents.groupCreated actorUserId groupData.Id groupData.Name validatedUserIds
 
             Ok {
                 State = groupData
@@ -127,7 +131,11 @@ module Group =
                 UncommittedEvents = group.UncommittedEvents
             }
 
-    let updateName (newName: string) (group: ValidatedGroup) : Result<ValidatedGroup, DomainError> =
+    let updateName
+        (actorUserId: UserId)
+        (newName: string)
+        (group: ValidatedGroup)
+        : Result<ValidatedGroup, DomainError> =
         match newName with
         | "" -> Error(ValidationError "Group name cannot be empty")
         | nameValue when nameValue.Length > 100 -> Error(ValidationError "Group name cannot exceed 100 characters")
@@ -145,14 +153,16 @@ module Group =
                 }
 
                 let nameChangedEvent =
-                    GroupEvents.groupUpdated group.State.Id [ GroupChange.NameChanged(oldName, trimmedName) ]
+                    GroupEvents.groupUpdated actorUserId group.State.Id [
+                        GroupChange.NameChanged(oldName, trimmedName)
+                    ]
 
                 Ok {
                     State = updatedGroupData
                     UncommittedEvents = group.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
                 }
 
-    let addUser (userId: UserId) (group: ValidatedGroup) : Result<ValidatedGroup, DomainError> =
+    let addUser (actorUserId: UserId) (userId: UserId) (group: ValidatedGroup) : Result<ValidatedGroup, DomainError> =
         if List.contains userId group.State.UserIds then
             Error(Conflict "User is already a member of this group")
         else
@@ -163,14 +173,18 @@ module Group =
             }
 
             let userAddedEvent =
-                GroupEvents.groupUpdated group.State.Id [ GroupChange.UserAdded(userId) ]
+                GroupEvents.groupUpdated actorUserId group.State.Id [ GroupChange.UserAdded(userId) ]
 
             Ok {
                 State = updatedGroupData
                 UncommittedEvents = group.UncommittedEvents @ [ userAddedEvent :> IDomainEvent ]
             }
 
-    let removeUser (userId: UserId) (group: ValidatedGroup) : Result<ValidatedGroup, DomainError> =
+    let removeUser
+        (actorUserId: UserId)
+        (userId: UserId)
+        (group: ValidatedGroup)
+        : Result<ValidatedGroup, DomainError> =
         if not (List.contains userId group.State.UserIds) then
             Error(NotFound "User is not a member of this group")
         else
@@ -181,15 +195,15 @@ module Group =
             }
 
             let userRemovedEvent =
-                GroupEvents.groupUpdated group.State.Id [ GroupChange.UserRemoved(userId) ]
+                GroupEvents.groupUpdated actorUserId group.State.Id [ GroupChange.UserRemoved(userId) ]
 
             Ok {
                 State = updatedGroupData
                 UncommittedEvents = group.UncommittedEvents @ [ userRemovedEvent :> IDomainEvent ]
             }
 
-    let markForDeletion (group: ValidatedGroup) : ValidatedGroup =
-        let groupDeletedEvent = GroupEvents.groupDeleted group.State.Id
+    let markForDeletion (actorUserId: UserId) (group: ValidatedGroup) : ValidatedGroup =
+        let groupDeletedEvent = GroupEvents.groupDeleted actorUserId group.State.Id
 
         {
             group with

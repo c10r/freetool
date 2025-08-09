@@ -3,33 +3,14 @@ namespace Freetool.Api.Controllers
 open System.Threading.Tasks
 open Microsoft.AspNetCore.Mvc
 open Freetool.Domain
-open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 open Freetool.Application.Commands
 open Freetool.Application.Interfaces
-open Freetool.Application.Mappers
 
 [<ApiController>]
 [<Route("user")>]
 type UserController(userRepository: IUserRepository, commandHandler: ICommandHandler) =
-    inherit ControllerBase()
-
-    [<HttpPost>]
-    member this.CreateUser([<FromBody>] createDto: CreateUserDto) : Task<IActionResult> = task {
-        let unvalidatedUser = UserMapper.fromCreateDto createDto
-
-        match User.validate unvalidatedUser with
-        | Error domainError -> return this.HandleDomainError(domainError)
-        | Ok validatedUser ->
-            let! result = commandHandler.HandleCommand userRepository (CreateUser validatedUser)
-
-            return
-                match result with
-                | Ok(UserResult userDto) ->
-                    this.CreatedAtAction(nameof this.GetUserById, {| id = userDto.Id |}, userDto) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
-    }
+    inherit AuthenticatedControllerBase()
 
     [<HttpGet("{id}")>]
     member this.GetUserById(id: string) : Task<IActionResult> = task {
@@ -73,7 +54,8 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
 
     [<HttpPut("{id}/name")>]
     member this.UpdateUserName(id: string, [<FromBody>] updateDto: UpdateUserNameDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand userRepository (UpdateUserName(id, updateDto))
+        let userId = this.CurrentUserId
+        let! result = commandHandler.HandleCommand userRepository (UpdateUserName(userId, id, updateDto))
 
         return
             match result with
@@ -84,40 +66,47 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
 
     [<HttpPut("{id}/email")>]
     member this.UpdateUserEmail(id: string, [<FromBody>] updateDto: UpdateUserEmailDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand userRepository (UpdateUserEmail(id, updateDto))
+        let userId = this.CurrentUserId
+        let! result = commandHandler.HandleCommand userRepository (UpdateUserEmail(userId, id, updateDto))
 
         return
             match result with
-            | Ok(UserResult userDto) -> this.Ok(userDto) :> IActionResult
+            | Ok(UserResult userDto) -> this.Ok userDto :> IActionResult
             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-            | Error error -> this.HandleDomainError(error)
+            | Error error -> this.HandleDomainError error
     }
 
     [<HttpPut("{id}/profile-picture")>]
     member this.SetProfilePicture(id: string, [<FromBody>] setDto: SetProfilePictureDto) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand userRepository (SetProfilePicture(id, setDto))
+        let userId = this.CurrentUserId
+
+        let! result = commandHandler.HandleCommand userRepository (SetProfilePicture(userId, id, setDto))
 
         return
             match result with
-            | Ok(UserResult userDto) -> this.Ok(userDto) :> IActionResult
+            | Ok(UserResult userDto) -> this.Ok userDto :> IActionResult
             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-            | Error error -> this.HandleDomainError(error)
+            | Error error -> this.HandleDomainError error
     }
 
     [<HttpDelete("{id}/profile-picture")>]
     member this.RemoveProfilePicture(id: string) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand userRepository (RemoveProfilePicture id)
+        let userId = this.CurrentUserId
+
+        let! result = commandHandler.HandleCommand userRepository (RemoveProfilePicture(userId, id))
 
         return
             match result with
-            | Ok(UserResult userDto) -> this.Ok(userDto) :> IActionResult
+            | Ok(UserResult userDto) -> this.Ok userDto :> IActionResult
             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-            | Error error -> this.HandleDomainError(error)
+            | Error error -> this.HandleDomainError error
     }
 
     [<HttpDelete("{id}")>]
     member this.DeleteUser(id: string) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand userRepository (DeleteUser id)
+        let userId = this.CurrentUserId
+
+        let! result = commandHandler.HandleCommand userRepository (DeleteUser(userId, id))
 
         return
             match result with

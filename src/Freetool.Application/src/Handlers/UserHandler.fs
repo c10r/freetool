@@ -17,7 +17,7 @@ module UserHandler =
         : Task<Result<UserCommandResult, DomainError>> =
         task {
             match command with
-            | CreateUser validatedUser ->
+            | CreateUser(actorUserId, validatedUser) ->
                 // Check if email already exists
                 let email =
                     Email.Create(Some(User.getEmail validatedUser))
@@ -30,16 +30,16 @@ module UserHandler =
                 if existsByEmail then
                     return Error(Conflict "A user with this email already exists")
                 else
-                    // Create event-aware user from the validated user
+                    // Create event-aware user from the validated user with actorUserId
                     let eventAwareUser =
                         User.create (User.getName validatedUser) email (User.getProfilePicUrl validatedUser)
 
                     // Save user and events atomically
                     match! userRepository.AddAsync eventAwareUser with
                     | Error error -> return Error error
-                    | Ok() -> return Ok(UserCommandResult.UserResult(eventAwareUser.State))
+                    | Ok(user) -> return Ok(UserResult(user.State))
 
-            | DeleteUser userId ->
+            | DeleteUser(actorUserId, userId) ->
                 match Guid.TryParse userId with
                 | false, _ -> return Error(ValidationError "Invalid user ID format")
                 | true, guid ->
@@ -49,8 +49,8 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        // Mark user for deletion to create the delete event
-                        let userWithDeleteEvent = User.markForDeletion user
+                        // Mark user for deletion to create the delete event with actorUserId
+                        let userWithDeleteEvent = User.markForDeletion actorUserId user
                         let deleteEvent = User.getUncommittedEvents userWithDeleteEvent |> List.tryHead
 
                         // Delete user and save event atomically
@@ -58,7 +58,7 @@ module UserHandler =
                         | Error error -> return Error error
                         | Ok() -> return Ok(UserCommandResult.UnitResult())
 
-            | UpdateUserName(userId, dto) ->
+            | UpdateUserName(actorUserId, userId, dto) ->
                 match Guid.TryParse userId with
                 | false, _ -> return Error(ValidationError "Invalid user ID format")
                 | true, guid ->
@@ -68,16 +68,16 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        // Update name using domain method (automatically creates event)
-                        match User.updateName (Some dto.Name) user with
+                        // Update name using domain method with actor (automatically creates event)
+                        match User.updateName actorUserId (Some dto.Name) user with
                         | Error error -> return Error error
                         | Ok updatedUser ->
                             // Save user and events atomically
                             match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(UserCommandResult.UserResult(updatedUser.State))
+                            | Ok(user) -> return Ok(UserResult(user.State))
 
-            | UpdateUserEmail(userId, dto) ->
+            | UpdateUserEmail(actorUserId, userId, dto) ->
                 match Guid.TryParse userId with
                 | false, _ -> return Error(ValidationError "Invalid user ID format")
                 | true, guid ->
@@ -87,16 +87,16 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        // Update email using domain method (automatically creates event)
-                        match User.updateEmail dto.Email user with
+                        // Update email using domain method with actor (automatically creates event)
+                        match User.updateEmail actorUserId dto.Email user with
                         | Error error -> return Error error
                         | Ok updatedUser ->
                             // Save user and events atomically
                             match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(UserCommandResult.UserResult(updatedUser.State))
+                            | Ok(user) -> return Ok(UserResult(user.State))
 
-            | SetProfilePicture(userId, dto) ->
+            | SetProfilePicture(actorUserId, userId, dto) ->
                 match Guid.TryParse userId with
                 | false, _ -> return Error(ValidationError "Invalid user ID format")
                 | true, guid ->
@@ -106,16 +106,16 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        // Update profile picture using domain method (automatically creates event)
-                        match User.updateProfilePic (Some dto.ProfilePicUrl) user with
+                        // Update profile picture using domain method with actor (automatically creates event)
+                        match User.updateProfilePic actorUserId (Some dto.ProfilePicUrl) user with
                         | Error error -> return Error error
                         | Ok updatedUser ->
                             // Save user and events atomically
                             match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(UserResult(updatedUser.State))
+                            | Ok(user) -> return Ok(UserResult(user.State))
 
-            | RemoveProfilePicture userId ->
+            | RemoveProfilePicture(actorUserId, userId) ->
                 match Guid.TryParse userId with
                 | false, _ -> return Error(ValidationError "Invalid user ID format")
                 | true, guid ->
@@ -125,13 +125,13 @@ module UserHandler =
                     match userOption with
                     | None -> return Error(NotFound "User not found")
                     | Some user ->
-                        // Remove profile picture using domain method (automatically creates event)
-                        let updatedUser = User.removeProfilePicture user
+                        // Remove profile picture using domain method with actor (automatically creates event)
+                        let updatedUser = User.removeProfilePicture actorUserId user
 
                         // Save user and events atomically
                         match! userRepository.UpdateAsync updatedUser with
                         | Error error -> return Error error
-                        | Ok() -> return Ok(UserCommandResult.UserResult(updatedUser.State))
+                        | Ok(user) -> return Ok(UserResult(user.State))
 
             | GetUserById userId ->
                 match Guid.TryParse userId with

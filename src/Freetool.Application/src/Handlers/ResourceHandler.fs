@@ -19,7 +19,7 @@ module ResourceHandler =
         : Task<Result<ResourceCommandResult, DomainError>> =
         task {
             match command with
-            | CreateResource validatedResource ->
+            | CreateResource(actorUserId, validatedResource) ->
                 // Check if name already exists
                 let resourceName =
                     ResourceName.Create(Some(Resource.getName validatedResource))
@@ -36,21 +36,28 @@ module ResourceHandler =
                     | Error error -> return Error error
                     | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
-            | DeleteResource resourceId ->
+            | DeleteResource(actorUserId, resourceId) ->
                 match Guid.TryParse resourceId with
                 | false, _ -> return Error(ValidationError "Invalid resource ID format")
                 | true, guid ->
                     let resourceIdObj = ResourceId.FromGuid guid
-                    let! exists = resourceRepository.ExistsAsync resourceIdObj
+                    let! resourceOption = resourceRepository.GetByIdAsync resourceIdObj
 
-                    if not exists then
-                        return Error(NotFound "Resource not found")
-                    else
-                        match! resourceRepository.DeleteAsync resourceIdObj with
+                    match resourceOption with
+                    | None -> return Error(NotFound "Resource not found")
+                    | Some resource ->
+                        // Mark resource for deletion to create the delete event
+                        let resourceWithDeleteEvent = Resource.markForDeletion actorUserId resource
+
+                        let deleteEvent =
+                            Resource.getUncommittedEvents resourceWithDeleteEvent |> List.tryHead
+
+                        // Delete resource and save event atomically
+                        match! resourceRepository.DeleteAsync resourceIdObj deleteEvent with
                         | Error error -> return Error error
                         | Ok() -> return Ok(ResourceUnitResult())
 
-            | UpdateResourceName(resourceId, dto) ->
+            | UpdateResourceName(actorUserId, resourceId, dto) ->
                 match Guid.TryParse resourceId with
                 | false, _ -> return Error(ValidationError "Invalid resource ID format")
                 | true, guid ->
@@ -70,7 +77,7 @@ module ResourceHandler =
                                 if existsByName then
                                     return Error(Conflict "A resource with this name already exists")
                                 else
-                                    match ResourceMapper.fromUpdateNameDto dto resource with
+                                    match ResourceMapper.fromUpdateNameDto actorUserId dto resource with
                                     | Error error -> return Error error
                                     | Ok validatedResource ->
                                         match! resourceRepository.UpdateAsync validatedResource with
@@ -78,14 +85,14 @@ module ResourceHandler =
                                         | Ok() -> return Ok(ResourceResult(validatedResource.State))
                         else
                             // Name hasn't changed, just update normally
-                            match ResourceMapper.fromUpdateNameDto dto resource with
+                            match ResourceMapper.fromUpdateNameDto actorUserId dto resource with
                             | Error error -> return Error error
                             | Ok validatedResource ->
                                 match! resourceRepository.UpdateAsync validatedResource with
                                 | Error error -> return Error error
                                 | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
-            | UpdateResourceDescription(resourceId, dto) ->
+            | UpdateResourceDescription(actorUserId, resourceId, dto) ->
                 match Guid.TryParse resourceId with
                 | false, _ -> return Error(ValidationError "Invalid resource ID format")
                 | true, guid ->
@@ -95,14 +102,14 @@ module ResourceHandler =
                     match resourceOption with
                     | None -> return Error(NotFound "Resource not found")
                     | Some resource ->
-                        match ResourceMapper.fromUpdateDescriptionDto dto resource with
+                        match ResourceMapper.fromUpdateDescriptionDto actorUserId dto resource with
                         | Error error -> return Error error
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
                             | Error error -> return Error error
                             | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
-            | UpdateResourceBaseUrl(resourceId, dto) ->
+            | UpdateResourceBaseUrl(actorUserId, resourceId, dto) ->
                 match Guid.TryParse resourceId with
                 | false, _ -> return Error(ValidationError "Invalid resource ID format")
                 | true, guid ->
@@ -112,14 +119,14 @@ module ResourceHandler =
                     match resourceOption with
                     | None -> return Error(NotFound "Resource not found")
                     | Some resource ->
-                        match ResourceMapper.fromUpdateBaseUrlDto dto resource with
+                        match ResourceMapper.fromUpdateBaseUrlDto actorUserId dto resource with
                         | Error error -> return Error error
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
                             | Error error -> return Error error
                             | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
-            | UpdateResourceUrlParameters(resourceId, dto) ->
+            | UpdateResourceUrlParameters(actorUserId, resourceId, dto) ->
                 match Guid.TryParse resourceId with
                 | false, _ -> return Error(ValidationError "Invalid resource ID format")
                 | true, guid ->
@@ -140,14 +147,14 @@ module ResourceHandler =
                                 Body = App.getBody app
                             })
 
-                        match ResourceMapper.fromUpdateUrlParametersDto dto appConflictData resource with
+                        match ResourceMapper.fromUpdateUrlParametersDto actorUserId dto appConflictData resource with
                         | Error error -> return Error error
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
                             | Error error -> return Error error
                             | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
-            | UpdateResourceHeaders(resourceId, dto) ->
+            | UpdateResourceHeaders(actorUserId, resourceId, dto) ->
                 match Guid.TryParse resourceId with
                 | false, _ -> return Error(ValidationError "Invalid resource ID format")
                 | true, guid ->
@@ -168,14 +175,14 @@ module ResourceHandler =
                                 Body = App.getBody app
                             })
 
-                        match ResourceMapper.fromUpdateHeadersDto dto appConflictData resource with
+                        match ResourceMapper.fromUpdateHeadersDto actorUserId dto appConflictData resource with
                         | Error error -> return Error error
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with
                             | Error error -> return Error error
                             | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
-            | UpdateResourceBody(resourceId, dto) ->
+            | UpdateResourceBody(actorUserId, resourceId, dto) ->
                 match Guid.TryParse resourceId with
                 | false, _ -> return Error(ValidationError "Invalid resource ID format")
                 | true, guid ->
@@ -196,7 +203,7 @@ module ResourceHandler =
                                 Body = App.getBody app
                             })
 
-                        match ResourceMapper.fromUpdateBodyDto dto appConflictData resource with
+                        match ResourceMapper.fromUpdateBodyDto actorUserId dto appConflictData resource with
                         | Error error -> return Error error
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with

@@ -10,11 +10,13 @@ type RunCreatedEvent = {
     InputValues: RunInputValue list
     OccurredAt: DateTime
     EventId: Guid
+    ActorUserId: UserId
 } with
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
 
 type RunStatusChangedEvent = {
     RunId: RunId
@@ -22,29 +24,33 @@ type RunStatusChangedEvent = {
     NewStatus: RunStatus
     OccurredAt: DateTime
     EventId: Guid
+    ActorUserId: UserId
 } with
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
 
 module RunEvents =
-    let runCreated (runId: RunId) (appId: AppId) (inputValues: RunInputValue list) =
+    let runCreated (actorUserId: UserId) (runId: RunId) (appId: AppId) (inputValues: RunInputValue list) =
         {
             RunId = runId
             AppId = appId
             InputValues = inputValues
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
+            ActorUserId = actorUserId
         }
         : RunCreatedEvent
 
-    let runStatusChanged (runId: RunId) (oldStatus: RunStatus) (newStatus: RunStatus) =
+    let runStatusChanged (actorUserId: UserId) (runId: RunId) (oldStatus: RunStatus) (newStatus: RunStatus) =
         {
             RunId = runId
             OldStatus = oldStatus
             NewStatus = newStatus
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
+            ActorUserId = actorUserId
         }
         : RunStatusChangedEvent

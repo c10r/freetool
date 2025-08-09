@@ -1,6 +1,7 @@
 namespace Freetool.Application.Commands
 
 open Freetool.Domain.Entities
+open Freetool.Domain.ValueObjects
 open Freetool.Application.DTOs
 
 type RunCommandResult =
@@ -9,7 +10,7 @@ type RunCommandResult =
     | RunUnitResult of unit
 
 type RunCommand =
-    | CreateRun of appId: string * CreateRunDto
+    | CreateRun of actorUserId: UserId * appId: string * CreateRunDto
     | GetRunById of runId: string
     | GetRunsByAppId of appId: string * skip: int * take: int
     | GetRunsByStatus of status: string * skip: int * take: int

@@ -51,6 +51,7 @@ type EventRepository(context: FreetoolDbContext) =
                 EventData = eventData
                 OccurredAt = event.OccurredAt
                 CreatedAt = DateTime.UtcNow
+                UserId = event.UserId
             }
 
             context.Events.Add(eventDataRecord) |> ignore

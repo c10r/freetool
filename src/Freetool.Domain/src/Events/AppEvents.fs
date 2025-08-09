@@ -29,35 +29,42 @@ type AppCreatedEvent = {
     Inputs: Input list
     OccurredAt: DateTime
     EventId: Guid
+    ActorUserId: UserId
 } with
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
 
 type AppUpdatedEvent = {
     AppId: AppId
     Changes: AppChange list
     OccurredAt: DateTime
     EventId: Guid
+    ActorUserId: UserId
 } with
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
 
 type AppDeletedEvent = {
     AppId: AppId
     OccurredAt: DateTime
     EventId: Guid
+    ActorUserId: UserId
 } with
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
 
 module AppEvents =
     let appCreated
+        (actorUserId: UserId)
         (appId: AppId)
         (name: AppName)
         (folderId: FolderId option)
@@ -72,22 +79,25 @@ module AppEvents =
             Inputs = inputs
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
+            ActorUserId = actorUserId
         }
         : AppCreatedEvent
 
-    let appUpdated (appId: AppId) (changes: AppChange list) =
+    let appUpdated (actorUserId: UserId) (appId: AppId) (changes: AppChange list) =
         {
             AppId = appId
             Changes = changes
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
+            ActorUserId = actorUserId
         }
         : AppUpdatedEvent
 
-    let appDeleted (appId: AppId) =
+    let appDeleted (actorUserId: UserId) (appId: AppId) =
         {
             AppId = appId
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
+            ActorUserId = actorUserId
         }
         : AppDeletedEvent

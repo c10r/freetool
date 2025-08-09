@@ -18,7 +18,7 @@ module FolderHandler =
         : Task<Result<FolderCommandResult, DomainError>> =
         task {
             match command with
-            | CreateFolder validatedFolder ->
+            | CreateFolder(actorUserId, validatedFolder) ->
                 // Check if a folder with the same name already exists in the parent
                 let folderName =
                     FolderName.Create(Some(Folder.getName validatedFolder))
@@ -50,7 +50,7 @@ module FolderHandler =
                             | Error error -> return Error error
                             | Ok() -> return Ok(FolderResult(validatedFolder.State))
 
-            | DeleteFolder folderId ->
+            | DeleteFolder(actorUserId, folderId) ->
                 match Guid.TryParse folderId with
                 | false, _ -> return Error(ValidationError "Invalid folder ID format")
                 | true, guid ->
@@ -66,11 +66,16 @@ module FolderHandler =
                         if not (List.isEmpty children) then
                             return Error(Conflict "Cannot delete folder that contains subfolders")
                         else
-                            match! folderRepository.DeleteAsync folderIdObj with
+                            // Mark folder for deletion to create the delete event
+                            let folderWithDeleteEvent = Folder.markForDeletion actorUserId folder
+                            let deleteEvent = Folder.getUncommittedEvents folderWithDeleteEvent |> List.tryHead
+
+                            // Delete folder and save event atomically
+                            match! folderRepository.DeleteAsync folderIdObj deleteEvent with
                             | Error error -> return Error error
                             | Ok() -> return Ok(FolderUnitResult())
 
-            | UpdateFolderName(folderId, dto) ->
+            | UpdateFolderName(actorUserId, folderId, dto) ->
                 match Guid.TryParse folderId with
                 | false, _ -> return Error(ValidationError "Invalid folder ID format")
                 | true, guid ->
@@ -94,7 +99,7 @@ module FolderHandler =
                                     return
                                         Error(Conflict "A folder with this name already exists in the parent directory")
                                 else
-                                    match FolderMapper.fromUpdateNameDto dto folder with
+                                    match FolderMapper.fromUpdateNameDto actorUserId dto folder with
                                     | Error error -> return Error error
                                     | Ok validatedFolder ->
                                         match! folderRepository.UpdateAsync validatedFolder with
@@ -102,14 +107,14 @@ module FolderHandler =
                                         | Ok() -> return Ok(FolderResult(validatedFolder.State))
                         else
                             // Name hasn't changed, just update normally
-                            match FolderMapper.fromUpdateNameDto dto folder with
+                            match FolderMapper.fromUpdateNameDto actorUserId dto folder with
                             | Error error -> return Error error
                             | Ok validatedFolder ->
                                 match! folderRepository.UpdateAsync validatedFolder with
                                 | Error error -> return Error error
                                 | Ok() -> return Ok(FolderResult(validatedFolder.State))
 
-            | MoveFolder(folderId, dto) ->
+            | MoveFolder(actorUserId, folderId, dto) ->
                 match Guid.TryParse folderId with
                 | false, _ -> return Error(ValidationError "Invalid folder ID format")
                 | true, guid ->
@@ -159,7 +164,7 @@ module FolderHandler =
                                                     "A folder with this name already exists in the target parent directory"
                                             )
                                     else
-                                        let movedFolder = FolderMapper.fromMoveDto dto folder
+                                        let movedFolder = FolderMapper.fromMoveDto actorUserId dto folder
 
                                         match! folderRepository.UpdateAsync movedFolder with
                                         | Error error -> return Error error
@@ -178,7 +183,7 @@ module FolderHandler =
                                     return
                                         Error(Conflict "A folder with this name already exists in the root directory")
                                 else
-                                    let movedFolder = FolderMapper.fromMoveDto dto folder
+                                    let movedFolder = FolderMapper.fromMoveDto actorUserId dto folder
 
                                     match! folderRepository.UpdateAsync movedFolder with
                                     | Error error -> return Error error

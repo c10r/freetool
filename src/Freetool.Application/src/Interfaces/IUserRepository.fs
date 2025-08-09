@@ -12,9 +12,9 @@ type IUserRepository =
 
     abstract member GetAllAsync: skip: int -> take: int -> Task<ValidatedUser list>
 
-    abstract member AddAsync: ValidatedUser -> Task<Result<unit, DomainError>>
+    abstract member AddAsync: ValidatedUser -> Task<Result<ValidatedUser, DomainError>>
 
-    abstract member UpdateAsync: ValidatedUser -> Task<Result<unit, DomainError>>
+    abstract member UpdateAsync: ValidatedUser -> Task<Result<ValidatedUser, DomainError>>
 
     abstract member DeleteAsync: UserId -> IDomainEvent option -> Task<Result<unit, DomainError>>
 

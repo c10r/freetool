@@ -24,35 +24,42 @@ type ResourceCreatedEvent = {
     Body: KeyValuePair list
     OccurredAt: DateTime
     EventId: Guid
+    ActorUserId: UserId
 } with
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
 
 type ResourceUpdatedEvent = {
     ResourceId: ResourceId
     Changes: ResourceChange list
     OccurredAt: DateTime
     EventId: Guid
+    ActorUserId: UserId
 } with
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
 
 type ResourceDeletedEvent = {
     ResourceId: ResourceId
     OccurredAt: DateTime
     EventId: Guid
+    ActorUserId: UserId
 } with
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
 
 module ResourceEvents =
     let resourceCreated
+        (actorUserId: UserId)
         (resourceId: ResourceId)
         (name: ResourceName)
         (description: ResourceDescription)
@@ -73,22 +80,25 @@ module ResourceEvents =
             Body = body
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
+            ActorUserId = actorUserId
         }
         : ResourceCreatedEvent
 
-    let resourceUpdated (resourceId: ResourceId) (changes: ResourceChange list) =
+    let resourceUpdated (actorUserId: UserId) (resourceId: ResourceId) (changes: ResourceChange list) =
         {
             ResourceId = resourceId
             Changes = changes
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
+            ActorUserId = actorUserId
         }
         : ResourceUpdatedEvent
 
-    let resourceDeleted (resourceId: ResourceId) =
+    let resourceDeleted (actorUserId: UserId) (resourceId: ResourceId) =
         {
             ResourceId = resourceId
             OccurredAt = DateTime.UtcNow
             EventId = Guid.NewGuid()
+            ActorUserId = actorUserId
         }
         : ResourceDeletedEvent

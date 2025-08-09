@@ -42,7 +42,7 @@ type TracingUserCommandHandlerDecorator(inner: ICommandHandler, activitySource: 
 
     member private this.AddCommandAttributes activity command =
         match command with
-        | CreateUser dto ->
+        | CreateUser(actorId, dto) ->
             Tracing.addUserAttributes activity None (Some(User.getEmail dto))
             Tracing.addAttribute activity "operation.type" "create"
         | GetUserById id ->
@@ -54,25 +54,25 @@ type TracingUserCommandHandlerDecorator(inner: ICommandHandler, activitySource: 
         | GetAllUsers(skip, take) ->
             Tracing.addPaginationAttributes activity skip take None
             Tracing.addAttribute activity "operation.type" "read"
-        | UpdateUserName(id, nameDto) ->
+        | UpdateUserName(actorId, id, nameDto) ->
             Tracing.addUserAttributes activity (Some id) None
             Tracing.addAttribute activity "operation.type" "update"
             Tracing.addAttribute activity "update.field" "name"
             Tracing.addAttribute activity "update.value" nameDto.Name
-        | UpdateUserEmail(id, emailDto) ->
+        | UpdateUserEmail(actorId, id, emailDto) ->
             Tracing.addUserAttributes activity (Some id) None
             Tracing.addAttribute activity "operation.type" "update"
             Tracing.addAttribute activity "update.field" "email"
             Tracing.addAttribute activity "update.value" emailDto.Email
-        | SetProfilePicture(id, urlDto) ->
+        | SetProfilePicture(actorId, id, urlDto) ->
             Tracing.addUserAttributes activity (Some id) None
             Tracing.addAttribute activity "operation.type" "update"
             Tracing.addAttribute activity "profile_picture.url" urlDto.ProfilePicUrl
-        | RemoveProfilePicture id ->
+        | RemoveProfilePicture(actorId, id) ->
             Tracing.addUserAttributes activity (Some id) None
             Tracing.addAttribute activity "operation.type" "update"
-        | DeleteUser id ->
-            Tracing.addUserAttributes activity (Some id) None
+        | DeleteUser(id, event) ->
+            Tracing.addUserAttributes activity (Some(id.Value.ToString())) None
             Tracing.addAttribute activity "operation.type" "delete"
 
     member private this.AddSuccessAttributes activity command result =

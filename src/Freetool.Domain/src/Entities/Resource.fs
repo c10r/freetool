@@ -78,6 +78,7 @@ module Resource =
     }
 
     let create
+        (actorUserId: UserId)
         (name: string)
         (description: string)
         (baseUrl: string)
@@ -141,6 +142,7 @@ module Resource =
 
                                     let resourceCreatedEvent =
                                         ResourceEvents.resourceCreated
+                                            actorUserId
                                             resourceData.Id
                                             validName
                                             validDescription
@@ -155,7 +157,11 @@ module Resource =
                                         UncommittedEvents = [ resourceCreatedEvent :> IDomainEvent ]
                                     }
 
-    let updateName (newName: string) (resource: ValidatedResource) : Result<ValidatedResource, DomainError> =
+    let updateName
+        (actorUserId: UserId)
+        (newName: string)
+        (resource: ValidatedResource)
+        : Result<ValidatedResource, DomainError> =
         match ResourceName.Create(Some newName) with
         | Error err -> Error err
         | Ok validName ->
@@ -168,7 +174,9 @@ module Resource =
             }
 
             let nameChangedEvent =
-                ResourceEvents.resourceUpdated resource.State.Id [ ResourceChange.NameChanged(oldName, validName) ]
+                ResourceEvents.resourceUpdated actorUserId resource.State.Id [
+                    ResourceChange.NameChanged(oldName, validName)
+                ]
 
             Ok {
                 State = updatedResourceData
@@ -176,6 +184,7 @@ module Resource =
             }
 
     let updateDescription
+        (actorUserId: UserId)
         (newDescription: string)
         (resource: ValidatedResource)
         : Result<ValidatedResource, DomainError> =
@@ -191,7 +200,7 @@ module Resource =
             }
 
             let descriptionChangedEvent =
-                ResourceEvents.resourceUpdated resource.State.Id [
+                ResourceEvents.resourceUpdated actorUserId resource.State.Id [
                     ResourceChange.DescriptionChanged(oldDescription, validDescription)
                 ]
 
@@ -200,7 +209,11 @@ module Resource =
                 UncommittedEvents = resource.UncommittedEvents @ [ descriptionChangedEvent :> IDomainEvent ]
             }
 
-    let updateBaseUrl (newBaseUrl: string) (resource: ValidatedResource) : Result<ValidatedResource, DomainError> =
+    let updateBaseUrl
+        (actorUserId: UserId)
+        (newBaseUrl: string)
+        (resource: ValidatedResource)
+        : Result<ValidatedResource, DomainError> =
         match BaseUrl.Create(Some newBaseUrl) with
         | Error err -> Error err
         | Ok validBaseUrl ->
@@ -213,7 +226,7 @@ module Resource =
             }
 
             let baseUrlChangedEvent =
-                ResourceEvents.resourceUpdated resource.State.Id [
+                ResourceEvents.resourceUpdated actorUserId resource.State.Id [
                     ResourceChange.BaseUrlChanged(oldBaseUrl, validBaseUrl)
                 ]
 
@@ -231,6 +244,7 @@ module Resource =
         BusinessRules.checkAppToResourceConflicts apps urlParameters headers body
 
     let updateUrlParameters
+        (actorUserId: UserId)
         (newUrlParameters: (string * string) list)
         (apps: AppResourceConflictData list)
         (resource: ValidatedResource)
@@ -263,7 +277,7 @@ module Resource =
                 }
 
                 let urlParamsChangedEvent =
-                    ResourceEvents.resourceUpdated resource.State.Id [
+                    ResourceEvents.resourceUpdated actorUserId resource.State.Id [
                         ResourceChange.UrlParametersChanged(oldUrlParams, validUrlParams)
                     ]
 
@@ -273,6 +287,7 @@ module Resource =
                 }
 
     let updateHeaders
+        (actorUserId: UserId)
         (newHeaders: (string * string) list)
         (apps: AppResourceConflictData list)
         (resource: ValidatedResource)
@@ -305,7 +320,7 @@ module Resource =
                 }
 
                 let headersChangedEvent =
-                    ResourceEvents.resourceUpdated resource.State.Id [
+                    ResourceEvents.resourceUpdated actorUserId resource.State.Id [
                         ResourceChange.HeadersChanged(oldHeaders, validHeaders)
                     ]
 
@@ -315,6 +330,7 @@ module Resource =
                 }
 
     let updateBody
+        (actorUserId: UserId)
         (newBody: (string * string) list)
         (apps: AppResourceConflictData list)
         (resource: ValidatedResource)
@@ -347,15 +363,18 @@ module Resource =
                 }
 
                 let bodyChangedEvent =
-                    ResourceEvents.resourceUpdated resource.State.Id [ ResourceChange.BodyChanged(oldBody, validBody) ]
+                    ResourceEvents.resourceUpdated actorUserId resource.State.Id [
+                        ResourceChange.BodyChanged(oldBody, validBody)
+                    ]
 
                 Ok {
                     State = updatedResourceData
                     UncommittedEvents = resource.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ]
                 }
 
-    let markForDeletion (resource: ValidatedResource) : ValidatedResource =
-        let resourceDeletedEvent = ResourceEvents.resourceDeleted resource.State.Id
+    let markForDeletion (actorUserId: UserId) (resource: ValidatedResource) : ValidatedResource =
+        let resourceDeletedEvent =
+            ResourceEvents.resourceDeleted actorUserId resource.State.Id
 
         {
             resource with

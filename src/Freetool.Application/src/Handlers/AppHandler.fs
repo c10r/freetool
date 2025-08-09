@@ -18,7 +18,7 @@ module AppHandler =
         : Task<Result<AppCommandResult, DomainError>> =
         task {
             match command with
-            | CreateApp validatedApp ->
+            | CreateApp(actorUserId, validatedApp) ->
                 // Check if app name already exists in folder
                 let appName =
                     AppName.Create(Some(App.getName validatedApp))
@@ -37,21 +37,26 @@ module AppHandler =
                     | Error error -> return Error error
                     | Ok() -> return Ok(AppResult(validatedApp.State))
 
-            | DeleteApp appId ->
+            | DeleteApp(actorUserId, appId) ->
                 match Guid.TryParse appId with
                 | false, _ -> return Error(ValidationError "Invalid app ID format")
                 | true, guid ->
                     let appIdObj = AppId.FromGuid guid
-                    let! exists = appRepository.ExistsAsync appIdObj
+                    let! appOption = appRepository.GetByIdAsync appIdObj
 
-                    if not exists then
-                        return Error(NotFound "App not found")
-                    else
-                        match! appRepository.DeleteAsync appIdObj with
+                    match appOption with
+                    | None -> return Error(NotFound "App not found")
+                    | Some app ->
+                        // Mark app for deletion to create the delete event
+                        let appWithDeleteEvent = App.markForDeletion actorUserId app
+                        let deleteEvent = App.getUncommittedEvents appWithDeleteEvent |> List.tryHead
+
+                        // Delete app and save event atomically
+                        match! appRepository.DeleteAsync appIdObj deleteEvent with
                         | Error error -> return Error error
                         | Ok() -> return Ok(AppUnitResult())
 
-            | UpdateAppName(appId, dto) ->
+            | UpdateAppName(actorUserId, appId, dto) ->
                 match Guid.TryParse appId with
                 | false, _ -> return Error(ValidationError "Invalid app ID format")
                 | true, guid ->
@@ -61,46 +66,50 @@ module AppHandler =
                     match appOption with
                     | None -> return Error(NotFound "App not found")
                     | Some app ->
-                        let unvalidatedApp = AppMapper.fromUpdateNameDto dto app
-
-                        match App.validate unvalidatedApp with
-                        | Error error -> return Error error
-                        | Ok validatedApp ->
-                            // Check if new name conflicts with existing app in same folder
-                            let newAppName =
-                                AppName.Create(Some dto.Name)
-                                |> function
-                                    | Ok name -> name
-                                    | Error error -> failwith $"DTO validation should have caught this: {error}"
-
-                            let folderId = App.getFolderId validatedApp
-                            let! existsByNameAndFolder = appRepository.ExistsByNameAndFolderIdAsync newAppName folderId
-
-                            if existsByNameAndFolder then
-                                return Error(Conflict "An app with this name already exists in the folder")
-                            else
-                                match! appRepository.UpdateAsync validatedApp with
-                                | Error error -> return Error error
-                                | Ok() -> return Ok(AppResult(validatedApp.State))
-
-            | UpdateAppInputs(appId, dto) ->
-                match Guid.TryParse appId with
-                | false, _ -> return Error(ValidationError "Invalid app ID format")
-                | true, guid ->
-                    let appIdObj = AppId.FromGuid guid
-                    let! appOption = appRepository.GetByIdAsync appIdObj
-
-                    match appOption with
-                    | None -> return Error(NotFound "App not found")
-                    | Some app ->
-                        let unvalidatedApp = AppMapper.fromUpdateInputsDto dto app
-
-                        match App.validate unvalidatedApp with
-                        | Error error -> return Error error
-                        | Ok validatedApp ->
-                            match! appRepository.UpdateAsync validatedApp with
+                        // Check if new name conflicts with existing app in same folder (only if name changed)
+                        if App.getName app <> dto.Name then
+                            match AppName.Create(Some dto.Name) with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(AppResult(validatedApp.State))
+                            | Ok newAppName ->
+                                let folderId = App.getFolderId app
+
+                                let! existsByNameAndFolder =
+                                    appRepository.ExistsByNameAndFolderIdAsync newAppName folderId
+
+                                if existsByNameAndFolder then
+                                    return Error(Conflict "An app with this name already exists in the folder")
+                                else
+                                    // Update name using domain method (automatically creates event)
+                                    match App.updateName actorUserId dto.Name app with
+                                    | Error error -> return Error error
+                                    | Ok updatedApp ->
+                                        // Save app and events atomically
+                                        match! appRepository.UpdateAsync updatedApp with
+                                        | Error error -> return Error error
+                                        | Ok() -> return Ok(AppResult(updatedApp.State))
+                        else
+                            return Ok(AppResult(app.State))
+
+            | UpdateAppInputs(actorUserId, appId, dto) ->
+                match Guid.TryParse appId with
+                | false, _ -> return Error(ValidationError "Invalid app ID format")
+                | true, guid ->
+                    let appIdObj = AppId.FromGuid guid
+                    let! appOption = appRepository.GetByIdAsync appIdObj
+
+                    match appOption with
+                    | None -> return Error(NotFound "App not found")
+                    | Some app ->
+                        let inputs = dto.Inputs |> List.map AppMapper.inputFromDto
+
+                        // Update inputs using domain method (automatically creates event)
+                        match App.updateInputs actorUserId inputs app with
+                        | Error error -> return Error error
+                        | Ok updatedApp ->
+                            // Save app and events atomically
+                            match! appRepository.UpdateAsync updatedApp with
+                            | Error error -> return Error error
+                            | Ok() -> return Ok(AppResult(updatedApp.State))
 
             | GetAppById appId ->
                 match Guid.TryParse appId with

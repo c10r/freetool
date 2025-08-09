@@ -48,9 +48,9 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
 
             | Ok validEmail ->
                 let userRepository = context.RequestServices.GetRequiredService<IUserRepository>()
-                let! userExists = userRepository.ExistsByEmailAsync validEmail
+                let! user = userRepository.GetByEmailAsync validEmail
 
-                if not userExists then
+                if Option.isNone user then
                     // Auto-create new user on first login
                     let userNameOption = extractHeader TAILSCALE_USER_NAME context
                     let profilePicOption = extractHeader TAILSCALE_USER_PROFILE context
@@ -67,28 +67,16 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                         context.Response.StatusCode <- 500
                         do! context.Response.WriteAsync "Internal Server Error: Failed to create user"
                         return ()
-                    | Ok _ ->
+                    | Ok user ->
+                        context.Items.["UserId"] <- user.State.Id
                         Tracing.addAttribute currentActivity "tailscale.auth.user_created" "true"
                         Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
+                        Tracing.addAttribute currentActivity "user.id" (user.State.Id.Value.ToString())
+                else
+                    Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
+                    Tracing.addAttribute currentActivity "user.id" (user.Value.State.Id.Value.ToString())
 
-                // User is authorized (either existing or newly created), add user info to context
-                let userNameOption = extractHeader TAILSCALE_USER_NAME context
-                let profilePicOption = extractHeader TAILSCALE_USER_PROFILE context
-
-                context.Items.[TAILSCALE_USER_LOGIN] <- userEmail
-                context.Items.[TAILSCALE_USER_NAME] <- (userNameOption |> Option.defaultValue "")
-                context.Items.["TailscaleUserProfilePic"] <- (profilePicOption |> Option.defaultValue "")
-
-                // Add successful auth attributes to span
                 Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
-                Tracing.addUserAttributes currentActivity None (Some userEmail)
-
-                userNameOption
-                |> Option.iter (Tracing.addAttribute currentActivity "tailscale.auth.user_name")
-
-                profilePicOption
-                |> Option.iter (Tracing.addAttribute currentActivity "tailscale.auth.user_profile_pic")
-
                 Tracing.setSpanStatus currentActivity true None
 
                 do! next.Invoke context

@@ -9,7 +9,7 @@ open Freetool.Domain.Entities
 open Freetool.Application.Interfaces
 open Freetool.Infrastructure.Database
 
-type FolderRepository(context: FreetoolDbContext) =
+type FolderRepository(context: FreetoolDbContext, eventRepository: IEventRepository) =
 
     interface IFolderRepository with
 
@@ -65,33 +65,68 @@ type FolderRepository(context: FreetoolDbContext) =
         }
 
         member _.AddAsync(folder: ValidatedFolder) : Task<Result<unit, DomainError>> = task {
+            use transaction = context.Database.BeginTransaction()
+
             try
+                // 1. Add folder
                 context.Folders.Add folder.State |> ignore
                 let! _ = context.SaveChangesAsync()
+
+                // 2. Save events to audit log
+                let events = Folder.getUncommittedEvents folder
+
+                for event in events do
+                    do! eventRepository.SaveEventAsync event
+
+                // 3. Commit transaction
+                transaction.Commit()
                 return Ok()
             with
-            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to add folder: {ex.Message}")
-            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
+            | :? DbUpdateException as ex ->
+                transaction.Rollback()
+                return Error(Conflict $"Failed to add folder: {ex.Message}")
+            | ex ->
+                transaction.Rollback()
+                return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
         member _.UpdateAsync(folder: ValidatedFolder) : Task<Result<unit, DomainError>> = task {
+            use transaction = context.Database.BeginTransaction()
+
             try
                 let guidId = (Folder.getId folder).Value
                 let! existingData = context.Folders.FirstOrDefaultAsync(fun f -> f.Id.Value = guidId)
 
                 match Option.ofObj existingData with
-                | None -> return Error(NotFound "Folder not found")
+                | None ->
+                    transaction.Rollback()
+                    return Error(NotFound "Folder not found")
                 | Some _ ->
                     // Update entity directly
                     context.Folders.Update(folder.State) |> ignore
                     let! _ = context.SaveChangesAsync()
+
+                    // Save events to audit log
+                    let events = Folder.getUncommittedEvents folder
+
+                    for event in events do
+                        do! eventRepository.SaveEventAsync event
+
+                    // Commit transaction
+                    transaction.Commit()
                     return Ok()
             with
-            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to update folder: {ex.Message}")
-            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
+            | :? DbUpdateException as ex ->
+                transaction.Rollback()
+                return Error(Conflict $"Failed to update folder: {ex.Message}")
+            | ex ->
+                transaction.Rollback()
+                return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
-        member _.DeleteAsync(folderId: FolderId) : Task<Result<unit, DomainError>> = task {
+        member _.DeleteAsync (folderId: FolderId) (deleteEvent: IDomainEvent option) : Task<Result<unit, DomainError>> = task {
+            use transaction = context.Database.BeginTransaction()
+
             try
                 let guidId = folderId.Value
 
@@ -101,7 +136,9 @@ type FolderRepository(context: FreetoolDbContext) =
                         .FirstOrDefaultAsync(fun f -> f.Id.Value = guidId)
 
                 match Option.ofObj folderData with
-                | None -> return Error(NotFound "Folder not found")
+                | None ->
+                    transaction.Rollback()
+                    return Error(NotFound "Folder not found")
                 | Some data ->
                     // Soft delete: create updated record with IsDeleted flag
                     let updatedData = {
@@ -112,10 +149,22 @@ type FolderRepository(context: FreetoolDbContext) =
 
                     context.Folders.Update(updatedData) |> ignore
                     let! _ = context.SaveChangesAsync()
+
+                    // Save delete event if provided
+                    match deleteEvent with
+                    | Some event -> do! eventRepository.SaveEventAsync event
+                    | None -> ()
+
+                    // Commit transaction
+                    transaction.Commit()
                     return Ok()
             with
-            | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete folder: {ex.Message}")
-            | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
+            | :? DbUpdateException as ex ->
+                transaction.Rollback()
+                return Error(Conflict $"Failed to delete folder: {ex.Message}")
+            | ex ->
+                transaction.Rollback()
+                return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
         member _.ExistsAsync(folderId: FolderId) : Task<bool> = task {

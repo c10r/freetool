@@ -8,7 +8,7 @@ open Freetool.Application.DTOs
 
 module FolderMapper =
 
-    let fromCreateDto (dto: CreateFolderDto) : Result<ValidatedFolder, DomainError> =
+    let fromCreateDto (actorUserId: UserId) (dto: CreateFolderDto) : Result<ValidatedFolder, DomainError> =
         let parentId =
             match dto.Location with
             | RootFolder -> None
@@ -17,12 +17,16 @@ module FolderMapper =
                 | true, guid -> Some(FolderId.FromGuid(guid))
                 | false, _ -> None // Will be validated in handler
 
-        Folder.create dto.Name parentId
+        Folder.create actorUserId dto.Name parentId
 
-    let fromUpdateNameDto (dto: UpdateFolderNameDto) (folder: ValidatedFolder) : Result<ValidatedFolder, DomainError> =
-        Folder.updateName dto.Name folder
+    let fromUpdateNameDto
+        (actorUserId: UserId)
+        (dto: UpdateFolderNameDto)
+        (folder: ValidatedFolder)
+        : Result<ValidatedFolder, DomainError> =
+        Folder.updateName actorUserId dto.Name folder
 
-    let fromMoveDto (dto: MoveFolderDto) (folder: ValidatedFolder) : ValidatedFolder =
+    let fromMoveDto (actorUserId: UserId) (dto: MoveFolderDto) (folder: ValidatedFolder) : ValidatedFolder =
         let parentId =
             match dto.ParentId with
             | RootFolder -> None
@@ -31,7 +35,7 @@ module FolderMapper =
                 | true, guid -> Some(FolderId.FromGuid(guid))
                 | false, _ -> None // Will be validated in handler
 
-        Folder.moveToParent parentId folder
+        Folder.moveToParent actorUserId parentId folder
 
     let toDataWithChildren (folder: ValidatedFolder) (children: ValidatedFolder list) : FolderData =
         // Since Children is now a computed property that returns None,

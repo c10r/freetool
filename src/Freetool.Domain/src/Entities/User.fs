@@ -71,7 +71,7 @@ module User =
                 profilePicUrl
                 |> Option.bind (fun url -> Url.Create(Some url) |> Result.toOption)
 
-            UserEvents.userCreated userData.Id userData.Name email profilePicUrlOption
+            UserEvents.userCreated userData.Id userData.Id userData.Name email profilePicUrlOption
 
         {
             State = userData
@@ -119,116 +119,8 @@ module User =
                             UncommittedEvents = user.UncommittedEvents
                         }
 
-    let updateName (newName: string option) (user: ValidatedUser) : Result<ValidatedUser, DomainError> =
-        match newName with
-        | None
-        | Some "" -> Error(ValidationError "User name cannot be empty")
-        | Some nameValue when nameValue.Length > 100 -> Error(ValidationError "User name cannot exceed 100 characters")
-        | Some nameValue ->
-            let oldName = user.State.Name
-
-            let updatedUserData = {
-                user.State with
-                    Name = nameValue.Trim()
-                    UpdatedAt = DateTime.UtcNow
-            }
-
-            let nameChangedEvent =
-                UserEvents.userUpdated user.State.Id [ UserChange.NameChanged(oldName, nameValue.Trim()) ]
-
-            Ok {
-                State = updatedUserData
-                UncommittedEvents = user.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
-            }
-
-    let updateEmail (newEmail: string) (user: ValidatedUser) : Result<ValidatedUser, DomainError> =
-        match Email.Create(Some newEmail) with
-        | Error err -> Error err
-        | Ok newEmailObj ->
-            match Email.Create(Some user.State.Email) with
-            | Error _ -> Error(ValidationError "Current email is invalid")
-            | Ok oldEmailObj ->
-                let updatedUserData = {
-                    user.State with
-                        Email = newEmailObj.Value
-                        UpdatedAt = DateTime.UtcNow
-                }
-
-                let emailChangedEvent =
-                    UserEvents.userUpdated user.State.Id [ EmailChanged(oldEmailObj, newEmailObj) ]
-
-                Ok {
-                    State = updatedUserData
-                    UncommittedEvents = user.UncommittedEvents @ [ emailChangedEvent :> IDomainEvent ]
-                }
-
-    let updateProfilePic (newProfilePicUrl: string option) (user: ValidatedUser) : Result<ValidatedUser, DomainError> =
-        let oldProfilePicUrl =
-            user.State.ProfilePicUrl
-            |> Option.map (fun url -> Url.Create(Some url))
-            |> Option.bind (function
-                | Ok url -> Some url
-                | Error _ -> None)
-
-        match newProfilePicUrl with
-        | None ->
-            let updatedUserData = {
-                user.State with
-                    ProfilePicUrl = None
-                    UpdatedAt = DateTime.UtcNow
-            }
-
-            let profilePicChangedEvent =
-                UserEvents.userUpdated user.State.Id [ ProfilePicChanged(oldProfilePicUrl, None) ]
-
-            Ok {
-                State = updatedUserData
-                UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
-            }
-        | Some urlString ->
-            match Url.Create(Some urlString) with
-            | Error err -> Error err
-            | Ok validUrl ->
-                let newProfilePicUrlObj = Some validUrl
-
-                let updatedUserData = {
-                    user.State with
-                        ProfilePicUrl = Some(validUrl.Value)
-                        UpdatedAt = DateTime.UtcNow
-                }
-
-                let profilePicChangedEvent =
-                    UserEvents.userUpdated user.State.Id [ ProfilePicChanged(oldProfilePicUrl, newProfilePicUrlObj) ]
-
-                Ok {
-                    State = updatedUserData
-                    UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
-                }
-
-    let removeProfilePicture (user: ValidatedUser) : ValidatedUser =
-        let oldProfilePicUrl =
-            user.State.ProfilePicUrl
-            |> Option.map (fun url -> Url.Create(Some url))
-            |> Option.bind (function
-                | Ok url -> Some url
-                | Error _ -> None)
-
-        let updatedUserData = {
-            user.State with
-                ProfilePicUrl = None
-                UpdatedAt = DateTime.UtcNow
-        }
-
-        let profilePicChangedEvent =
-            UserEvents.userUpdated user.State.Id [ ProfilePicChanged(oldProfilePicUrl, None) ]
-
-        {
-            State = updatedUserData
-            UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
-        }
-
-    let markForDeletion (user: ValidatedUser) : ValidatedUser =
-        let userDeletedEvent = UserEvents.userDeleted user.State.Id
+    let markForDeletion (actorUserId: UserId) (user: ValidatedUser) : ValidatedUser =
+        let userDeletedEvent = UserEvents.userDeleted actorUserId user.State.Id
 
         {
             user with
@@ -250,3 +142,123 @@ module User =
     let getCreatedAt (user: User) : DateTime = user.State.CreatedAt
 
     let getUpdatedAt (user: User) : DateTime = user.State.UpdatedAt
+
+    let updateName
+        (actorUserId: UserId)
+        (newName: string option)
+        (user: ValidatedUser)
+        : Result<ValidatedUser, DomainError> =
+        match newName with
+        | None -> Error(ValidationError "User name cannot be null")
+        | Some nameValue when String.IsNullOrWhiteSpace nameValue -> Error(ValidationError "User name cannot be empty")
+        | Some nameValue when nameValue.Trim().Length > 100 ->
+            Error(ValidationError "User name cannot exceed 100 characters")
+        | Some nameValue ->
+            let oldName = user.State.Name
+
+            let updatedUserData = {
+                user.State with
+                    Name = nameValue.Trim()
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let nameChangedEvent =
+                UserEvents.userUpdated actorUserId user.State.Id [ UserChange.NameChanged(oldName, nameValue.Trim()) ]
+
+            Ok {
+                State = updatedUserData
+                UncommittedEvents = user.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
+            }
+
+    let updateEmail
+        (actorUserId: UserId)
+        (newEmail: string)
+        (user: ValidatedUser)
+        : Result<ValidatedUser, DomainError> =
+        match Email.Create(Some newEmail) with
+        | Error err -> Error err
+        | Ok newEmailObj ->
+            match Email.Create(Some user.State.Email) with
+            | Error _ -> Error(ValidationError "Current user email is invalid")
+            | Ok oldEmailObj ->
+                let updatedUserData = {
+                    user.State with
+                        Email = newEmailObj.Value
+                        UpdatedAt = DateTime.UtcNow
+                }
+
+                let emailChangedEvent =
+                    UserEvents.userUpdated actorUserId user.State.Id [ EmailChanged(oldEmailObj, newEmailObj) ]
+
+                Ok {
+                    State = updatedUserData
+                    UncommittedEvents = user.UncommittedEvents @ [ emailChangedEvent :> IDomainEvent ]
+                }
+
+    let updateProfilePic
+        (actorUserId: UserId)
+        (newProfilePicUrl: string option)
+        (user: ValidatedUser)
+        : Result<ValidatedUser, DomainError> =
+        let oldProfilePicUrl =
+            user.State.ProfilePicUrl
+            |> Option.bind (fun url -> Url.Create(Some url) |> Result.toOption)
+
+        let newProfilePicUrlObj =
+            newProfilePicUrl
+            |> Option.bind (fun url -> Url.Create(Some url) |> Result.toOption)
+
+        match newProfilePicUrl with
+        | None ->
+            let updatedUserData = {
+                user.State with
+                    ProfilePicUrl = None
+                    UpdatedAt = DateTime.UtcNow
+            }
+
+            let profilePicChangedEvent =
+                UserEvents.userUpdated actorUserId user.State.Id [ ProfilePicChanged(oldProfilePicUrl, None) ]
+
+            Ok {
+                State = updatedUserData
+                UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
+            }
+        | Some urlString ->
+            match Url.Create(Some urlString) with
+            | Error err -> Error err
+            | Ok validUrl ->
+
+                let updatedUserData = {
+                    user.State with
+                        ProfilePicUrl = Some(validUrl.Value)
+                        UpdatedAt = DateTime.UtcNow
+                }
+
+                let profilePicChangedEvent =
+                    UserEvents.userUpdated actorUserId user.State.Id [
+                        ProfilePicChanged(oldProfilePicUrl, newProfilePicUrlObj)
+                    ]
+
+                Ok {
+                    State = updatedUserData
+                    UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
+                }
+
+    let removeProfilePicture (actorUserId: UserId) (user: ValidatedUser) : ValidatedUser =
+        let oldProfilePicUrl =
+            user.State.ProfilePicUrl
+            |> Option.bind (fun url -> Url.Create(Some url) |> Result.toOption)
+
+        let updatedUserData = {
+            user.State with
+                ProfilePicUrl = None
+                UpdatedAt = DateTime.UtcNow
+        }
+
+        let profilePicChangedEvent =
+            UserEvents.userUpdated actorUserId user.State.Id [ ProfilePicChanged(oldProfilePicUrl, None) ]
+
+        {
+            State = updatedUserData
+            UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
+        }

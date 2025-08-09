@@ -28,6 +28,7 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.006_CreateGroupsAndUserGroupsTables.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.007_AddResourceColumnsToAppsTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.008_CreateRunsTable.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.009_AddUserIdToEventsTable.sql" />
   </ItemGroup>
 
   <ItemGroup>

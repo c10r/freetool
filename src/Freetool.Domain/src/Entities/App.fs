@@ -112,7 +112,7 @@ module App =
                     UncommittedEvents = app.UncommittedEvents
                 }
 
-    let updateName (newName: string) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
+    let updateName (actorUserId: UserId) (newName: string) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
         match AppName.Create(Some newName) with
         | Error err -> Error err
         | Ok validName ->
@@ -126,14 +126,18 @@ module App =
             }
 
             let nameChangedEvent =
-                AppEvents.appUpdated app.State.Id [ AppChange.NameChanged(oldName, validName) ]
+                AppEvents.appUpdated actorUserId app.State.Id [ AppChange.NameChanged(oldName, validName) ]
 
             Ok {
                 State = updatedAppData
                 UncommittedEvents = app.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
             }
 
-    let updateInputs (newInputs: Input list) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
+    let updateInputs
+        (actorUserId: UserId)
+        (newInputs: Input list)
+        (app: ValidatedApp)
+        : Result<ValidatedApp, DomainError> =
         let validateInputs inputs =
             let rec validateList acc remaining =
                 match remaining with
@@ -157,7 +161,7 @@ module App =
             }
 
             let inputsChangedEvent =
-                AppEvents.appUpdated app.State.Id [ AppChange.InputsChanged(oldInputs, validInputs) ]
+                AppEvents.appUpdated actorUserId app.State.Id [ AppChange.InputsChanged(oldInputs, validInputs) ]
 
             Ok {
                 State = updatedAppData
@@ -173,6 +177,7 @@ module App =
         BusinessRules.checkResourceToAppConflicts resource urlParameters headers body
 
     let private create
+        (actorUserId: UserId)
         (name: string)
         (folderId: FolderId)
         (resourceId: ResourceId)
@@ -231,7 +236,7 @@ module App =
                         let validName = AppName.Create(Some name) |> Result.defaultValue (AppName(""))
 
                         let appCreatedEvent =
-                            AppEvents.appCreated appData.Id validName (Some folderId) resourceId inputs
+                            AppEvents.appCreated actorUserId appData.Id validName (Some folderId) resourceId inputs
 
                         Ok {
                             validatedApp with
@@ -239,6 +244,7 @@ module App =
                         }
 
     let createWithResource
+        (actorUserId: UserId)
         (name: string)
         (folderId: FolderId)
         (resource: ValidatedResource)
@@ -257,10 +263,10 @@ module App =
         | Ok() ->
             // No conflicts, proceed with normal creation
             let resourceId = Resource.getId resource
-            create name folderId resourceId inputs urlPath urlParameters headers body
+            create actorUserId name folderId resourceId inputs urlPath urlParameters headers body
 
-    let markForDeletion (app: ValidatedApp) : ValidatedApp =
-        let appDeletedEvent = AppEvents.appDeleted app.State.Id
+    let markForDeletion (actorUserId: UserId) (app: ValidatedApp) : ValidatedApp =
+        let appDeletedEvent = AppEvents.appDeleted actorUserId app.State.Id
 
         {
             app with
@@ -303,7 +309,11 @@ module App =
         Body = getBody app
     }
 
-    let updateUrlPath (newUrlPath: string option) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
+    let updateUrlPath
+        (actorUserId: UserId)
+        (newUrlPath: string option)
+        (app: ValidatedApp)
+        : Result<ValidatedApp, DomainError> =
         let updatedAppData = {
             app.State with
                 UrlPath = newUrlPath
@@ -311,7 +321,7 @@ module App =
         }
 
         let urlPathChangedEvent =
-            AppEvents.appUpdated app.State.Id [ AppChange.UrlPathChanged(app.State.UrlPath, newUrlPath) ]
+            AppEvents.appUpdated actorUserId app.State.Id [ AppChange.UrlPathChanged(app.State.UrlPath, newUrlPath) ]
 
         Ok {
             State = updatedAppData
@@ -319,6 +329,7 @@ module App =
         }
 
     let updateUrlParameters
+        (actorUserId: UserId)
         (newUrlParameters: (string * string) list)
         (resource: ResourceAppConflictData)
         (app: ValidatedApp)
@@ -351,7 +362,9 @@ module App =
                 }
 
                 let urlParamsChangedEvent =
-                    AppEvents.appUpdated app.State.Id [ AppChange.UrlParametersChanged(oldUrlParams, validUrlParams) ]
+                    AppEvents.appUpdated actorUserId app.State.Id [
+                        AppChange.UrlParametersChanged(oldUrlParams, validUrlParams)
+                    ]
 
                 Ok {
                     State = updatedAppData
@@ -359,6 +372,7 @@ module App =
                 }
 
     let updateHeaders
+        (actorUserId: UserId)
         (newHeaders: (string * string) list)
         (resource: ResourceAppConflictData)
         (app: ValidatedApp)
@@ -391,7 +405,7 @@ module App =
                 }
 
                 let headersChangedEvent =
-                    AppEvents.appUpdated app.State.Id [ AppChange.HeadersChanged(oldHeaders, validHeaders) ]
+                    AppEvents.appUpdated actorUserId app.State.Id [ AppChange.HeadersChanged(oldHeaders, validHeaders) ]
 
                 Ok {
                     State = updatedAppData
@@ -399,6 +413,7 @@ module App =
                 }
 
     let updateBody
+        (actorUserId: UserId)
         (newBody: (string * string) list)
         (resource: ResourceAppConflictData)
         (app: ValidatedApp)
@@ -431,7 +446,7 @@ module App =
                 }
 
                 let bodyChangedEvent =
-                    AppEvents.appUpdated app.State.Id [ AppChange.BodyChanged(oldBody, validBody) ]
+                    AppEvents.appUpdated actorUserId app.State.Id [ AppChange.BodyChanged(oldBody, validBody) ]
 
                 Ok {
                     State = updatedAppData

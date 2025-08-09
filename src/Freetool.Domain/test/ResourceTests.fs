@@ -1,9 +1,11 @@
 module Freetool.Domain.Tests.ResourceTests
 
+open System
 open Xunit
 open Freetool.Domain
 open Freetool.Domain.Entities
 open Freetool.Domain.Events
+open Freetool.Domain.ValueObjects
 
 // Helper function for test assertions
 let unwrapResult result =
@@ -14,13 +16,22 @@ let unwrapResult result =
 [<Fact>]
 let ``Resource creation should generate ResourceCreatedEvent`` () =
     // Arrange
-    let urlParams = [ ("userId", "123"); ("format", "json") ]
-    let headers = [ ("Authorization", "Bearer token"); ("Content-Type", "application/json") ]
-    let body = [ ("name", "John Doe"); ("email", "john@example.com") ]
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let urlParams = [ "userId", "123"; "format", "json" ]
+    let headers = [ "Authorization", "Bearer token"; "Content-Type", "application/json" ]
+    let body = [ "name", "John Doe"; "email", "john@example.com" ]
 
     // Act
     let result =
-        Resource.create "User API" "Manages user data" "https://api.example.com/users" urlParams headers body "GET"
+        Resource.create
+            actorUserId
+            "User API"
+            "Manages user data"
+            "https://api.example.com/users"
+            urlParams
+            headers
+            body
+            "GET"
 
     // Assert
     match result with
@@ -42,12 +53,14 @@ let ``Resource creation should generate ResourceCreatedEvent`` () =
 [<Fact>]
 let ``Resource name update should generate correct event`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     let resource =
-        Resource.create "Old API Name" "Description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId "Old API Name" "Description" "https://api.example.com" [] [] [] "GET"
         |> unwrapResult
 
     // Act
-    let result = Resource.updateName "New API Name" resource
+    let result = Resource.updateName actorUserId "New API Name" resource
 
     // Assert
     match result with
@@ -70,12 +83,15 @@ let ``Resource name update should generate correct event`` () =
 [<Fact>]
 let ``Resource description update should generate correct event`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     let resource =
-        Resource.create "API Name" "Old description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId "API Name" "Old description" "https://api.example.com" [] [] [] "GET"
         |> unwrapResult
 
     // Act
-    let result = Resource.updateDescription "New detailed description" resource
+    let result =
+        Resource.updateDescription actorUserId "New detailed description" resource
 
     // Assert
     match result with
@@ -98,12 +114,15 @@ let ``Resource description update should generate correct event`` () =
 [<Fact>]
 let ``Resource base URL update should generate correct event`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     let resource =
-        Resource.create "API Name" "Description" "https://old-api.example.com" [] [] [] "POST"
+        Resource.create actorUserId "API Name" "Description" "https://old-api.example.com" [] [] [] "POST"
         |> unwrapResult
 
     // Act
-    let result = Resource.updateBaseUrl "https://new-api.example.com" resource
+    let result =
+        Resource.updateBaseUrl actorUserId "https://new-api.example.com" resource
 
     // Assert
     match result with
@@ -126,16 +145,17 @@ let ``Resource base URL update should generate correct event`` () =
 [<Fact>]
 let ``Resource URL parameters update should generate correct event`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let initialParams = [ ("id", "1") ]
 
     let resource =
-        Resource.create "API Name" "Description" "https://api.example.com" initialParams [] [] "PUT"
+        Resource.create actorUserId "API Name" "Description" "https://api.example.com" initialParams [] [] "PUT"
         |> unwrapResult
 
-    let newParams = [ ("userId", "123"); ("format", "json"); ("limit", "10") ]
+    let newParams = [ "userId", "123"; "format", "json"; "limit", "10" ]
 
     // Act
-    let result = Resource.updateUrlParameters newParams [] resource
+    let result = Resource.updateUrlParameters actorUserId newParams [] resource
 
     // Assert
     match result with
@@ -162,16 +182,17 @@ let ``Resource URL parameters update should generate correct event`` () =
 [<Fact>]
 let ``Resource headers update should generate correct event`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let initialHeaders = [ ("Accept", "application/json") ]
 
     let resource =
-        Resource.create "API Name" "Description" "https://api.example.com" [] initialHeaders [] "DELETE"
+        Resource.create actorUserId "API Name" "Description" "https://api.example.com" [] initialHeaders [] "DELETE"
         |> unwrapResult
 
-    let newHeaders = [ ("Authorization", "Bearer token"); ("Content-Type", "application/json") ]
+    let newHeaders = [ "Authorization", "Bearer token"; "Content-Type", "application/json" ]
 
     // Act
-    let result = Resource.updateHeaders newHeaders [] resource
+    let result = Resource.updateHeaders actorUserId newHeaders [] resource
 
     // Assert
     match result with
@@ -196,16 +217,17 @@ let ``Resource headers update should generate correct event`` () =
 [<Fact>]
 let ``Resource body update should generate correct event`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let initialBody = [ ("name", "John") ]
 
     let resource =
-        Resource.create "API Name" "Description" "https://api.example.com" [] [] initialBody "PATCH"
+        Resource.create actorUserId "API Name" "Description" "https://api.example.com" [] [] initialBody "PATCH"
         |> unwrapResult
 
-    let newBody = [ ("firstName", "Jane"); ("lastName", "Doe"); ("age", "30") ]
+    let newBody = [ "firstName", "Jane"; "lastName", "Doe"; "age", "30" ]
 
     // Act
-    let result = Resource.updateBody newBody [] resource
+    let result = Resource.updateBody actorUserId newBody [] resource
 
     // Assert
     match result with
@@ -230,8 +252,10 @@ let ``Resource body update should generate correct event`` () =
 [<Fact>]
 let ``Resource creation should reject empty name`` () =
     // Act
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     let result =
-        Resource.create "" "Description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId "" "Description" "https://api.example.com" [] [] [] "GET"
 
     // Assert
     match result with
@@ -241,7 +265,10 @@ let ``Resource creation should reject empty name`` () =
 [<Fact>]
 let ``Resource creation should reject empty description`` () =
     // Act
-    let result = Resource.create "API Name" "" "https://api.example.com" [] [] [] "GET"
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
+    let result =
+        Resource.create actorUserId "API Name" "" "https://api.example.com" [] [] [] "GET"
 
     // Assert
     match result with
@@ -251,8 +278,10 @@ let ``Resource creation should reject empty description`` () =
 [<Fact>]
 let ``Resource creation should reject invalid URL`` () =
     // Act
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     let result =
-        Resource.create "API Name" "Description" "not-a-valid-url" [] [] [] "GET"
+        Resource.create actorUserId "API Name" "Description" "not-a-valid-url" [] [] [] "GET"
 
     // Assert
     match result with
@@ -262,11 +291,12 @@ let ``Resource creation should reject invalid URL`` () =
 [<Fact>]
 let ``Resource creation should reject invalid key-value pairs`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let invalidParams = [ ("", "value") ] // Empty key
 
     // Act
     let result =
-        Resource.create "API Name" "Description" "https://api.example.com" invalidParams [] [] "GET"
+        Resource.create actorUserId "API Name" "Description" "https://api.example.com" invalidParams [] [] "GET"
 
     // Assert
     match result with
@@ -276,12 +306,14 @@ let ``Resource creation should reject invalid key-value pairs`` () =
 [<Fact>]
 let ``Resource deletion should generate ResourceDeletedEvent`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     let resource =
-        Resource.create "Test API" "Description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId "Test API" "Description" "https://api.example.com" [] [] [] "GET"
         |> unwrapResult
 
     // Act
-    let deletedResource = Resource.markForDeletion resource
+    let deletedResource = Resource.markForDeletion actorUserId resource
 
     // Assert
     let events = Resource.getUncommittedEvents deletedResource

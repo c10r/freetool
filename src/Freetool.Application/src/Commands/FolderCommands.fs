@@ -1,6 +1,7 @@
 namespace Freetool.Application.Commands
 
 open Freetool.Domain.Entities
+open Freetool.Domain.ValueObjects
 open Freetool.Application.DTOs
 
 type FolderCommandResult =
@@ -9,12 +10,12 @@ type FolderCommandResult =
     | FolderUnitResult of unit
 
 type FolderCommand =
-    | CreateFolder of ValidatedFolder
+    | CreateFolder of actorUserId: UserId * ValidatedFolder
     | GetFolderById of folderId: string
     | GetFolderWithChildren of folderId: string
     | GetRootFolders of skip: int * take: int
     | GetChildFolders of parentId: string * skip: int * take: int
     | GetAllFolders of skip: int * take: int
-    | DeleteFolder of folderId: string
-    | UpdateFolderName of folderId: string * UpdateFolderNameDto
-    | MoveFolder of folderId: string * MoveFolderDto
+    | DeleteFolder of actorUserId: UserId * folderId: string
+    | UpdateFolderName of actorUserId: UserId * folderId: string * UpdateFolderNameDto
+    | MoveFolder of actorUserId: UserId * folderId: string * MoveFolderDto

@@ -17,6 +17,7 @@ let unwrapResult result =
 // Helper function to create test app with inputs - returns both app and resource for testing
 let createTestAppWithResource () =
     let folderId = FolderId.NewId()
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
 
     let inputs = [
         {
@@ -34,6 +35,7 @@ let createTestAppWithResource () =
     // Create a test resource
     let resource =
         Resource.create
+            actorUserId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users/{userId}"
@@ -44,10 +46,10 @@ let createTestAppWithResource () =
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/{userId}/profile") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/{userId}/profile") [] [] []
         |> unwrapResult
 
-    (app, resource)
+    app, resource
 
 // Helper function to create test app with inputs
 let createTestApp () = createTestAppWithResource () |> fst
@@ -56,6 +58,7 @@ let createTestApp () = createTestAppWithResource () |> fst
 let ``Run creation should validate required inputs`` () =
     // Arrange
     let app = createTestApp ()
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
 
     let inputValues = [
         { Title = "userId"; Value = "123" }
@@ -63,7 +66,7 @@ let ``Run creation should validate required inputs`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -73,6 +76,7 @@ let ``Run creation should validate required inputs`` () =
 [<Fact>]
 let ``Run creation should reject invalid input names`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let app = createTestApp ()
 
     let inputValues = [
@@ -88,7 +92,7 @@ let ``Run creation should reject invalid input names`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -100,6 +104,7 @@ let ``Run creation should reject invalid input names`` () =
 [<Fact>]
 let ``Run creation with valid inputs should succeed and generate events`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let app = createTestApp ()
 
     let inputValues = [
@@ -111,7 +116,7 @@ let ``Run creation with valid inputs should succeed and generate events`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -134,6 +139,7 @@ let ``Run creation with valid inputs should succeed and generate events`` () =
 [<Fact>]
 let ``Run status transitions should generate correct events`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let app = createTestApp ()
 
     let inputValues = [
@@ -144,10 +150,10 @@ let ``Run status transitions should generate correct events`` () =
         }
     ]
 
-    let run = Run.createWithValidation app inputValues |> unwrapResult
+    let run = Run.createWithValidation actorUserId app inputValues |> unwrapResult
 
     // Act - transition to running
-    let runningRun = Run.markAsRunning run
+    let runningRun = Run.markAsRunning actorUserId run
 
     // Assert
     Assert.Equal(Running, Run.getStatus runningRun)
@@ -170,6 +176,7 @@ let ``Run status transitions should generate correct events`` () =
 [<Fact>]
 let ``Run completion with success should update status and response`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let app = createTestApp ()
 
     let inputValues = [
@@ -180,12 +187,12 @@ let ``Run completion with success should update status and response`` () =
         }
     ]
 
-    let run = Run.createWithValidation app inputValues |> unwrapResult
-    let runningRun = Run.markAsRunning run
+    let run = Run.createWithValidation actorUserId app inputValues |> unwrapResult
+    let runningRun = Run.markAsRunning actorUserId run
     let response = """{"id": 123, "name": "John Doe"}"""
 
     // Act
-    let completedRun = Run.markAsSuccess response runningRun
+    let completedRun = Run.markAsSuccess actorUserId response runningRun
 
     // Assert
     Assert.Equal(Success, Run.getStatus completedRun)
@@ -196,6 +203,7 @@ let ``Run completion with success should update status and response`` () =
 [<Fact>]
 let ``Run completion with failure should update status and error message`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let app = createTestApp ()
 
     let inputValues = [
@@ -206,12 +214,12 @@ let ``Run completion with failure should update status and error message`` () =
         }
     ]
 
-    let run = Run.createWithValidation app inputValues |> unwrapResult
-    let runningRun = Run.markAsRunning run
+    let run = Run.createWithValidation actorUserId app inputValues |> unwrapResult
+    let runningRun = Run.markAsRunning actorUserId run
     let errorMessage = "Network timeout after 30 seconds"
 
     // Act
-    let failedRun = Run.markAsFailure errorMessage runningRun
+    let failedRun = Run.markAsFailure actorUserId errorMessage runningRun
 
     // Assert
     Assert.Equal(Failure, Run.getStatus failedRun)
@@ -222,6 +230,7 @@ let ``Run completion with failure should update status and error message`` () =
 [<Fact>]
 let ``Run with invalid configuration should update status correctly`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let app = createTestApp ()
 
     let inputValues = [
@@ -232,11 +241,11 @@ let ``Run with invalid configuration should update status correctly`` () =
         }
     ]
 
-    let run = Run.createWithValidation app inputValues |> unwrapResult
+    let run = Run.createWithValidation actorUserId app inputValues |> unwrapResult
     let configError = "Resource not found"
 
     // Act
-    let invalidRun = Run.markAsInvalidConfiguration configError run
+    let invalidRun = Run.markAsInvalidConfiguration actorUserId configError run
 
     // Assert
     Assert.Equal(InvalidConfiguration, Run.getStatus invalidRun)
@@ -246,6 +255,7 @@ let ``Run with invalid configuration should update status correctly`` () =
 [<Fact>]
 let ``Run executable request composition should substitute input values`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let app, resource = createTestAppWithResource ()
 
     let inputValues = [
@@ -256,7 +266,7 @@ let ``Run executable request composition should substitute input values`` () =
         }
     ]
 
-    let run = Run.createWithValidation app inputValues |> unwrapResult
+    let run = Run.createWithValidation actorUserId app inputValues |> unwrapResult
 
     // Act
     let result = Run.composeExecutableRequestFromAppAndResource run app resource
@@ -288,6 +298,7 @@ let ``Run executable request composition should substitute input values`` () =
 [<Fact>]
 let ``Run creation should validate Email input type with valid email`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -299,11 +310,19 @@ let ``Run creation should validate Email input type with valid email`` () =
     ]
 
     let resource =
-        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "email", "{userEmail}" ] "POST"
+        Resource.create
+            actorUserId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "email", "{userEmail}" ]
+            "POST"
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [
@@ -314,7 +333,7 @@ let ``Run creation should validate Email input type with valid email`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -324,6 +343,7 @@ let ``Run creation should validate Email input type with valid email`` () =
 [<Fact>]
 let ``Run creation should reject Email input type with invalid email`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -335,11 +355,19 @@ let ``Run creation should reject Email input type with invalid email`` () =
     ]
 
     let resource =
-        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "email", "{userEmail}" ] "POST"
+        Resource.create
+            actorUserId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "email", "{userEmail}" ]
+            "POST"
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [
@@ -350,7 +378,7 @@ let ``Run creation should reject Email input type with invalid email`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -360,6 +388,7 @@ let ``Run creation should reject Email input type with invalid email`` () =
 [<Fact>]
 let ``Run creation should validate Integer input type with valid integer`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -371,17 +400,25 @@ let ``Run creation should validate Integer input type with valid integer`` () =
     ]
 
     let resource =
-        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "age", "{age}" ] "POST"
+        Resource.create
+            actorUserId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "age", "{age}" ]
+            "POST"
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [ { Title = "age"; Value = "25" } ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -391,6 +428,7 @@ let ``Run creation should validate Integer input type with valid integer`` () =
 [<Fact>]
 let ``Run creation should reject Integer input type with invalid integer`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -402,11 +440,19 @@ let ``Run creation should reject Integer input type with invalid integer`` () =
     ]
 
     let resource =
-        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "age", "{age}" ] "POST"
+        Resource.create
+            actorUserId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "age", "{age}" ]
+            "POST"
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [
@@ -417,7 +463,7 @@ let ``Run creation should reject Integer input type with invalid integer`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -429,6 +475,7 @@ let ``Run creation should reject Integer input type with invalid integer`` () =
 [<Fact>]
 let ``Run creation should validate Boolean input type with valid boolean`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -440,17 +487,25 @@ let ``Run creation should validate Boolean input type with valid boolean`` () =
     ]
 
     let resource =
-        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "active", "{isActive}" ] "POST"
+        Resource.create
+            actorUserId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "active", "{isActive}" ]
+            "POST"
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [ { Title = "isActive"; Value = "true" } ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -460,6 +515,7 @@ let ``Run creation should validate Boolean input type with valid boolean`` () =
 [<Fact>]
 let ``Run creation should reject Boolean input type with invalid boolean`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -471,17 +527,25 @@ let ``Run creation should reject Boolean input type with invalid boolean`` () =
     ]
 
     let resource =
-        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "active", "{isActive}" ] "POST"
+        Resource.create
+            actorUserId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "active", "{isActive}" ]
+            "POST"
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [ { Title = "isActive"; Value = "maybe" } ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -493,6 +557,7 @@ let ``Run creation should reject Boolean input type with invalid boolean`` () =
 [<Fact>]
 let ``Run creation should validate Date input type with valid date`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -505,6 +570,7 @@ let ``Run creation should validate Date input type with valid date`` () =
 
     let resource =
         Resource.create
+            actorUserId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -515,7 +581,7 @@ let ``Run creation should validate Date input type with valid date`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [
@@ -526,7 +592,7 @@ let ``Run creation should validate Date input type with valid date`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -536,6 +602,7 @@ let ``Run creation should validate Date input type with valid date`` () =
 [<Fact>]
 let ``Run creation should reject Date input type with invalid date`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -548,6 +615,7 @@ let ``Run creation should reject Date input type with invalid date`` () =
 
     let resource =
         Resource.create
+            actorUserId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -558,7 +626,7 @@ let ``Run creation should reject Date input type with invalid date`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [
@@ -569,7 +637,7 @@ let ``Run creation should reject Date input type with invalid date`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -581,6 +649,7 @@ let ``Run creation should reject Date input type with invalid date`` () =
 [<Fact>]
 let ``Run creation should validate Text input type within length limit`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -592,11 +661,19 @@ let ``Run creation should validate Text input type within length limit`` () =
     ]
 
     let resource =
-        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "desc", "{description}" ] "POST"
+        Resource.create
+            actorUserId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "desc", "{description}" ]
+            "POST"
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [
@@ -607,7 +684,7 @@ let ``Run creation should validate Text input type within length limit`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -617,6 +694,7 @@ let ``Run creation should validate Text input type within length limit`` () =
 [<Fact>]
 let ``Run creation should reject Text input type exceeding length limit`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -628,11 +706,19 @@ let ``Run creation should reject Text input type exceeding length limit`` () =
     ]
 
     let resource =
-        Resource.create "Test API" "Test endpoint" "https://api.test.com/users" [] [] [ "desc", "{description}" ] "POST"
+        Resource.create
+            actorUserId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users"
+            []
+            []
+            [ "desc", "{description}" ]
+            "POST"
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [
@@ -643,7 +729,7 @@ let ``Run creation should reject Text input type exceeding length limit`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -656,6 +742,7 @@ let ``Run creation should reject Text input type exceeding length limit`` () =
 [<Fact>]
 let ``Run creation should validate MultiText input type with valid choice`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -668,6 +755,7 @@ let ``Run creation should validate MultiText input type with valid choice`` () =
 
     let resource =
         Resource.create
+            actorUserId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -678,7 +766,7 @@ let ``Run creation should validate MultiText input type with valid choice`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [
@@ -686,7 +774,7 @@ let ``Run creation should validate MultiText input type with valid choice`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with
@@ -696,6 +784,7 @@ let ``Run creation should validate MultiText input type with valid choice`` () =
 [<Fact>]
 let ``Run creation should reject MultiText input type with invalid choice`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs = [
@@ -708,6 +797,7 @@ let ``Run creation should reject MultiText input type with invalid choice`` () =
 
     let resource =
         Resource.create
+            actorUserId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -718,7 +808,7 @@ let ``Run creation should reject MultiText input type with invalid choice`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource "Test App" folderId resource inputs (Some "/test") [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
     let inputValues = [
@@ -729,7 +819,7 @@ let ``Run creation should reject MultiText input type with invalid choice`` () =
     ]
 
     // Act
-    let result = Run.createWithValidation app inputValues
+    let result = Run.createWithValidation actorUserId app inputValues
 
     // Assert
     match result with

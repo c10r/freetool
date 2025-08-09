@@ -57,7 +57,7 @@ module Folder =
         UncommittedEvents = []
     }
 
-    let create (name: string) (parentId: FolderId option) : Result<ValidatedFolder, DomainError> =
+    let create (actorUserId: UserId) (name: string) (parentId: FolderId option) : Result<ValidatedFolder, DomainError> =
         match FolderName.Create(Some name) with
         | Error err -> Error err
         | Ok validName ->
@@ -70,14 +70,19 @@ module Folder =
                 IsDeleted = false
             }
 
-            let folderCreatedEvent = FolderEvents.folderCreated folderData.Id validName parentId
+            let folderCreatedEvent =
+                FolderEvents.folderCreated actorUserId folderData.Id validName parentId
 
             Ok {
                 State = folderData
                 UncommittedEvents = [ folderCreatedEvent :> IDomainEvent ]
             }
 
-    let updateName (newName: string) (folder: ValidatedFolder) : Result<ValidatedFolder, DomainError> =
+    let updateName
+        (actorUserId: UserId)
+        (newName: string)
+        (folder: ValidatedFolder)
+        : Result<ValidatedFolder, DomainError> =
         match FolderName.Create(Some newName) with
         | Error err -> Error err
         | Ok validName ->
@@ -90,14 +95,14 @@ module Folder =
             }
 
             let nameChangedEvent =
-                FolderEvents.folderUpdated folder.State.Id [ FolderChange.NameChanged(oldName, validName) ]
+                FolderEvents.folderUpdated actorUserId folder.State.Id [ FolderChange.NameChanged(oldName, validName) ]
 
             Ok {
                 State = updatedFolderData
                 UncommittedEvents = folder.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
             }
 
-    let moveToParent (newParentId: FolderId option) (folder: ValidatedFolder) : ValidatedFolder =
+    let moveToParent (actorUserId: UserId) (newParentId: FolderId option) (folder: ValidatedFolder) : ValidatedFolder =
         let oldParentId = folder.State.ParentId
 
         let updatedFolderData = {
@@ -107,15 +112,17 @@ module Folder =
         }
 
         let parentChangedEvent =
-            FolderEvents.folderUpdated folder.State.Id [ FolderChange.ParentChanged(oldParentId, newParentId) ]
+            FolderEvents.folderUpdated actorUserId folder.State.Id [
+                FolderChange.ParentChanged(oldParentId, newParentId)
+            ]
 
         {
             State = updatedFolderData
             UncommittedEvents = folder.UncommittedEvents @ [ parentChangedEvent :> IDomainEvent ]
         }
 
-    let markForDeletion (folder: ValidatedFolder) : ValidatedFolder =
-        let folderDeletedEvent = FolderEvents.folderDeleted folder.State.Id
+    let markForDeletion (actorUserId: UserId) (folder: ValidatedFolder) : ValidatedFolder =
+        let folderDeletedEvent = FolderEvents.folderDeleted actorUserId folder.State.Id
 
         {
             folder with

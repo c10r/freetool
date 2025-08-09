@@ -16,8 +16,11 @@ let unwrapResult result =
 [<Fact>]
 let ``RequestComposer should combine Resource and App correctly`` () =
     // Arrange - Create a Resource
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     let resourceResult =
         Resource.create
+            actorUserId
             "User API"
             "API for user management"
             "https://api.example.com"
@@ -34,12 +37,13 @@ let ``RequestComposer should combine Resource and App correctly`` () =
 
     let appResult =
         App.createWithResource
+            actorUserId
             "User Profile App"
             folderId
             resource
             []
             (Some "/users/profile")
-            [ ("page", "1"); ("size", "10") ] [ ("Authorization", "Bearer token123") ] [ ("include_metadata", "true") ]
+            [ "page", "1"; "size", "10" ] [ ("Authorization", "Bearer token123") ] [ ("include_metadata", "true") ]
 
     let app = unwrapResult appResult
 
@@ -76,11 +80,7 @@ let ``RequestComposer should combine Resource and App correctly`` () =
 [<Fact>]
 let ``RequestComposer should handle URL path composition correctly`` () =
     // Arrange
-    let resourceResult =
-        Resource.create "API" "Test API" "https://api.test.com/" [] [] [] "POST"
-
-    let resource = unwrapResult resourceResult
-    let resourceId = Resource.getId resource
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     // Test different URL path scenarios
@@ -95,16 +95,14 @@ let ``RequestComposer should handle URL path composition correctly`` () =
         "https://api.test.com/", None, "https://api.test.com/"
     ]
 
-    for (baseUrl, urlPath, expected) in testCases do
+    for baseUrl, urlPath, expected in testCases do
         // Create Resource with specific base URL
         let resourceWithUrl =
-            Resource.create "API" "Test" baseUrl [] [] [] "GET" |> unwrapResult
-
-        let resourceIdWithUrl = Resource.getId resourceWithUrl
+            Resource.create actorUserId "API" "Test" baseUrl [] [] [] "GET" |> unwrapResult
 
         // Create App with specific URL path using the resource
         let appResult =
-            App.createWithResource "Test App" folderId resourceWithUrl [] urlPath [] [] []
+            App.createWithResource actorUserId "Test App" folderId resourceWithUrl [] urlPath [] [] []
 
         let app = unwrapResult appResult
 
@@ -119,8 +117,11 @@ let ``RequestComposer should handle URL path composition correctly`` () =
 [<Fact>]
 let ``RequestComposer should allow App extending Resource with new values`` () =
     // Arrange - Resource with some parameters, headers, and body
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     let resourceResult =
         Resource.create
+            actorUserId
             "API"
             "Test API"
             "https://api.test.com"
@@ -135,7 +136,7 @@ let ``RequestComposer should allow App extending Resource with new values`` () =
 
     // App that only adds new values (no overrides)
     let appResult =
-        App.createWithResource "Extend App" folderId resource [] None [ ("page", "1"); ("size", "10") ] [
+        App.createWithResource actorUserId "Extend App" folderId resource [] None [ ("page", "1"); ("size", "10") ] [
             "Authorization", "Bearer xyz"
         ] [ "include_metadata", "true" ]
 
@@ -168,8 +169,10 @@ let ``RequestComposer should allow App extending Resource with new values`` () =
 [<Fact>]
 let ``RequestComposer should reject mismatched ResourceId`` () =
     // Arrange - Create a Resource
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     let resourceResult =
-        Resource.create "API" "Test API" "https://api.test.com" [] [] [] "GET"
+        Resource.create actorUserId "API" "Test API" "https://api.test.com" [] [] [] "GET"
 
     let resource = unwrapResult resourceResult
 
@@ -177,11 +180,11 @@ let ``RequestComposer should reject mismatched ResourceId`` () =
     let folderId = FolderId.NewId()
 
     let differentResource =
-        Resource.create "Different API" "Test" "https://different.com" [] [] [] "POST"
+        Resource.create actorUserId "Different API" "Test" "https://different.com" [] [] [] "POST"
         |> unwrapResult
 
     let appResult =
-        App.createWithResource "Mismatched App" folderId differentResource [] None [] [] []
+        App.createWithResource actorUserId "Mismatched App" folderId differentResource [] None [] [] []
 
     let app = unwrapResult appResult
 
@@ -199,8 +202,11 @@ let ``RequestComposer should reject mismatched ResourceId`` () =
 [<Fact>]
 let ``RequestComposer should handle empty App extensions`` () =
     // Arrange - Resource with some data
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+
     let resourceResult =
         Resource.create
+            actorUserId
             "API"
             "Test API"
             "https://api.test.com"
@@ -215,7 +221,7 @@ let ``RequestComposer should handle empty App extensions`` () =
 
     // App with no extensions (empty lists and None)
     let appResult =
-        App.createWithResource "Empty App" folderId resource [] None [] [] []
+        App.createWithResource actorUserId "Empty App" folderId resource [] None [] [] []
 
     let app = unwrapResult appResult
 

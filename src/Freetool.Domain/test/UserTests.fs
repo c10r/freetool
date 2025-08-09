@@ -16,11 +16,12 @@ let unwrapResult result =
 [<Fact>]
 let ``User name update should generate correct event`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let email = Email.Create(Some "john@example.com") |> unwrapResult
     let user = User.create "John Doe" email None
 
     // Act
-    let result = User.updateName (Some "Jane Doe") user
+    let result = User.updateName actorUserId (Some "Jane Doe") user
 
     // Assert
     match result with
@@ -62,11 +63,12 @@ let ``User creation should generate UserCreatedEvent`` () =
 [<Fact>]
 let ``User email update should generate correct event`` () =
     // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let oldEmail = Email.Create(Some "john@example.com") |> unwrapResult
     let user = User.create "John Doe" oldEmail None
 
     // Act
-    let result = User.updateEmail "jane@example.com" user
+    let result = User.updateEmail actorUserId "jane@example.com" user
 
     // Assert
     match result with

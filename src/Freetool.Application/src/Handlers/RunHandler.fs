@@ -21,7 +21,7 @@ module RunHandler =
         : Task<Result<RunCommandResult, DomainError>> =
         task {
             match command with
-            | CreateRun(appId, dto) ->
+            | CreateRun(actorUserId, appId, dto) ->
                 match Guid.TryParse appId with
                 | false, _ -> return Error(ValidationError "Invalid app ID format")
                 | true, guid ->
@@ -33,7 +33,7 @@ module RunHandler =
                     | Some app ->
                         let inputValues = RunMapper.fromCreateDto dto
 
-                        match Run.createWithValidation app inputValues with
+                        match Run.createWithValidation actorUserId app inputValues with
                         | Error domainError -> return Error domainError
                         | Ok validatedRun ->
                             // Get the resource associated with the app
@@ -43,7 +43,10 @@ module RunHandler =
                             match resourceOption with
                             | None ->
                                 let runWithError =
-                                    Run.markAsInvalidConfiguration "Associated resource not found" validatedRun
+                                    Run.markAsInvalidConfiguration
+                                        actorUserId
+                                        "Associated resource not found"
+                                        validatedRun
 
                                 match! runRepository.AddAsync runWithError with
                                 | Error error -> return Error error
@@ -52,7 +55,8 @@ module RunHandler =
                                 // Compose executable request with input substitution
                                 match Run.composeExecutableRequestFromAppAndResource validatedRun app resource with
                                 | Error err ->
-                                    let runWithError = Run.markAsInvalidConfiguration (err.ToString()) validatedRun
+                                    let runWithError =
+                                        Run.markAsInvalidConfiguration actorUserId (err.ToString()) validatedRun
 
                                     match! runRepository.AddAsync runWithError with
                                     | Error error -> return Error error
@@ -63,7 +67,7 @@ module RunHandler =
                                     | Error error -> return Error error
                                     | Ok() ->
                                         // Mark as running and execute the request in background
-                                        let runningRun = Run.markAsRunning runWithExecutableRequest
+                                        let runningRun = Run.markAsRunning actorUserId runWithExecutableRequest
 
                                         // Execute the HTTP request (this would typically be done asynchronously)
                                         let executableRequest = Run.getExecutableRequest runningRun |> Option.get
@@ -71,8 +75,8 @@ module RunHandler =
 
                                         let finalRun =
                                             match executeResult with
-                                            | Ok response -> Run.markAsSuccess response runningRun
-                                            | Error err -> Run.markAsFailure (err.ToString()) runningRun
+                                            | Ok response -> Run.markAsSuccess actorUserId response runningRun
+                                            | Error err -> Run.markAsFailure actorUserId (err.ToString()) runningRun
 
                                         // Update the run with final status
                                         match! runRepository.UpdateAsync finalRun with

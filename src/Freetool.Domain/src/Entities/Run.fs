@@ -191,7 +191,11 @@ module Run =
                         | Error e, _ -> Error e)
                     (Ok [])
 
-    let createWithValidation (app: ValidatedApp) (inputValues: RunInputValue list) : Result<ValidatedRun, DomainError> =
+    let createWithValidation
+        (actorUserId: UserId)
+        (app: ValidatedApp)
+        (inputValues: RunInputValue list)
+        : Result<ValidatedRun, DomainError> =
 
         let appInputs = App.getInputs app
 
@@ -213,7 +217,7 @@ module Run =
             }
 
             let runCreatedEvent =
-                RunEvents.runCreated runData.Id runData.AppId validatedInputValues
+                RunEvents.runCreated actorUserId runData.Id runData.AppId validatedInputValues
 
             Ok {
                 State = runData
@@ -277,7 +281,7 @@ module Run =
 
             Ok(setExecutableRequest executableRequest run)
 
-    let markAsRunning (run: ValidatedRun) : ValidatedRun =
+    let markAsRunning (actorUserId: UserId) (run: ValidatedRun) : ValidatedRun =
         let updatedRunData = {
             run.State with
                 Status = Running
@@ -285,14 +289,14 @@ module Run =
         }
 
         let statusChangedEvent =
-            RunEvents.runStatusChanged run.State.Id run.State.Status Running
+            RunEvents.runStatusChanged actorUserId run.State.Id run.State.Status Running
 
         {
             State = updatedRunData
             UncommittedEvents = run.UncommittedEvents @ [ statusChangedEvent :> IDomainEvent ]
         }
 
-    let markAsSuccess (response: string) (run: ValidatedRun) : ValidatedRun =
+    let markAsSuccess (actorUserId: UserId) (response: string) (run: ValidatedRun) : ValidatedRun =
         let updatedRunData = {
             run.State with
                 Status = Success
@@ -301,14 +305,14 @@ module Run =
         }
 
         let statusChangedEvent =
-            RunEvents.runStatusChanged run.State.Id run.State.Status Success
+            RunEvents.runStatusChanged actorUserId run.State.Id run.State.Status Success
 
         {
             State = updatedRunData
             UncommittedEvents = run.UncommittedEvents @ [ statusChangedEvent :> IDomainEvent ]
         }
 
-    let markAsFailure (errorMessage: string) (run: ValidatedRun) : ValidatedRun =
+    let markAsFailure (actorUserId: UserId) (errorMessage: string) (run: ValidatedRun) : ValidatedRun =
         let updatedRunData = {
             run.State with
                 Status = Failure
@@ -317,14 +321,14 @@ module Run =
         }
 
         let statusChangedEvent =
-            RunEvents.runStatusChanged run.State.Id run.State.Status Failure
+            RunEvents.runStatusChanged actorUserId run.State.Id run.State.Status Failure
 
         {
             State = updatedRunData
             UncommittedEvents = run.UncommittedEvents @ [ statusChangedEvent :> IDomainEvent ]
         }
 
-    let markAsInvalidConfiguration (errorMessage: string) (run: ValidatedRun) : ValidatedRun =
+    let markAsInvalidConfiguration (actorUserId: UserId) (errorMessage: string) (run: ValidatedRun) : ValidatedRun =
         let updatedRunData = {
             run.State with
                 Status = InvalidConfiguration
@@ -333,7 +337,7 @@ module Run =
         }
 
         let statusChangedEvent =
-            RunEvents.runStatusChanged run.State.Id run.State.Status InvalidConfiguration
+            RunEvents.runStatusChanged actorUserId run.State.Id run.State.Status InvalidConfiguration
 
         {
             State = updatedRunData
