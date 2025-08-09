@@ -136,17 +136,19 @@ function TreeNode({
   const isExpanded = expandedFolders.has(node.id);
   const hasChildren = isFolder && node.children && node.children.length > 0;
 
-  const handleClick = () => {
-    if (isFolder) {
-      toggleExpanded(node.id);
-    }
+  const handleChevronClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleExpanded(node.id);
+  };
+
+  const handleFolderClick = () => {
     onSelect(node.id);
   };
 
   return (
     <div>
       <button
-        onClick={handleClick}
+        onClick={handleFolderClick}
         className={cn(
           "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent",
           isSelected && "bg-accent",
@@ -154,7 +156,10 @@ function TreeNode({
         aria-current={isSelected ? "page" : undefined}
       >
         {hasChildren && (
-          <span className="flex-shrink-0">
+          <span
+            className="flex-shrink-0 cursor-pointer hover:bg-accent/50 rounded p-0.5"
+            onClick={handleChevronClick}
+          >
             {isExpanded ? (
               <ChevronDown size={16} />
             ) : (

@@ -137,9 +137,13 @@ function FolderView({
                   variant="secondary"
                   size="icon"
                   onClick={() => onSelect(child.id)}
-                  aria-label="Open"
+                  aria-label={child.type === "folder" ? "Open" : "Edit"}
                 >
-                  <Plus size={16} />
+                  {child.type === "folder" ? (
+                    <Plus size={16} />
+                  ) : (
+                    <Edit size={16} />
+                  )}
                 </Button>
                 <Button
                   variant="secondary"
