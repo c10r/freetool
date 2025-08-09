@@ -2,6 +2,8 @@
 
 A free, open-source alternative to Retool for building internal tools and dashboards. Freetool helps companies create CRUD interfaces around their internal APIs with authentication, authorization, and audit logging - all without requiring developers to build custom admin interfaces.
 
+# Contributing
+
 ## 🏗️ Architecture
 
 This project follows **Onion Architecture** principles to maintain clean separation of concerns and enable comprehensive testing:
@@ -568,11 +570,13 @@ F# requires dependencies to be ordered correctly in `.fsproj` files. Always ensu
 - Keep business logic pure and free of infrastructure concerns
 - Use meaningful commit messages following [Conventional Commits](https://www.conventionalcommits.org/)
 
-## 📄 License
+# 💻 Deploying
+
+Freetool is meant to be deployed behind a [Tailscale](https://tailscale.com) network. When deployed via Tailscale Serve, Tailscale will automatically set [identity headers](https://tailscale.com/kb/1312/serve#identity-headers), obviating the need for this app to handle auth at all.
+
+# 📄 License & 🙏 Acknowledgements
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
 
 - Inspired by [Retool](https://retool.com/) and the need for open-source internal tooling
 - Built with [F#](https://fsharp.org/) and [ASP.NET Core](https://docs.microsoft.com/en-us/aspnet/core/)
