@@ -445,15 +445,51 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
         // Configure EventData
         modelBuilder.Entity<EventData>(fun entity ->
+            let eventTypeConverter =
+                ValueConverter<EventType, string>(
+                    (fun eventType -> EventTypeConverter.toString eventType),
+                    (fun str ->
+                        match EventTypeConverter.fromString str with
+                        | Some eventType -> eventType
+                        | None -> failwith $"Invalid EventType in database: {str}")
+                )
+
+            let entityTypeConverter =
+                ValueConverter<EntityType, string>(
+                    (fun entityType -> EntityTypeConverter.toString entityType),
+                    (fun str ->
+                        match EntityTypeConverter.fromString str with
+                        | Some entityType -> entityType
+                        | None -> failwith $"Invalid EntityType in database: {str}")
+                )
+
+            let userIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.UserId, System.Guid>(
+                    (fun userId -> userId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.UserId(guid))
+                )
+
             // Explicit property configuration to help with constructor binding
             entity.Property(fun e -> e.Id).HasColumnName("Id") |> ignore
             entity.Property(fun e -> e.EventId).HasColumnName("EventId") |> ignore
-            entity.Property(fun e -> e.EventType).HasColumnName("EventType") |> ignore
-            entity.Property(fun e -> e.EntityType).HasColumnName("EntityType") |> ignore
+
+            entity
+                .Property(fun e -> e.EventType)
+                .HasColumnName("EventType")
+                .HasConversion(eventTypeConverter)
+            |> ignore
+
+            entity
+                .Property(fun e -> e.EntityType)
+                .HasColumnName("EntityType")
+                .HasConversion(entityTypeConverter)
+            |> ignore
+
             entity.Property(fun e -> e.EntityId).HasColumnName("EntityId") |> ignore
             entity.Property(fun e -> e.EventData).HasColumnName("EventData") |> ignore
             entity.Property(fun e -> e.OccurredAt).HasColumnName("OccurredAt") |> ignore
-            entity.Property(fun e -> e.CreatedAt).HasColumnName("CreatedAt") |> ignore)
+            entity.Property(fun e -> e.CreatedAt).HasColumnName("CreatedAt") |> ignore
+            entity.Property(fun e -> e.UserId).HasConversion(userIdConverter) |> ignore)
         |> ignore
 
         // Configure GroupData

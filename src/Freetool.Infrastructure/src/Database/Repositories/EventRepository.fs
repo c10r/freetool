@@ -14,15 +14,20 @@ open Freetool.Infrastructure.Database
 type EventRepository(context: FreetoolDbContext) =
     interface IEventRepository with
         member this.SaveEventAsync(event: IDomainEvent) = task {
-            let entityType =
-                event
-                    .GetType()
-                    .Name.Replace("Event", "")
-                    .Replace("Created", "")
-                    .Replace("Updated", "")
-                    .Replace("Deleted", "")
+            let eventTypeName = event.GetType().Name
 
-            let eventType = event.GetType().Name
+            let eventType =
+                EventTypeConverter.fromString eventTypeName
+                |> Option.defaultWith (fun () -> failwith $"Unknown event type: {eventTypeName}")
+
+            let entityType =
+                match eventType with
+                | UserEvents _ -> EntityType.User
+                | AppEvents _ -> EntityType.App
+                | ResourceEvents _ -> EntityType.Resource
+                | FolderEvents _ -> EntityType.Folder
+                | GroupEvents _ -> EntityType.Group
+                | RunEvents _ -> EntityType.Run
 
             let entityId =
                 match event with
@@ -59,49 +64,48 @@ type EventRepository(context: FreetoolDbContext) =
             return ()
         }
 
-        member this.GetEventsByEntityAsync (entityType: string) (entityId: string) = task {
-            let! events =
-                context.Events
-                    .Where(fun e -> e.EntityType = entityType && e.EntityId = entityId)
-                    .OrderBy(fun e -> e.OccurredAt)
-                    .ToListAsync()
+        member this.GetEventsAsync(filter: EventFilter) : Threading.Tasks.Task<PagedResult<EventData>> = task {
+            let query = context.Events.AsQueryable()
 
-            return events |> List.ofSeq
-        }
+            // Apply filters
+            let filteredQuery =
+                query
+                |> fun q ->
+                    match filter.UserId with
+                    | Some userId -> q.Where(fun e -> e.UserId = userId)
+                    | None -> q
+                |> fun q ->
+                    match filter.EventType with
+                    | Some eventType -> q.Where(fun e -> e.EventType = eventType)
+                    | None -> q
+                |> fun q ->
+                    match filter.EntityType with
+                    | Some entityType -> q.Where(fun e -> e.EntityType = entityType)
+                    | None -> q
+                |> fun q ->
+                    match filter.FromDate with
+                    | Some fromDate -> q.Where(fun e -> e.OccurredAt >= fromDate)
+                    | None -> q
+                |> fun q ->
+                    match filter.ToDate with
+                    | Some toDate -> q.Where(fun e -> e.OccurredAt <= toDate)
+                    | None -> q
 
-        member this.GetAllEventsAsync (skip: int) (take: int) = task {
-            let! totalCount = context.Events.CountAsync()
+            // Get total count before pagination
+            let! totalCount = filteredQuery.CountAsync()
 
-            let! events =
-                context.Events
+            // Apply pagination and ordering (most recent first)
+            let! items =
+                filteredQuery
                     .OrderByDescending(fun e -> e.OccurredAt)
-                    .Skip(skip)
-                    .Take(take)
+                    .Skip(filter.Skip)
+                    .Take(filter.Take)
                     .ToListAsync()
 
             return {
-                Items = events |> List.ofSeq
+                Items = items |> List.ofSeq
                 TotalCount = totalCount
-                Skip = skip
-                Take = take
-            }
-        }
-
-        member this.GetEventsByTypeAsync (eventType: string) (skip: int) (take: int) = task {
-            let! totalCount = context.Events.Where(fun e -> e.EventType = eventType).CountAsync()
-
-            let! events =
-                context.Events
-                    .Where(fun e -> e.EventType = eventType)
-                    .OrderByDescending(fun e -> e.OccurredAt)
-                    .Skip(skip)
-                    .Take(take)
-                    .ToListAsync()
-
-            return {
-                Items = events |> List.ofSeq
-                TotalCount = totalCount
-                Skip = skip
-                Take = take
+                Skip = filter.Skip
+                Take = filter.Take
             }
         }

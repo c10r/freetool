@@ -5,6 +5,7 @@ open Microsoft.Extensions.DependencyInjection
 open System.Threading.Tasks
 open System.Diagnostics
 open Freetool.Application.Interfaces
+open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
 open Freetool.Api.Tracing
 
@@ -56,8 +57,7 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                     let profilePicOption = extractHeader TAILSCALE_USER_PROFILE context
                     let userName = userNameOption |> Option.defaultValue userEmail
 
-                    let newUser =
-                        Freetool.Domain.Entities.User.create userName validEmail profilePicOption
+                    let newUser = User.create userName validEmail profilePicOption
 
                     match! userRepository.AddAsync newUser with
                     | Error err ->
