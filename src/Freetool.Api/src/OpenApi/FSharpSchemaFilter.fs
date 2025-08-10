@@ -3,7 +3,6 @@ namespace Freetool.Api.OpenApi
 open Microsoft.OpenApi.Models
 open Microsoft.OpenApi.Any
 open Swashbuckle.AspNetCore.SwaggerGen
-open System
 open System.Collections.Generic
 open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
@@ -105,6 +104,22 @@ type FSharpUnionSchemaFilter() =
 
                 schema.AdditionalProperties <- null
                 schema.Required <- HashSet<string>([ "Case" ])
+
+            // Handle HttpMethod union
+            elif context.Type = typeof<HttpMethod> then
+                schema.Type <- "string"
+
+                schema.Enum <- [|
+                    OpenApiString("DELETE") :> IOpenApiAny
+                    OpenApiString("GET") :> IOpenApiAny
+                    OpenApiString("PATCH") :> IOpenApiAny
+                    OpenApiString("POST") :> IOpenApiAny
+                    OpenApiString("PUT") :> IOpenApiAny
+                |]
+
+                schema.Properties <- null
+                schema.AdditionalProperties <- null
+                schema.Required <- null
 
             // Handle EntityType union
             elif context.Type = typeof<EntityType> then

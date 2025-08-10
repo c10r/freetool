@@ -14,6 +14,7 @@ open Freetool.Infrastructure.Services
 open Freetool.Application.Interfaces
 open Freetool.Application.Handlers
 open Freetool.Application.Commands
+open Freetool.Application.DTOs
 open Freetool.Api.Tracing
 open Freetool.Api.Middleware
 open Freetool.Api.OpenApi
@@ -28,6 +29,7 @@ let main args =
         .ConfigureApiBehaviorOptions(fun options -> options.SuppressModelStateInvalidFilter <- false)
         .AddJsonOptions(fun options ->
             options.JsonSerializerOptions.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull
+            options.JsonSerializerOptions.Converters.Add(HttpMethodConverter())
             options.JsonSerializerOptions.Converters.Add(JsonFSharpConverter()))
     |> ignore
 

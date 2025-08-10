@@ -3004,12 +3004,7 @@ export interface components {
       id?: string & components["schemas"]["FolderId"];
       name: string & components["schemas"]["FolderName"];
       parentId?: components["schemas"]["FolderIdFSharpOption"] | null;
-      readonly children?:
-        | components["schemas"]["FolderDataFSharpListFSharpOption"]
-        | null;
-    };
-    FolderDataFSharpListFSharpOption: {
-      value?: components["schemas"]["FolderData"][] | null;
+      children?: components["schemas"]["FolderData"][] | null;
     };
     FolderDataPagedResult: {
       items?: components["schemas"]["FolderData"][] | null;
@@ -3037,7 +3032,7 @@ export interface components {
       /** Format: uuid */
       id?: string & components["schemas"]["GroupId"];
       name: string;
-      readonly userIds?: components["schemas"]["UserId"][] | null;
+      userIds?: components["schemas"]["UserId"][] | null;
     };
     GroupDataPagedResult: {
       items?: components["schemas"]["GroupData"][] | null;
@@ -3050,15 +3045,8 @@ export interface components {
     };
     /** Format: uuid */
     GroupId: string;
-    HttpMethod: {
-      /** Format: int32 */
-      readonly tag?: number;
-      readonly isDelete?: boolean;
-      readonly isGet?: boolean;
-      readonly isPatch?: boolean;
-      readonly isPost?: boolean;
-      readonly isPut?: boolean;
-    };
+    /** @enum {string} */
+    HttpMethod: string;
     Input: {
       title?: string | null;
       type?: components["schemas"]["InputType"];
@@ -3130,7 +3118,8 @@ export interface components {
       id?: string & components["schemas"]["ResourceId"];
       name: string & components["schemas"]["ResourceName"];
       description: string & components["schemas"]["ResourceDescription"];
-      httpMethod: components["schemas"]["HttpMethod"];
+      /** @enum {string} */
+      httpMethod: "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
       baseUrl: string & components["schemas"]["BaseUrl"];
       urlParameters: components["schemas"]["KeyValuePair"][];
       headers: components["schemas"]["KeyValuePair"][];

@@ -47,14 +47,7 @@ export default function WorkspaceMain(props: WorkspaceMainProps) {
 
   // Handle special sections from sidebar
   if (selectedId === "resources") {
-    return (
-      <ResourcesView
-        endpoints={props.endpoints}
-        createEndpoint={props.createEndpoint}
-        updateEndpoint={props.updateEndpoint}
-        deleteEndpoint={props.deleteEndpoint}
-      />
-    );
+    return <ResourcesView />;
   }
 
   if (selectedId === "audit-log") {

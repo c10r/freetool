@@ -107,7 +107,7 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
 
         member _.ExistsByNameAsync(resourceName: ResourceName) : Task<bool> = task {
             let nameStr = resourceName.Value
-            return! context.Resources.AnyAsync(fun r -> r.Name.Value = nameStr)
+            return! context.Resources.AnyAsync(fun r -> r.Name = resourceName)
         }
 
         member _.GetCountAsync() : Task<int> = task { return! context.Resources.CountAsync() }

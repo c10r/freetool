@@ -4679,21 +4679,6 @@
             "nullable": true
           },
           "children": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/FolderDataFSharpListFSharpOption"
-              }
-            ],
-            "nullable": true,
-            "readOnly": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "FolderDataFSharpListFSharpOption": {
-        "type": "object",
-        "properties": {
-          "value": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/FolderData"
@@ -4796,8 +4781,7 @@
             "items": {
               "$ref": "#/components/schemas/UserId"
             },
-            "nullable": true,
-            "readOnly": true
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -4833,34 +4817,14 @@
         "format": "uuid"
       },
       "HttpMethod": {
-        "type": "object",
-        "properties": {
-          "tag": {
-            "type": "integer",
-            "format": "int32",
-            "readOnly": true
-          },
-          "isDelete": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isGet": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isPatch": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isPost": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isPut": {
-            "type": "boolean",
-            "readOnly": true
-          }
-        },
+        "enum": [
+          "DELETE",
+          "GET",
+          "PATCH",
+          "POST",
+          "PUT"
+        ],
+        "type": "string",
         "additionalProperties": false
       },
       "Input": {
@@ -5160,6 +5124,14 @@
           },
           "httpMethod": {
             "maxLength": 10,
+            "enum": [
+              "DELETE",
+              "GET",
+              "PATCH",
+              "POST",
+              "PUT"
+            ],
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/HttpMethod"

@@ -5,6 +5,10 @@ const client = createClient<paths>({
   baseUrl: "https://chanders-macbook-pro.koala-snake.ts.net:8443",
 });
 
+/**
+ * Audit Log
+ */
+
 export const getAuditEvents = (skip?: number, take?: number) => {
   if (skip && take) {
     return client.GET("/audit/events", {
@@ -15,6 +19,10 @@ export const getAuditEvents = (skip?: number, take?: number) => {
   }
   return client.GET("/audit/events");
 };
+
+/**
+ * Groups
+ */
 
 export const getGroups = (skip?: number, take?: number) => {
   if (skip && take) {
@@ -109,16 +117,9 @@ export const getGroupById = (groupId: string) => {
   });
 };
 
-export const getUsers = (skip?: number, take?: number) => {
-  if (skip && take) {
-    return client.GET("/user", {
-      params: {
-        query: { skip, take },
-      },
-    });
-  }
-  return client.GET("/user");
-};
+/**
+ * Resources
+ */
 
 export const getResources = (skip?: number, take?: number) => {
   if (skip && take) {
@@ -132,10 +133,169 @@ export const getResources = (skip?: number, take?: number) => {
   return client.GET("/resource");
 };
 
+export const createResource = ({
+  name,
+  description,
+  baseUrl,
+  httpMethod,
+  urlParameters,
+  headers,
+  body,
+}: {
+  name: string;
+  description: string;
+  baseUrl: string;
+  httpMethod: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  urlParameters: { key: string; value: string }[];
+  headers: { key: string; value: string }[];
+  body: { key: string; value: string }[];
+}) => {
+  return client.POST("/resource", {
+    body: {
+      name,
+      description,
+      baseUrl,
+      httpMethod,
+      urlParameters,
+      headers,
+      body,
+    },
+  });
+};
+
 export const deleteResource = (id: string) => {
   return client.DELETE("/resource/{id}", {
     params: {
       path: { id },
     },
   });
+};
+
+export const updateResourceName = ({
+  id,
+  newName,
+}: {
+  id: string;
+  newName: string;
+}) => {
+  return client.PUT("/resource/{id}/name", {
+    params: {
+      path: {
+        id,
+      },
+    },
+    body: {
+      name: newName,
+    },
+  });
+};
+
+export const updateResourceDescription = ({
+  id,
+  newDescription,
+}: {
+  id: string;
+  newDescription: string;
+}) => {
+  return client.PUT("/resource/{id}/description", {
+    params: {
+      path: {
+        id,
+      },
+    },
+    body: {
+      description: newDescription,
+    },
+  });
+};
+
+export const updateResourceBaseUrl = ({
+  id,
+  baseUrl,
+}: {
+  id: string;
+  baseUrl: string;
+}) => {
+  return client.PUT("/resource/{id}/base-url", {
+    params: {
+      path: {
+        id,
+      },
+    },
+    body: {
+      baseUrl,
+    },
+  });
+};
+
+export const updateResourceUrlParameters = ({
+  id,
+  urlParameters,
+}: {
+  id: string;
+  urlParameters: { key: string; value: string }[];
+}) => {
+  return client.PUT("/resource/{id}/url-parameters", {
+    params: {
+      path: {
+        id,
+      },
+    },
+    body: {
+      urlParameters,
+    },
+  });
+};
+
+export const updateResourceHeaders = ({
+  id,
+  headers,
+}: {
+  id: string;
+  headers: { key: string; value: string }[];
+}) => {
+  return client.PUT("/resource/{id}/headers", {
+    params: {
+      path: {
+        id,
+      },
+    },
+    body: {
+      headers,
+    },
+  });
+};
+
+export const updateResourceBody = ({
+  id,
+  body,
+}: {
+  id: string;
+  body: { key: string; value: string }[];
+}) => {
+  return client.PUT("/resource/{id}/body", {
+    params: {
+      path: {
+        id,
+      },
+    },
+    body: {
+      body,
+    },
+  });
+};
+
+/**
+ * Users
+ */
+
+export const getUsers = (skip?: number, take?: number) => {
+  if (skip && take) {
+    return client.GET("/user", {
+      params: {
+        query: { skip, take },
+      },
+    });
+  }
+  return client.GET("/user");
 };
