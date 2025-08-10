@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import SidebarTree from "./SidebarTree";
 import WorkspaceMain from "./WorkspaceMain";
 import { WorkspaceNode, FolderNode, AppNode, Endpoint } from "./types";
@@ -10,7 +11,44 @@ function createApp(id: string, name: string, parentId?: string): AppNode {
   return { id, name, type: "app", parentId, fields: [], endpointId: undefined };
 }
 
+// Helper functions to convert between selectedId and URL paths
+function getPathFromSelectedId(
+  selectedId: string,
+  nodes: Record<string, WorkspaceNode>,
+): string {
+  if (selectedId === "resources") return "/resources";
+  if (selectedId === "users-&-teams") return "/users";
+  if (selectedId === "audit-log") return "/audit";
+  if (selectedId === "root") return "/workspaces";
+
+  // For workspace nodes, use /workspaces/:nodeId
+  if (nodes[selectedId]) {
+    return `/workspaces/${selectedId}`;
+  }
+
+  return "/workspaces";
+}
+
+function getSelectedIdFromPath(
+  pathname: string,
+  nodeId?: string,
+  rootId: string = "root",
+): string {
+  if (pathname === "/resources") return "resources";
+  if (pathname === "/users") return "users-&-teams";
+  if (pathname === "/audit") return "audit-log";
+  if (pathname === "/workspaces" && !nodeId) return rootId;
+  if (pathname.startsWith("/workspaces/") && nodeId) return nodeId;
+  if (pathname === "/") return rootId;
+
+  return rootId;
+}
+
 export default function Workspace() {
+  const { nodeId } = useParams<{ nodeId?: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [nodes, setNodes] = useState<Record<string, WorkspaceNode>>(() => {
     const rootId = "root";
     const folder1 = createFolder(crypto.randomUUID(), "Team A", rootId);
@@ -21,7 +59,15 @@ export default function Workspace() {
     return { [root.id]: root, [folder1.id]: folder1, [app1.id]: app1 };
   });
   const rootId = "root";
-  const [selectedId, setSelectedId] = useState<string>(rootId);
+
+  // Get selectedId from current URL
+  const selectedId = getSelectedIdFromPath(location.pathname, nodeId, rootId);
+
+  // Function to update URL when selection changes
+  const setSelectedId = (id: string) => {
+    const newPath = getPathFromSelectedId(id, nodes);
+    navigate(newPath);
+  };
 
   const [endpoints, setEndpoints] = useState<Record<string, Endpoint>>(() => {
     return {};
