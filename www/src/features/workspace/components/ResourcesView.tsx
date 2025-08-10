@@ -37,15 +37,15 @@ export default function ResourcesView({
         setLoading(true);
         const response = await getResources();
         if (response.data?.items) {
-          const mappedItems = response.data?.items.map(item => {
+          const mappedItems = response.data?.items.map((item) => {
             return {
               id: item.id.value,
               name: item.name,
               description: item.description,
               baseUrl: item.baseUrl,
-              httpMethod: item.httpMethod
-            } as Resource
-          })
+              httpMethod: item.httpMethod,
+            } as Resource;
+          });
           setResources(mappedItems);
         }
       } catch (err) {

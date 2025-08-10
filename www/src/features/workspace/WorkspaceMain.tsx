@@ -15,6 +15,7 @@ import {
 } from "./types";
 import AppFormRenderer from "./components/AppFormRenderer";
 import ResourcesView from "./components/ResourcesView";
+import AuditLogView from "./components/AuditLogView";
 import HttpMethodBadge from "./components/HttpMethodBadge";
 import {
   Select,
@@ -53,6 +54,10 @@ export default function WorkspaceMain(props: WorkspaceMainProps) {
         deleteEndpoint={props.deleteEndpoint}
       />
     );
+  }
+
+  if (selectedId === "audit-log") {
+    return <AuditLogView />;
   }
 
   if (!selected) return null;
