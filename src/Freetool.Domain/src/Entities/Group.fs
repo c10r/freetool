@@ -32,14 +32,10 @@ type GroupData = {
     [<JsonIgnore>]
     IsDeleted: bool
 
-    // Internal storage for UserIds - not mapped to database
     [<NotMapped>]
-    [<JsonIgnore>]
-    mutable _userIds: UserId list
-} with
-
-    [<NotMapped>]
-    member this.UserIds: UserId list = this._userIds
+    [<JsonPropertyName("userIds")>]
+    mutable UserIds: UserId list
+}
 
 // Junction entity for many-to-many relationship
 [<Table("UserGroups")>]
@@ -48,7 +44,7 @@ type GroupData = {
 [<CLIMutable>]
 type UserGroupData = {
     [<Key>]
-    Id: System.Guid
+    Id: Guid
 
     [<Required>]
     UserId: UserId
@@ -94,7 +90,7 @@ module Group =
                 CreatedAt = DateTime.UtcNow
                 UpdatedAt = DateTime.UtcNow
                 IsDeleted = false
-                _userIds = validatedUserIds
+                UserIds = validatedUserIds
             }
 
             let groupCreatedEvent =
@@ -123,7 +119,7 @@ module Group =
             let updatedGroupData = {
                 groupData with
                     Name = nameValue.Trim()
-                    _userIds = distinctUserIds
+                    UserIds = distinctUserIds
             }
 
             Ok {
@@ -169,7 +165,7 @@ module Group =
             let updatedGroupData = {
                 group.State with
                     UpdatedAt = DateTime.UtcNow
-                    _userIds = userId :: group.State.UserIds
+                    UserIds = userId :: group.State.UserIds
             }
 
             let userAddedEvent =
@@ -191,7 +187,7 @@ module Group =
             let updatedGroupData = {
                 group.State with
                     UpdatedAt = DateTime.UtcNow
-                    _userIds = List.filter (fun id -> id <> userId) group.State.UserIds
+                    UserIds = List.filter (fun id -> id <> userId) group.State.UserIds
             }
 
             let userRemovedEvent =

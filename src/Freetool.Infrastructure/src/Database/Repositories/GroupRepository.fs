@@ -26,7 +26,7 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                 let userIds = userGroupEntities |> Seq.map (fun ug -> ug.UserId) |> Seq.toList
 
                 // Create GroupData with UserIds populated from relationships
-                data._userIds <- userIds
+                data.UserIds <- userIds
                 return Some(Group.fromData data)
         }
 
@@ -43,7 +43,7 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                 let userIds = userGroupEntities |> Seq.map (fun ug -> ug.UserId) |> Seq.toList
 
                 // Create GroupData with UserIds populated from relationships
-                data._userIds <- userIds
+                data.UserIds <- userIds
                 return Some(Group.fromData data)
         }
 
@@ -63,7 +63,7 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                 let userIds = userGroupEntities |> Seq.map (fun ug -> ug.UserId) |> Seq.toList
 
                 // Create GroupData with UserIds populated from relationships
-                data._userIds <- userIds
+                data.UserIds <- userIds
                 let group = Group.fromData data
                 groupList <- group :: groupList
 
@@ -91,7 +91,7 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                     let userIds = allUserGroupsForGroup |> Seq.map (fun ug -> ug.UserId) |> Seq.toList
 
                     // Set the UserIds for this group
-                    data._userIds <- userIds
+                    data.UserIds <- userIds
                     let group = Group.fromData data
 
                     groupList <- group :: groupList
