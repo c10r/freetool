@@ -38,6 +38,7 @@ module FolderMapper =
         Folder.moveToParent actorUserId parentId folder
 
     let toDataWithChildren (folder: ValidatedFolder) (children: ValidatedFolder list) : FolderData =
-        // Since Children is now a computed property that returns None,
-        // we just return the folder data and handle children separately
-        folder.State
+        // Populate the children field with the provided children
+        let folderDataWithChildren = folder.State
+        folderDataWithChildren.Children <- children |> List.map (fun child -> child.State)
+        folderDataWithChildren

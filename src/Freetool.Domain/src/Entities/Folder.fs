@@ -33,10 +33,11 @@ type FolderData = {
 
     [<JsonIgnore>]
     IsDeleted: bool
-} with
 
     [<NotMapped>]
-    member _.Children: FolderData list option = None
+    [<JsonPropertyName("children")>]
+    mutable Children: FolderData list
+}
 
 type Folder = EventSourcingAggregate<FolderData>
 
@@ -68,6 +69,7 @@ module Folder =
                 CreatedAt = DateTime.UtcNow
                 UpdatedAt = DateTime.UtcNow
                 IsDeleted = false
+                Children = []
             }
 
             let folderCreatedEvent =

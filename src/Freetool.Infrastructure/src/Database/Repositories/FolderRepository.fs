@@ -17,7 +17,21 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
             let guidId = folderId.Value
             let! folderData = context.Folders.FirstOrDefaultAsync(fun f -> f.Id.Value = guidId)
 
-            return folderData |> Option.ofObj |> Option.map (fun data -> Folder.fromData data)
+            match Option.ofObj folderData with
+            | None -> return None
+            | Some data ->
+                // Load children for this folder
+                let! childrenData =
+                    context.Folders
+                        .Where(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
+                        .OrderBy(fun f -> f.Name)
+                        .ToListAsync()
+
+                // Initialize children as empty list first
+                data.Children <- []
+                // Populate children field
+                data.Children <- childrenData |> Seq.toList
+                return Some(Folder.fromData data)
         }
 
         member _.GetChildrenAsync(folderId: FolderId) : Task<ValidatedFolder list> = task {
@@ -41,7 +55,28 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
                     .Take(take)
                     .ToListAsync()
 
-            return folderDatas |> Seq.map (fun data -> Folder.fromData data) |> Seq.toList
+            // Load children for each root folder
+            let folders = []
+            let mutable folderList = folders
+
+            for data in folderDatas do
+                let guidId = data.Id.Value
+
+                // Load children for this folder
+                let! childrenData =
+                    context.Folders
+                        .Where(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
+                        .OrderBy(fun f -> f.Name)
+                        .ToListAsync()
+
+                // Initialize children as empty list first
+                data.Children <- []
+                // Populate children field
+                data.Children <- childrenData |> Seq.toList
+                let folder = Folder.fromData data
+                folderList <- folder :: folderList
+
+            return List.rev folderList
         }
 
         member _.GetChildFoldersAsync (parentId: FolderId) (skip: int) (take: int) : Task<ValidatedFolder list> = task {
@@ -61,7 +96,28 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
         member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedFolder list> = task {
             let! folderDatas = context.Folders.OrderBy(fun f -> f.Name).Skip(skip).Take(take).ToListAsync()
 
-            return folderDatas |> Seq.map (fun data -> Folder.fromData data) |> Seq.toList
+            // Load children for each folder
+            let folders = []
+            let mutable folderList = folders
+
+            for data in folderDatas do
+                let guidId = data.Id.Value
+
+                // Load children for this folder
+                let! childrenData =
+                    context.Folders
+                        .Where(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
+                        .OrderBy(fun f -> f.Name)
+                        .ToListAsync()
+
+                // Initialize children as empty list first
+                data.Children <- []
+                // Populate children field
+                data.Children <- childrenData |> Seq.toList
+                let folder = Folder.fromData data
+                folderList <- folder :: folderList
+
+            return List.rev folderList
         }
 
         member _.AddAsync(folder: ValidatedFolder) : Task<Result<unit, DomainError>> = task {
