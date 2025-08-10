@@ -31,31 +31,32 @@ export default function ResourcesView({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchResources = async () => {
-      try {
-        setLoading(true);
-        const response = await getResources();
-        if (response.data?.items) {
-          const mappedItems = response.data?.items.map((item) => {
-            return {
-              id: item.id.value,
-              name: item.name,
-              description: item.description,
-              baseUrl: item.baseUrl,
-              httpMethod: item.httpMethod,
-            } as Resource;
-          });
-          setResources(mappedItems);
-        }
-      } catch (err) {
-        setError("Failed to load resources");
-        console.error("Error fetching resources:", err);
-      } finally {
-        setLoading(false);
+  const fetchResources = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getResources();
+      if (response.data?.items) {
+        const mappedItems = response.data?.items.map((item) => {
+          return {
+            id: item.id.value,
+            name: item.name,
+            description: item.description,
+            baseUrl: item.baseUrl,
+            httpMethod: item.httpMethod,
+          } as Resource;
+        });
+        setResources(mappedItems);
       }
-    };
+    } catch (err) {
+      setError("Failed to load resources");
+      console.error("Error fetching resources:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchResources();
   }, []);
 
@@ -63,7 +64,7 @@ export default function ResourcesView({
     <section className="p-6 space-y-4 overflow-y-auto flex-1">
       <header className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Resources</h2>
-        <Button onClick={() => window.location.reload()}>Refresh</Button>
+        <Button onClick={fetchResources}>Refresh</Button>
       </header>
       <Separator />
 
