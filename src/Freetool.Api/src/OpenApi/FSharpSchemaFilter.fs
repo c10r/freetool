@@ -6,12 +6,58 @@ open Swashbuckle.AspNetCore.SwaggerGen
 open System
 open System.Collections.Generic
 open Freetool.Domain.Entities
+open Freetool.Domain.ValueObjects
 
 type FSharpUnionSchemaFilter() =
     interface ISchemaFilter with
         member _.Apply(schema: OpenApiSchema, context: SchemaFilterContext) =
+            // Handle ID value objects - convert them to simple UUID strings
+            if
+                context.Type = typeof<UserId>
+                || context.Type = typeof<AppId>
+                || context.Type = typeof<GroupId>
+                || context.Type = typeof<FolderId>
+                || context.Type = typeof<ResourceId>
+                || context.Type = typeof<RunId>
+            then
+                schema.Type <- "string"
+                schema.Format <- "uuid"
+                schema.Properties <- null
+                schema.AdditionalProperties <- null
+                schema.Required <- null
+
+            // Handle string-based value objects - convert them to simple strings
+            elif
+                context.Type = typeof<AppName>
+                || context.Type = typeof<BaseUrl>
+                || context.Type = typeof<Email>
+                || context.Type = typeof<FolderName>
+                || context.Type = typeof<ResourceDescription>
+                || context.Type = typeof<ResourceName>
+                || context.Type = typeof<Url>
+                || context.Type = typeof<InputTitle>
+            then
+                schema.Type <- "string"
+                schema.Properties <- null
+                schema.AdditionalProperties <- null
+                schema.Required <- null
+
+            // Handle F# option types - convert them to nullable types
+            elif
+                context.Type.IsGenericType
+                && context.Type.GetGenericTypeDefinition().Name.Contains("FSharpOption")
+            then
+                let innerType = context.Type.GetGenericArguments().[0]
+
+                if innerType = typeof<string> then
+                    schema.Type <- "string"
+                    schema.Nullable <- true
+                    schema.Properties <- null
+                    schema.AdditionalProperties <- null
+                    schema.Required <- null
+
             // Handle EventType union
-            if context.Type = typeof<EventType> then
+            elif context.Type = typeof<EventType> then
                 schema.Type <- "object"
                 schema.Properties <- Dictionary<string, OpenApiSchema>()
 

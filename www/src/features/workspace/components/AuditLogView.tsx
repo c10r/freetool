@@ -99,7 +99,7 @@ export default function AuditLogView() {
             entityType: item.eventType.Case.toLocaleLowerCase().split(
               "events",
             )[0] as EntityType,
-            userId: item.userId.value,
+            userId: item.userId,
             occurredAt: item.occurredAt,
             eventData: JSON.parse(item.eventData),
           };

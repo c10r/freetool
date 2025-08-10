@@ -35,10 +35,10 @@ export default function UsersTeamsView() {
         if (response.data) {
           const userData: User[] = response.data.items?.map((user) => {
             return {
-              id: user.id as string,
+              id: user.id,
               name: user.name,
               email: user.email,
-              profilePicUrl: user.profilePicUrl as string,
+              profilePicUrl: user.profilePicUrl,
             };
           });
           setUsers(userData);
@@ -59,7 +59,7 @@ export default function UsersTeamsView() {
         if (response.data) {
           const groupData: Group[] = response.data.items?.map((group) => {
             return {
-              id: group.id as string,
+              id: group.id,
               name: group.name,
               memberCount: group.userIds?.length || 0,
             };

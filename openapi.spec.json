@@ -4092,11 +4092,13 @@
         "type": "object",
         "properties": {
           "id": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/AppId"
               }
-            ]
+            ],
+            "format": "uuid"
           },
           "name": {
             "maxLength": 100,
@@ -4104,18 +4106,22 @@
             "type": "string"
           },
           "folderId": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/FolderId"
               }
-            ]
+            ],
+            "format": "uuid"
           },
           "resourceId": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceId"
               }
-            ]
+            ],
+            "format": "uuid"
           },
           "inputs": {
             "type": "array",
@@ -4125,6 +4131,7 @@
           },
           "urlPath": {
             "maxLength": 500,
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/StringFSharpOption"
@@ -4187,25 +4194,9 @@
         "additionalProperties": false
       },
       "AppId": {
-        "type": "object",
-        "properties": {
-          "tag": {
-            "type": "integer",
-            "format": "int32",
-            "readOnly": true
-          },
-          "item": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          },
-          "value": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          }
-        },
-        "additionalProperties": false
+        "type": "string",
+        "additionalProperties": false,
+        "format": "uuid"
       },
       "AppInputDto": {
         "required": [
@@ -4228,14 +4219,7 @@
         "additionalProperties": false
       },
       "BaseUrl": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "string",
-            "nullable": true,
-            "readOnly": true
-          }
-        },
+        "type": "string",
         "additionalProperties": false
       },
       "CreateAppDto": {
@@ -4269,6 +4253,7 @@
           "urlPath": {
             "maxLength": 500,
             "minLength": 0,
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/StringFSharpOption"
@@ -4541,11 +4526,13 @@
             "format": "date-time"
           },
           "userId": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/UserId"
               }
-            ]
+            ],
+            "format": "uuid"
           }
         },
         "additionalProperties": false
@@ -4662,14 +4649,17 @@
         "type": "object",
         "properties": {
           "id": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/FolderId"
               }
-            ]
+            ],
+            "format": "uuid"
           },
           "name": {
             "maxLength": 100,
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/FolderName"
@@ -4735,35 +4725,21 @@
         "additionalProperties": false
       },
       "FolderId": {
-        "type": "object",
-        "properties": {
-          "tag": {
-            "type": "integer",
-            "format": "int32",
-            "readOnly": true
-          },
-          "item": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          },
-          "value": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          }
-        },
-        "additionalProperties": false
+        "type": "string",
+        "additionalProperties": false,
+        "format": "uuid"
       },
       "FolderIdFSharpOption": {
         "type": "object",
         "properties": {
           "value": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/FolderId"
               }
-            ]
+            ],
+            "format": "uuid"
           }
         },
         "additionalProperties": false
@@ -4788,14 +4764,7 @@
         "additionalProperties": false
       },
       "FolderName": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "string",
-            "nullable": true,
-            "readOnly": true
-          }
-        },
+        "type": "string",
         "additionalProperties": false
       },
       "GroupData": {
@@ -4805,11 +4774,13 @@
         "type": "object",
         "properties": {
           "id": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/GroupId"
               }
-            ]
+            ],
+            "format": "uuid"
           },
           "name": {
             "maxLength": 100,
@@ -4853,25 +4824,9 @@
         "additionalProperties": false
       },
       "GroupId": {
-        "type": "object",
-        "properties": {
-          "tag": {
-            "type": "integer",
-            "format": "int32",
-            "readOnly": true
-          },
-          "item": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          },
-          "value": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          }
-        },
-        "additionalProperties": false
+        "type": "string",
+        "additionalProperties": false,
+        "format": "uuid"
       },
       "HttpMethod": {
         "type": "object",
@@ -5173,14 +5128,17 @@
         "type": "object",
         "properties": {
           "id": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceId"
               }
-            ]
+            ],
+            "format": "uuid"
           },
           "name": {
             "maxLength": 100,
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceName"
@@ -5189,6 +5147,7 @@
           },
           "description": {
             "maxLength": 500,
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceDescription"
@@ -5205,6 +5164,7 @@
           },
           "baseUrl": {
             "maxLength": 1000,
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/BaseUrl"
@@ -5258,46 +5218,16 @@
         "additionalProperties": false
       },
       "ResourceDescription": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "string",
-            "nullable": true,
-            "readOnly": true
-          }
-        },
+        "type": "string",
         "additionalProperties": false
       },
       "ResourceId": {
-        "type": "object",
-        "properties": {
-          "tag": {
-            "type": "integer",
-            "format": "int32",
-            "readOnly": true
-          },
-          "item": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          },
-          "value": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          }
-        },
-        "additionalProperties": false
+        "type": "string",
+        "additionalProperties": false,
+        "format": "uuid"
       },
       "ResourceName": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "string",
-            "nullable": true,
-            "readOnly": true
-          }
-        },
+        "type": "string",
         "additionalProperties": false
       },
       "RunData": {
@@ -5309,18 +5239,22 @@
         "type": "object",
         "properties": {
           "id": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/RunId"
               }
-            ]
+            ],
+            "format": "uuid"
           },
           "appId": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/AppId"
               }
-            ]
+            ],
+            "format": "uuid"
           },
           "status": {
             "maxLength": 50,
@@ -5345,6 +5279,7 @@
             "nullable": true
           },
           "response": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/StringFSharpOption"
@@ -5353,6 +5288,7 @@
             "nullable": true
           },
           "errorMessage": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/StringFSharpOption"
@@ -5380,25 +5316,9 @@
         "additionalProperties": false
       },
       "RunId": {
-        "type": "object",
-        "properties": {
-          "tag": {
-            "type": "integer",
-            "format": "int32",
-            "readOnly": true
-          },
-          "item": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          },
-          "value": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          }
-        },
-        "additionalProperties": false
+        "type": "string",
+        "additionalProperties": false,
+        "format": "uuid"
       },
       "RunInputDto": {
         "required": [
@@ -5494,14 +5414,9 @@
         "additionalProperties": false
       },
       "StringFSharpOption": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
+        "type": "string",
+        "additionalProperties": false,
+        "nullable": true
       },
       "StringStringTuple": {
         "type": "object",
@@ -5693,11 +5608,13 @@
         "type": "object",
         "properties": {
           "id": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/UserId"
               }
-            ]
+            ],
+            "format": "uuid"
           },
           "name": {
             "maxLength": 100,
@@ -5711,6 +5628,7 @@
           },
           "profilePicUrl": {
             "maxLength": 2000,
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/StringFSharpOption"
@@ -5747,25 +5665,9 @@
         "additionalProperties": false
       },
       "UserId": {
-        "type": "object",
-        "properties": {
-          "tag": {
-            "type": "integer",
-            "format": "int32",
-            "readOnly": true
-          },
-          "item": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          },
-          "value": {
-            "type": "string",
-            "format": "uuid",
-            "readOnly": true
-          }
-        },
-        "additionalProperties": false
+        "type": "string",
+        "additionalProperties": false,
+        "format": "uuid"
       }
     }
   }

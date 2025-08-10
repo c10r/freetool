@@ -39,7 +39,7 @@ export default function ResourcesView({
       if (response.data?.items) {
         const mappedItems = response.data?.items.map((item) => {
           return {
-            id: item.id.value,
+            id: item.id,
             name: item.name,
             description: item.description,
             baseUrl: item.baseUrl,
