@@ -45,7 +45,9 @@ type EventRepository(context: FreetoolDbContext) =
                 | :? Events.FolderDeletedEvent as e -> e.FolderId.ToString()
                 | _ -> "unknown"
 
-            let eventData = JsonSerializer.Serialize(event)
+            let jsonOptions = JsonSerializerOptions()
+            jsonOptions.Converters.Add(UserIdConverter())
+            let eventData = JsonSerializer.Serialize(event, jsonOptions)
 
             let eventDataRecord: Entities.EventData = {
                 Id = Guid.NewGuid()

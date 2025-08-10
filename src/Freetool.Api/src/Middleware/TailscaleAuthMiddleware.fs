@@ -5,6 +5,7 @@ open Microsoft.Extensions.DependencyInjection
 open System.Threading.Tasks
 open System.Diagnostics
 open Freetool.Application.Interfaces
+open Freetool.Domain
 open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
 open Freetool.Api.Tracing
@@ -38,6 +39,7 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
             Tracing.setSpanStatus currentActivity false (Some "Missing or empty Tailscale user login")
             context.Response.StatusCode <- 401
             do! context.Response.WriteAsync $"Unauthorized: Missing or invalid {TAILSCALE_USER_LOGIN}"
+            return ()
         | Some userEmail ->
             match Email.Create(Some userEmail) with
             | Error _ ->
@@ -46,6 +48,7 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                 Tracing.setSpanStatus currentActivity false (Some "Invalid email format in Tailscale header")
                 context.Response.StatusCode <- 401
                 do! context.Response.WriteAsync $"Unauthorized: Invalid {TAILSCALE_USER_LOGIN}"
+                return ()
 
             | Ok validEmail ->
                 let userRepository = context.RequestServices.GetRequiredService<IUserRepository>()
@@ -65,19 +68,31 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                         Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
                         Tracing.setSpanStatus currentActivity false (Some "Failed to create user")
                         context.Response.StatusCode <- 500
-                        do! context.Response.WriteAsync "Internal Server Error: Failed to create user"
+
+                        let errorMessage =
+                            match err with
+                            | ValidationError msg -> $"Validation error: {msg}"
+                            | NotFound msg -> $"Not found: {msg}"
+                            | Conflict msg -> $"Conflict: {msg}"
+                            | InvalidOperation msg -> $"Invalid operation: {msg}"
+
+                        do! context.Response.WriteAsync $"Internal Server Error: Failed to create user - {errorMessage}"
                         return ()
                     | Ok user ->
                         context.Items.["UserId"] <- user.State.Id
                         Tracing.addAttribute currentActivity "tailscale.auth.user_created" "true"
                         Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
                         Tracing.addAttribute currentActivity "user.id" (user.State.Id.Value.ToString())
+
+                        Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
+                        Tracing.setSpanStatus currentActivity true None
+                        do! next.Invoke context
                 else
+                    context.Items.["UserId"] <- user.Value.State.Id
                     Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
                     Tracing.addAttribute currentActivity "user.id" (user.Value.State.Id.Value.ToString())
 
-                Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
-                Tracing.setSpanStatus currentActivity true None
-
-                do! next.Invoke context
+                    Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
+                    Tracing.setSpanStatus currentActivity true None
+                    do! next.Invoke context
     }

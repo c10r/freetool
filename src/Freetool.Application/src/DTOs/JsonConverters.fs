@@ -3,6 +3,7 @@ namespace Freetool.Application.DTOs
 open System
 open System.Text.Json
 open System.Text.Json.Serialization
+open Freetool.Domain.ValueObjects
 
 type StringOptionConverter() =
     inherit JsonConverter<string option>()
@@ -39,3 +40,14 @@ type FolderLocationConverter() =
         match value with
         | RootFolder -> writer.WriteNullValue()
         | ChildFolder parentId -> writer.WriteStringValue(parentId)
+
+type UserIdConverter() =
+    inherit JsonConverter<UserId>()
+
+    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
+        let guidStr = reader.GetString()
+        let guid = Guid.Parse(guidStr)
+        UserId.FromGuid(guid)
+
+    override _.Write(writer: Utf8JsonWriter, value: UserId, _options: JsonSerializerOptions) =
+        writer.WriteStringValue(value.Value.ToString())
