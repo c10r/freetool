@@ -98,7 +98,7 @@ function SidebarSection({
   selectedId: string;
   onSelect: (id: string) => void;
 }) {
-  const sectionId = title.toLowerCase().replace(" ", "-");
+  const sectionId = title.toLowerCase().replace(/ /g, "-");
   const isSelected = selectedId === sectionId;
 
   return (

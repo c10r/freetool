@@ -16,6 +16,17 @@ export const getAuditEvents = (skip?: number, take?: number) => {
   return client.GET("/audit/events");
 };
 
+export const getGroups = (skip?: number, take?: number) => {
+  if (skip && take) {
+    return client.GET("/group", {
+      params: {
+        query: { skip, take },
+      },
+    });
+  }
+  return client.GET("/group");
+};
+
 export const getUsers = (skip?: number, take?: number) => {
   if (skip && take) {
     return client.GET("/user", {
