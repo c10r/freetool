@@ -63,6 +63,52 @@ export const updateGroupName = ({ id, name }: { id: string; name: string }) => {
   });
 };
 
+export const addGroupMember = ({
+  groupId,
+  userId,
+}: {
+  groupId: string;
+  userId: string;
+}) => {
+  return client.POST("/group/{id}/users", {
+    params: {
+      path: {
+        id: groupId,
+      },
+    },
+    body: {
+      userId,
+    },
+  });
+};
+
+export const removeGroupMember = ({
+  groupId,
+  userId,
+}: {
+  groupId: string;
+  userId: string;
+}) => {
+  return client.DELETE("/group/{id}/users", {
+    params: {
+      path: {
+        id: groupId,
+      },
+    },
+    body: {
+      userId,
+    },
+  });
+};
+
+export const getGroupById = (groupId: string) => {
+  return client.GET("/group/{id}", {
+    params: {
+      path: { id: groupId },
+    },
+  });
+};
+
 export const getUsers = (skip?: number, take?: number) => {
   if (skip && take) {
     return client.GET("/user", {

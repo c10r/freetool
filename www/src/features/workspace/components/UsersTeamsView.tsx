@@ -15,8 +15,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, User, Plus } from "lucide-react";
-import { getUsers, getGroups, createGroup } from "@/api/api";
+import { Users, User, Plus, Edit, X } from "lucide-react";
+import {
+  getUsers,
+  getGroups,
+  createGroup,
+  updateGroupName,
+  addGroupMember,
+  removeGroupMember,
+  getGroupById,
+} from "@/api/api";
 
 interface User {
   id: string;
@@ -43,6 +51,12 @@ export default function UsersTeamsView() {
   const [groupName, setGroupName] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+
+  const [editGroupOpen, setEditGroupOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [editGroupName, setEditGroupName] = useState("");
+  const [editSelectedUserIds, setEditSelectedUserIds] = useState<string[]>([]);
+  const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -130,6 +144,85 @@ export default function UsersTeamsView() {
       setSelectedUserIds([...selectedUserIds, userId]);
     } else {
       setSelectedUserIds(selectedUserIds.filter((id) => id !== userId));
+    }
+  };
+
+  const handleEditUserSelection = (userId: string, checked: boolean) => {
+    if (checked) {
+      setEditSelectedUserIds([...editSelectedUserIds, userId]);
+    } else {
+      setEditSelectedUserIds(editSelectedUserIds.filter((id) => id !== userId));
+    }
+  };
+
+  const handleEditGroup = async (group: Group) => {
+    try {
+      setEditingGroup(group);
+      setEditGroupName(group.name);
+
+      const response = await getGroupById(group.id);
+      if (response.data) {
+        const currentUserIds = response.data.userIds || [];
+        setEditSelectedUserIds(currentUserIds);
+      }
+
+      setEditGroupOpen(true);
+    } catch (error) {
+      console.error("Error fetching group details:", error);
+    }
+  };
+
+  const handleUpdateGroup = async () => {
+    if (!editingGroup || !editGroupName.trim()) {
+      return;
+    }
+
+    try {
+      setIsUpdatingGroup(true);
+
+      await updateGroupName({
+        id: editingGroup.id,
+        name: editGroupName.trim(),
+      });
+
+      const response = await getGroupById(editingGroup.id);
+      if (response.data) {
+        const currentUserIds = response.data.userIds || [];
+
+        const usersToAdd = editSelectedUserIds.filter(
+          (id) => !currentUserIds.includes(id),
+        );
+        const usersToRemove = currentUserIds.filter(
+          (id) => !editSelectedUserIds.includes(id),
+        );
+
+        for (const userId of usersToAdd) {
+          await addGroupMember({ groupId: editingGroup.id, userId });
+        }
+
+        for (const userId of usersToRemove) {
+          await removeGroupMember({ groupId: editingGroup.id, userId });
+        }
+      }
+
+      setEditGroupOpen(false);
+      setEditingGroup(null);
+      setEditGroupName("");
+      setEditSelectedUserIds([]);
+
+      const groupsResponse = await getGroups();
+      if (groupsResponse.data) {
+        const groupData: Group[] = groupsResponse.data.items?.map((group) => ({
+          id: group.id,
+          name: group.name,
+          memberCount: group.userIds?.length || 0,
+        }));
+        setGroups(groupData);
+      }
+    } catch (error) {
+      console.error("Error updating group:", error);
+    } finally {
+      setIsUpdatingGroup(false);
     }
   };
 
@@ -309,6 +402,89 @@ export default function UsersTeamsView() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Edit Group Dialog */}
+          <Dialog open={editGroupOpen} onOpenChange={setEditGroupOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit Team</DialogTitle>
+                <DialogDescription>
+                  Update the team name and manage its members.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-group-name">Team Name</Label>
+                  <Input
+                    id="edit-group-name"
+                    placeholder="Enter team name"
+                    value={editGroupName}
+                    onChange={(e) => setEditGroupName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label>Team Members</Label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {users.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center space-x-3"
+                      >
+                        <Checkbox
+                          id={`edit-user-${user.id}`}
+                          checked={editSelectedUserIds.includes(user.id)}
+                          onCheckedChange={(checked) =>
+                            handleEditUserSelection(user.id, checked as boolean)
+                          }
+                        />
+                        <div className="flex items-center space-x-2 flex-1">
+                          {user.profilePicUrl ? (
+                            <img
+                              src={user.profilePicUrl}
+                              alt={`${user.name}'s profile`}
+                              className="w-6 h-6 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                              <User
+                                size={12}
+                                className="text-muted-foreground"
+                              />
+                            </div>
+                          )}
+                          <Label
+                            htmlFor={`edit-user-${user.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {user.name}
+                          </Label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {editSelectedUserIds.length} member
+                    {editSelectedUserIds.length !== 1 ? "s" : ""} selected
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditGroupOpen(false)}
+                  disabled={isUpdatingGroup}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateGroup}
+                  disabled={!editGroupName.trim() || isUpdatingGroup}
+                >
+                  {isUpdatingGroup ? "Updating..." : "Update Team"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {groupsLoading ? (
@@ -342,9 +518,19 @@ export default function UsersTeamsView() {
             {groups.map((group) => (
               <Card key={group.id}>
                 <CardHeader>
-                  <CardTitle className="text-base font-medium">
-                    {group.name}
-                  </CardTitle>
+                  <div className="flex items-start justify-between">
+                    <CardTitle className="text-base font-medium">
+                      {group.name}
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditGroup(group)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Edit size={14} />
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {group.memberCount !== undefined && (
