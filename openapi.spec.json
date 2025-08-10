@@ -4425,36 +4425,21 @@
         "additionalProperties": false
       },
       "EntityType": {
+        "required": [
+          "Case"
+        ],
         "type": "object",
         "properties": {
-          "tag": {
-            "type": "integer",
-            "format": "int32",
-            "readOnly": true
-          },
-          "isUser": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isApp": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isResource": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isFolder": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isGroup": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isRun": {
-            "type": "boolean",
-            "readOnly": true
+          "Case": {
+            "enum": [
+              "User",
+              "App",
+              "Resource",
+              "Folder",
+              "Group",
+              "Run"
+            ],
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -4481,18 +4466,63 @@
             "type": "string"
           },
           "eventType": {
+            "required": [
+              "Case"
+            ],
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/EventType"
               }
-            ]
+            ],
+            "properties": {
+              "Case": {
+                "enum": [
+                  "UserEvents",
+                  "AppEvents",
+                  "ResourceEvents",
+                  "FolderEvents",
+                  "GroupEvents",
+                  "RunEvents"
+                ],
+                "type": "string"
+              },
+              "Fields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "Case": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           },
           "entityType": {
+            "required": [
+              "Case"
+            ],
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/EntityType"
               }
-            ]
+            ],
+            "properties": {
+              "Case": {
+                "enum": [
+                  "User",
+                  "App",
+                  "Resource",
+                  "Folder",
+                  "Group",
+                  "Run"
+                ],
+                "type": "string"
+              }
+            }
           },
           "entityId": {
             "minLength": 1,
@@ -4546,36 +4576,32 @@
         "additionalProperties": false
       },
       "EventType": {
+        "required": [
+          "Case"
+        ],
         "type": "object",
         "properties": {
-          "tag": {
-            "type": "integer",
-            "format": "int32",
-            "readOnly": true
+          "Case": {
+            "enum": [
+              "UserEvents",
+              "AppEvents",
+              "ResourceEvents",
+              "FolderEvents",
+              "GroupEvents",
+              "RunEvents"
+            ],
+            "type": "string"
           },
-          "isUserEvents": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isAppEvents": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isResourceEvents": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isFolderEvents": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isGroupEvents": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "isRunEvents": {
-            "type": "boolean",
-            "readOnly": true
+          "Fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "Case": {
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "additionalProperties": false

@@ -16,6 +16,7 @@ open Freetool.Application.Handlers
 open Freetool.Application.Commands
 open Freetool.Api.Tracing
 open Freetool.Api.Middleware
+open Freetool.Api.OpenApi
 
 [<EntryPoint>]
 let main args =
@@ -34,7 +35,8 @@ let main args =
 
     builder.Services.AddSwaggerGen(fun c ->
         c.SupportNonNullableReferenceTypes() |> ignore
-        c.UseAllOfToExtendReferenceSchemas() |> ignore)
+        c.UseAllOfToExtendReferenceSchemas() |> ignore
+        c.SchemaFilter<FSharpUnionSchemaFilter>() |> ignore)
     |> ignore
 
     builder.Services.AddDbContext<FreetoolDbContext>(fun options ->
