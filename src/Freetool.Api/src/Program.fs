@@ -30,6 +30,8 @@ let main args =
         .AddJsonOptions(fun options ->
             options.JsonSerializerOptions.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull
             options.JsonSerializerOptions.Converters.Add(HttpMethodConverter())
+            options.JsonSerializerOptions.Converters.Add(EventTypeConverter())
+            options.JsonSerializerOptions.Converters.Add(EntityTypeConverter())
             options.JsonSerializerOptions.Converters.Add(JsonFSharpConverter()))
     |> ignore
 

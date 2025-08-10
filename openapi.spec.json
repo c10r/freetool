@@ -4414,23 +4414,15 @@
         "additionalProperties": false
       },
       "EntityType": {
-        "required": [
-          "Case"
+        "enum": [
+          "User",
+          "App",
+          "Resource",
+          "Folder",
+          "Group",
+          "Run"
         ],
-        "type": "object",
-        "properties": {
-          "Case": {
-            "enum": [
-              "User",
-              "App",
-              "Resource",
-              "Folder",
-              "Group",
-              "Run"
-            ],
-            "type": "string"
-          }
-        },
+        "type": "string",
         "additionalProperties": false
       },
       "EventData": {
@@ -4455,63 +4447,47 @@
             "type": "string"
           },
           "eventType": {
-            "required": [
-              "Case"
+            "enum": [
+              "UserCreatedEvent",
+              "UserUpdatedEvent",
+              "UserDeletedEvent",
+              "AppCreatedEvent",
+              "AppUpdatedEvent",
+              "AppDeletedEvent",
+              "ResourceCreatedEvent",
+              "ResourceUpdatedEvent",
+              "ResourceDeletedEvent",
+              "FolderCreatedEvent",
+              "FolderUpdatedEvent",
+              "FolderDeletedEvent",
+              "GroupCreatedEvent",
+              "GroupUpdatedEvent",
+              "GroupDeletedEvent",
+              "RunCreatedEvent",
+              "RunStatusChangedEvent"
             ],
-            "type": "object",
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/EventType"
               }
-            ],
-            "properties": {
-              "Case": {
-                "enum": [
-                  "UserEvents",
-                  "AppEvents",
-                  "ResourceEvents",
-                  "FolderEvents",
-                  "GroupEvents",
-                  "RunEvents"
-                ],
-                "type": "string"
-              },
-              "Fields": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "Case": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
+            ]
           },
           "entityType": {
-            "required": [
-              "Case"
+            "enum": [
+              "User",
+              "App",
+              "Resource",
+              "Folder",
+              "Group",
+              "Run"
             ],
-            "type": "object",
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/EntityType"
               }
-            ],
-            "properties": {
-              "Case": {
-                "enum": [
-                  "User",
-                  "App",
-                  "Resource",
-                  "Folder",
-                  "Group",
-                  "Run"
-                ],
-                "type": "string"
-              }
-            }
+            ]
           },
           "entityId": {
             "minLength": 1,
@@ -4567,34 +4543,26 @@
         "additionalProperties": false
       },
       "EventType": {
-        "required": [
-          "Case"
+        "enum": [
+          "UserCreatedEvent",
+          "UserUpdatedEvent",
+          "UserDeletedEvent",
+          "AppCreatedEvent",
+          "AppUpdatedEvent",
+          "AppDeletedEvent",
+          "ResourceCreatedEvent",
+          "ResourceUpdatedEvent",
+          "ResourceDeletedEvent",
+          "FolderCreatedEvent",
+          "FolderUpdatedEvent",
+          "FolderDeletedEvent",
+          "GroupCreatedEvent",
+          "GroupUpdatedEvent",
+          "GroupDeletedEvent",
+          "RunCreatedEvent",
+          "RunStatusChangedEvent"
         ],
-        "type": "object",
-        "properties": {
-          "Case": {
-            "enum": [
-              "UserEvents",
-              "AppEvents",
-              "ResourceEvents",
-              "FolderEvents",
-              "GroupEvents",
-              "RunEvents"
-            ],
-            "type": "string"
-          },
-          "Fields": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "Case": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
+        "type": "string",
         "additionalProperties": false
       },
       "ExecutableHttpRequest": {

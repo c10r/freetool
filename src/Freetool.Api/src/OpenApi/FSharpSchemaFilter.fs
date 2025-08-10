@@ -71,39 +71,31 @@ type FSharpUnionSchemaFilter() =
 
             // Handle EventType union
             elif context.Type = typeof<EventType> then
-                schema.Type <- "object"
-                schema.Properties <- Dictionary<string, OpenApiSchema>()
+                schema.Type <- "string"
 
-                schema.Properties.Add(
-                    "Case",
-                    OpenApiSchema(
-                        Type = "string",
-                        Enum = [|
-                            OpenApiString("UserEvents") :> IOpenApiAny
-                            OpenApiString("AppEvents") :> IOpenApiAny
-                            OpenApiString("ResourceEvents") :> IOpenApiAny
-                            OpenApiString("FolderEvents") :> IOpenApiAny
-                            OpenApiString("GroupEvents") :> IOpenApiAny
-                            OpenApiString("RunEvents") :> IOpenApiAny
-                        |]
-                    )
-                )
+                schema.Enum <- [|
+                    OpenApiString("UserCreatedEvent") :> IOpenApiAny
+                    OpenApiString("UserUpdatedEvent") :> IOpenApiAny
+                    OpenApiString("UserDeletedEvent") :> IOpenApiAny
+                    OpenApiString("AppCreatedEvent") :> IOpenApiAny
+                    OpenApiString("AppUpdatedEvent") :> IOpenApiAny
+                    OpenApiString("AppDeletedEvent") :> IOpenApiAny
+                    OpenApiString("ResourceCreatedEvent") :> IOpenApiAny
+                    OpenApiString("ResourceUpdatedEvent") :> IOpenApiAny
+                    OpenApiString("ResourceDeletedEvent") :> IOpenApiAny
+                    OpenApiString("FolderCreatedEvent") :> IOpenApiAny
+                    OpenApiString("FolderUpdatedEvent") :> IOpenApiAny
+                    OpenApiString("FolderDeletedEvent") :> IOpenApiAny
+                    OpenApiString("GroupCreatedEvent") :> IOpenApiAny
+                    OpenApiString("GroupUpdatedEvent") :> IOpenApiAny
+                    OpenApiString("GroupDeletedEvent") :> IOpenApiAny
+                    OpenApiString("RunCreatedEvent") :> IOpenApiAny
+                    OpenApiString("RunStatusChangedEvent") :> IOpenApiAny
+                |]
 
-                schema.Properties.Add(
-                    "Fields",
-                    OpenApiSchema(
-                        Type = "array",
-                        Items =
-                            OpenApiSchema(
-                                Type = "object",
-                                Properties =
-                                    Dictionary<string, OpenApiSchema>(dict [ "Case", OpenApiSchema(Type = "string") ])
-                            )
-                    )
-                )
-
+                schema.Properties <- null
                 schema.AdditionalProperties <- null
-                schema.Required <- HashSet<string>([ "Case" ])
+                schema.Required <- null
 
             // Handle HttpMethod union
             elif context.Type = typeof<HttpMethod> then
@@ -123,23 +115,17 @@ type FSharpUnionSchemaFilter() =
 
             // Handle EntityType union
             elif context.Type = typeof<EntityType> then
-                schema.Type <- "object"
-                schema.Properties <- Dictionary<string, OpenApiSchema>()
+                schema.Type <- "string"
 
-                schema.Properties.Add(
-                    "Case",
-                    OpenApiSchema(
-                        Type = "string",
-                        Enum = [|
-                            OpenApiString("User") :> IOpenApiAny
-                            OpenApiString("App") :> IOpenApiAny
-                            OpenApiString("Resource") :> IOpenApiAny
-                            OpenApiString("Folder") :> IOpenApiAny
-                            OpenApiString("Group") :> IOpenApiAny
-                            OpenApiString("Run") :> IOpenApiAny
-                        |]
-                    )
-                )
+                schema.Enum <- [|
+                    OpenApiString("User") :> IOpenApiAny
+                    OpenApiString("App") :> IOpenApiAny
+                    OpenApiString("Resource") :> IOpenApiAny
+                    OpenApiString("Folder") :> IOpenApiAny
+                    OpenApiString("Group") :> IOpenApiAny
+                    OpenApiString("Run") :> IOpenApiAny
+                |]
 
+                schema.Properties <- null
                 schema.AdditionalProperties <- null
-                schema.Required <- HashSet<string>([ "Case" ])
+                schema.Required <- null

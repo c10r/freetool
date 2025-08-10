@@ -4,6 +4,7 @@ open System
 open System.Text.Json
 open System.Text.Json.Serialization
 open Freetool.Domain.ValueObjects
+open Freetool.Domain.Entities
 
 type StringOptionConverter() =
     inherit JsonConverter<string option>()
@@ -64,3 +65,29 @@ type HttpMethodConverter() =
 
     override _.Write(writer: Utf8JsonWriter, value: HttpMethod, _options: JsonSerializerOptions) =
         writer.WriteStringValue(value.ToString())
+
+type EventTypeConverter() =
+    inherit JsonConverter<EventType>()
+
+    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
+        let eventTypeStr = reader.GetString()
+
+        match Freetool.Domain.Entities.EventTypeConverter.fromString (eventTypeStr) with
+        | Some eventType -> eventType
+        | None -> failwith $"Invalid event type: {eventTypeStr}"
+
+    override _.Write(writer: Utf8JsonWriter, value: EventType, _options: JsonSerializerOptions) =
+        writer.WriteStringValue(Freetool.Domain.Entities.EventTypeConverter.toString (value))
+
+type EntityTypeConverter() =
+    inherit JsonConverter<EntityType>()
+
+    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
+        let entityTypeStr = reader.GetString()
+
+        match Freetool.Domain.Entities.EntityTypeConverter.fromString (entityTypeStr) with
+        | Some entityType -> entityType
+        | None -> failwith $"Invalid entity type: {entityTypeStr}"
+
+    override _.Write(writer: Utf8JsonWriter, value: EntityType, _options: JsonSerializerOptions) =
+        writer.WriteStringValue(Freetool.Domain.Entities.EntityTypeConverter.toString (value))

@@ -2933,31 +2933,33 @@ export interface components {
       /** Format: date-time */
       value?: string;
     };
-    EntityType: {
-      /** @enum {string} */
-      Case: "User" | "App" | "Resource" | "Folder" | "Group" | "Run";
-    };
+    /** @enum {string} */
+    EntityType: string;
     EventData: {
       /** Format: uuid */
       id?: string;
       eventId: string;
-      eventType: {
-        /** @enum {string} */
-        Case:
-          | "UserEvents"
-          | "AppEvents"
-          | "ResourceEvents"
-          | "FolderEvents"
-          | "GroupEvents"
-          | "RunEvents";
-        Fields?: {
-          Case?: string;
-        }[];
-      } & WithRequired<components["schemas"]["EventType"], "Case">;
-      entityType: {
-        /** @enum {string} */
-        Case: "User" | "App" | "Resource" | "Folder" | "Group" | "Run";
-      } & WithRequired<components["schemas"]["EntityType"], "Case">;
+      /** @enum {string} */
+      eventType:
+        | "UserCreatedEvent"
+        | "UserUpdatedEvent"
+        | "UserDeletedEvent"
+        | "AppCreatedEvent"
+        | "AppUpdatedEvent"
+        | "AppDeletedEvent"
+        | "ResourceCreatedEvent"
+        | "ResourceUpdatedEvent"
+        | "ResourceDeletedEvent"
+        | "FolderCreatedEvent"
+        | "FolderUpdatedEvent"
+        | "FolderDeletedEvent"
+        | "GroupCreatedEvent"
+        | "GroupUpdatedEvent"
+        | "GroupDeletedEvent"
+        | "RunCreatedEvent"
+        | "RunStatusChangedEvent";
+      /** @enum {string} */
+      entityType: "User" | "App" | "Resource" | "Folder" | "Group" | "Run";
       entityId: string;
       eventData: string;
       /** Format: date-time */
@@ -2976,19 +2978,8 @@ export interface components {
       /** Format: int32 */
       take?: number;
     };
-    EventType: {
-      /** @enum {string} */
-      Case:
-        | "UserEvents"
-        | "AppEvents"
-        | "ResourceEvents"
-        | "FolderEvents"
-        | "GroupEvents"
-        | "RunEvents";
-      Fields?: {
-        Case?: string;
-      }[];
-    };
+    /** @enum {string} */
+    EventType: string;
     ExecutableHttpRequest: {
       baseUrl?: string | null;
       urlParameters?: components["schemas"]["StringStringTuple"][] | null;
@@ -3250,7 +3241,4 @@ export interface components {
   pathItems: never;
 }
 export type $defs = Record<string, never>;
-type WithRequired<T, K extends keyof T> = T & {
-  [P in K]-?: T[P];
-};
 export type operations = Record<string, never>;

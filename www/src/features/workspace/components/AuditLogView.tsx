@@ -34,7 +34,7 @@ type EventType =
   | GroupEvents
   | RunEvents;
 
-type EntityType = "user" | "folder" | "group" | "app" | "resource" | "run";
+type EntityType = "User" | "Folder" | "Group" | "App" | "Resource" | "Run";
 
 interface AuditEvent {
   id: string;
@@ -57,17 +57,17 @@ const getEventTypeColor = (eventType: EventType): string => {
 
 const getEntityTypeColor = (entityType: EntityType): string => {
   switch (entityType) {
-    case "user":
+    case "User":
       return "bg-purple-100 text-purple-800";
-    case "folder":
+    case "Folder":
       return "bg-orange-100 text-orange-800";
-    case "group":
+    case "Group":
       return "bg-indigo-100 text-indigo-800";
-    case "app":
+    case "App":
       return "bg-emerald-100 text-emerald-800";
-    case "resource":
+    case "Resource":
       return "bg-cyan-100 text-cyan-800";
-    case "run":
+    case "Run":
       return "bg-pink-100 text-pink-800";
     default:
       return "bg-gray-100 text-gray-800";
@@ -95,10 +95,8 @@ export default function AuditLogView() {
           return {
             id: item.id,
             eventId: item.eventId,
-            eventType: item.eventType.Fields[0].Case as EventType,
-            entityType: item.eventType.Case.toLocaleLowerCase().split(
-              "events",
-            )[0] as EntityType,
+            eventType: item.eventType,
+            entityType: item.entityType,
             userId: item.userId,
             occurredAt: item.occurredAt,
             eventData: JSON.parse(item.eventData),
