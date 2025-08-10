@@ -27,6 +27,42 @@ export const getGroups = (skip?: number, take?: number) => {
   return client.GET("/group");
 };
 
+export const createGroup = ({
+  name,
+  userIds,
+}: {
+  name: string;
+  userIds: string[];
+}) => {
+  return client.POST("/group", {
+    body: {
+      name,
+      userIds,
+    },
+  });
+};
+
+export const deleteGroup = (groupId: string) => {
+  return client.DELETE("/group/{id}", {
+    params: {
+      path: { id: groupId },
+    },
+  });
+};
+
+export const updateGroupName = ({ id, name }: { id: string; name: string }) => {
+  return client.PUT("/group/{id}/name", {
+    params: {
+      path: {
+        id,
+      },
+    },
+    body: {
+      name,
+    },
+  });
+};
+
 export const getUsers = (skip?: number, take?: number) => {
   if (skip && take) {
     return client.GET("/user", {

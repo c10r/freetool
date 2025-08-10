@@ -4320,11 +4320,15 @@
             "type": "string"
           },
           "userIds": {
+            "type": "array",
             "allOf": [
               {
                 "$ref": "#/components/schemas/StringFSharpListFSharpOption"
               }
             ],
+            "items": {
+              "type": "string"
+            },
             "nullable": true
           }
         },
@@ -5401,17 +5405,12 @@
         "additionalProperties": false
       },
       "StringFSharpListFSharpOption": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "nullable": true
-          }
+        "type": "array",
+        "items": {
+          "type": "string"
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "nullable": true
       },
       "StringFSharpOption": {
         "type": "string",

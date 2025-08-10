@@ -55,6 +55,20 @@ type FSharpUnionSchemaFilter() =
                     schema.Properties <- null
                     schema.AdditionalProperties <- null
                     schema.Required <- null
+                // Handle string list option types - convert them to nullable string arrays
+                elif
+                    innerType.IsGenericType
+                    && innerType.GetGenericTypeDefinition().Name.Contains("FSharpList")
+                then
+                    let listItemType = innerType.GetGenericArguments().[0]
+
+                    if listItemType = typeof<string> then
+                        schema.Type <- "array"
+                        schema.Items <- OpenApiSchema(Type = "string")
+                        schema.Nullable <- true
+                        schema.Properties <- null
+                        schema.AdditionalProperties <- null
+                        schema.Required <- null
 
             // Handle EventType union
             elif context.Type = typeof<EventType> then

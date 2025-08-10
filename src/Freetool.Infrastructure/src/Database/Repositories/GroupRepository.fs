@@ -14,15 +14,13 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
     interface IGroupRepository with
 
         member _.GetByIdAsync(groupId: GroupId) : Task<ValidatedGroup option> = task {
-            let guidId = groupId.Value
-            let! groupData = context.Groups.FirstOrDefaultAsync(fun g -> g.Id.Value = guidId)
+            let! groupData = context.Groups.FirstOrDefaultAsync(fun g -> g.Id = groupId)
 
             match Option.ofObj groupData with
             | None -> return None
             | Some data ->
                 // Get associated user-group relationships
-                let groupIdValue = Freetool.Domain.ValueObjects.GroupId(guidId)
-                let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = groupIdValue).ToListAsync()
+                let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = groupId).ToListAsync()
 
                 // Convert UserGroup entities to UserIds
                 let userIds = userGroupEntities |> Seq.map (fun ug -> ug.UserId) |> Seq.toList
@@ -56,7 +54,10 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
             let mutable groupList = groups
 
             for data in groupDatas do
-                let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = data.Id).ToListAsync()
+                let groupId = data.Id
+
+                // Use direct value object comparison - EF value converters should handle this
+                let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = groupId).ToListAsync()
 
                 // Convert UserGroup entities to UserIds
                 let userIds = userGroupEntities |> Seq.map (fun ug -> ug.UserId) |> Seq.toList
@@ -76,11 +77,15 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
             let mutable groupList = groups
 
             for userGroup in userGroupEntities do
-                let! groupData = context.Groups.FirstOrDefaultAsync(fun g -> g.Id = userGroup.GroupId)
+                let groupId = userGroup.GroupId
+                let! groupData = context.Groups.FirstOrDefaultAsync(fun g -> g.Id = groupId)
 
                 match Option.ofObj groupData with
                 | Some data ->
-                    let! allUserGroupsForGroup = context.UserGroups.Where(fun ug -> ug.GroupId = data.Id).ToListAsync()
+                    let dataGroupId = data.Id
+
+                    let! allUserGroupsForGroup =
+                        context.UserGroups.Where(fun ug -> ug.GroupId = dataGroupId).ToListAsync()
 
                     // Convert UserGroup entities to UserIds
                     let userIds = allUserGroupsForGroup |> Seq.map (fun ug -> ug.UserId) |> Seq.toList
@@ -132,8 +137,8 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
 
         member _.UpdateAsync(group: ValidatedGroup) : Task<Result<unit, DomainError>> = task {
             try
-                let guidId = (Group.getId group).Value
-                let! existingData = context.Groups.FirstOrDefaultAsync(fun g -> g.Id.Value = guidId)
+                let groupId = Group.getId group
+                let! existingData = context.Groups.FirstOrDefaultAsync(fun g -> g.Id = groupId)
 
                 match Option.ofObj existingData with
                 | None -> return Error(NotFound "Group not found")
@@ -144,8 +149,7 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
 
                     // Update user-group relationships
                     // First, remove existing relationships
-                    let! existingUserGroups =
-                        context.UserGroups.Where(fun ug -> ug.GroupId = GroupId(guidId)).ToListAsync()
+                    let! existingUserGroups = context.UserGroups.Where(fun ug -> ug.GroupId = groupId).ToListAsync()
 
                     context.UserGroups.RemoveRange(existingUserGroups)
 
@@ -177,10 +181,10 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
 
         member _.DeleteAsync(groupWithDeleteEvent: ValidatedGroup) : Task<Result<unit, DomainError>> = task {
             try
-                let guidId = (Group.getId groupWithDeleteEvent).Value
+                let groupId = Group.getId groupWithDeleteEvent
 
                 // Remove all user-group relationships first
-                let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = GroupId(guidId)).ToListAsync()
+                let! userGroupEntities = context.UserGroups.Where(fun ug -> ug.GroupId = groupId).ToListAsync()
 
                 context.UserGroups.RemoveRange(userGroupEntities)
 
@@ -207,8 +211,7 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
         }
 
         member _.ExistsAsync(groupId: GroupId) : Task<bool> = task {
-            let guidId = groupId.Value
-            return! context.Groups.AnyAsync(fun g -> g.Id.Value = guidId)
+            return! context.Groups.AnyAsync(fun g -> g.Id = groupId)
         }
 
         member _.ExistsByNameAsync(name: string) : Task<bool> = task {

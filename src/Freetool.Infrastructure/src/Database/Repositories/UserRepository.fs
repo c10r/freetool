@@ -14,8 +14,7 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
     interface IUserRepository with
 
         member _.GetByIdAsync(userId: UserId) : Task<ValidatedUser option> = task {
-            let guidId = userId.Value
-            let! userData = context.Users.FirstOrDefaultAsync(fun u -> u.Id.Value = guidId)
+            let! userData = context.Users.FirstOrDefaultAsync(fun u -> u.Id = userId)
 
             return userData |> Option.ofObj |> Option.map (fun data -> User.fromData data)
         }
@@ -54,8 +53,8 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
 
         member _.UpdateAsync(user: ValidatedUser) : Task<Result<ValidatedUser, DomainError>> = task {
             try
-                let guidId = (User.getId user).Value
-                let! existingUserData = context.Users.FirstOrDefaultAsync(fun u -> u.Id.Value = guidId)
+                let userId = User.getId user
+                let! existingUserData = context.Users.FirstOrDefaultAsync(fun u -> u.Id = userId)
 
                 match Option.ofObj existingUserData with
                 | None -> return Error(NotFound "User not found")
@@ -101,8 +100,7 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
         }
 
         member _.ExistsAsync(userId: UserId) : Task<bool> = task {
-            let guidId = userId.Value
-            return! context.Users.AnyAsync(fun u -> u.Id.Value = guidId)
+            return! context.Users.AnyAsync(fun u -> u.Id = userId)
         }
 
         member _.ExistsByEmailAsync(email: Email) : Task<bool> = task {
