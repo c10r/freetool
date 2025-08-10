@@ -93,9 +93,9 @@ type RunRepository(context: FreetoolDbContext, eventRepository: IEventRepository
 
                 match existingDataOption with
                 | None -> return Error(NotFound "Run not found")
-                | Some _ ->
-                    // Update entity directly
-                    context.Runs.Update(run.State) |> ignore
+                | Some existingEntity ->
+                    // Update the already-tracked entity to avoid tracking conflicts
+                    context.Entry(existingEntity).CurrentValues.SetValues(run.State)
 
                     // Save domain events
                     let events = Run.getUncommittedEvents run

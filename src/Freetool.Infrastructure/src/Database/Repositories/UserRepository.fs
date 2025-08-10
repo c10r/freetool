@@ -58,9 +58,9 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
 
                 match Option.ofObj existingUserData with
                 | None -> return Error(NotFound "User not found")
-                | Some _ ->
-                    // Update the entity directly
-                    context.Users.Update(user.State) |> ignore
+                | Some existingEntity ->
+                    // Update the already-tracked entity to avoid tracking conflicts
+                    context.Entry(existingEntity).CurrentValues.SetValues(user.State)
 
                     // Save events to audit log
                     let events = User.getUncommittedEvents user

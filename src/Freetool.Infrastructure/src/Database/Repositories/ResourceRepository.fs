@@ -57,9 +57,9 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
 
                 match Option.ofObj existingData with
                 | None -> return Error(NotFound "Resource not found")
-                | Some _ ->
-                    // Update the entity directly
-                    context.Resources.Update(resource.State) |> ignore
+                | Some existingEntity ->
+                    // Update the already-tracked entity to avoid tracking conflicts
+                    context.Entry(existingEntity).CurrentValues.SetValues(resource.State)
 
                     // Save event to database
                     let events = Resource.getUncommittedEvents resource

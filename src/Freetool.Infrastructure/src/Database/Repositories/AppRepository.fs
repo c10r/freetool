@@ -76,9 +76,9 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
 
                 match Option.ofObj existingData with
                 | None -> return Error(NotFound "App not found")
-                | Some _ ->
-                    // Update entity directly
-                    context.Apps.Update(app.State) |> ignore
+                | Some existingEntity ->
+                    // Update the already-tracked entity to avoid tracking conflicts
+                    context.Entry(existingEntity).CurrentValues.SetValues(app.State)
 
                     // Save events to audit log in SAME transaction
                     let events = App.getUncommittedEvents app

@@ -142,9 +142,9 @@ type GroupRepository(context: FreetoolDbContext, eventRepository: IEventReposito
 
                 match Option.ofObj existingData with
                 | None -> return Error(NotFound "Group not found")
-                | Some _ ->
-                    // Update the entity directly
-                    context.Groups.Update(group.State) |> ignore
+                | Some existingEntity ->
+                    // Update the already-tracked entity to avoid tracking conflicts
+                    context.Entry(existingEntity).CurrentValues.SetValues(group.State)
                     let! _ = context.SaveChangesAsync()
 
                     // Update user-group relationships

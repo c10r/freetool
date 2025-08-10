@@ -146,9 +146,9 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
 
                 match Option.ofObj existingData with
                 | None -> return Error(NotFound "Folder not found")
-                | Some _ ->
-                    // Update entity directly
-                    context.Folders.Update(folder.State) |> ignore
+                | Some existingEntity ->
+                    // Update the already-tracked entity to avoid tracking conflicts
+                    context.Entry(existingEntity).CurrentValues.SetValues(folder.State)
 
                     // Save events to audit log
                     let events = Folder.getUncommittedEvents folder
