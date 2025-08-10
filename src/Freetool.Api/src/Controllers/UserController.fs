@@ -2,7 +2,9 @@ namespace Freetool.Api.Controllers
 
 open System.Threading.Tasks
 open Microsoft.AspNetCore.Mvc
+open Microsoft.AspNetCore.Http
 open Freetool.Domain
+open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 open Freetool.Application.Commands
 open Freetool.Application.Interfaces
@@ -13,6 +15,10 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
     inherit AuthenticatedControllerBase()
 
     [<HttpGet("{id}")>]
+    [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetUserById(id: string) : Task<IActionResult> = task {
         let! result = commandHandler.HandleCommand userRepository (GetUserById id)
 
@@ -24,6 +30,10 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
     }
 
     [<HttpGet("email/{email}")>]
+    [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetUserByEmail(email: string) : Task<IActionResult> = task {
         let! result = commandHandler.HandleCommand userRepository (GetUserByEmail email)
 
@@ -35,6 +45,9 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
     }
 
     [<HttpGet>]
+    [<ProducesResponseType(typeof<PagedResult<UserData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetUsers([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> = task {
         let skipValue = if skip < 0 then 0 else skip
 
@@ -53,6 +66,10 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
     }
 
     [<HttpPut("{id}/name")>]
+    [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.UpdateUserName(id: string, [<FromBody>] updateDto: UpdateUserNameDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let! result = commandHandler.HandleCommand userRepository (UpdateUserName(userId, id, updateDto))
@@ -65,6 +82,10 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
     }
 
     [<HttpPut("{id}/email")>]
+    [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.UpdateUserEmail(id: string, [<FromBody>] updateDto: UpdateUserEmailDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let! result = commandHandler.HandleCommand userRepository (UpdateUserEmail(userId, id, updateDto))
@@ -77,6 +98,10 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
     }
 
     [<HttpPut("{id}/profile-picture")>]
+    [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.SetProfilePicture(id: string, [<FromBody>] setDto: SetProfilePictureDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
 
@@ -90,6 +115,10 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
     }
 
     [<HttpDelete("{id}/profile-picture")>]
+    [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.RemoveProfilePicture(id: string) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
 
@@ -103,6 +132,10 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
     }
 
     [<HttpDelete("{id}")>]
+    [<ProducesResponseType(StatusCodes.Status204NoContent)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.DeleteUser(id: string) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
 

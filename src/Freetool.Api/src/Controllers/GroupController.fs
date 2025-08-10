@@ -2,6 +2,7 @@ namespace Freetool.Api.Controllers
 
 open System.Threading.Tasks
 open Microsoft.AspNetCore.Mvc
+open Microsoft.AspNetCore.Http
 open Freetool.Domain
 open Freetool.Domain.Entities
 open Freetool.Application.DTOs
@@ -15,6 +16,9 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
     inherit AuthenticatedControllerBase()
 
     [<HttpPost>]
+    [<ProducesResponseType(typeof<GroupData>, StatusCodes.Status201Created)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.CreateGroup([<FromBody>] createDto: CreateGroupDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let unvalidatedGroup = GroupMapper.fromCreateDto createDto
@@ -33,6 +37,10 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
     }
 
     [<HttpGet("{id}")>]
+    [<ProducesResponseType(typeof<GroupData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetGroupById(id: string) : Task<IActionResult> = task {
         let! result = commandHandler.HandleCommand(GetGroupById id)
 
@@ -44,6 +52,10 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
     }
 
     [<HttpGet("name/{name}")>]
+    [<ProducesResponseType(typeof<GroupData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetGroupByName(name: string) : Task<IActionResult> = task {
         let! result = commandHandler.HandleCommand(GetGroupByName name)
 
@@ -55,6 +67,9 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
     }
 
     [<HttpGet>]
+    [<ProducesResponseType(typeof<PagedResult<GroupData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetGroups([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> = task {
         let skipValue = if skip < 0 then 0 else skip
 
@@ -73,6 +88,9 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
     }
 
     [<HttpGet("user/{userId}")>]
+    [<ProducesResponseType(typeof<PagedResult<GroupData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetGroupsByUserId(userId: string) : Task<IActionResult> = task {
         let! result = commandHandler.HandleCommand(GetGroupsByUserId userId)
 
@@ -84,6 +102,10 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
     }
 
     [<HttpPut("{id}/name")>]
+    [<ProducesResponseType(typeof<GroupData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.UpdateGroupName(id: string, [<FromBody>] updateDto: UpdateGroupNameDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let! result = commandHandler.HandleCommand(UpdateGroupName(userId, id, updateDto))
@@ -96,6 +118,10 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
     }
 
     [<HttpPost("{id}/users")>]
+    [<ProducesResponseType(typeof<GroupData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.AddUserToGroup(id: string, [<FromBody>] addUserDto: AddUserToGroupDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let! result = commandHandler.HandleCommand(AddUserToGroup(userId, id, addUserDto))
@@ -108,6 +134,10 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
     }
 
     [<HttpDelete("{id}/users")>]
+    [<ProducesResponseType(typeof<GroupData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.RemoveUserFromGroup
         (id: string, [<FromBody>] removeUserDto: RemoveUserFromGroupDto)
         : Task<IActionResult> =
@@ -123,6 +153,10 @@ type GroupController(commandHandler: IMultiRepositoryCommandHandler<GroupCommand
         }
 
     [<HttpDelete("{id}")>]
+    [<ProducesResponseType(StatusCodes.Status204NoContent)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.DeleteGroup(id: string) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let! result = commandHandler.HandleCommand(DeleteGroup(userId, id))

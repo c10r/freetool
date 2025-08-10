@@ -2,7 +2,9 @@ namespace Freetool.Api.Controllers
 
 open System.Threading.Tasks
 open Microsoft.AspNetCore.Mvc
+open Microsoft.AspNetCore.Http
 open Freetool.Domain
+open Freetool.Domain.Entities
 open Freetool.Application.DTOs
 open Freetool.Application.Commands
 open Freetool.Application.Interfaces
@@ -18,6 +20,9 @@ type FolderController
     inherit AuthenticatedControllerBase()
 
     [<HttpPost>]
+    [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status201Created)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.CreateFolder([<FromBody>] createDto: CreateFolderDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
 
@@ -35,6 +40,10 @@ type FolderController
     }
 
     [<HttpGet("{id}")>]
+    [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetFolderById(id: string) : Task<IActionResult> = task {
         let! result = commandHandler.HandleCommand folderRepository (GetFolderById id)
 
@@ -46,6 +55,10 @@ type FolderController
     }
 
     [<HttpGet("{id}/children")>]
+    [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetFolderWithChildren(id: string) : Task<IActionResult> = task {
         let! result = commandHandler.HandleCommand folderRepository (GetFolderWithChildren id)
 
@@ -57,6 +70,9 @@ type FolderController
     }
 
     [<HttpGet("root")>]
+    [<ProducesResponseType(typeof<PagedResult<FolderData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetRootFolders([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> = task {
         let skipValue = if skip < 0 then 0 else skip
 
@@ -75,6 +91,9 @@ type FolderController
     }
 
     [<HttpGet("{parentId}/children")>]
+    [<ProducesResponseType(typeof<PagedResult<FolderData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetChildFolders
         (parentId: string, [<FromQuery>] skip: int, [<FromQuery>] take: int)
         : Task<IActionResult> =
@@ -97,6 +116,9 @@ type FolderController
         }
 
     [<HttpGet>]
+    [<ProducesResponseType(typeof<PagedResult<FolderData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetAllFolders([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> = task {
         let skipValue = if skip < 0 then 0 else skip
 
@@ -115,6 +137,10 @@ type FolderController
     }
 
     [<HttpPut("{id}/name")>]
+    [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.UpdateFolderName(id: string, [<FromBody>] updateDto: UpdateFolderNameDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let! result = commandHandler.HandleCommand folderRepository (UpdateFolderName(userId, id, updateDto))
@@ -127,6 +153,10 @@ type FolderController
     }
 
     [<HttpPut("{id}/move")>]
+    [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.MoveFolder(id: string, [<FromBody>] moveDto: MoveFolderDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let! result = commandHandler.HandleCommand folderRepository (MoveFolder(userId, id, moveDto))
@@ -139,6 +169,10 @@ type FolderController
     }
 
     [<HttpDelete("{id}")>]
+    [<ProducesResponseType(StatusCodes.Status204NoContent)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.DeleteFolder(id: string) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let! result = commandHandler.HandleCommand folderRepository (DeleteFolder(userId, id))

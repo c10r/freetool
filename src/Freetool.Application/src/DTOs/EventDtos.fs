@@ -5,6 +5,7 @@ open Freetool.Domain.ValueObjects
 open System
 open System.ComponentModel.DataAnnotations
 
+[<CLIMutable>]
 type EventFilterDTO = {
     UserId: string option
     EventType: string option

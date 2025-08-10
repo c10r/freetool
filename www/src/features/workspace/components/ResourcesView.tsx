@@ -21,13 +21,6 @@ interface Resource {
   httpMethod: string;
 }
 
-interface ResourcesResponse {
-  items: Resource[];
-  skip: number;
-  take: number;
-  totalCount: number;
-}
-
 export default function ResourcesView({
   endpoints,
   createEndpoint,
@@ -43,9 +36,17 @@ export default function ResourcesView({
       try {
         setLoading(true);
         const response = await getResources();
-        if (response.data) {
-          const resourcesData = response.data as unknown as ResourcesResponse;
-          setResources(resourcesData.items);
+        if (response.data?.items) {
+          const mappedItems = response.data?.items.map(item => {
+            return {
+              id: item.id.value,
+              name: item.name,
+              description: item.description,
+              baseUrl: item.baseUrl,
+              httpMethod: item.httpMethod
+            } as Resource
+          })
+          setResources(mappedItems);
         }
       } catch (err) {
         setError("Failed to load resources");

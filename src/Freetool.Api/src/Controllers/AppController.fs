@@ -2,6 +2,7 @@ namespace Freetool.Api.Controllers
 
 open System.Threading.Tasks
 open Microsoft.AspNetCore.Mvc
+open Microsoft.AspNetCore.Http
 open Freetool.Domain
 open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
@@ -23,6 +24,10 @@ type AppController
     inherit AuthenticatedControllerBase()
 
     [<HttpPost>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status201Created)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.CreateApp([<FromBody>] createDto: CreateAppDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let createRequest = AppMapper.fromCreateDto createDto
@@ -74,6 +79,10 @@ type AppController
     }
 
     [<HttpGet("{id}")>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetAppById(id: string) : Task<IActionResult> = task {
         let! result = commandHandler.HandleCommand appRepository (GetAppById id)
 
@@ -85,6 +94,9 @@ type AppController
     }
 
     [<HttpGet("folder/{folderId}")>]
+    [<ProducesResponseType(typeof<PagedResult<AppData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetAppsByFolderId
         (folderId: string, [<FromQuery>] skip: int, [<FromQuery>] take: int)
         : Task<IActionResult> =
@@ -106,6 +118,9 @@ type AppController
         }
 
     [<HttpGet>]
+    [<ProducesResponseType(typeof<PagedResult<AppData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetApps([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> = task {
         let skipValue = if skip < 0 then 0 else skip
 
@@ -124,6 +139,10 @@ type AppController
     }
 
     [<HttpPut("{id}/name")>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.UpdateAppName(id: string, [<FromBody>] updateDto: UpdateAppNameDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let! result = commandHandler.HandleCommand appRepository (UpdateAppName(userId, id, updateDto))
@@ -136,6 +155,10 @@ type AppController
     }
 
     [<HttpPut("{id}/inputs")>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.UpdateAppInputs(id: string, [<FromBody>] updateDto: UpdateAppInputsDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let! result = commandHandler.HandleCommand appRepository (UpdateAppInputs(userId, id, updateDto))
@@ -148,6 +171,10 @@ type AppController
     }
 
     [<HttpDelete("{id}")>]
+    [<ProducesResponseType(StatusCodes.Status204NoContent)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.DeleteApp(id: string) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
         let! result = commandHandler.HandleCommand appRepository (DeleteApp(userId, id))
@@ -160,6 +187,10 @@ type AppController
     }
 
     [<HttpPost("{id}/run")>]
+    [<ProducesResponseType(typeof<RunData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.RunApp(id: string, [<FromBody>] createRunDto: CreateRunDto) : Task<IActionResult> = task {
         let userId = this.CurrentUserId
 
