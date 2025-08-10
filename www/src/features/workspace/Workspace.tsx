@@ -24,18 +24,7 @@ export default function Workspace() {
   const [selectedId, setSelectedId] = useState<string>(rootId);
 
   const [endpoints, setEndpoints] = useState<Record<string, Endpoint>>(() => {
-    const id = crypto.randomUUID();
-    return {
-      [id]: {
-        id,
-        name: "Sample Endpoint",
-        url: "https://httpbin.org/post",
-        method: "POST",
-        headers: [{ key: "Content-Type", value: "application/json" }],
-        query: [],
-        body: [],
-      },
-    };
+    return {};
   });
 
   const updateNode = (node: WorkspaceNode) =>

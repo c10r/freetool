@@ -1,0 +1,48 @@
+import createClient from "openapi-fetch";
+import type { paths } from "../schema";
+
+const client = createClient<paths>({
+  baseUrl: "https://chanders-macbook-pro.koala-snake.ts.net:8443",
+});
+
+export const getAuditEvents = (skip?: number, take?: number) => {
+  if (skip && take) {
+    return client.GET("/audit/events", {
+      params: {
+        query: { "Skip.Value": skip, "Take.Value": take },
+      },
+    });
+  }
+  return client.GET("/audit/events");
+};
+
+export const getUsers = (skip?: number, take?: number) => {
+  if (skip && take) {
+    return client.GET("/user", {
+      params: {
+        query: { skip, take },
+      },
+    });
+  }
+  return client.GET("/user");
+};
+
+export const getResources = (skip?: number, take?: number) => {
+  if (skip && take) {
+    return client.GET("/resource", {
+      params: {
+        query: { skip, take },
+      },
+    });
+  }
+
+  return client.GET("/resource");
+};
+
+export const deleteResource = (id: string) => {
+  return client.DELETE("/resource/{id}", {
+    params: {
+      path: { id },
+    },
+  });
+};

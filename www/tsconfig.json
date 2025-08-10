@@ -9,11 +9,14 @@
     "paths": {
       "@/*": ["./src/*"]
     },
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "noImplicitAny": false,
     "noUnusedParameters": false,
     "skipLibCheck": true,
     "allowJs": true,
     "noUnusedLocals": false,
+    "noUncheckedIndexedAccess": true,
     "strictNullChecks": false
   }
 }
