@@ -12,8 +12,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { getResources, createResource } from "@/api/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  getResources,
+  createResource,
+  updateResourceName,
+  updateResourceDescription,
+  updateResourceBaseUrl,
+} from "@/api/api";
 import HttpMethodBadge from "./HttpMethodBadge";
+import { Edit, Check, X } from "lucide-react";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -37,6 +50,32 @@ export default function ResourcesView() {
     description: "",
     baseUrl: "",
     httpMethod: "GET" as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+  });
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    description: "",
+    baseUrl: "",
+  });
+  const [fieldUpdating, setFieldUpdating] = useState({
+    name: false,
+    description: false,
+    baseUrl: false,
+  });
+  const [fieldSaved, setFieldSaved] = useState({
+    name: false,
+    description: false,
+    baseUrl: false,
+  });
+  const [fieldError, setFieldError] = useState({
+    name: false,
+    description: false,
+    baseUrl: false,
+  });
+  const [fieldErrorMessages, setFieldErrorMessages] = useState({
+    name: "",
+    description: "",
+    baseUrl: "",
   });
 
   const fetchResources = async () => {
@@ -113,6 +152,143 @@ export default function ResourcesView() {
       baseUrl: "",
       httpMethod: "GET",
     });
+  };
+
+  const handleEditResource = (resource: Resource) => {
+    setEditingResource(resource);
+    setEditFormData({
+      name: resource.name,
+      description: resource.description,
+      baseUrl: resource.baseUrl,
+    });
+  };
+
+  const handleCloseEdit = () => {
+    setEditingResource(null);
+    setEditFormData({
+      name: "",
+      description: "",
+      baseUrl: "",
+    });
+    setFieldUpdating({
+      name: false,
+      description: false,
+      baseUrl: false,
+    });
+    setFieldSaved({
+      name: false,
+      description: false,
+      baseUrl: false,
+    });
+    setFieldError({
+      name: false,
+      description: false,
+      baseUrl: false,
+    });
+    setFieldErrorMessages({
+      name: "",
+      description: "",
+      baseUrl: "",
+    });
+  };
+
+  const updateField = async (
+    field: "name" | "description" | "baseUrl",
+    value: string,
+  ) => {
+    if (!editingResource || !value.trim()) return;
+
+    // Don't make network request if value hasn't changed
+    if (value.trim() === editingResource[field]) return;
+
+    setFieldUpdating((prev) => ({ ...prev, [field]: true }));
+
+    try {
+      let response;
+      if (field === "name") {
+        response = await updateResourceName({
+          id: editingResource.id,
+          newName: value.trim(),
+        });
+      } else if (field === "description") {
+        response = await updateResourceDescription({
+          id: editingResource.id,
+          newDescription: value.trim(),
+        });
+      } else if (field === "baseUrl") {
+        response = await updateResourceBaseUrl({
+          id: editingResource.id,
+          baseUrl: value.trim(),
+        });
+      }
+
+      // Check if the response contains an error
+      if (response && response.error) {
+        console.error(`Error updating ${field}:`, response.error);
+
+        // Extract error message
+        const errorMessage = response.error.message || "Failed to save";
+
+        // Show error indicator and message
+        setFieldError((prev) => ({ ...prev, [field]: true }));
+        setFieldErrorMessages((prev) => ({ ...prev, [field]: errorMessage }));
+
+        // Reset the field value on error
+        setEditFormData((prev) => ({
+          ...prev,
+          [field]: editingResource[field],
+        }));
+
+        // Hide error indicator after 2 seconds
+        setTimeout(() => {
+          setFieldError((prev) => ({ ...prev, [field]: false }));
+          setFieldErrorMessages((prev) => ({ ...prev, [field]: "" }));
+        }, 2000);
+
+        return;
+      }
+
+      // Update local state
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === editingResource.id ? { ...r, [field]: value.trim() } : r,
+        ),
+      );
+
+      // Update editing resource
+      setEditingResource((prev) =>
+        prev ? { ...prev, [field]: value.trim() } : null,
+      );
+
+      // Show success indicator only on successful save
+      setFieldSaved((prev) => ({ ...prev, [field]: true }));
+      setTimeout(() => {
+        setFieldSaved((prev) => ({ ...prev, [field]: false }));
+      }, 2000);
+    } catch (error) {
+      console.error(`Error updating ${field}:`, error);
+
+      // Show error indicator
+      setFieldError((prev) => ({ ...prev, [field]: true }));
+      setFieldErrorMessages((prev) => ({
+        ...prev,
+        [field]: "Network error occurred",
+      }));
+
+      // Reset the field value on error
+      setEditFormData((prev) => ({
+        ...prev,
+        [field]: editingResource[field],
+      }));
+
+      // Hide error indicator after 2 seconds
+      setTimeout(() => {
+        setFieldError((prev) => ({ ...prev, [field]: false }));
+        setFieldErrorMessages((prev) => ({ ...prev, [field]: "" }));
+      }, 2000);
+    } finally {
+      setFieldUpdating((prev) => ({ ...prev, [field]: false }));
+    }
   };
 
   return (
@@ -267,7 +443,17 @@ export default function ResourcesView() {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span>{resource.name}</span>
-                  <HttpMethodBadge method={resource.httpMethod} />
+                  <div className="flex items-center gap-2">
+                    <HttpMethodBadge method={resource.httpMethod} />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleEditResource(resource)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -282,6 +468,160 @@ export default function ResourcesView() {
           ))}
         </div>
       )}
+
+      <Dialog open={!!editingResource} onOpenChange={() => handleCloseEdit()}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Resource</DialogTitle>
+          </DialogHeader>
+          {editingResource && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <div className="relative">
+                  <Input
+                    id="edit-name"
+                    value={editFormData.name}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, name: e.target.value })
+                    }
+                    onBlur={(e) => {
+                      if (e.target.value !== editingResource.name) {
+                        updateField("name", e.target.value);
+                      }
+                    }}
+                    disabled={fieldUpdating.name}
+                    placeholder="Enter resource name"
+                  />
+                  {fieldUpdating.name && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                    </div>
+                  )}
+                  {fieldSaved.name &&
+                    !fieldUpdating.name &&
+                    !fieldError.name && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Check className="h-4 w-4 text-green-500" />
+                      </div>
+                    )}
+                  {fieldError.name && !fieldUpdating.name && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <X className="h-4 w-4 text-red-500" />
+                    </div>
+                  )}
+                </div>
+                {fieldErrorMessages.name && (
+                  <div className="text-red-500 text-sm mt-1">
+                    {fieldErrorMessages.name}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <div className="relative">
+                  <Textarea
+                    id="edit-description"
+                    value={editFormData.description}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        description: e.target.value,
+                      })
+                    }
+                    onBlur={(e) => {
+                      if (e.target.value !== editingResource.description) {
+                        updateField("description", e.target.value);
+                      }
+                    }}
+                    disabled={fieldUpdating.description}
+                    placeholder="Enter resource description"
+                    rows={3}
+                  />
+                  {fieldUpdating.description && (
+                    <div className="absolute right-3 top-3">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                    </div>
+                  )}
+                  {fieldSaved.description &&
+                    !fieldUpdating.description &&
+                    !fieldError.description && (
+                      <div className="absolute right-3 top-3">
+                        <Check className="h-4 w-4 text-green-500" />
+                      </div>
+                    )}
+                  {fieldError.description && !fieldUpdating.description && (
+                    <div className="absolute right-3 top-3">
+                      <X className="h-4 w-4 text-red-500" />
+                    </div>
+                  )}
+                </div>
+                {fieldErrorMessages.description && (
+                  <div className="text-red-500 text-sm mt-1">
+                    {fieldErrorMessages.description}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-baseUrl">Base URL</Label>
+                <div className="relative">
+                  <Input
+                    id="edit-baseUrl"
+                    value={editFormData.baseUrl}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        baseUrl: e.target.value,
+                      })
+                    }
+                    onBlur={(e) => {
+                      if (e.target.value !== editingResource.baseUrl) {
+                        updateField("baseUrl", e.target.value);
+                      }
+                    }}
+                    disabled={fieldUpdating.baseUrl}
+                    placeholder="https://api.example.com"
+                  />
+                  {fieldUpdating.baseUrl && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                    </div>
+                  )}
+                  {fieldSaved.baseUrl &&
+                    !fieldUpdating.baseUrl &&
+                    !fieldError.baseUrl && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Check className="h-4 w-4 text-green-500" />
+                      </div>
+                    )}
+                  {fieldError.baseUrl && !fieldUpdating.baseUrl && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <X className="h-4 w-4 text-red-500" />
+                    </div>
+                  )}
+                </div>
+                {fieldErrorMessages.baseUrl && (
+                  <div className="text-red-500 text-sm mt-1">
+                    {fieldErrorMessages.baseUrl}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>HTTP Method</Label>
+                <div className="flex items-center gap-2">
+                  <HttpMethodBadge method={editingResource.httpMethod} />
+                  <span className="text-sm text-muted-foreground">
+                    (HTTP method cannot be changed after creation)
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

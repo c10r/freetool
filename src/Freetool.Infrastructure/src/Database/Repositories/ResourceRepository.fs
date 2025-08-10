@@ -15,7 +15,7 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
 
         member _.GetByIdAsync(resourceId: ResourceId) : Task<ValidatedResource option> = task {
             let guidId = resourceId.Value
-            let! resourceData = context.Resources.FirstOrDefaultAsync(fun r -> r.Id.Value = guidId)
+            let! resourceData = context.Resources.FirstOrDefaultAsync(fun r -> r.Id = resourceId)
 
             return resourceData |> Option.ofObj |> Option.map (fun data -> Resource.fromData data)
         }
@@ -52,8 +52,8 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
 
         member _.UpdateAsync(resource: ValidatedResource) : Task<Result<unit, DomainError>> = task {
             try
-                let guidId = (Resource.getId resource).Value
-                let! existingData = context.Resources.FirstOrDefaultAsync(fun r -> r.Id.Value = guidId)
+                let resourceId = Resource.getId resource
+                let! existingData = context.Resources.FirstOrDefaultAsync(fun r -> r.Id = resourceId)
 
                 match Option.ofObj existingData with
                 | None -> return Error(NotFound "Resource not found")
@@ -101,8 +101,7 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
         }
 
         member _.ExistsAsync(resourceId: ResourceId) : Task<bool> = task {
-            let guidId = resourceId.Value
-            return! context.Resources.AnyAsync(fun r -> r.Id.Value = guidId)
+            return! context.Resources.AnyAsync(fun r -> r.Id = resourceId)
         }
 
         member _.ExistsByNameAsync(resourceName: ResourceName) : Task<bool> = task {
