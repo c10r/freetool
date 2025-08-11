@@ -162,31 +162,41 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
 
         member _.DeleteAsync(folderWithDeleteEvent: ValidatedFolder) : Task<Result<unit, DomainError>> = task {
             try
-                let folderId = folderWithDeleteEvent.State.Id
-                let! existingEntity = context.Folders.FirstOrDefaultAsync(fun f -> f.Id = folderId)
+                let folderId = folderWithDeleteEvent.State.Id.Value
 
-                let existingEntityOption = Option.ofObj existingEntity
+                // Use interpolated SQL with CTE to recursively soft delete all descendants
+                let updatedAt = System.DateTime.UtcNow
 
-                match existingEntityOption with
-                | None -> return Error(NotFound "Folder not found")
-                | Some entity ->
-                    // Soft delete: create updated record with IsDeleted flag
-                    let updatedEntity = {
-                        folderWithDeleteEvent.State with
-                            IsDeleted = true
-                            UpdatedAt = System.DateTime.UtcNow
-                    }
+                let! rowsAffected =
+                    context.Database.ExecuteSqlInterpolatedAsync(
+                        $"""
+                    WITH FolderHierarchy AS (
+                        -- Base case: the folder to delete
+                        SELECT Id FROM Folders WHERE Id = {folderId}
 
-                    context.Entry(entity).CurrentValues.SetValues(updatedEntity)
+                        UNION ALL
 
+                        -- Recursive case: all children
+                        SELECT f.Id
+                        FROM Folders f
+                        INNER JOIN FolderHierarchy fh ON f.ParentId = fh.Id
+                        WHERE f.IsDeleted = 0
+                    )
+                    UPDATE Folders
+                    SET IsDeleted = 1, UpdatedAt = {updatedAt}
+                    WHERE Id IN (SELECT Id FROM FolderHierarchy) AND IsDeleted = 0
+                """
+                    )
+
+                if rowsAffected = 0 then
+                    return Error(NotFound "Folder not found")
+                else
                     // Save all uncommitted events
                     let events = Folder.getUncommittedEvents folderWithDeleteEvent
 
                     for event in events do
                         do! eventRepository.SaveEventAsync event
 
-                    // Commit transaction
-                    let! _ = context.SaveChangesAsync()
                     return Ok()
             with
             | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete folder: {ex.Message}")

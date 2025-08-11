@@ -60,19 +60,13 @@ module FolderHandler =
                     match folderOption with
                     | None -> return Error(NotFound "Folder not found")
                     | Some folder ->
-                        // Check if folder has children
-                        let! children = folderRepository.GetChildrenAsync folderIdObj
+                        // Mark folder for deletion to create the delete event
+                        let folderWithDeleteEvent = Folder.markForDeletion actorUserId folder
 
-                        if not (List.isEmpty children) then
-                            return Error(Conflict "Cannot delete folder that contains subfolders")
-                        else
-                            // Mark folder for deletion to create the delete event
-                            let folderWithDeleteEvent = Folder.markForDeletion actorUserId folder
-
-                            // Delete folder and save event atomically
-                            match! folderRepository.DeleteAsync folderWithDeleteEvent with
-                            | Error error -> return Error error
-                            | Ok() -> return Ok(FolderUnitResult())
+                        // Delete folder and save event atomically
+                        match! folderRepository.DeleteAsync folderWithDeleteEvent with
+                        | Error error -> return Error error
+                        | Ok() -> return Ok(FolderUnitResult())
 
             | UpdateFolderName(actorUserId, folderId, dto) ->
                 match Guid.TryParse folderId with
