@@ -4,6 +4,7 @@ import SidebarTree from "./SidebarTree";
 import WorkspaceMain from "./WorkspaceMain";
 import { WorkspaceNode, FolderNode, AppNode, Endpoint } from "./types";
 import { getAllFolders, createApp as createAppAPI } from "@/api/api";
+import NotFound from "@/pages/NotFound";
 
 function createFolder(id: string, name: string, parentId?: string): FolderNode {
   return { id, name, type: "folder", parentId, childrenIds: [] };
@@ -141,6 +142,15 @@ export default function Workspace() {
 
   // Get selectedId from current URL
   const selectedId = getSelectedIdFromPath(location.pathname, nodeId, rootId);
+
+  // Check if the nodeId from URL is valid (only after data is loaded)
+  const isValidNodeId = useMemo(() => {
+    if (loading) return true; // Don't validate while loading
+    if (!nodeId) return true; // Root path is always valid
+    if (["resources", "users-&-teams", "audit-log"].includes(selectedId))
+      return true; // Special sections are valid
+    return nodes[selectedId] !== undefined; // Check if node exists
+  }, [loading, nodeId, selectedId, nodes]);
 
   // Function to update URL when selection changes
   const setSelectedId = (id: string) => {
@@ -295,6 +305,11 @@ export default function Workspace() {
         </div>
       </div>
     );
+  }
+
+  // Show NotFound for invalid nodeIds
+  if (!isValidNodeId) {
+    return <NotFound />;
   }
 
   // Show empty state

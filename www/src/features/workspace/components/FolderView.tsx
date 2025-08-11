@@ -25,6 +25,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { FolderNode, WorkspaceMainProps } from "../types";
 import {
   createFolder as createFolderAPI,
@@ -51,6 +57,13 @@ export default function FolderView({
     setEditing(false);
     setRenameError(null);
   }, [folder.id, folder.name]);
+
+  // Reset app creation form when navigating to a different folder
+  useEffect(() => {
+    setShowCreateAppForm(false);
+    setCreateAppError(null);
+    setAppFormData({ name: "", resourceId: "" });
+  }, [folder.id]);
   const [newFolderName, setNewFolderName] = useState("");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -407,10 +420,30 @@ export default function FolderView({
               </div>
             </PopoverContent>
           </Popover>
-          <Button variant="secondary" onClick={handleShowCreateAppForm}>
-            <FilePlus2 className="mr-2 h-4 w-4" />
-            {showCreateAppForm ? "Cancel" : "New App"}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="secondary"
+                    onClick={handleShowCreateAppForm}
+                    disabled={folder.id === "root"}
+                  >
+                    <FilePlus2 className="mr-2 h-4 w-4" />
+                    {showCreateAppForm ? "Cancel" : "New App"}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {folder.id === "root" && (
+                <TooltipContent>
+                  <p>
+                    Apps must be created inside a folder. Please create or
+                    select a folder first.
+                  </p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </header>
 
