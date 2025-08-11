@@ -6,6 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   WorkspaceNode,
   FolderNode,
   AppNode,
@@ -26,6 +39,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  createFolder as createFolderAPI,
+  deleteFolder as deleteFolderAPI,
+} from "@/api/api";
 
 interface WorkspaceMainProps {
   nodes: Record<string, WorkspaceNode>;
@@ -78,11 +95,113 @@ function FolderView({
 }: WorkspaceMainProps & { folder: FolderNode }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(folder.name);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [createFolderError, setCreateFolderError] = useState<string | null>(
+    null,
+  );
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletingChildId, setDeletingChildId] = useState<string | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const children = useMemo(
     () => folder.childrenIds.map((id) => nodes[id]).filter(Boolean),
     [folder.childrenIds, nodes],
   );
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+
+    setIsCreatingFolder(true);
+    setCreateFolderError(null);
+    try {
+      const response = await createFolderAPI(newFolderName, folder.id);
+      if (response.error) {
+        setCreateFolderError(
+          (response.error?.message as string) || "Failed to create folder",
+        );
+      } else if (response.data) {
+        // Add the new folder to the local state using the API response
+        const newFolder = response.data;
+        const folderNode = {
+          id: newFolder.id!,
+          name: newFolder.name,
+          type: "folder" as const,
+          parentId: folder.id,
+          childrenIds: [],
+        };
+
+        // Update nodes and parent's childrenIds
+        updateNode(folderNode);
+        const updatedParent = {
+          ...folder,
+          childrenIds: [...folder.childrenIds, newFolder.id!],
+        };
+        updateNode(updatedParent);
+
+        // Reset form
+        setNewFolderName("");
+        setPopoverOpen(false);
+      }
+    } catch (error) {
+      setCreateFolderError(
+        error instanceof Error ? error.message : "Failed to create folder",
+      );
+    } finally {
+      setIsCreatingFolder(false);
+    }
+  };
+
+  const handleDeleteClick = (childId: string) => {
+    setDeletingChildId(childId);
+    setDeleteConfirmOpen(true);
+    setDeleteConfirmName("");
+    setDeleteError(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingChildId) return;
+
+    const childToDelete = nodes[deletingChildId];
+    if (!childToDelete || deleteConfirmName !== childToDelete.name) {
+      setDeleteError("Folder name doesn't match");
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      const response = await deleteFolderAPI(deletingChildId);
+      if (response.error) {
+        setDeleteError(
+          (response.error?.message as string) || "Failed to delete folder",
+        );
+      } else {
+        // Remove from local state
+        deleteNode(deletingChildId);
+        // Reset state
+        setDeleteConfirmOpen(false);
+        setDeletingChildId(null);
+        setDeleteConfirmName("");
+      }
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "Failed to delete folder",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false);
+    setDeletingChildId(null);
+    setDeleteConfirmName("");
+    setDeleteError(null);
+  };
 
   return (
     <section className="p-6 space-y-4 overflow-y-auto flex-1">
@@ -117,9 +236,61 @@ function FolderView({
           </Button>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => createFolder(folder.id)}>
-            <FolderPlus className="mr-2 h-4 w-4" /> New Folder
-          </Button>
+          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button>
+                <FolderPlus className="mr-2 h-4 w-4" /> New Folder
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium">Create New Folder</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Enter a name for the new folder.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Folder name"
+                    value={newFolderName}
+                    onChange={(e) => {
+                      setNewFolderName(e.target.value);
+                      if (createFolderError) setCreateFolderError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleCreateFolder();
+                      }
+                    }}
+                  />
+                  {createFolderError && (
+                    <p className="text-sm text-red-500">{createFolderError}</p>
+                  )}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setPopoverOpen(false);
+                      setNewFolderName("");
+                      setCreateFolderError(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleCreateFolder}
+                    disabled={!newFolderName.trim() || isCreatingFolder}
+                  >
+                    {isCreatingFolder ? "Creating..." : "Create"}
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button variant="secondary" onClick={() => createApp(folder.id)}>
             <FilePlus2 className="mr-2 h-4 w-4" /> New App
           </Button>
@@ -152,7 +323,11 @@ function FolderView({
                 <Button
                   variant="secondary"
                   size="icon"
-                  onClick={() => deleteNode(child.id)}
+                  onClick={() =>
+                    child.type === "folder"
+                      ? handleDeleteClick(child.id)
+                      : deleteNode(child.id)
+                  }
                   aria-label="Delete"
                 >
                   <Trash2 size={16} />
@@ -174,6 +349,78 @@ function FolderView({
           </Card>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleDeleteCancel();
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600">
+              Delete Folder
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              folder and all its contents.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {deletingChildId && (
+            <div className="space-y-3">
+              <p className="text-sm">
+                Type{" "}
+                <strong className="font-semibold">
+                  {nodes[deletingChildId]?.name}
+                </strong>{" "}
+                to confirm deletion:
+              </p>
+              <Input
+                placeholder="Enter folder name"
+                value={deleteConfirmName}
+                onChange={(e) => {
+                  setDeleteConfirmName(e.target.value);
+                  if (deleteError) setDeleteError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleDeleteConfirm();
+                  }
+                }}
+              />
+              {deleteError && (
+                <p className="text-sm text-red-500">{deleteError}</p>
+              )}
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleDeleteCancel}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={
+                !deletingChildId ||
+                !deleteConfirmName ||
+                deleteConfirmName !== nodes[deletingChildId]?.name ||
+                isDeleting
+              }
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

@@ -14,16 +14,18 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
     interface IFolderRepository with
 
         member _.GetByIdAsync(folderId: FolderId) : Task<ValidatedFolder option> = task {
-            let guidId = folderId.Value
-            let! folderData = context.Folders.FirstOrDefaultAsync(fun f -> f.Id.Value = guidId)
+            let! folderData = context.Folders.FirstOrDefaultAsync(fun f -> f.Id = folderId)
+            let folderDataOption = Option.ofObj folderData
 
-            match Option.ofObj folderData with
+            match folderDataOption with
             | None -> return None
             | Some data ->
+                // Initialize Children immediately after EF materialization to prevent null reference in GetHashCode
+                data.Children <- []
                 // Load children for this folder
                 let! childrenData =
                     context.Folders
-                        .Where(fun f -> f.ParentId = Some(FolderId(guidId)))
+                        .Where(fun f -> f.ParentId = Some(folderId))
                         .OrderBy(fun f -> f.Name)
                         .ToListAsync()
 
@@ -35,13 +37,14 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
         }
 
         member _.GetChildrenAsync(folderId: FolderId) : Task<ValidatedFolder list> = task {
-            let guidId = folderId.Value
-
             let! folderDatas =
                 context.Folders
-                    .Where(fun f -> f.ParentId = Some(FolderId(guidId)))
+                    .Where(fun f -> f.ParentId = Some(folderId))
                     .OrderBy(fun f -> f.Name)
                     .ToListAsync()
+
+            // Initialize Children for all retrieved folders
+            folderDatas |> Seq.iter (fun data -> data.Children <- [])
 
             return folderDatas |> Seq.map (fun data -> Folder.fromData data) |> Seq.toList
         }
@@ -55,22 +58,25 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
                     .Take(take)
                     .ToListAsync()
 
+            // Initialize Children for all retrieved folders
+            folderDatas |> Seq.iter (fun data -> data.Children <- [])
+
             // Load children for each root folder
             let folders = []
             let mutable folderList = folders
 
             for data in folderDatas do
-                let guidId = data.Id.Value
-
                 // Load children for this folder
+                let dataId = data.Id
+
                 let! childrenData =
                     context.Folders
-                        .Where(fun f -> f.ParentId = Some(FolderId(guidId)))
+                        .Where(fun f -> f.ParentId = Some(dataId))
                         .OrderBy(fun f -> f.Name)
                         .ToListAsync()
 
-                // Initialize children as empty list first
-                data.Children <- []
+                // Initialize children for retrieved child data
+                childrenData |> Seq.iter (fun childData -> childData.Children <- [])
                 // Populate children field
                 data.Children <- childrenData |> Seq.toList
                 let folder = Folder.fromData data
@@ -82,22 +88,25 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
         member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedFolder list> = task {
             let! folderDatas = context.Folders.OrderBy(fun f -> f.Name).Skip(skip).Take(take).ToListAsync()
 
+            // Initialize Children for all retrieved folders
+            folderDatas |> Seq.iter (fun data -> data.Children <- [])
+
             // Load children for each folder
             let folders = []
             let mutable folderList = folders
 
             for data in folderDatas do
-                let guidId = data.Id.Value
-
                 // Load children for this folder
+                let dataId = data.Id
+
                 let! childrenData =
                     context.Folders
-                        .Where(fun f -> f.ParentId = Some(FolderId(guidId)))
+                        .Where(fun f -> f.ParentId = Some(dataId))
                         .OrderBy(fun f -> f.Name)
                         .ToListAsync()
 
-                // Initialize children as empty list first
-                data.Children <- []
+                // Initialize children for retrieved child data
+                childrenData |> Seq.iter (fun childData -> childData.Children <- [])
                 // Populate children field
                 data.Children <- childrenData |> Seq.toList
                 let folder = Folder.fromData data
@@ -129,8 +138,9 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
             try
                 let guidId = (Folder.getId folder).Value
                 let! existingData = context.Folders.FirstOrDefaultAsync(fun f -> f.Id.Value = guidId)
+                let existingDataOption = Option.ofObj existingData
 
-                match Option.ofObj existingData with
+                match existingDataOption with
                 | None -> return Error(NotFound "Folder not found")
                 | Some existingEntity ->
                     // Update the already-tracked entity to avoid tracking conflicts
@@ -152,46 +162,51 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
 
         member _.DeleteAsync(folderWithDeleteEvent: ValidatedFolder) : Task<Result<unit, DomainError>> = task {
             try
-                // Soft delete: create updated record with IsDeleted flag
-                let updatedData = {
-                    folderWithDeleteEvent.State with
-                        IsDeleted = true
-                        UpdatedAt = System.DateTime.UtcNow
-                }
+                let folderId = folderWithDeleteEvent.State.Id
+                let! existingEntity = context.Folders.FirstOrDefaultAsync(fun f -> f.Id = folderId)
 
-                context.Folders.Update(updatedData) |> ignore
+                let existingEntityOption = Option.ofObj existingEntity
 
-                // Save all uncommitted events
-                let events = Folder.getUncommittedEvents folderWithDeleteEvent
+                match existingEntityOption with
+                | None -> return Error(NotFound "Folder not found")
+                | Some entity ->
+                    // Soft delete: create updated record with IsDeleted flag
+                    let updatedEntity = {
+                        folderWithDeleteEvent.State with
+                            IsDeleted = true
+                            UpdatedAt = System.DateTime.UtcNow
+                    }
 
-                for event in events do
-                    do! eventRepository.SaveEventAsync event
+                    context.Entry(entity).CurrentValues.SetValues(updatedEntity)
 
-                // Commit transaction
-                let! _ = context.SaveChangesAsync()
-                return Ok()
+                    // Save all uncommitted events
+                    let events = Folder.getUncommittedEvents folderWithDeleteEvent
+
+                    for event in events do
+                        do! eventRepository.SaveEventAsync event
+
+                    // Commit transaction
+                    let! _ = context.SaveChangesAsync()
+                    return Ok()
             with
             | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete folder: {ex.Message}")
             | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
         member _.ExistsAsync(folderId: FolderId) : Task<bool> = task {
-            let guidId = folderId.Value
-            return! context.Folders.AnyAsync(fun f -> f.Id.Value = guidId)
+            return! context.Folders.AnyAsync(fun f -> f.Id = folderId)
         }
 
         member _.ExistsByNameInParentAsync (folderName: FolderName) (parentId: FolderId option) : Task<bool> = task {
-            let nameStr = folderName.Value
-
             match parentId with
             | None ->
-                // Check root folders
-                return! context.Folders.AnyAsync(fun f -> f.Name.Value = nameStr && f.ParentId = None)
+                // Check root folders - load to client side then filter
+                let! rootFolders = context.Folders.Where(fun f -> f.ParentId = None).ToListAsync()
+                return rootFolders |> Seq.exists (fun f -> f.Name = folderName)
             | Some pid ->
-                // Check folders with specific parent
-                let guidId = pid.Value
-
-                return! context.Folders.AnyAsync(fun f -> f.Name.Value = nameStr && f.ParentId = Some(FolderId(guidId)))
+                // Check folders with specific parent - load to client side then filter
+                let! childFolders = context.Folders.Where(fun f -> f.ParentId = Some pid).ToListAsync()
+                return childFolders |> Seq.exists (fun f -> f.Name = folderName)
         }
 
         member _.GetCountAsync() : Task<int> = task { return! context.Folders.CountAsync() }
@@ -201,6 +216,5 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
         }
 
         member _.GetChildCountAsync(parentId: FolderId) : Task<int> = task {
-            let guidId = parentId.Value
-            return! context.Folders.CountAsync(fun f -> f.ParentId = Some(FolderId(guidId)))
+            return! context.Folders.CountAsync(fun f -> f.ParentId = Some(parentId))
         }

@@ -3,12 +3,61 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import SidebarTree from "./SidebarTree";
 import WorkspaceMain from "./WorkspaceMain";
 import { WorkspaceNode, FolderNode, AppNode, Endpoint } from "./types";
+import { getAllFolders } from "@/api/api";
 
 function createFolder(id: string, name: string, parentId?: string): FolderNode {
   return { id, name, type: "folder", parentId, childrenIds: [] };
 }
 function createApp(id: string, name: string, parentId?: string): AppNode {
   return { id, name, type: "app", parentId, fields: [], endpointId: undefined };
+}
+
+// Transform API folder data to workspace nodes structure
+function transformFoldersToNodes(
+  folders: Array<{
+    id?: string;
+    name: string;
+    parentId?: string | null;
+    children?: any[] | null;
+  }>,
+  rootId: string,
+): Record<string, WorkspaceNode> {
+  const nodes: Record<string, WorkspaceNode> = {};
+
+  // Create virtual root node
+  const root: FolderNode = {
+    id: rootId,
+    name: "Workspaces",
+    type: "folder",
+    childrenIds: [],
+  };
+  nodes[rootId] = root;
+
+  // First pass: create all folder nodes
+  folders.forEach((folder) => {
+    if (folder.id) {
+      const folderNode: FolderNode = {
+        id: folder.id,
+        name: folder.name || "Unnamed Folder",
+        type: "folder",
+        parentId: folder.parentId ?? rootId, // Use nullish coalescing to handle null parentId
+        childrenIds: [],
+      };
+      nodes[folder.id] = folderNode;
+    }
+  });
+
+  // Second pass: build parent-child relationships
+  Object.values(nodes).forEach((node) => {
+    if (node.type === "folder" && node.parentId && nodes[node.parentId]) {
+      const parent = nodes[node.parentId] as FolderNode;
+      if (!parent.childrenIds.includes(node.id)) {
+        parent.childrenIds.push(node.id);
+      }
+    }
+  });
+
+  return nodes;
 }
 
 // Helper functions to convert between selectedId and URL paths
@@ -49,16 +98,40 @@ export default function Workspace() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [nodes, setNodes] = useState<Record<string, WorkspaceNode>>(() => {
-    const rootId = "root";
-    const folder1 = createFolder(crypto.randomUUID(), "Team A", rootId);
-    const app1 = createApp(crypto.randomUUID(), "Onboarding App", folder1.id);
-    const root: FolderNode = createFolder(rootId, "Workspaces");
-    root.childrenIds = [folder1.id];
-    folder1.childrenIds = [app1.id];
-    return { [root.id]: root, [folder1.id]: folder1, [app1.id]: app1 };
-  });
+  const [nodes, setNodes] = useState<Record<string, WorkspaceNode>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const rootId = "root";
+
+  // Load workspace data
+  useEffect(() => {
+    const loadWorkspaceData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getAllFolders();
+
+        if (response.error) {
+          setError("Failed to load workspace data");
+          console.error("Error loading workspace data:", response.error);
+        } else if (response.data) {
+          // Transform API response to nodes structure
+          const transformedNodes = transformFoldersToNodes(
+            response.data.items || [],
+            rootId,
+          );
+          setNodes(transformedNodes);
+        }
+      } catch (err) {
+        setError("Failed to load workspace data");
+        console.error("Error loading workspace data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadWorkspaceData();
+  }, [rootId]);
 
   // Get selectedId from current URL
   const selectedId = getSelectedIdFromPath(location.pathname, nodeId, rootId);
@@ -147,6 +220,73 @@ export default function Workspace() {
     () => buildBreadcrumb(nodes, selectedId),
     [nodes, selectedId],
   );
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="h-screen flex overflow-hidden">
+        <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto mb-2"></div>
+            Loading workspace...
+          </div>
+        </aside>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+            Loading...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="h-screen flex overflow-hidden">
+        <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
+          <div className="text-center text-red-500 p-4">
+            <div className="text-2xl mb-2">⚠️</div>
+            Error loading workspace
+          </div>
+        </aside>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-red-500 text-xl mb-2">⚠️</div>
+            <p className="text-red-500 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state
+  if (Object.keys(nodes).length === 0) {
+    return (
+      <div className="h-screen flex overflow-hidden">
+        <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
+          <div className="text-center text-muted-foreground p-4">
+            <div className="text-2xl mb-2">📁</div>
+            No workspaces
+          </div>
+        </aside>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <div className="text-4xl mb-4">📁</div>
+            <h2 className="text-xl font-semibold mb-2">No workspaces found</h2>
+            <p>Create your first workspace to get started.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex overflow-hidden">

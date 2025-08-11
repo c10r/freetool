@@ -96,7 +96,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun u -> u.Id).HasConversion(userIdConverter) |> ignore
 
             entity.Property(fun u -> u.ProfilePicUrl).HasConversion(optionStringConverter)
-            |> ignore)
+            |> ignore
+
+            // Global query filter for soft delete
+            entity.HasQueryFilter(fun u -> not u.IsDeleted) |> ignore)
         |> ignore
 
         // Configure FolderData
@@ -150,7 +153,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Ignore("Children") |> ignore
 
             entity.Property(fun f -> f.ParentId).HasConversion(optionFolderIdConverter)
-            |> ignore)
+            |> ignore
+
+            // Global query filter for soft delete
+            entity.HasQueryFilter(fun f -> not f.IsDeleted) |> ignore)
         |> ignore
 
         // Configure RunData
@@ -200,7 +206,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             |> ignore
 
             entity.HasOne<AppData>().WithMany().HasForeignKey(fun r -> r.AppId :> obj)
-            |> ignore)
+            |> ignore
+
+            // Global query filter for soft delete
+            entity.HasQueryFilter(fun r -> not r.IsDeleted) |> ignore)
         |> ignore
 
         // Configure ResourceData
@@ -288,7 +297,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             |> ignore
 
             entity.Property(fun r -> r.Body).HasConversion(keyValuePairListConverter)
-            |> ignore)
+            |> ignore
+
+            // Global query filter for soft delete
+            entity.HasQueryFilter(fun r -> not r.IsDeleted) |> ignore)
         |> ignore
 
         // Configure AppData
@@ -440,7 +452,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             |> ignore
 
             entity.Property(fun a -> a.Body).HasConversion(keyValuePairListConverter)
-            |> ignore)
+            |> ignore
+
+            // Global query filter for soft delete
+            entity.HasQueryFilter(fun a -> not a.IsDeleted) |> ignore)
         |> ignore
 
         // Configure EventData
@@ -514,7 +529,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
             // Ignore the UserIds navigation properties explicitly
             entity.Ignore("UserIds") |> ignore
-            entity.Ignore("_userIds") |> ignore)
+            entity.Ignore("_userIds") |> ignore
+
+            // Global query filter for soft delete
+            entity.HasQueryFilter(fun g -> not g.IsDeleted) |> ignore)
         |> ignore
 
         // Configure UserGroupData

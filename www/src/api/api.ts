@@ -33,7 +33,7 @@ export const createFolder = (name: string, parentId: string | null) => {
   });
 };
 
-export const getAll = (skip?: number, take?: number) => {
+export const getAllFolders = (skip?: number, take?: number) => {
   if (skip && take) {
     return client.GET("/folder", {
       params: {
@@ -47,13 +47,13 @@ export const getAll = (skip?: number, take?: number) => {
   return client.GET("/folder");
 };
 
-export const getChildren = (id: string) => {
+export const getFolderChildren = (id: string) => {
   return client.GET("/folder/{id}/children", {
     params: { path: { id } },
   });
 };
 
-export const getRoot = (skip?: number, take?: number) => {
+export const getRootFolder = (skip?: number, take?: number) => {
   if (skip && take) {
     return client.GET("/folder/root", {
       parmas: {
@@ -83,7 +83,7 @@ export const moveFolder = (id: string, parentFolderId: string | null) => {
   });
 };
 
-export const updateName = (id: string, newName: string) => {
+export const updateFolderName = (id: string, newName: string) => {
   return client.PUT("/folder/{id}/name", {
     params: {
       path: { id },
