@@ -42,6 +42,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   createFolder as createFolderAPI,
   deleteFolder as deleteFolderAPI,
+  updateFolderName,
 } from "@/api/api";
 
 interface WorkspaceMainProps {
@@ -95,6 +96,13 @@ function FolderView({
 }: WorkspaceMainProps & { folder: FolderNode }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(folder.name);
+
+  // Update name when folder changes
+  useEffect(() => {
+    setName(folder.name);
+    setEditing(false);
+    setRenameError(null);
+  }, [folder.id, folder.name]);
   const [newFolderName, setNewFolderName] = useState("");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -106,6 +114,8 @@ function FolderView({
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   const children = useMemo(
     () => folder.childrenIds.map((id) => nodes[id]).filter(Boolean),
@@ -203,37 +213,91 @@ function FolderView({
     setDeleteError(null);
   };
 
+  const handleRename = async () => {
+    if (!name.trim() || name === folder.name) {
+      setEditing(false);
+      return;
+    }
+
+    setIsRenaming(true);
+    setRenameError(null);
+    try {
+      const response = await updateFolderName(folder.id, name.trim());
+      if (response.error) {
+        setRenameError(
+          (response.error?.message as string) || "Failed to rename folder",
+        );
+      } else {
+        // Update local state
+        updateNode({ ...folder, name: name.trim() });
+        setEditing(false);
+      }
+    } catch (error) {
+      setRenameError(
+        error instanceof Error ? error.message : "Failed to rename folder",
+      );
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
   return (
     <section className="p-6 space-y-4 overflow-y-auto flex-1">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {editing ? (
-            <div className="flex items-center gap-2">
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-64"
-              />
-              <Button
-                onClick={() => {
-                  updateNode({ ...folder, name });
-                  setEditing(false);
-                }}
-              >
-                Save
-              </Button>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (renameError) setRenameError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleRename();
+                    }
+                    if (e.key === "Escape") {
+                      setName(folder.name);
+                      setEditing(false);
+                      setRenameError(null);
+                    }
+                  }}
+                  className="w-64"
+                />
+                <Button onClick={handleRename} disabled={isRenaming}>
+                  {isRenaming ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setName(folder.name);
+                    setEditing(false);
+                    setRenameError(null);
+                  }}
+                  disabled={isRenaming}
+                >
+                  Cancel
+                </Button>
+              </div>
+              {renameError && (
+                <p className="text-sm text-red-500">{renameError}</p>
+              )}
             </div>
           ) : (
             <h2 className="text-2xl font-semibold">{folder.name}</h2>
           )}
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={() => setEditing((v) => !v)}
-            aria-label="Rename folder"
-          >
-            <Edit size={16} />
-          </Button>
+          {folder.id !== "root" && (
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={() => setEditing((v) => !v)}
+              aria-label="Rename folder"
+            >
+              <Edit size={16} />
+            </Button>
+          )}
         </div>
         <div className="flex gap-2">
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>

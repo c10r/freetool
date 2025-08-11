@@ -136,8 +136,8 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
 
         member _.UpdateAsync(folder: ValidatedFolder) : Task<Result<unit, DomainError>> = task {
             try
-                let guidId = (Folder.getId folder).Value
-                let! existingData = context.Folders.FirstOrDefaultAsync(fun f -> f.Id.Value = guidId)
+                let folderId = Folder.getId folder
+                let! existingData = context.Folders.FirstOrDefaultAsync(fun f -> f.Id = folderId)
                 let existingDataOption = Option.ofObj existingData
 
                 match existingDataOption with
