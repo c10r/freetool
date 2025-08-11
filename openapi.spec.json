@@ -745,28 +745,28 @@
         ],
         "parameters": [
           {
-            "name": "UserId.Value",
+            "name": "userId",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "EventType.Value",
+            "name": "eventType",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "EntityType.Value",
+            "name": "entityType",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "FromDate.Value",
+            "name": "fromDate",
             "in": "query",
             "schema": {
               "type": "string",
@@ -774,7 +774,7 @@
             }
           },
           {
-            "name": "ToDate.Value",
+            "name": "toDate",
             "in": "query",
             "schema": {
               "type": "string",
@@ -782,7 +782,7 @@
             }
           },
           {
-            "name": "Skip.Value",
+            "name": "skip",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -790,7 +790,7 @@
             }
           },
           {
-            "name": "Take.Value",
+            "name": "take",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -4322,14 +4322,10 @@
         "additionalProperties": false
       },
       "DateTimeFSharpOption": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "additionalProperties": false
+        "type": "string",
+        "additionalProperties": false,
+        "format": "date-time",
+        "nullable": true
       },
       "EntityType": {
         "enum": [
@@ -5129,19 +5125,23 @@
             "nullable": true
           },
           "startedAt": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/DateTimeFSharpOption"
               }
             ],
+            "format": "date-time",
             "nullable": true
           },
           "completedAt": {
+            "type": "string",
             "allOf": [
               {
                 "$ref": "#/components/schemas/DateTimeFSharpOption"
               }
             ],
+            "format": "date-time",
             "nullable": true
           }
         },

@@ -46,7 +46,8 @@ let main args =
         c.MapType<FolderLocation>(fun () -> Microsoft.OpenApi.Models.OpenApiSchema(Type = "string", Nullable = true))
         |> ignore
 
-        c.SchemaFilter<FSharpUnionSchemaFilter>() |> ignore)
+        c.SchemaFilter<FSharpUnionSchemaFilter>() |> ignore
+        c.OperationFilter<FSharpQueryParameterOperationFilter>() |> ignore)
     |> ignore
 
     builder.Services.AddDbContext<FreetoolDbContext>(fun options ->

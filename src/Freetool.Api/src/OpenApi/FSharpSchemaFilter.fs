@@ -11,8 +11,16 @@ open Freetool.Application.DTOs
 type FSharpUnionSchemaFilter() =
     interface ISchemaFilter with
         member _.Apply(schema: OpenApiSchema, context: SchemaFilterContext) =
+            // Handle F# int types - ensure they're treated as primitive integers
+            if context.Type = typeof<int> then
+                schema.Type <- "integer"
+                schema.Format <- "int32"
+                schema.Properties <- null
+                schema.AdditionalProperties <- null
+                schema.Required <- null
+
             // Handle ID value objects - convert them to simple UUID strings
-            if
+            elif
                 context.Type = typeof<UserId>
                 || context.Type = typeof<AppId>
                 || context.Type = typeof<GroupId>
@@ -51,6 +59,22 @@ type FSharpUnionSchemaFilter() =
 
                 if innerType = typeof<string> then
                     schema.Type <- "string"
+                    schema.Nullable <- true
+                    schema.Properties <- null
+                    schema.AdditionalProperties <- null
+                    schema.Required <- null
+                // Handle int option - convert to nullable integer
+                elif innerType = typeof<int> then
+                    schema.Type <- "integer"
+                    schema.Format <- "int32"
+                    schema.Nullable <- true
+                    schema.Properties <- null
+                    schema.AdditionalProperties <- null
+                    schema.Required <- null
+                // Handle DateTime option - convert to nullable datetime
+                elif innerType = typeof<System.DateTime> then
+                    schema.Type <- "string"
+                    schema.Format <- "date-time"
                     schema.Nullable <- true
                     schema.Properties <- null
                     schema.AdditionalProperties <- null
@@ -138,3 +162,17 @@ type FSharpUnionSchemaFilter() =
                 schema.Properties <- null
                 schema.AdditionalProperties <- null
                 schema.Required <- null
+
+type FSharpQueryParameterOperationFilter() =
+    interface IOperationFilter with
+        member _.Apply(operation: OpenApiOperation, context: OperationFilterContext) =
+            if operation.Parameters <> null then
+                for parameter in operation.Parameters do
+                    // Fix F# option parameter names - remove .Value suffix
+                    if parameter.Name.EndsWith(".Value") then
+                        parameter.Name <- parameter.Name.Substring(0, parameter.Name.Length - 6)
+                        // Convert to camelCase for consistency
+                        if parameter.Name.Length > 0 then
+                            parameter.Name <-
+                                System.Char.ToLowerInvariant(parameter.Name.[0]).ToString()
+                                + parameter.Name.Substring(1)
