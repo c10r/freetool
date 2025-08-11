@@ -52,3 +52,17 @@ export interface AppNode extends BaseNode {
 }
 
 export type WorkspaceNode = FolderNode | AppNode;
+
+export interface WorkspaceMainProps {
+  nodes: Record<string, WorkspaceNode>;
+  selectedId: string;
+  onSelect: (id: string) => void;
+  updateNode: (node: WorkspaceNode) => void;
+  createFolder: (parentId: string) => void;
+  createApp: (parentId: string) => void;
+  deleteNode: (id: string) => void;
+  endpoints: Record<string, Endpoint>;
+  createEndpoint: () => void;
+  updateEndpoint: (ep: Endpoint) => void;
+  deleteEndpoint: (id: string) => void;
+}

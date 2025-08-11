@@ -9,6 +9,14 @@ open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 
+(*
+ * TODO: Change the data model to be path-based parent ID's
+ * This obviates the need for recursion when doing deletions (see FolderRepository)
+ * It also makes the reads much faster and simpler to implement.
+ *
+ * It DOES slow down the writes but in my experience this type of structure is 10-1
+ * read favored anyway, so slowing down writes shouldn't matter.
+ *)
 [<Table("Folders")>]
 [<Index([| "Name"; "ParentId" |], IsUnique = true, Name = "IX_Folders_Name_ParentId")>]
 // CLIMutable for EntityFramework
