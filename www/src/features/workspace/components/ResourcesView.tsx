@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -120,7 +120,7 @@ export default function ResourcesView() {
             urlParameters: item.urlParameters || [],
             headers: item.headers || [],
             body: item.body || [],
-          };
+          } as Resource;
         });
         setResources(mappedItems);
       }
@@ -251,9 +251,16 @@ export default function ResourcesView() {
   ) => {
     if (!editingResource) return;
 
+    // Filter out empty key-value pairs (both key and value must be non-empty)
+    const filteredValue = value.filter(
+      (pair) => pair.key.trim() !== "" && pair.value.trim() !== "",
+    );
+
     // Don't make network request if value hasn't changed
-    const currentValue = editingResource[field] || [];
-    if (JSON.stringify(value) === JSON.stringify(currentValue)) return;
+    const currentValue = (editingResource[field] || []).filter(
+      (pair) => pair.key.trim() !== "" && pair.value.trim() !== "",
+    );
+    if (JSON.stringify(filteredValue) === JSON.stringify(currentValue)) return;
 
     setFieldUpdating((prev) => ({ ...prev, [field]: true }));
 
@@ -262,17 +269,17 @@ export default function ResourcesView() {
       if (field === "urlParameters") {
         response = await updateResourceUrlParameters({
           id: editingResource.id,
-          urlParameters: value,
+          urlParameters: filteredValue,
         });
       } else if (field === "headers") {
         response = await updateResourceHeaders({
           id: editingResource.id,
-          headers: value,
+          headers: filteredValue,
         });
       } else if (field === "body") {
         response = await updateResourceBody({
           id: editingResource.id,
-          body: value,
+          body: filteredValue,
         });
       }
 
@@ -305,12 +312,14 @@ export default function ResourcesView() {
       // Update local state
       setResources((prev) =>
         prev.map((r) =>
-          r.id === editingResource.id ? { ...r, [field]: value } : r,
+          r.id === editingResource.id ? { ...r, [field]: filteredValue } : r,
         ),
       );
 
       // Update editing resource
-      setEditingResource((prev) => (prev ? { ...prev, [field]: value } : null));
+      setEditingResource((prev) =>
+        prev ? { ...prev, [field]: filteredValue } : null,
+      );
 
       // Show success indicator only on successful save
       setFieldSaved((prev) => ({ ...prev, [field]: true }));
@@ -801,6 +810,8 @@ export default function ResourcesView() {
                         ...editFormData,
                         urlParameters: items,
                       });
+                    }}
+                    onBlur={(items) => {
                       updateKeyValueField("urlParameters", items);
                     }}
                     ariaLabel="URL parameters"
@@ -837,6 +848,8 @@ export default function ResourcesView() {
                     items={editFormData.headers}
                     onChange={(items) => {
                       setEditFormData({ ...editFormData, headers: items });
+                    }}
+                    onBlur={(items) => {
                       updateKeyValueField("headers", items);
                     }}
                     ariaLabel="HTTP headers"
@@ -873,6 +886,8 @@ export default function ResourcesView() {
                     items={editFormData.body}
                     onChange={(items) => {
                       setEditFormData({ ...editFormData, body: items });
+                    }}
+                    onBlur={(items) => {
                       updateKeyValueField("body", items);
                     }}
                     ariaLabel="JSON body"

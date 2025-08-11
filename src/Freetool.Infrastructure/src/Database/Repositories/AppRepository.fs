@@ -138,7 +138,6 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
         }
 
         member _.GetByResourceIdAsync(resourceId: ResourceId) : Task<ValidatedApp list> = task {
-            let resourceGuidId = resourceId.Value
-            let! appDatas = context.Apps.Where(fun a -> a.ResourceId.Value = resourceGuidId).ToListAsync()
+            let! appDatas = context.Apps.Where(fun a -> a.ResourceId = resourceId).ToListAsync()
             return appDatas |> Seq.map (fun data -> App.fromData data) |> Seq.toList
         }

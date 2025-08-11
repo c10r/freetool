@@ -6,12 +6,14 @@ import { KeyValuePair } from "../types";
 interface KeyValueListProps {
   items: KeyValuePair[] | undefined;
   onChange: (items: KeyValuePair[]) => void;
+  onBlur?: (items: KeyValuePair[]) => void;
   ariaLabel?: string;
 }
 
 export default function KeyValueList({
   items = [],
   onChange,
+  onBlur,
   ariaLabel,
 }: KeyValueListProps) {
   const add = () => onChange([...(items || []), { key: "", value: "" }]);
@@ -23,7 +25,21 @@ export default function KeyValueList({
   return (
     <div className="space-y-2" aria-label={ariaLabel}>
       {(items || []).map((kv, i) => (
-        <div key={i} className="grid grid-cols-12 gap-2 items-center">
+        <div
+          key={i}
+          className="grid grid-cols-12 gap-2 items-center"
+          onBlur={(e) => {
+            // Only trigger onBlur if focus is leaving this entire row
+            // relatedTarget can be null when clicking outside the document
+            const relatedTarget = e.relatedTarget;
+            if (
+              !relatedTarget ||
+              !e.currentTarget.contains(relatedTarget as Node)
+            ) {
+              onBlur?.(items || []);
+            }
+          }}
+        >
           <Input
             placeholder="Key"
             value={kv.key}

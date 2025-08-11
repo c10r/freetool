@@ -13,11 +13,85 @@ export const getAuditEvents = (skip?: number, take?: number) => {
   if (skip && take) {
     return client.GET("/audit/events", {
       params: {
-        query: { "Skip.Value": skip, "Take.Value": take },
+        query: { skip, take },
       },
     });
   }
   return client.GET("/audit/events");
+};
+
+/**
+ * Folders
+ */
+
+export const createFolder = (name: string, parentId: string | null) => {
+  return client.POST("/folder", {
+    body: {
+      name,
+      location: parentId,
+    },
+  });
+};
+
+export const getAll = (skip?: number, take?: number) => {
+  if (skip && take) {
+    return client.GET("/folder", {
+      params: {
+        query: {
+          skip,
+          take,
+        },
+      },
+    });
+  }
+  return client.GET("/folder");
+};
+
+export const getChildren = (id: string) => {
+  return client.GET("/folder/{id}/children", {
+    params: { path: { id } },
+  });
+};
+
+export const getRoot = (skip?: number, take?: number) => {
+  if (skip && take) {
+    return client.GET("/folder/root", {
+      parmas: {
+        query: { skip, take },
+      },
+    });
+  }
+  return client.GET("/folder/root");
+};
+
+export const deleteFolder = (id: string) => {
+  return client.DELETE("/folder/{id}", {
+    params: {
+      path: { id },
+    },
+  });
+};
+
+export const moveFolder = (id: string, parentFolderId: string | null) => {
+  return client.PUT("/folder/{id}/move", {
+    params: {
+      path: { id },
+    },
+    body: {
+      parentId: parentFolderId !== null ? parentFolderId : undefined,
+    },
+  });
+};
+
+export const updateName = (id: string, newName: string) => {
+  return client.PUT("/folder/{id}/name", {
+    params: {
+      path: { id },
+    },
+    body: {
+      name: newName,
+    },
+  });
 };
 
 /**
