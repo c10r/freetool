@@ -365,7 +365,8 @@ function FolderView({
         {children.map((child) => (
           <Card
             key={child.id}
-            className="transition-transform hover:scale-[1.01]"
+            className="transition-transform hover:scale-[1.01] cursor-pointer"
+            onClick={() => onSelect(child.id)}
           >
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base font-medium">
@@ -375,7 +376,10 @@ function FolderView({
                 <Button
                   variant="secondary"
                   size="icon"
-                  onClick={() => onSelect(child.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect(child.id);
+                  }}
                   aria-label={child.type === "folder" ? "Open" : "Edit"}
                 >
                   {child.type === "folder" ? (
@@ -387,11 +391,12 @@ function FolderView({
                 <Button
                   variant="secondary"
                   size="icon"
-                  onClick={() =>
+                  onClick={(e) => {
+                    e.stopPropagation();
                     child.type === "folder"
                       ? handleDeleteClick(child.id)
-                      : deleteNode(child.id)
-                  }
+                      : deleteNode(child.id);
+                  }}
                   aria-label="Delete"
                 >
                   <Trash2 size={16} />
