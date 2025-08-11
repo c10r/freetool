@@ -23,7 +23,7 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
                 // Load children for this folder
                 let! childrenData =
                     context.Folders
-                        .Where(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
+                        .Where(fun f -> f.ParentId = Some(FolderId(guidId)))
                         .OrderBy(fun f -> f.Name)
                         .ToListAsync()
 
@@ -39,7 +39,7 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
 
             let! folderDatas =
                 context.Folders
-                    .Where(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
+                    .Where(fun f -> f.ParentId = Some(FolderId(guidId)))
                     .OrderBy(fun f -> f.Name)
                     .ToListAsync()
 
@@ -49,7 +49,7 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
         member _.GetRootFoldersAsync (skip: int) (take: int) : Task<ValidatedFolder list> = task {
             let! folderDatas =
                 context.Folders
-                    .Where(fun f -> f.ParentId.IsNone)
+                    .Where(fun f -> f.ParentId = None)
                     .OrderBy(fun f -> f.Name)
                     .Skip(skip)
                     .Take(take)
@@ -65,7 +65,7 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
                 // Load children for this folder
                 let! childrenData =
                     context.Folders
-                        .Where(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
+                        .Where(fun f -> f.ParentId = Some(FolderId(guidId)))
                         .OrderBy(fun f -> f.Name)
                         .ToListAsync()
 
@@ -92,7 +92,7 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
                 // Load children for this folder
                 let! childrenData =
                     context.Folders
-                        .Where(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
+                        .Where(fun f -> f.ParentId = Some(FolderId(guidId)))
                         .OrderBy(fun f -> f.Name)
                         .ToListAsync()
 
@@ -186,23 +186,21 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
             match parentId with
             | None ->
                 // Check root folders
-                return! context.Folders.AnyAsync(fun f -> f.Name.Value = nameStr && f.ParentId.IsNone)
+                return! context.Folders.AnyAsync(fun f -> f.Name.Value = nameStr && f.ParentId = None)
             | Some pid ->
                 // Check folders with specific parent
                 let guidId = pid.Value
 
-                return!
-                    context.Folders.AnyAsync(fun f ->
-                        f.Name.Value = nameStr && f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
+                return! context.Folders.AnyAsync(fun f -> f.Name.Value = nameStr && f.ParentId = Some(FolderId(guidId)))
         }
 
         member _.GetCountAsync() : Task<int> = task { return! context.Folders.CountAsync() }
 
         member _.GetRootCountAsync() : Task<int> = task {
-            return! context.Folders.CountAsync(fun f -> f.ParentId.IsNone)
+            return! context.Folders.CountAsync(fun f -> f.ParentId = None)
         }
 
         member _.GetChildCountAsync(parentId: FolderId) : Task<int> = task {
             let guidId = parentId.Value
-            return! context.Folders.CountAsync(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
+            return! context.Folders.CountAsync(fun f -> f.ParentId = Some(FolderId(guidId)))
         }
