@@ -6,6 +6,7 @@ open Swashbuckle.AspNetCore.SwaggerGen
 open System.Collections.Generic
 open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
+open Freetool.Application.DTOs
 
 type FSharpUnionSchemaFilter() =
     interface ISchemaFilter with
@@ -50,6 +51,14 @@ type FSharpUnionSchemaFilter() =
 
                 if innerType = typeof<string> then
                     schema.Type <- "string"
+                    schema.Nullable <- true
+                    schema.Properties <- null
+                    schema.AdditionalProperties <- null
+                    schema.Required <- null
+                // Handle FolderId option - convert to nullable UUID string
+                elif innerType = typeof<FolderId> then
+                    schema.Type <- "string"
+                    schema.Format <- "uuid"
                     schema.Nullable <- true
                     schema.Properties <- null
                     schema.AdditionalProperties <- null

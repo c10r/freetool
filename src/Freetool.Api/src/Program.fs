@@ -33,6 +33,7 @@ let main args =
             options.JsonSerializerOptions.Converters.Add(EventTypeConverter())
             options.JsonSerializerOptions.Converters.Add(EntityTypeConverter())
             options.JsonSerializerOptions.Converters.Add(KeyValuePairConverter())
+            options.JsonSerializerOptions.Converters.Add(FolderLocationConverter())
             options.JsonSerializerOptions.Converters.Add(JsonFSharpConverter()))
     |> ignore
 
@@ -41,6 +42,10 @@ let main args =
     builder.Services.AddSwaggerGen(fun c ->
         c.SupportNonNullableReferenceTypes() |> ignore
         c.UseAllOfToExtendReferenceSchemas() |> ignore
+
+        c.MapType<FolderLocation>(fun () -> Microsoft.OpenApi.Models.OpenApiSchema(Type = "string", Nullable = true))
+        |> ignore
+
         c.SchemaFilter<FSharpUnionSchemaFilter>() |> ignore)
     |> ignore
 
