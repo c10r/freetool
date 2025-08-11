@@ -32,6 +32,7 @@ let main args =
             options.JsonSerializerOptions.Converters.Add(HttpMethodConverter())
             options.JsonSerializerOptions.Converters.Add(EventTypeConverter())
             options.JsonSerializerOptions.Converters.Add(EntityTypeConverter())
+            options.JsonSerializerOptions.Converters.Add(KeyValuePairConverter())
             options.JsonSerializerOptions.Converters.Add(JsonFSharpConverter()))
     |> ignore
 

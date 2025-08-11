@@ -91,3 +91,36 @@ type EntityTypeConverter() =
 
     override _.Write(writer: Utf8JsonWriter, value: EntityType, _options: JsonSerializerOptions) =
         writer.WriteStringValue(Freetool.Domain.Entities.EntityTypeConverter.toString (value))
+
+type KeyValuePairConverter() =
+    inherit JsonConverter<KeyValuePair>()
+
+    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
+        if reader.TokenType <> JsonTokenType.StartObject then
+            failwith "Expected start of object for KeyValuePair"
+
+        let mutable key = ""
+        let mutable value = ""
+
+        while reader.Read() do
+            match reader.TokenType with
+            | JsonTokenType.PropertyName ->
+                let propertyName = reader.GetString()
+                reader.Read() |> ignore
+
+                match propertyName with
+                | "key" -> key <- reader.GetString()
+                | "value" -> value <- reader.GetString()
+                | _ -> reader.Skip()
+            | JsonTokenType.EndObject -> ()
+            | _ -> reader.Skip()
+
+        match KeyValuePair.Create(key, value) with
+        | Ok kvp -> kvp
+        | Error err -> failwith $"Failed to create KeyValuePair: {err}"
+
+    override _.Write(writer: Utf8JsonWriter, value: KeyValuePair, _options: JsonSerializerOptions) =
+        writer.WriteStartObject()
+        writer.WriteString("key", value.Key)
+        writer.WriteString("value", value.Value)
+        writer.WriteEndObject()

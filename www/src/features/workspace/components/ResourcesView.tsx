@@ -24,9 +24,14 @@ import {
   updateResourceName,
   updateResourceDescription,
   updateResourceBaseUrl,
+  updateResourceUrlParameters,
+  updateResourceHeaders,
+  updateResourceBody,
 } from "@/api/api";
 import HttpMethodBadge from "./HttpMethodBadge";
+import KeyValueList from "./KeyValueList";
 import { Edit, Check, X } from "lucide-react";
+import { KeyValuePair } from "../types";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -36,6 +41,9 @@ interface Resource {
   description: string;
   baseUrl: string;
   httpMethod: HttpMethod;
+  urlParameters: KeyValuePair[];
+  headers: KeyValuePair[];
+  body: KeyValuePair[];
 }
 
 export default function ResourcesView() {
@@ -50,32 +58,50 @@ export default function ResourcesView() {
     description: "",
     baseUrl: "",
     httpMethod: "GET" as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+    urlParameters: [] as KeyValuePair[],
+    headers: [] as KeyValuePair[],
+    body: [] as KeyValuePair[],
   });
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editFormData, setEditFormData] = useState({
     name: "",
     description: "",
     baseUrl: "",
+    urlParameters: [] as KeyValuePair[],
+    headers: [] as KeyValuePair[],
+    body: [] as KeyValuePair[],
   });
   const [fieldUpdating, setFieldUpdating] = useState({
     name: false,
     description: false,
     baseUrl: false,
+    urlParameters: false,
+    headers: false,
+    body: false,
   });
   const [fieldSaved, setFieldSaved] = useState({
     name: false,
     description: false,
     baseUrl: false,
+    urlParameters: false,
+    headers: false,
+    body: false,
   });
   const [fieldError, setFieldError] = useState({
     name: false,
     description: false,
     baseUrl: false,
+    urlParameters: false,
+    headers: false,
+    body: false,
   });
   const [fieldErrorMessages, setFieldErrorMessages] = useState({
     name: "",
     description: "",
     baseUrl: "",
+    urlParameters: "",
+    headers: "",
+    body: "",
   });
 
   const fetchResources = async () => {
@@ -91,6 +117,9 @@ export default function ResourcesView() {
             description: item.description,
             baseUrl: item.baseUrl,
             httpMethod: item.httpMethod,
+            urlParameters: item.urlParameters || [],
+            headers: item.headers || [],
+            body: item.body || [],
           };
         });
         setResources(mappedItems);
@@ -122,9 +151,9 @@ export default function ResourcesView() {
         description: formData.description.trim(),
         baseUrl: formData.baseUrl.trim(),
         httpMethod: formData.httpMethod,
-        urlParameters: [],
-        headers: [],
-        body: [],
+        urlParameters: formData.urlParameters,
+        headers: formData.headers,
+        body: formData.body,
       });
 
       setFormData({
@@ -132,6 +161,9 @@ export default function ResourcesView() {
         description: "",
         baseUrl: "",
         httpMethod: "GET",
+        urlParameters: [],
+        headers: [],
+        body: [],
       });
       setShowCreateForm(false);
       await fetchResources();
@@ -151,6 +183,9 @@ export default function ResourcesView() {
       description: "",
       baseUrl: "",
       httpMethod: "GET",
+      urlParameters: [],
+      headers: [],
+      body: [],
     });
   };
 
@@ -160,6 +195,9 @@ export default function ResourcesView() {
       name: resource.name,
       description: resource.description,
       baseUrl: resource.baseUrl,
+      urlParameters: resource.urlParameters || [],
+      headers: resource.headers || [],
+      body: resource.body || [],
     });
   };
 
@@ -169,27 +207,140 @@ export default function ResourcesView() {
       name: "",
       description: "",
       baseUrl: "",
+      urlParameters: [],
+      headers: [],
+      body: [],
     });
     setFieldUpdating({
       name: false,
       description: false,
       baseUrl: false,
+      urlParameters: false,
+      headers: false,
+      body: false,
     });
     setFieldSaved({
       name: false,
       description: false,
       baseUrl: false,
+      urlParameters: false,
+      headers: false,
+      body: false,
     });
     setFieldError({
       name: false,
       description: false,
       baseUrl: false,
+      urlParameters: false,
+      headers: false,
+      body: false,
     });
     setFieldErrorMessages({
       name: "",
       description: "",
       baseUrl: "",
+      urlParameters: "",
+      headers: "",
+      body: "",
     });
+  };
+
+  const updateKeyValueField = async (
+    field: "urlParameters" | "headers" | "body",
+    value: KeyValuePair[],
+  ) => {
+    if (!editingResource) return;
+
+    // Don't make network request if value hasn't changed
+    const currentValue = editingResource[field] || [];
+    if (JSON.stringify(value) === JSON.stringify(currentValue)) return;
+
+    setFieldUpdating((prev) => ({ ...prev, [field]: true }));
+
+    try {
+      let response;
+      if (field === "urlParameters") {
+        response = await updateResourceUrlParameters({
+          id: editingResource.id,
+          urlParameters: value,
+        });
+      } else if (field === "headers") {
+        response = await updateResourceHeaders({
+          id: editingResource.id,
+          headers: value,
+        });
+      } else if (field === "body") {
+        response = await updateResourceBody({
+          id: editingResource.id,
+          body: value,
+        });
+      }
+
+      // Check if the response contains an error
+      if (response && response.error) {
+        console.error(`Error updating ${field}:`, response.error);
+
+        // Extract error message
+        const errorMessage = response.error.message || "Failed to save";
+
+        // Show error indicator and message
+        setFieldError((prev) => ({ ...prev, [field]: true }));
+        setFieldErrorMessages((prev) => ({ ...prev, [field]: errorMessage }));
+
+        // Reset the field value on error
+        setEditFormData((prev) => ({
+          ...prev,
+          [field]: editingResource[field] || [],
+        }));
+
+        // Hide error indicator after 2 seconds
+        setTimeout(() => {
+          setFieldError((prev) => ({ ...prev, [field]: false }));
+          setFieldErrorMessages((prev) => ({ ...prev, [field]: "" }));
+        }, 2000);
+
+        return;
+      }
+
+      // Update local state
+      setResources((prev) =>
+        prev.map((r) =>
+          r.id === editingResource.id ? { ...r, [field]: value } : r,
+        ),
+      );
+
+      // Update editing resource
+      setEditingResource((prev) => (prev ? { ...prev, [field]: value } : null));
+
+      // Show success indicator only on successful save
+      setFieldSaved((prev) => ({ ...prev, [field]: true }));
+      setTimeout(() => {
+        setFieldSaved((prev) => ({ ...prev, [field]: false }));
+      }, 2000);
+    } catch (error) {
+      console.error(`Error updating ${field}:`, error);
+
+      // Show error indicator
+      setFieldError((prev) => ({ ...prev, [field]: true }));
+      setFieldErrorMessages((prev) => ({
+        ...prev,
+        [field]: "Network error occurred",
+      }));
+
+      // Reset the field value on error
+      setEditFormData((prev) => ({
+        ...prev,
+        [field]: editingResource[field] || [],
+      }));
+
+      // Hide error indicator after 2 seconds
+      setTimeout(() => {
+        setFieldError((prev) => ({ ...prev, [field]: false }));
+        setFieldErrorMessages((prev) => ({ ...prev, [field]: "" }));
+      }, 2000);
+    } finally {
+      setFieldUpdating((prev) => ({ ...prev, [field]: false }));
+    }
   };
 
   const updateField = async (
@@ -388,6 +539,37 @@ export default function ResourcesView() {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>Query Parameters</Label>
+              <KeyValueList
+                items={formData.urlParameters}
+                onChange={(items) =>
+                  setFormData({ ...formData, urlParameters: items })
+                }
+                ariaLabel="URL parameters"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>HTTP Headers</Label>
+              <KeyValueList
+                items={formData.headers}
+                onChange={(items) =>
+                  setFormData({ ...formData, headers: items })
+                }
+                ariaLabel="HTTP headers"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>JSON Body</Label>
+              <KeyValueList
+                items={formData.body}
+                onChange={(items) => setFormData({ ...formData, body: items })}
+                ariaLabel="JSON body"
+              />
+            </div>
+
             <div className="flex gap-2 pt-2">
               <Button
                 onClick={handleCreateResource}
@@ -470,12 +652,12 @@ export default function ResourcesView() {
       )}
 
       <Dialog open={!!editingResource} onOpenChange={() => handleCloseEdit()}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit Resource</DialogTitle>
           </DialogHeader>
           {editingResource && (
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto flex-1 pr-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-name">Name</Label>
                 <div className="relative">
@@ -605,6 +787,117 @@ export default function ResourcesView() {
                 {fieldErrorMessages.baseUrl && (
                   <div className="text-red-500 text-sm mt-1">
                     {fieldErrorMessages.baseUrl}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Query Parameters</Label>
+                <div className="relative">
+                  <KeyValueList
+                    items={editFormData.urlParameters}
+                    onChange={(items) => {
+                      setEditFormData({
+                        ...editFormData,
+                        urlParameters: items,
+                      });
+                      updateKeyValueField("urlParameters", items);
+                    }}
+                    ariaLabel="URL parameters"
+                  />
+                  {fieldUpdating.urlParameters && (
+                    <div className="absolute right-3 top-3">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                    </div>
+                  )}
+                  {fieldSaved.urlParameters &&
+                    !fieldUpdating.urlParameters &&
+                    !fieldError.urlParameters && (
+                      <div className="absolute right-3 top-3">
+                        <Check className="h-4 w-4 text-green-500" />
+                      </div>
+                    )}
+                  {fieldError.urlParameters && !fieldUpdating.urlParameters && (
+                    <div className="absolute right-3 top-3">
+                      <X className="h-4 w-4 text-red-500" />
+                    </div>
+                  )}
+                </div>
+                {fieldErrorMessages.urlParameters && (
+                  <div className="text-red-500 text-sm mt-1">
+                    {fieldErrorMessages.urlParameters}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>HTTP Headers</Label>
+                <div className="relative">
+                  <KeyValueList
+                    items={editFormData.headers}
+                    onChange={(items) => {
+                      setEditFormData({ ...editFormData, headers: items });
+                      updateKeyValueField("headers", items);
+                    }}
+                    ariaLabel="HTTP headers"
+                  />
+                  {fieldUpdating.headers && (
+                    <div className="absolute right-3 top-3">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                    </div>
+                  )}
+                  {fieldSaved.headers &&
+                    !fieldUpdating.headers &&
+                    !fieldError.headers && (
+                      <div className="absolute right-3 top-3">
+                        <Check className="h-4 w-4 text-green-500" />
+                      </div>
+                    )}
+                  {fieldError.headers && !fieldUpdating.headers && (
+                    <div className="absolute right-3 top-3">
+                      <X className="h-4 w-4 text-red-500" />
+                    </div>
+                  )}
+                </div>
+                {fieldErrorMessages.headers && (
+                  <div className="text-red-500 text-sm mt-1">
+                    {fieldErrorMessages.headers}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>JSON Body</Label>
+                <div className="relative">
+                  <KeyValueList
+                    items={editFormData.body}
+                    onChange={(items) => {
+                      setEditFormData({ ...editFormData, body: items });
+                      updateKeyValueField("body", items);
+                    }}
+                    ariaLabel="JSON body"
+                  />
+                  {fieldUpdating.body && (
+                    <div className="absolute right-3 top-3">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                    </div>
+                  )}
+                  {fieldSaved.body &&
+                    !fieldUpdating.body &&
+                    !fieldError.body && (
+                      <div className="absolute right-3 top-3">
+                        <Check className="h-4 w-4 text-green-500" />
+                      </div>
+                    )}
+                  {fieldError.body && !fieldUpdating.body && (
+                    <div className="absolute right-3 top-3">
+                      <X className="h-4 w-4 text-red-500" />
+                    </div>
+                  )}
+                </div>
+                {fieldErrorMessages.body && (
+                  <div className="text-red-500 text-sm mt-1">
+                    {fieldErrorMessages.body}
                   </div>
                 )}
               </div>
