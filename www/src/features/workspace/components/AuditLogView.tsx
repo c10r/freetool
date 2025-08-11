@@ -106,7 +106,6 @@ export default function AuditLogView() {
       }
     } catch (err) {
       setError("Failed to load audit events");
-      console.error("Error fetching audit events:", err);
     } finally {
       setLoading(false);
     }

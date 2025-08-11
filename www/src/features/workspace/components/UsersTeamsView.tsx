@@ -77,7 +77,6 @@ export default function UsersTeamsView() {
         }
       } catch (error) {
         setUsersError("Failed to load users");
-        console.error("Error fetching users:", error);
       } finally {
         setUsersLoading(false);
       }
@@ -100,7 +99,6 @@ export default function UsersTeamsView() {
         }
       } catch (error) {
         setGroupsError("Failed to load teams");
-        console.error("Error fetching groups:", error);
       } finally {
         setGroupsLoading(false);
       }
@@ -132,8 +130,6 @@ export default function UsersTeamsView() {
         }));
         setGroups(groupData);
       }
-    } catch (error) {
-      console.error("Error creating group:", error);
     } finally {
       setIsCreatingGroup(false);
     }
@@ -156,20 +152,16 @@ export default function UsersTeamsView() {
   };
 
   const handleEditGroup = async (group: Group) => {
-    try {
-      setEditingGroup(group);
-      setEditGroupName(group.name);
+    setEditingGroup(group);
+    setEditGroupName(group.name);
 
-      const response = await getGroupById(group.id);
-      if (response.data) {
-        const currentUserIds = response.data.userIds || [];
-        setEditSelectedUserIds(currentUserIds);
-      }
-
-      setEditGroupOpen(true);
-    } catch (error) {
-      console.error("Error fetching group details:", error);
+    const response = await getGroupById(group.id);
+    if (response.data) {
+      const currentUserIds = response.data.userIds || [];
+      setEditSelectedUserIds(currentUserIds);
     }
+
+    setEditGroupOpen(true);
   };
 
   const handleUpdateGroup = async () => {
@@ -219,8 +211,6 @@ export default function UsersTeamsView() {
         }));
         setGroups(groupData);
       }
-    } catch (error) {
-      console.error("Error updating group:", error);
     } finally {
       setIsUpdatingGroup(false);
     }

@@ -14,28 +14,23 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
     interface IAppRepository with
 
         member _.GetByIdAsync(appId: AppId) : Task<ValidatedApp option> = task {
-            let guidId = appId.Value
-            let! appData = context.Apps.FirstOrDefaultAsync(fun a -> a.Id.Value = guidId)
+            let! appData = context.Apps.FirstOrDefaultAsync(fun a -> a.Id = appId)
 
             return appData |> Option.ofObj |> Option.map (fun data -> App.fromData data)
         }
 
         member _.GetByNameAndFolderIdAsync (appName: AppName) (folderId: FolderId) : Task<ValidatedApp option> = task {
             let nameStr = appName.Value
-            let folderGuidId = folderId.Value
 
-            let! appData =
-                context.Apps.FirstOrDefaultAsync(fun a -> a.Name = nameStr && a.FolderId.Value = folderGuidId)
+            let! appData = context.Apps.FirstOrDefaultAsync(fun a -> a.Name = nameStr && a.FolderId = folderId)
 
             return appData |> Option.ofObj |> Option.map (fun data -> App.fromData data)
         }
 
         member _.GetByFolderIdAsync (folderId: FolderId) (skip: int) (take: int) : Task<ValidatedApp list> = task {
-            let folderGuidId = folderId.Value
-
             let! appDatas =
                 context.Apps
-                    .Where(fun a -> a.FolderId.Value = folderGuidId)
+                    .Where(fun a -> a.FolderId = folderId)
                     .OrderBy(fun a -> a.CreatedAt)
                     .Skip(skip)
                     .Take(take)
@@ -71,8 +66,8 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
 
         member _.UpdateAsync(app: ValidatedApp) : Task<Result<unit, DomainError>> = task {
             try
-                let guidId = (App.getId app).Value
-                let! existingData = context.Apps.FirstOrDefaultAsync(fun a -> a.Id.Value = guidId)
+                let appId = App.getId app
+                let! existingData = context.Apps.FirstOrDefaultAsync(fun a -> a.Id = appId)
 
                 match Option.ofObj existingData with
                 | None -> return Error(NotFound "App not found")
@@ -119,22 +114,17 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
             | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
-        member _.ExistsAsync(appId: AppId) : Task<bool> = task {
-            let guidId = appId.Value
-            return! context.Apps.AnyAsync(fun a -> a.Id.Value = guidId)
-        }
+        member _.ExistsAsync(appId: AppId) : Task<bool> = task { return! context.Apps.AnyAsync(fun a -> a.Id = appId) }
 
         member _.ExistsByNameAndFolderIdAsync (appName: AppName) (folderId: FolderId) : Task<bool> = task {
             let nameStr = appName.Value
-            let folderGuidId = folderId.Value
-            return! context.Apps.AnyAsync(fun a -> a.Name = nameStr && a.FolderId.Value = folderGuidId)
+            return! context.Apps.AnyAsync(fun a -> a.Name = nameStr && a.FolderId = folderId)
         }
 
         member _.GetCountAsync() : Task<int> = task { return! context.Apps.CountAsync() }
 
         member _.GetCountByFolderIdAsync(folderId: FolderId) : Task<int> = task {
-            let folderGuidId = folderId.Value
-            return! context.Apps.CountAsync(fun a -> a.FolderId.Value = folderGuidId)
+            return! context.Apps.CountAsync(fun a -> a.FolderId = folderId)
         }
 
         member _.GetByResourceIdAsync(resourceId: ResourceId) : Task<ValidatedApp list> = task {

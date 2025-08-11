@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { updateAppName, getResources } from "@/api/api";
 
 export default function AppView({
   app,
@@ -25,12 +26,60 @@ export default function AppView({
   const [tab, setTab] = useState("build");
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(app.name);
+  const [nameUpdating, setNameUpdating] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
+  const [nameError, setNameError] = useState(false);
+  const [nameErrorMessage, setNameErrorMessage] = useState("");
+
+  // Resource picker state
+  const [resources, setResources] = useState<
+    Array<{ id: string; name: string; httpMethod: string }>
+  >([]);
+  const [loadingResources, setLoadingResources] = useState(false);
+  const [resourcesError, setResourcesError] = useState<string | null>(null);
 
   // Update name when app changes
   useEffect(() => {
     setName(app.name);
     setEditing(false);
+    // Reset states when app changes
+    setNameUpdating(false);
+    setNameSaved(false);
+    setNameError(false);
+    setNameErrorMessage("");
   }, [app.id, app.name]);
+
+  // Fetch resources on component mount
+  useEffect(() => {
+    const fetchResources = async () => {
+      setLoadingResources(true);
+      setResourcesError(null);
+      try {
+        const response = await getResources();
+        if (response.error) {
+          setResourcesError("Failed to load resources");
+          setResources([]);
+        } else if (response.data?.items) {
+          const resourceList = response.data.items.map((item) => ({
+            id: item.id!,
+            name: item.name,
+            httpMethod: item.httpMethod,
+          }));
+          setResources(resourceList);
+        } else {
+          // No items in response, set empty array
+          setResources([]);
+        }
+      } catch (error) {
+        setResourcesError("Failed to load resources");
+        setResources([]);
+      } finally {
+        setLoadingResources(false);
+      }
+    };
+
+    fetchResources();
+  }, []);
 
   const updateField = (id: string, patch: Partial<AppField>) => {
     updateNode({
@@ -62,18 +111,85 @@ export default function AppView({
         <div className="flex items-center gap-3">
           {editing ? (
             <div className="flex items-center gap-2">
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-64"
-              />
+              <div className="relative">
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-64 pr-10"
+                  disabled={nameUpdating}
+                />
+                {nameUpdating && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                  </div>
+                )}
+                {nameSaved && !nameUpdating && !nameError && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <Check className="h-4 w-4 text-green-500" />
+                  </div>
+                )}
+                {nameError && !nameUpdating && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <X className="h-4 w-4 text-red-500" />
+                  </div>
+                )}
+              </div>
               <Button
-                onClick={() => {
-                  updateNode({ ...app, name });
-                  setEditing(false);
+                onClick={async () => {
+                  if (!name.trim() || name.trim() === app.name) {
+                    setEditing(false);
+                    return;
+                  }
+
+                  setNameUpdating(true);
+                  setNameError(false);
+                  setNameErrorMessage("");
+
+                  try {
+                    const response = await updateAppName(app.id, name.trim());
+
+                    if (response.error) {
+                      const errorMessage =
+                        response.error.message || "Failed to save name";
+                      setNameError(true);
+                      setNameErrorMessage(errorMessage as string);
+                      setName(app.name); // Reset to original name
+
+                      // Hide error after 2 seconds
+                      setTimeout(() => {
+                        setNameError(false);
+                        setNameErrorMessage("");
+                      }, 2_000);
+
+                      return;
+                    }
+
+                    // Update local state on success
+                    updateNode({ ...app, name: name.trim() });
+                    setEditing(false);
+
+                    // Show success indicator
+                    setNameSaved(true);
+                    setTimeout(() => {
+                      setNameSaved(false);
+                    }, 2_000);
+                  } catch (error) {
+                    setNameError(true);
+                    setNameErrorMessage("Network error occurred");
+                    setName(app.name); // Reset to original name
+
+                    // Hide error after 2 seconds
+                    setTimeout(() => {
+                      setNameError(false);
+                      setNameErrorMessage("");
+                    }, 2_000);
+                  } finally {
+                    setNameUpdating(false);
+                  }
                 }}
+                disabled={nameUpdating}
               >
-                Save
+                {nameUpdating ? "Saving..." : "Save"}
               </Button>
             </div>
           ) : (
@@ -111,10 +227,53 @@ export default function AppView({
               </SelectContent>
             </Select>
           </div>
+          <div className="w-64">
+            <Select
+              value={app.resourceId || ""}
+              onValueChange={(v) =>
+                updateNode({ ...app, resourceId: v || undefined })
+              }
+              disabled={loadingResources}
+            >
+              <SelectTrigger aria-label="Select Resource">
+                <SelectValue
+                  placeholder={
+                    loadingResources
+                      ? "Loading resources..."
+                      : "Select Resource"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {resources.length > 0 ? (
+                  resources.map((resource) => (
+                    <SelectItem key={resource.id} value={resource.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{resource.name}</span>
+                        <HttpMethodBadge method={resource.httpMethod as any} />
+                      </div>
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    {loadingResources
+                      ? "Loading resources..."
+                      : resourcesError ||
+                        "No resources available - Create one first"}
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
           <Button onClick={addField}>
             <Plus className="mr-2 h-4 w-4" /> Add Field
           </Button>
         </div>
+        {nameErrorMessage && (
+          <div className="text-red-500 text-sm bg-red-50 p-2 rounded mt-2">
+            {nameErrorMessage}
+          </div>
+        )}
       </header>
       <Separator />
       <Tabs value={tab} onValueChange={setTab}>

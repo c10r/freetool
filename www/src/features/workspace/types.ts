@@ -49,6 +49,7 @@ export interface AppNode extends BaseNode {
   type: "app";
   fields: AppField[];
   endpointId?: string; // selected endpoint to call on submit
+  resourceId?: string; // selected resource to use for the app
 }
 
 export type WorkspaceNode = FolderNode | AppNode;
@@ -59,7 +60,11 @@ export interface WorkspaceMainProps {
   onSelect: (id: string) => void;
   updateNode: (node: WorkspaceNode) => void;
   createFolder: (parentId: string) => void;
-  createApp: (parentId: string) => void;
+  createApp: (
+    parentId: string,
+    name?: string,
+    resourceId?: string,
+  ) => Promise<void>;
   deleteNode: (id: string) => void;
   endpoints: Record<string, Endpoint>;
   createEndpoint: () => void;

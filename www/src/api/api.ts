@@ -1,9 +1,115 @@
 import createClient from "openapi-fetch";
 import type { paths } from "../schema";
+import { KeyValuePair } from "@/features/workspace/types";
 
 const client = createClient<paths>({
   baseUrl: "https://chanders-macbook-pro.koala-snake.ts.net:8443",
 });
+
+/**
+ * App
+ */
+
+type AppInput = {
+  inputs: {
+    title: string;
+    type: string;
+  };
+  required: boolean;
+};
+
+type AppCreateInput = {
+  name: string;
+  folderId: string;
+  resourceId: string;
+  inputs: AppInput[];
+  urlPath?: string;
+  body: KeyValuePair[];
+  headers: KeyValuePair[];
+  urlParameters: KeyValuePair[];
+};
+
+export const getApps = (skip?: number, take?: number) => {
+  if (skip && take) {
+    return client.GET("/app", {
+      params: {
+        query: { skip, take },
+      },
+    });
+  }
+  return client.GET("/app");
+};
+
+export const getAppById = (appId: string) => {
+  return client.GET("/app/{id}", {
+    params: {
+      path: { id: appId },
+    },
+  });
+};
+
+export const getAppByFolder = (
+  folderId: string,
+  skip?: number,
+  take?: number,
+) => {
+  if (skip && take) {
+    return client.GET("/app/folder/{folderId}", {
+      params: {
+        path: { folderId },
+        query: { skip, take },
+      },
+    });
+  }
+  return client.GET("/app/folder/{folderId}", {
+    params: {
+      path: { folderId },
+    },
+  });
+};
+
+export const createApp = (appInputs: AppCreateInput) => {
+  return client.POST("/app", {
+    body: appInputs,
+  });
+};
+
+export const deleteApp = (appId: string) => {
+  return client.DELETE("/app/{id}", {
+    params: {
+      path: { id: appId },
+    },
+  });
+};
+
+export const updateAppInputs = (
+  appId: string,
+  body?: KeyValuePair[],
+  headers?: KeyValuePair[],
+  urlParameters?: KeyValuePair[],
+) => {
+  return client.PUT("/app/{id}/inputs", {
+    params: {
+      path: { id: appId },
+    },
+    body: {
+      body,
+      headers,
+      urlParameters,
+    },
+  });
+};
+
+export const updateAppName = (appId: string, name: string) => {
+  return client.PUT("/app/{id}/name", {
+    params: {
+      path: { id: appId },
+    },
+    body: {
+      name,
+    },
+  });
+};
 
 /**
  * Audit Log
@@ -56,7 +162,7 @@ export const getFolderChildren = (id: string) => {
 export const getRootFolder = (skip?: number, take?: number) => {
   if (skip && take) {
     return client.GET("/folder/root", {
-      parmas: {
+      params: {
         query: { skip, take },
       },
     });

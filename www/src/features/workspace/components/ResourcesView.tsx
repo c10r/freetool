@@ -126,7 +126,6 @@ export default function ResourcesView() {
       }
     } catch (err) {
       setError("Failed to load resources");
-      console.error("Error fetching resources:", err);
     } finally {
       setLoading(false);
     }
@@ -169,7 +168,6 @@ export default function ResourcesView() {
       await fetchResources();
     } catch (err) {
       setCreateError("Failed to create resource. Please try again.");
-      console.error("Error creating resource:", err);
     } finally {
       setCreating(false);
     }
@@ -285,8 +283,6 @@ export default function ResourcesView() {
 
       // Check if the response contains an error
       if (response && response.error) {
-        console.error(`Error updating ${field}:`, response.error);
-
         // Extract error message
         const errorMessage = response.error.message || "Failed to save";
 
@@ -304,7 +300,7 @@ export default function ResourcesView() {
         setTimeout(() => {
           setFieldError((prev) => ({ ...prev, [field]: false }));
           setFieldErrorMessages((prev) => ({ ...prev, [field]: "" }));
-        }, 2000);
+        }, 2_000);
 
         return;
       }
@@ -325,10 +321,8 @@ export default function ResourcesView() {
       setFieldSaved((prev) => ({ ...prev, [field]: true }));
       setTimeout(() => {
         setFieldSaved((prev) => ({ ...prev, [field]: false }));
-      }, 2000);
+      }, 2_000);
     } catch (error) {
-      console.error(`Error updating ${field}:`, error);
-
       // Show error indicator
       setFieldError((prev) => ({ ...prev, [field]: true }));
       setFieldErrorMessages((prev) => ({
@@ -346,7 +340,7 @@ export default function ResourcesView() {
       setTimeout(() => {
         setFieldError((prev) => ({ ...prev, [field]: false }));
         setFieldErrorMessages((prev) => ({ ...prev, [field]: "" }));
-      }, 2000);
+      }, 2_000);
     } finally {
       setFieldUpdating((prev) => ({ ...prev, [field]: false }));
     }
@@ -384,8 +378,6 @@ export default function ResourcesView() {
 
       // Check if the response contains an error
       if (response && response.error) {
-        console.error(`Error updating ${field}:`, response.error);
-
         // Extract error message
         const errorMessage = response.error.message || "Failed to save";
 
@@ -403,7 +395,7 @@ export default function ResourcesView() {
         setTimeout(() => {
           setFieldError((prev) => ({ ...prev, [field]: false }));
           setFieldErrorMessages((prev) => ({ ...prev, [field]: "" }));
-        }, 2000);
+        }, 2_000);
 
         return;
       }
@@ -424,10 +416,8 @@ export default function ResourcesView() {
       setFieldSaved((prev) => ({ ...prev, [field]: true }));
       setTimeout(() => {
         setFieldSaved((prev) => ({ ...prev, [field]: false }));
-      }, 2000);
+      }, 2_000);
     } catch (error) {
-      console.error(`Error updating ${field}:`, error);
-
       // Show error indicator
       setFieldError((prev) => ({ ...prev, [field]: true }));
       setFieldErrorMessages((prev) => ({
@@ -445,7 +435,7 @@ export default function ResourcesView() {
       setTimeout(() => {
         setFieldError((prev) => ({ ...prev, [field]: false }));
         setFieldErrorMessages((prev) => ({ ...prev, [field]: "" }));
-      }, 2000);
+      }, 2_000);
     } finally {
       setFieldUpdating((prev) => ({ ...prev, [field]: false }));
     }

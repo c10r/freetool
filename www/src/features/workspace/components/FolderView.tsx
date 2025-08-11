@@ -3,12 +3,20 @@ import { Plus, FolderPlus, FilePlus2, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -22,7 +30,9 @@ import {
   createFolder as createFolderAPI,
   deleteFolder as deleteFolderAPI,
   updateFolderName,
+  getResources,
 } from "@/api/api";
+import HttpMethodBadge from "./HttpMethodBadge";
 
 export default function FolderView({
   folder,
@@ -56,6 +66,19 @@ export default function FolderView({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
+
+  // App creation form state
+  const [showCreateAppForm, setShowCreateAppForm] = useState(false);
+  const [isCreatingApp, setIsCreatingApp] = useState(false);
+  const [createAppError, setCreateAppError] = useState<string | null>(null);
+  const [appFormData, setAppFormData] = useState({
+    name: "",
+    resourceId: "",
+  });
+  const [resources, setResources] = useState<
+    Array<{ id: string; name: string; httpMethod: string }>
+  >([]);
+  const [loadingResources, setLoadingResources] = useState(false);
 
   const children = useMemo(
     () => folder.childrenIds.map((id) => nodes[id]).filter(Boolean),
@@ -191,6 +214,78 @@ export default function FolderView({
     }
   };
 
+  const handleCreateApp = async () => {
+    if (!appFormData.name.trim()) {
+      setCreateAppError("App name is required");
+      return;
+    }
+
+    setIsCreatingApp(true);
+    setCreateAppError(null);
+
+    try {
+      // Call createApp with both name and resourceId
+      // Note: We'll need to update the createApp signature to accept resourceId
+      await createApp(
+        folder.id,
+        appFormData.name.trim(),
+        appFormData.resourceId,
+      );
+
+      // Reset form and close on success
+      setAppFormData({ name: "", resourceId: "" });
+      setShowCreateAppForm(false);
+    } catch (error) {
+      // Extract the actual error message from the thrown error
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to create app. Please try again.";
+      setCreateAppError(errorMessage);
+    } finally {
+      setIsCreatingApp(false);
+    }
+  };
+
+  const fetchResources = async () => {
+    setLoadingResources(true);
+    try {
+      const response = await getResources();
+      if (response.error) {
+        setResources([]);
+      } else if (response.data?.items) {
+        const resourceList = response.data.items.map((item) => ({
+          id: item.id!,
+          name: item.name,
+          httpMethod: item.httpMethod,
+        }));
+        setResources(resourceList);
+      } else {
+        // No items in response, set empty array
+        setResources([]);
+      }
+    } catch (error) {
+      setResources([]);
+    } finally {
+      setLoadingResources(false);
+    }
+  };
+
+  const handleShowCreateAppForm = async () => {
+    if (!showCreateAppForm) {
+      await fetchResources();
+      setShowCreateAppForm(true);
+    } else {
+      setShowCreateAppForm(false);
+    }
+  };
+
+  const handleCancelCreateApp = () => {
+    setShowCreateAppForm(false);
+    setCreateAppError(null);
+    setAppFormData({ name: "", resourceId: "" });
+  };
+
   return (
     <section className="p-6 space-y-4 overflow-y-auto flex-1">
       <header className="flex items-center justify-between">
@@ -312,11 +407,125 @@ export default function FolderView({
               </div>
             </PopoverContent>
           </Popover>
-          <Button variant="secondary" onClick={() => createApp(folder.id)}>
-            <FilePlus2 className="mr-2 h-4 w-4" /> New App
+          <Button variant="secondary" onClick={handleShowCreateAppForm}>
+            <FilePlus2 className="mr-2 h-4 w-4" />
+            {showCreateAppForm ? "Cancel" : "New App"}
           </Button>
         </div>
       </header>
+
+      {showCreateAppForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Create New App</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {createAppError && (
+              <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
+                {createAppError}
+              </div>
+            )}
+
+            {!loadingResources && resources.length === 0 && (
+              <div className="text-amber-600 text-sm bg-amber-50 p-3 rounded border border-amber-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-amber-500">⚠️</span>
+                  <span>
+                    <strong>No resources available.</strong> You need to create
+                    at least one resource before creating an app.
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <span className="text-xs text-amber-600">
+                    Go to Resources → Create Resource to get started.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="app-name">App Name *</Label>
+              <Input
+                id="app-name"
+                placeholder="Enter app name"
+                value={appFormData.name}
+                onChange={(e) => {
+                  setAppFormData({ ...appFormData, name: e.target.value });
+                  if (createAppError) setCreateAppError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleCreateApp();
+                  }
+                }}
+                disabled={isCreatingApp}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="app-resource">Resource</Label>
+              <Select
+                value={appFormData.resourceId}
+                onValueChange={(value) => {
+                  setAppFormData({ ...appFormData, resourceId: value });
+                }}
+                disabled={isCreatingApp || loadingResources}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      loadingResources
+                        ? "Loading resources..."
+                        : "Select a resource"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {resources.length > 0 ? (
+                    resources.map((resource) => (
+                      <SelectItem key={resource.id} value={resource.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{resource.name}</span>
+                          <HttpMethodBadge
+                            method={resource.httpMethod as any}
+                          />
+                        </div>
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      {loadingResources
+                        ? "Loading resources..."
+                        : "No resources available - Create one first"}
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                onClick={handleCreateApp}
+                disabled={
+                  isCreatingApp ||
+                  !appFormData.name.trim() ||
+                  resources.length === 0
+                }
+              >
+                {isCreatingApp ? "Creating..." : "Create App"}
+              </Button>
+              <Button
+                onClick={handleCancelCreateApp}
+                variant="outline"
+                disabled={isCreatingApp}
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Separator />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {children.map((child) => (
@@ -426,9 +635,11 @@ export default function FolderView({
                   size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
-                    child.type === "folder"
-                      ? handleDeleteClick(child.id)
-                      : deleteNode(child.id);
+                    if (child.type === "folder") {
+                      handleDeleteClick(child.id);
+                    } else {
+                      deleteNode(child.id);
+                    }
                   }}
                   aria-label="Delete"
                 >

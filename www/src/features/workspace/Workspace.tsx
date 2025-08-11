@@ -3,13 +3,21 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import SidebarTree from "./SidebarTree";
 import WorkspaceMain from "./WorkspaceMain";
 import { WorkspaceNode, FolderNode, AppNode, Endpoint } from "./types";
-import { getAllFolders } from "@/api/api";
+import { getAllFolders, createApp as createAppAPI } from "@/api/api";
 
 function createFolder(id: string, name: string, parentId?: string): FolderNode {
   return { id, name, type: "folder", parentId, childrenIds: [] };
 }
 function createApp(id: string, name: string, parentId?: string): AppNode {
-  return { id, name, type: "app", parentId, fields: [], endpointId: undefined };
+  return {
+    id,
+    name,
+    type: "app",
+    parentId,
+    fields: [],
+    endpointId: undefined,
+    resourceId: undefined,
+  };
 }
 
 // Transform API folder data to workspace nodes structure
@@ -113,7 +121,6 @@ export default function Workspace() {
 
         if (response.error) {
           setError("Failed to load workspace data");
-          console.error("Error loading workspace data:", response.error);
         } else if (response.data) {
           // Transform API response to nodes structure
           const transformedNodes = transformFoldersToNodes(
@@ -124,7 +131,6 @@ export default function Workspace() {
         }
       } catch (err) {
         setError("Failed to load workspace data");
-        console.error("Error loading workspace data:", err);
       } finally {
         setLoading(false);
       }
@@ -161,10 +167,33 @@ export default function Workspace() {
       };
     });
 
-  const addApp = (parentId: string) =>
+  const addApp = async (
+    parentId: string,
+    name: string = "New App",
+    resourceId: string = "",
+  ) => {
+    const id = crypto.randomUUID();
+
+    // Call backend API to create the app
+    const response = await createAppAPI({
+      name: name.trim(),
+      folderId: parentId === "root" ? null : parentId,
+      inputs: [],
+      resourceId: resourceId || "",
+      body: [],
+      headers: [],
+      urlParameters: [],
+    });
+
+    if (response.error) {
+      throw new Error(
+        (response.error.message as string) || "Failed to create app",
+      );
+    }
+
+    // Update local state only if API call succeeds
     setNodes((prev) => {
-      const id = crypto.randomUUID();
-      const app = createApp(id, "New App", parentId);
+      const app = createApp(id, name.trim(), parentId);
       const parent = prev[parentId] as FolderNode;
       return {
         ...prev,
@@ -172,6 +201,7 @@ export default function Workspace() {
         [parentId]: { ...parent, childrenIds: [...parent.childrenIds, id] },
       };
     });
+  };
 
   const deleteNode = (id: string) =>
     setNodes((prev) => {

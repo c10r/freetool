@@ -78,16 +78,14 @@ export default function AppFormRenderer({
       } else {
         toast({
           title: "Error",
-          description: `Request failed with ${res.status}. See console for details.`,
+          description: `Request failed with ${res.status}.`,
         });
-        console.error("Endpoint error response:", text);
       }
     } catch (err) {
       toast({
         title: "Error",
-        description: "Failed to call endpoint. Check console.",
+        description: "Failed to call endpoint.",
       });
-      console.error(err);
     }
   };
 
