@@ -230,33 +230,6 @@ module FolderHandler =
 
                     return Ok(FoldersResult result)
 
-            | GetChildFolders(parentId, skip, take) ->
-                if skip < 0 then
-                    return Error(ValidationError "Skip cannot be negative")
-                elif take <= 0 || take > 100 then
-                    return Error(ValidationError "Take must be between 1 and 100")
-                else
-                    match Guid.TryParse parentId with
-                    | false, _ -> return Error(ValidationError "Invalid parent folder ID format")
-                    | true, guid ->
-                        let parentIdObj = FolderId.FromGuid guid
-                        let! parentExists = folderRepository.ExistsAsync parentIdObj
-
-                        if not parentExists then
-                            return Error(NotFound "Parent folder not found")
-                        else
-                            let! folders = folderRepository.GetChildFoldersAsync parentIdObj skip take
-                            let! totalCount = folderRepository.GetChildCountAsync parentIdObj
-
-                            let result = {
-                                Items = folders |> List.map (fun folder -> folder.State)
-                                TotalCount = totalCount
-                                Skip = skip
-                                Take = take
-                            }
-
-                            return Ok(FoldersResult result)
-
             | GetAllFolders(skip, take) ->
                 if skip < 0 then
                     return Error(ValidationError "Skip cannot be negative")

@@ -79,20 +79,6 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
             return List.rev folderList
         }
 
-        member _.GetChildFoldersAsync (parentId: FolderId) (skip: int) (take: int) : Task<ValidatedFolder list> = task {
-            let guidId = parentId.Value
-
-            let! folderDatas =
-                context.Folders
-                    .Where(fun f -> f.ParentId.IsSome && f.ParentId.Value.Value = guidId)
-                    .OrderBy(fun f -> f.Name)
-                    .Skip(skip)
-                    .Take(take)
-                    .ToListAsync()
-
-            return folderDatas |> Seq.map (fun data -> Folder.fromData data) |> Seq.toList
-        }
-
         member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedFolder list> = task {
             let! folderDatas = context.Folders.OrderBy(fun f -> f.Name).Skip(skip).Take(take).ToListAsync()
 

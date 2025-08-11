@@ -14,7 +14,6 @@ type FolderCommand =
     | GetFolderById of folderId: string
     | GetFolderWithChildren of folderId: string
     | GetRootFolders of skip: int * take: int
-    | GetChildFolders of parentId: string * skip: int * take: int
     | GetAllFolders of skip: int * take: int
     | DeleteFolder of actorUserId: UserId * folderId: string
     | UpdateFolderName of actorUserId: UserId * folderId: string * UpdateFolderNameDto

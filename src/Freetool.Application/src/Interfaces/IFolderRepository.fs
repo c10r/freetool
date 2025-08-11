@@ -12,8 +12,6 @@ type IFolderRepository =
 
     abstract member GetRootFoldersAsync: skip: int -> take: int -> Task<ValidatedFolder list>
 
-    abstract member GetChildFoldersAsync: parentId: FolderId -> skip: int -> take: int -> Task<ValidatedFolder list>
-
     abstract member GetAllAsync: skip: int -> take: int -> Task<ValidatedFolder list>
 
     abstract member AddAsync: ValidatedFolder -> Task<Result<unit, DomainError>>

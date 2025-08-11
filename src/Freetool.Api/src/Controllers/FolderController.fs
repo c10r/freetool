@@ -90,31 +90,6 @@ type FolderController
             | Error error -> this.HandleDomainError(error)
     }
 
-    [<HttpGet("{parentId}/children")>]
-    [<ProducesResponseType(typeof<PagedResult<FolderData>>, StatusCodes.Status200OK)>]
-    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
-    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.GetChildFolders
-        (parentId: string, [<FromQuery>] skip: int, [<FromQuery>] take: int)
-        : Task<IActionResult> =
-        task {
-            let skipValue = if skip < 0 then 0 else skip
-
-            let takeValue =
-                if take <= 0 then 10
-                elif take > 100 then 100
-                else take
-
-            let! result =
-                commandHandler.HandleCommand folderRepository (GetChildFolders(parentId, skipValue, takeValue))
-
-            return
-                match result with
-                | Ok(FoldersResult pagedFolders) -> this.Ok(pagedFolders) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
-        }
-
     [<HttpGet>]
     [<ProducesResponseType(typeof<PagedResult<FolderData>>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
