@@ -74,7 +74,6 @@ export default function AppFormRenderer({
           title: "Submitted",
           description: `Endpoint ${method} ${urlObj.pathname} returned ${res.status}.`,
         });
-        console.log("Endpoint response:", text);
       } else {
         toast({
           title: "Error",
