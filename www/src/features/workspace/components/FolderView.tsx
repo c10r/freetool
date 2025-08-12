@@ -11,13 +11,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
@@ -31,15 +24,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FolderNode, WorkspaceMainProps } from "../types";
+import { FolderNode, WorkspaceMainProps, KeyValuePair } from "../types";
 import {
   createFolder as createFolderAPI,
   deleteFolder as deleteFolderAPI,
   deleteApp,
   updateFolderName,
-  getResources,
 } from "@/api/api";
-import HttpMethodBadge from "./HttpMethodBadge";
+import AppConfigForm from "./AppConfigForm";
 
 export default function FolderView({
   folder,
@@ -63,7 +55,13 @@ export default function FolderView({
   useEffect(() => {
     setShowCreateAppForm(false);
     setCreateAppError(null);
-    setAppFormData({ name: "", resourceId: "" });
+    setAppFormData({
+      name: "",
+      resourceId: "",
+      queryParameters: [],
+      headers: [],
+      body: [],
+    });
   }, [folder.id]);
   const [newFolderName, setNewFolderName] = useState("");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -88,11 +86,10 @@ export default function FolderView({
   const [appFormData, setAppFormData] = useState({
     name: "",
     resourceId: "",
+    queryParameters: [] as KeyValuePair[],
+    headers: [] as KeyValuePair[],
+    body: [] as KeyValuePair[],
   });
-  const [resources, setResources] = useState<
-    Array<{ id: string; name: string; httpMethod: string }>
-  >([]);
-  const [loadingResources, setLoadingResources] = useState(false);
 
   const children = useMemo(
     () => folder.childrenIds.map((id) => nodes[id]).filter(Boolean),
@@ -247,7 +244,13 @@ export default function FolderView({
       );
 
       // Reset form and close on success
-      setAppFormData({ name: "", resourceId: "" });
+      setAppFormData({
+        name: "",
+        resourceId: "",
+        queryParameters: [],
+        headers: [],
+        body: [],
+      });
       setShowCreateAppForm(false);
     } catch (error) {
       // Extract the actual error message from the thrown error
@@ -261,43 +264,20 @@ export default function FolderView({
     }
   };
 
-  const fetchResources = async () => {
-    setLoadingResources(true);
-    try {
-      const response = await getResources();
-      if (response.error) {
-        setResources([]);
-      } else if (response.data?.items) {
-        const resourceList = response.data.items.map((item) => ({
-          id: item.id!,
-          name: item.name,
-          httpMethod: item.httpMethod,
-        }));
-        setResources(resourceList);
-      } else {
-        // No items in response, set empty array
-        setResources([]);
-      }
-    } catch (error) {
-      setResources([]);
-    } finally {
-      setLoadingResources(false);
-    }
-  };
-
-  const handleShowCreateAppForm = async () => {
-    if (!showCreateAppForm) {
-      await fetchResources();
-      setShowCreateAppForm(true);
-    } else {
-      setShowCreateAppForm(false);
-    }
+  const handleShowCreateAppForm = () => {
+    setShowCreateAppForm(!showCreateAppForm);
   };
 
   const handleCancelCreateApp = () => {
     setShowCreateAppForm(false);
     setCreateAppError(null);
-    setAppFormData({ name: "", resourceId: "" });
+    setAppFormData({
+      name: "",
+      resourceId: "",
+      queryParameters: [],
+      headers: [],
+      body: [],
+    });
   };
 
   return (
@@ -460,23 +440,6 @@ export default function FolderView({
               </div>
             )}
 
-            {!loadingResources && resources.length === 0 && (
-              <div className="text-amber-600 text-sm bg-amber-50 p-3 rounded border border-amber-200">
-                <div className="flex items-center gap-2">
-                  <span className="text-amber-500">⚠️</span>
-                  <span>
-                    <strong>No resources available.</strong> You need to create
-                    at least one resource before creating an app.
-                  </span>
-                </div>
-                <div className="mt-2">
-                  <span className="text-xs text-amber-600">
-                    Go to Resources → Create Resource to get started.
-                  </span>
-                </div>
-              </div>
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="app-name">App Name *</Label>
               <Input
@@ -496,55 +459,28 @@ export default function FolderView({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="app-resource">Resource</Label>
-              <Select
-                value={appFormData.resourceId}
-                onValueChange={(value) => {
-                  setAppFormData({ ...appFormData, resourceId: value });
-                }}
-                disabled={isCreatingApp || loadingResources}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={
-                      loadingResources
-                        ? "Loading resources..."
-                        : "Select a resource"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {resources.length > 0 ? (
-                    resources.map((resource) => (
-                      <SelectItem key={resource.id} value={resource.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{resource.name}</span>
-                          <HttpMethodBadge
-                            method={resource.httpMethod as any}
-                          />
-                        </div>
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                      {loadingResources
-                        ? "Loading resources..."
-                        : "No resources available - Create one first"}
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+            <AppConfigForm
+              resourceId={appFormData.resourceId}
+              queryParameters={appFormData.queryParameters}
+              headers={appFormData.headers}
+              body={appFormData.body}
+              onResourceChange={(resourceId) =>
+                setAppFormData({ ...appFormData, resourceId })
+              }
+              onQueryParametersChange={(queryParameters) =>
+                setAppFormData({ ...appFormData, queryParameters })
+              }
+              onHeadersChange={(headers) =>
+                setAppFormData({ ...appFormData, headers })
+              }
+              onBodyChange={(body) => setAppFormData({ ...appFormData, body })}
+              disabled={isCreatingApp}
+            />
 
             <div className="flex gap-2 pt-2">
               <Button
                 onClick={handleCreateApp}
-                disabled={
-                  isCreatingApp ||
-                  !appFormData.name.trim() ||
-                  resources.length === 0
-                }
+                disabled={isCreatingApp || !appFormData.name.trim()}
               >
                 {isCreatingApp ? "Creating..." : "Create App"}
               </Button>

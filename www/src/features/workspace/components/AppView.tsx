@@ -4,10 +4,6 @@ import { Plus, Edit, Trash2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { AppNode, AppField, FieldType, WorkspaceMainProps } from "../types";
-import AppFormRenderer from "./AppFormRenderer";
-import HttpMethodBadge from "./HttpMethodBadge";
 import {
   Select,
   SelectContent,
@@ -15,8 +11,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import {
+  AppNode,
+  AppField,
+  FieldType,
+  WorkspaceMainProps,
+  KeyValuePair,
+} from "../types";
+import AppFormRenderer from "./AppFormRenderer";
+import AppConfigForm from "./AppConfigForm";
+import ResourceSelector from "./ResourceSelector";
 import { Switch } from "@/components/ui/switch";
-import { updateAppName, getResources } from "@/api/api";
+import { updateAppName } from "@/api/api";
 
 export default function AppView({
   app,
@@ -31,13 +38,6 @@ export default function AppView({
   const [nameError, setNameError] = useState(false);
   const [nameErrorMessage, setNameErrorMessage] = useState("");
 
-  // Resource picker state
-  const [resources, setResources] = useState<
-    Array<{ id: string; name: string; httpMethod: string }>
-  >([]);
-  const [loadingResources, setLoadingResources] = useState(false);
-  const [resourcesError, setResourcesError] = useState<string | null>(null);
-
   // Update name when app changes
   useEffect(() => {
     setName(app.name);
@@ -48,38 +48,6 @@ export default function AppView({
     setNameError(false);
     setNameErrorMessage("");
   }, [app.id, app.name]);
-
-  // Fetch resources on component mount
-  useEffect(() => {
-    const fetchResources = async () => {
-      setLoadingResources(true);
-      setResourcesError(null);
-      try {
-        const response = await getResources();
-        if (response.error) {
-          setResourcesError("Failed to load resources");
-          setResources([]);
-        } else if (response.data?.items) {
-          const resourceList = response.data.items.map((item) => ({
-            id: item.id!,
-            name: item.name,
-            httpMethod: item.httpMethod,
-          }));
-          setResources(resourceList);
-        } else {
-          // No items in response, set empty array
-          setResources([]);
-        }
-      } catch (error) {
-        setResourcesError("Failed to load resources");
-        setResources([]);
-      } finally {
-        setLoadingResources(false);
-      }
-    };
-
-    fetchResources();
-  }, []);
 
   const updateField = (id: string, patch: Partial<AppField>) => {
     updateNode({
@@ -100,7 +68,18 @@ export default function AppView({
     updateNode({ ...app, fields: [...app.fields, nf] });
   };
 
-  const endpointList = Object.values(endpoints);
+  const updateQueryParameters = (queryParameters: KeyValuePair[]) => {
+    updateNode({ ...app, queryParameters });
+  };
+
+  const updateHeaders = (headers: KeyValuePair[]) => {
+    updateNode({ ...app, headers });
+  };
+
+  const updateBody = (body: KeyValuePair[]) => {
+    updateNode({ ...app, body });
+  };
+
   const selectedEndpoint = app.endpointId
     ? endpoints[app.endpointId]
     : undefined;
@@ -205,44 +184,11 @@ export default function AppView({
           </Button>
         </div>
         <div className="flex gap-2 items-center">
-          <div className="w-64">
-            <Select
-              value={app.resourceId || ""}
-              onValueChange={(v) =>
-                updateNode({ ...app, resourceId: v || undefined })
-              }
-              disabled={loadingResources}
-            >
-              <SelectTrigger aria-label="Select Resource">
-                <SelectValue
-                  placeholder={
-                    loadingResources
-                      ? "Loading resources..."
-                      : "Select Resource"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {resources.length > 0 ? (
-                  resources.map((resource) => (
-                    <SelectItem key={resource.id} value={resource.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{resource.name}</span>
-                        <HttpMethodBadge method={resource.httpMethod as any} />
-                      </div>
-                    </SelectItem>
-                  ))
-                ) : (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    {loadingResources
-                      ? "Loading resources..."
-                      : resourcesError ||
-                        "No resources available - Create one first"}
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+          <ResourceSelector
+            value={app.resourceId}
+            onValueChange={(resourceId) => updateNode({ ...app, resourceId })}
+            className="w-64"
+          />
           <Button onClick={addField}>
             <Plus className="mr-2 h-4 w-4" /> Add Field
           </Button>
@@ -320,6 +266,24 @@ export default function AppView({
               </CardContent>
             </Card>
           ))}
+
+          <Card>
+            <CardContent className="py-4">
+              <AppConfigForm
+                resourceId={app.resourceId}
+                queryParameters={app.queryParameters || []}
+                headers={app.headers || []}
+                body={app.body || []}
+                onResourceChange={(resourceId) =>
+                  updateNode({ ...app, resourceId })
+                }
+                onQueryParametersChange={updateQueryParameters}
+                onHeadersChange={updateHeaders}
+                onBodyChange={updateBody}
+                showResourceSelector={false}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
         <TabsContent value="fill">
           <AppFormRenderer app={app} endpoint={selectedEndpoint} />

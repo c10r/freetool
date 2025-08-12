@@ -50,6 +50,9 @@ export interface AppNode extends BaseNode {
   fields: AppField[];
   endpointId?: string; // selected endpoint to call on submit
   resourceId?: string; // selected resource to use for the app
+  queryParameters?: KeyValuePair[]; // query parameters for the app
+  headers?: KeyValuePair[]; // headers for the app
+  body?: KeyValuePair[]; // JSON body for the app
 }
 
 export type WorkspaceNode = FolderNode | AppNode;

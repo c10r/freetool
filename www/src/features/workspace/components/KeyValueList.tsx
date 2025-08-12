@@ -8,6 +8,8 @@ interface KeyValueListProps {
   onChange: (items: KeyValuePair[]) => void;
   onBlur?: (items: KeyValuePair[]) => void;
   ariaLabel?: string;
+  readOnly?: boolean;
+  readOnlyLabel?: string;
 }
 
 export default function KeyValueList({
@@ -15,6 +17,8 @@ export default function KeyValueList({
   onChange,
   onBlur,
   ariaLabel,
+  readOnly = false,
+  readOnlyLabel,
 }: KeyValueListProps) {
   const add = () => onChange([...(items || []), { key: "", value: "" }]);
   const remove = (i: number) => onChange(items.filter((_, idx) => idx !== i));
@@ -22,6 +26,39 @@ export default function KeyValueList({
     const next = items.map((kv, idx) => (idx === i ? { ...kv, ...patch } : kv));
     onChange(next);
   };
+  if (readOnly) {
+    return (
+      <div className="space-y-2" aria-label={ariaLabel}>
+        {readOnlyLabel && (
+          <div className="text-xs text-muted-foreground">{readOnlyLabel}</div>
+        )}
+        {(items || []).length === 0 ? (
+          <div className="text-sm text-muted-foreground italic">
+            None defined
+          </div>
+        ) : (
+          (items || []).map((kv, i) => (
+            <div key={i} className="grid grid-cols-12 gap-2 items-center">
+              <Input
+                value={kv.key}
+                className="col-span-5 bg-muted"
+                aria-label={`Key ${i + 1}`}
+                readOnly
+              />
+              <Input
+                value={kv.value}
+                className="col-span-6 bg-muted"
+                aria-label={`Value ${i + 1}`}
+                readOnly
+              />
+              <div className="col-span-1"></div>
+            </div>
+          ))
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2" aria-label={ariaLabel}>
       {(items || []).map((kv, i) => (
