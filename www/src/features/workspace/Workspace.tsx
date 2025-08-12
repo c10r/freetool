@@ -3,7 +3,11 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import SidebarTree from "./SidebarTree";
 import WorkspaceMain from "./WorkspaceMain";
 import { WorkspaceNode, FolderNode, AppNode, Endpoint } from "./types";
-import { getAllFolders, createApp as createAppAPI } from "@/api/api";
+import {
+  getAllFolders,
+  getAppByFolder,
+  createApp as createAppAPI,
+} from "@/api/api";
 import NotFound from "@/pages/NotFound";
 
 function createFolder(id: string, name: string, parentId?: string): FolderNode {
@@ -110,6 +114,7 @@ export default function Workspace() {
   const [nodes, setNodes] = useState<Record<string, WorkspaceNode>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadedFolders, setLoadedFolders] = useState<Set<string>>(new Set());
   const rootId = "root";
 
   // Load workspace data
@@ -142,6 +147,72 @@ export default function Workspace() {
 
   // Get selectedId from current URL
   const selectedId = getSelectedIdFromPath(location.pathname, nodeId, rootId);
+
+  // Load apps when navigating to a folder
+  useEffect(() => {
+    const loadAppsForFolder = async () => {
+      // Only load apps if we have a valid folder selected, nodes are loaded, and we haven't loaded this folder yet
+      if (
+        loading ||
+        !nodes[selectedId] ||
+        nodes[selectedId].type !== "folder" ||
+        loadedFolders.has(selectedId)
+      ) {
+        return;
+      }
+
+      try {
+        const folderId = selectedId === rootId ? null : selectedId;
+        const response = await getAppByFolder(folderId);
+
+        if (!response.error && response.data?.items) {
+          // Transform API apps to AppNode format and add them to nodes
+          const appsToAdd: Record<string, WorkspaceNode> = {};
+          const appIds: string[] = [];
+
+          response.data.items.forEach((apiApp) => {
+            if (apiApp.id) {
+              const appNode: AppNode = {
+                id: apiApp.id,
+                name: apiApp.name || "Unnamed App",
+                type: "app",
+                parentId: selectedId,
+                fields: [], // TODO: Transform apiApp inputs to fields if needed
+                endpointId: undefined, // TODO: Map from apiApp if available
+                resourceId: apiApp.resourceId || undefined,
+              };
+              appsToAdd[apiApp.id] = appNode;
+              appIds.push(apiApp.id);
+            }
+          });
+
+          // Update nodes state with new apps and update folder's childrenIds
+          setNodes((prev) => {
+            const folder = prev[selectedId] as FolderNode;
+            // Merge existing childrenIds with new app IDs, avoiding duplicates
+            const existingChildIds = folder.childrenIds || [];
+            const newChildIds = [...new Set([...existingChildIds, ...appIds])];
+
+            return {
+              ...prev,
+              ...appsToAdd,
+              [selectedId]: {
+                ...folder,
+                childrenIds: newChildIds,
+              },
+            };
+          });
+
+          // Mark this folder as loaded
+          setLoadedFolders((prev) => new Set([...prev, selectedId]));
+        }
+      } catch (error) {
+        console.error("Failed to load apps for folder:", error);
+      }
+    };
+
+    loadAppsForFolder();
+  }, [selectedId, loading, rootId, loadedFolders]);
 
   // Check if the nodeId from URL is valid (only after data is loaded)
   const isValidNodeId = useMemo(() => {
@@ -182,8 +253,6 @@ export default function Workspace() {
     name: string = "New App",
     resourceId: string = "",
   ) => {
-    const id = crypto.randomUUID();
-
     // Call backend API to create the app
     const response = await createAppAPI({
       name: name.trim(),
@@ -201,6 +270,9 @@ export default function Workspace() {
       );
     }
 
+    // Use the ID from the API response
+    const id = response.data!.id!;
+
     // Update local state only if API call succeeds
     setNodes((prev) => {
       const app = createApp(id, name.trim(), parentId);
@@ -211,6 +283,9 @@ export default function Workspace() {
         [parentId]: { ...parent, childrenIds: [...parent.childrenIds, id] },
       };
     });
+
+    // Mark the parent folder as loaded (since we're adding an app to it)
+    setLoadedFolders((prev) => new Set([...prev, parentId]));
   };
 
   const deleteNode = (id: string) =>

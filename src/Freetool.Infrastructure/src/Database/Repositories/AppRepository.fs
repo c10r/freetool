@@ -89,26 +89,33 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
             | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
         }
 
-        member _.DeleteAsync(appWithDeleteEvent: ValidatedApp) : Task<Result<unit, DomainError>> = task {
+        member _.DeleteAsync (appId: AppId) (userId: UserId) : Task<Result<unit, DomainError>> = task {
             try
-                // Soft delete: create updated record with IsDeleted flag
-                let updatedData = {
-                    appWithDeleteEvent.State with
-                        IsDeleted = true
-                        UpdatedAt = System.DateTime.UtcNow
-                }
+                let! existingData = context.Apps.FirstOrDefaultAsync(fun a -> a.Id = appId)
 
-                context.Apps.Update(updatedData) |> ignore
+                match Option.ofObj existingData with
+                | None -> return Error(NotFound "App not found")
+                | Some existingEntity ->
+                    // Create a ValidatedApp from the existing entity and mark it for deletion
+                    let validatedApp = App.fromData existingEntity
+                    let appWithDeleteEvent = App.markForDeletion userId validatedApp
 
-                // Save all uncommitted events
-                let events = App.getUncommittedEvents appWithDeleteEvent
+                    // Update the already-tracked entity to avoid tracking conflicts
+                    context.Entry(existingEntity).CurrentValues.SetValues {
+                        appWithDeleteEvent.State with
+                            IsDeleted = true
+                            UpdatedAt = System.DateTime.UtcNow
+                    }
 
-                for event in events do
-                    do! eventRepository.SaveEventAsync event
+                    // Save all uncommitted events
+                    let events = App.getUncommittedEvents appWithDeleteEvent
 
-                // Save to the database
-                let! _ = context.SaveChangesAsync()
-                return Ok()
+                    for event in events do
+                        do! eventRepository.SaveEventAsync event
+
+                    // Save to the database
+                    let! _ = context.SaveChangesAsync()
+                    return Ok()
             with
             | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete app: {ex.Message}")
             | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")

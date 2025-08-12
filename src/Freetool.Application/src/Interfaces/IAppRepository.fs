@@ -18,7 +18,7 @@ type IAppRepository =
 
     abstract member UpdateAsync: ValidatedApp -> Task<Result<unit, DomainError>>
 
-    abstract member DeleteAsync: ValidatedApp -> Task<Result<unit, DomainError>>
+    abstract member DeleteAsync: AppId -> UserId -> Task<Result<unit, DomainError>>
 
     abstract member ExistsAsync: AppId -> Task<bool>
 

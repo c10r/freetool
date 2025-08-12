@@ -35,6 +35,7 @@ import { FolderNode, WorkspaceMainProps } from "../types";
 import {
   createFolder as createFolderAPI,
   deleteFolder as deleteFolderAPI,
+  deleteApp,
   updateFolderName,
   getResources,
 } from "@/api/api";
@@ -666,12 +667,26 @@ export default function FolderView({
                 <Button
                   variant="secondary"
                   size="icon"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
                     if (child.type === "folder") {
                       handleDeleteClick(child.id);
                     } else {
-                      deleteNode(child.id);
+                      // Delete app using API
+                      try {
+                        const response = await deleteApp(child.id);
+                        if (response.error) {
+                          console.error(
+                            "Failed to delete app:",
+                            response.error,
+                          );
+                        } else {
+                          // Remove from local state on successful API call
+                          deleteNode(child.id);
+                        }
+                      } catch (error) {
+                        console.error("Error deleting app:", error);
+                      }
                     }
                   }}
                   aria-label="Delete"

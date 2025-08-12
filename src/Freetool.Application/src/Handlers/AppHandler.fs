@@ -42,18 +42,10 @@ module AppHandler =
                 | false, _ -> return Error(ValidationError "Invalid app ID format")
                 | true, guid ->
                     let appIdObj = AppId.FromGuid guid
-                    let! appOption = appRepository.GetByIdAsync appIdObj
-
-                    match appOption with
-                    | None -> return Error(NotFound "App not found")
-                    | Some app ->
-                        // Mark app for deletion to create the delete event
-                        let appWithDeleteEvent = App.markForDeletion actorUserId app
-
-                        // Delete app and save event atomically
-                        match! appRepository.DeleteAsync appWithDeleteEvent with
-                        | Error error -> return Error error
-                        | Ok() -> return Ok(AppUnitResult())
+                    // Delete app directly - repository handles validation and event creation
+                    match! appRepository.DeleteAsync appIdObj actorUserId with
+                    | Error error -> return Error error
+                    | Ok() -> return Ok(AppUnitResult())
 
             | UpdateAppName(actorUserId, appId, dto) ->
                 match Guid.TryParse appId with

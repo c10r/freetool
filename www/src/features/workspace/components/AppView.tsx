@@ -207,28 +207,6 @@ export default function AppView({
         <div className="flex gap-2 items-center">
           <div className="w-64">
             <Select
-              value={app.endpointId || ""}
-              onValueChange={(v) =>
-                updateNode({ ...app, endpointId: v || undefined })
-              }
-            >
-              <SelectTrigger aria-label="Select Endpoint">
-                <SelectValue placeholder="Select Endpoint" />
-              </SelectTrigger>
-              <SelectContent>
-                {endpointList.map((ep) => (
-                  <SelectItem key={ep.id} value={ep.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{ep.name}</span>
-                      <HttpMethodBadge method={ep.method} />
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-64">
-            <Select
               value={app.resourceId || ""}
               onValueChange={(v) =>
                 updateNode({ ...app, resourceId: v || undefined })
