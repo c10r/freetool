@@ -152,18 +152,19 @@ export default function Workspace() {
   useEffect(() => {
     const loadAppsForFolder = async () => {
       // Only load apps if we have a valid folder selected, nodes are loaded, and we haven't loaded this folder yet
+      // Skip loading apps for root folder since apps cannot live in the root
       if (
         loading ||
         !nodes[selectedId] ||
         nodes[selectedId].type !== "folder" ||
-        loadedFolders.has(selectedId)
+        loadedFolders.has(selectedId) ||
+        selectedId === rootId
       ) {
         return;
       }
 
       try {
-        const folderId = selectedId === rootId ? null : selectedId;
-        const response = await getAppByFolder(folderId);
+        const response = await getAppByFolder(selectedId);
 
         if (!response.error && response.data?.items) {
           // Transform API apps to AppNode format and add them to nodes
