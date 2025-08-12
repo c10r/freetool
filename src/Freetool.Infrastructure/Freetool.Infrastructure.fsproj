@@ -30,6 +30,7 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.008_CreateRunsTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.009_AddUserIdToEventsTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.010_AddHttpMethodToResourcesTable.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.011_UpdateAppUniqueIndexForSoftDelete.sql" />
   </ItemGroup>
 
   <ItemGroup>
