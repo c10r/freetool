@@ -111,6 +111,42 @@ export const updateAppName = (appId: string, name: string) => {
   });
 };
 
+export const updateAppBody = (appId: string, body: KeyValuePair[]) => {
+  return client.PUT("/app/{id}/body", {
+    params: {
+      path: { id: appId },
+    },
+    body: {
+      body,
+    },
+  });
+};
+
+export const updateAppHeaders = (appId: string, headers: KeyValuePair[]) => {
+  return client.PUT("/app/{id}/headers", {
+    params: {
+      path: { id: appId },
+    },
+    body: {
+      headers,
+    },
+  });
+};
+
+export const updateAppQueryParams = (
+  appId: string,
+  urlParameters: KeyValuePair[],
+) => {
+  return client.PUT("/app/{id}/query-parameters", {
+    params: {
+      path: { id: appId },
+    },
+    body: {
+      urlParameters,
+    },
+  });
+};
+
 /**
  * Audit Log
  */
