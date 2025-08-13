@@ -152,6 +152,139 @@ module AppHandler =
                     }
 
                     return Ok(AppsResult result)
+
+            | UpdateAppQueryParameters(actorUserId, appId, dto) ->
+                match Guid.TryParse appId with
+                | false, _ -> return Error(ValidationError "Invalid app ID format")
+                | true, guid ->
+                    let appIdObj = AppId.FromGuid guid
+                    let! appOption = appRepository.GetByIdAsync appIdObj
+
+                    match appOption with
+                    | None -> return Error(NotFound "App not found")
+                    | Some app ->
+                        return
+                            Error(
+                                InvalidOperation
+                                    "Resource repository required for URL parameters update - use AppHandler.handleCommandWithResourceRepository"
+                            )
+
+            | UpdateAppBody(actorUserId, appId, dto) ->
+                match Guid.TryParse appId with
+                | false, _ -> return Error(ValidationError "Invalid app ID format")
+                | true, guid ->
+                    let appIdObj = AppId.FromGuid guid
+                    let! appOption = appRepository.GetByIdAsync appIdObj
+
+                    match appOption with
+                    | None -> return Error(NotFound "App not found")
+                    | Some app ->
+                        return
+                            Error(
+                                InvalidOperation
+                                    "Resource repository required for body update - use AppHandler.handleCommandWithResourceRepository"
+                            )
+
+            | UpdateAppHeaders(actorUserId, appId, dto) ->
+                match Guid.TryParse appId with
+                | false, _ -> return Error(ValidationError "Invalid app ID format")
+                | true, guid ->
+                    let appIdObj = AppId.FromGuid guid
+                    let! appOption = appRepository.GetByIdAsync appIdObj
+
+                    match appOption with
+                    | None -> return Error(NotFound "App not found")
+                    | Some app ->
+                        return
+                            Error(
+                                InvalidOperation
+                                    "Resource repository required for headers update - use AppHandler.handleCommandWithResourceRepository"
+                            )
+        }
+
+    let handleCommandWithResourceRepository
+        (appRepository: IAppRepository)
+        (resourceRepository: IResourceRepository)
+        (command: AppCommand)
+        : Task<Result<AppCommandResult, DomainError>> =
+        task {
+            match command with
+            | UpdateAppQueryParameters(actorUserId, appId, dto) ->
+                match Guid.TryParse appId with
+                | false, _ -> return Error(ValidationError "Invalid app ID format")
+                | true, guid ->
+                    let appIdObj = AppId.FromGuid guid
+                    let! appOption = appRepository.GetByIdAsync appIdObj
+
+                    match appOption with
+                    | None -> return Error(NotFound "App not found")
+                    | Some app ->
+                        let! resourceOption = resourceRepository.GetByIdAsync app.State.ResourceId
+
+                        match resourceOption with
+                        | None -> return Error(NotFound "Resource not found")
+                        | Some resource ->
+                            let newUrlParameters = dto.UrlParameters |> List.map AppMapper.keyValuePairFromDto
+                            let resourceConflictData = Resource.toConflictData resource
+
+                            match App.updateUrlParameters actorUserId newUrlParameters resourceConflictData app with
+                            | Error error -> return Error error
+                            | Ok updatedApp ->
+                                match! appRepository.UpdateAsync updatedApp with
+                                | Error error -> return Error error
+                                | Ok() -> return Ok(AppResult(updatedApp.State))
+
+            | UpdateAppBody(actorUserId, appId, dto) ->
+                match Guid.TryParse appId with
+                | false, _ -> return Error(ValidationError "Invalid app ID format")
+                | true, guid ->
+                    let appIdObj = AppId.FromGuid guid
+                    let! appOption = appRepository.GetByIdAsync appIdObj
+
+                    match appOption with
+                    | None -> return Error(NotFound "App not found")
+                    | Some app ->
+                        let! resourceOption = resourceRepository.GetByIdAsync app.State.ResourceId
+
+                        match resourceOption with
+                        | None -> return Error(NotFound "Resource not found")
+                        | Some resource ->
+                            let newBody = dto.Body |> List.map AppMapper.keyValuePairFromDto
+                            let resourceConflictData = Resource.toConflictData resource
+
+                            match App.updateBody actorUserId newBody resourceConflictData app with
+                            | Error error -> return Error error
+                            | Ok updatedApp ->
+                                match! appRepository.UpdateAsync updatedApp with
+                                | Error error -> return Error error
+                                | Ok() -> return Ok(AppResult(updatedApp.State))
+
+            | UpdateAppHeaders(actorUserId, appId, dto) ->
+                match Guid.TryParse appId with
+                | false, _ -> return Error(ValidationError "Invalid app ID format")
+                | true, guid ->
+                    let appIdObj = AppId.FromGuid guid
+                    let! appOption = appRepository.GetByIdAsync appIdObj
+
+                    match appOption with
+                    | None -> return Error(NotFound "App not found")
+                    | Some app ->
+                        let! resourceOption = resourceRepository.GetByIdAsync app.State.ResourceId
+
+                        match resourceOption with
+                        | None -> return Error(NotFound "Resource not found")
+                        | Some resource ->
+                            let newHeaders = dto.Headers |> List.map AppMapper.keyValuePairFromDto
+                            let resourceConflictData = Resource.toConflictData resource
+
+                            match App.updateHeaders actorUserId newHeaders resourceConflictData app with
+                            | Error error -> return Error error
+                            | Ok updatedApp ->
+                                match! appRepository.UpdateAsync updatedApp with
+                                | Error error -> return Error error
+                                | Ok() -> return Ok(AppResult(updatedApp.State))
+
+            | _ -> return! handleCommand appRepository command
         }
 
 type AppHandler() =

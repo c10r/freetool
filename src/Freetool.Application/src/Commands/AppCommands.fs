@@ -17,3 +17,6 @@ type AppCommand =
     | DeleteApp of actorUserId: UserId * appId: string
     | UpdateAppName of actorUserId: UserId * appId: string * UpdateAppNameDto
     | UpdateAppInputs of actorUserId: UserId * appId: string * UpdateAppInputsDto
+    | UpdateAppQueryParameters of actorUserId: UserId * appId: string * UpdateAppQueryParametersDto
+    | UpdateAppBody of actorUserId: UserId * appId: string * UpdateAppBodyDto
+    | UpdateAppHeaders of actorUserId: UserId * appId: string * UpdateAppHeadersDto

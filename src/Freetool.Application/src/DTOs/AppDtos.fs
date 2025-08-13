@@ -48,3 +48,9 @@ type UpdateAppInputsDto = {
     [<Required>]
     Inputs: AppInputDto list
 }
+
+type UpdateAppQueryParametersDto = { UrlParameters: KeyValuePairDto list }
+
+type UpdateAppBodyDto = { Body: KeyValuePairDto list }
+
+type UpdateAppHeadersDto = { Headers: KeyValuePairDto list }

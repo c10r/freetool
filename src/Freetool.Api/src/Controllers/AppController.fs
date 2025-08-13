@@ -170,6 +170,72 @@ type AppController
             | Error error -> this.HandleDomainError(error)
     }
 
+    [<HttpPut("{id}/query-parameters")>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.UpdateAppQueryParameters
+        (id: string, [<FromBody>] updateDto: UpdateAppQueryParametersDto)
+        : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+
+            let! result =
+                AppHandler.handleCommandWithResourceRepository
+                    appRepository
+                    resourceRepository
+                    (UpdateAppQueryParameters(userId, id, updateDto))
+
+            return
+                match result with
+                | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                | Error error -> this.HandleDomainError(error)
+        }
+
+    [<HttpPut("{id}/body")>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.UpdateAppBody(id: string, [<FromBody>] updateDto: UpdateAppBodyDto) : Task<IActionResult> = task {
+        let userId = this.CurrentUserId
+
+        let! result =
+            AppHandler.handleCommandWithResourceRepository
+                appRepository
+                resourceRepository
+                (UpdateAppBody(userId, id, updateDto))
+
+        return
+            match result with
+            | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+            | Error error -> this.HandleDomainError(error)
+    }
+
+    [<HttpPut("{id}/headers")>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.UpdateAppHeaders(id: string, [<FromBody>] updateDto: UpdateAppHeadersDto) : Task<IActionResult> = task {
+        let userId = this.CurrentUserId
+
+        let! result =
+            AppHandler.handleCommandWithResourceRepository
+                appRepository
+                resourceRepository
+                (UpdateAppHeaders(userId, id, updateDto))
+
+        return
+            match result with
+            | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+            | Error error -> this.HandleDomainError(error)
+    }
+
     [<HttpDelete("{id}")>]
     [<ProducesResponseType(StatusCodes.Status204NoContent)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
