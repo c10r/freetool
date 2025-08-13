@@ -71,6 +71,7 @@ export default function KeyValueList({
             // Only trigger onBlur if focus is leaving this entire row
             // relatedTarget can be null when clicking outside the document
             const relatedTarget = e.relatedTarget;
+
             if (
               !relatedTarget ||
               !e.currentTarget.contains(relatedTarget as Node)

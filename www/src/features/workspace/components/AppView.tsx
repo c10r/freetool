@@ -24,6 +24,7 @@ import AppConfigForm from "./AppConfigForm";
 import ResourceSelector from "./ResourceSelector";
 import { Switch } from "@/components/ui/switch";
 import { updateAppName } from "@/api/api";
+import { useAppForm } from "../hooks/useAppForm";
 
 export default function AppView({
   app,
@@ -38,6 +39,32 @@ export default function AppView({
   const [nameError, setNameError] = useState(false);
   const [nameErrorMessage, setNameErrorMessage] = useState("");
 
+  // App form hook for autosave functionality
+  const {
+    formData: appFormData,
+    fieldStates: appFieldStates,
+    updateFormData: updateAppFormData,
+    updateKeyValueField,
+    resetFieldStates,
+    setFormData: setAppFormData,
+  } = useAppForm(
+    {
+      queryParameters: app.queryParameters || [],
+      headers: app.headers || [],
+      body: app.body || [],
+    },
+    app.id,
+    (updatedData) => {
+      // Update the app node when autosave occurs
+      updateNode({
+        ...app,
+        queryParameters: updatedData.queryParameters,
+        headers: updatedData.headers,
+        body: updatedData.body,
+      });
+    },
+  );
+
   // Update name when app changes
   useEffect(() => {
     setName(app.name);
@@ -47,7 +74,15 @@ export default function AppView({
     setNameSaved(false);
     setNameError(false);
     setNameErrorMessage("");
-  }, [app.id, app.name]);
+
+    // Update app form data when app changes
+    setAppFormData({
+      queryParameters: app.queryParameters || [],
+      headers: app.headers || [],
+      body: app.body || [],
+    });
+    resetFieldStates();
+  }, [app.id, app.name, setAppFormData, resetFieldStates]);
 
   const updateField = (id: string, patch: Partial<AppField>) => {
     updateNode({
@@ -69,15 +104,18 @@ export default function AppView({
   };
 
   const updateQueryParameters = (queryParameters: KeyValuePair[]) => {
-    updateNode({ ...app, queryParameters });
+    updateAppFormData("queryParameters", queryParameters);
+    // Don't update the app node immediately - wait for autosave
   };
 
   const updateHeaders = (headers: KeyValuePair[]) => {
-    updateNode({ ...app, headers });
+    updateAppFormData("headers", headers);
+    // Don't update the app node immediately - wait for autosave
   };
 
   const updateBody = (body: KeyValuePair[]) => {
-    updateNode({ ...app, body });
+    updateAppFormData("body", body);
+    // Don't update the app node immediately - wait for autosave
   };
 
   const selectedEndpoint = app.endpointId
@@ -271,9 +309,9 @@ export default function AppView({
             <CardContent className="py-4">
               <AppConfigForm
                 resourceId={app.resourceId}
-                queryParameters={app.queryParameters || []}
-                headers={app.headers || []}
-                body={app.body || []}
+                queryParameters={appFormData.queryParameters}
+                headers={appFormData.headers}
+                body={appFormData.body}
                 onResourceChange={(resourceId) =>
                   updateNode({ ...app, resourceId })
                 }
@@ -281,6 +319,11 @@ export default function AppView({
                 onHeadersChange={updateHeaders}
                 onBodyChange={updateBody}
                 showResourceSelector={false}
+                mode="edit"
+                fieldStates={appFieldStates}
+                onKeyValueFieldBlur={(field, items) => {
+                  updateKeyValueField(field, items);
+                }}
               />
             </CardContent>
           </Card>

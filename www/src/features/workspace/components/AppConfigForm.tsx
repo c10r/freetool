@@ -11,6 +11,7 @@ import { KeyValuePair, EndpointMethod } from "../types";
 import HttpMethodBadge from "./HttpMethodBadge";
 import KeyValueList from "./KeyValueList";
 import { getResources } from "@/api/api";
+import { Check, X } from "lucide-react";
 
 interface Resource {
   id: string;
@@ -19,6 +20,13 @@ interface Resource {
   urlParameters?: KeyValuePair[];
   headers?: KeyValuePair[];
   body?: KeyValuePair[];
+}
+
+interface FieldState {
+  updating: boolean;
+  saved: boolean;
+  error: boolean;
+  errorMessage: string;
 }
 
 interface AppConfigFormProps {
@@ -33,7 +41,32 @@ interface AppConfigFormProps {
   disabled?: boolean;
   showResourceSelector?: boolean;
   resourceSelectorLabel?: string;
+  mode?: "create" | "edit";
+  fieldStates?: {
+    queryParameters: FieldState;
+    headers: FieldState;
+    body: FieldState;
+  };
+  onKeyValueFieldBlur?: (
+    field: "queryParameters" | "headers" | "body",
+    value: KeyValuePair[],
+  ) => void;
 }
+
+const FieldIndicator = ({ state }: { state: FieldState }) => {
+  if (state.updating) {
+    return (
+      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+    );
+  }
+  if (state.saved && !state.error) {
+    return <Check className="h-4 w-4 text-green-500" />;
+  }
+  if (state.error) {
+    return <X className="h-4 w-4 text-red-500" />;
+  }
+  return null;
+};
 
 export default function AppConfigForm({
   resourceId,
@@ -47,6 +80,9 @@ export default function AppConfigForm({
   disabled = false,
   showResourceSelector = true,
   resourceSelectorLabel = "Resource",
+  mode = "create",
+  fieldStates,
+  onKeyValueFieldBlur,
 }: AppConfigFormProps) {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loadingResources, setLoadingResources] = useState(false);
@@ -55,6 +91,18 @@ export default function AppConfigForm({
   const selectedResource = resourceId
     ? resources.find((r) => r.id === resourceId)
     : undefined;
+
+  const getFieldState = (
+    field: "queryParameters" | "headers" | "body",
+  ): FieldState => {
+    const state = fieldStates?.[field] || {
+      updating: false,
+      saved: false,
+      error: false,
+      errorMessage: "",
+    };
+    return state;
+  };
 
   useEffect(() => {
     const fetchResources = async () => {
@@ -148,12 +196,27 @@ export default function AppConfigForm({
               readOnlyLabel="From selected resource (read-only):"
             />
           )}
-        <KeyValueList
-          items={queryParameters}
-          onChange={onQueryParametersChange}
-          ariaLabel="Query parameters"
-          disabled={disabled}
-        />
+        <div className="relative">
+          <KeyValueList
+            items={queryParameters}
+            onChange={onQueryParametersChange}
+            onBlur={(items) => {
+              onKeyValueFieldBlur?.("queryParameters", items);
+            }}
+            ariaLabel="Query parameters"
+            disabled={disabled || getFieldState("queryParameters").updating}
+          />
+          {mode === "edit" && (
+            <div className="absolute right-3 top-3">
+              <FieldIndicator state={getFieldState("queryParameters")} />
+            </div>
+          )}
+        </div>
+        {getFieldState("queryParameters").errorMessage && (
+          <div className="text-red-500 text-sm mt-1">
+            {getFieldState("queryParameters").errorMessage}
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -169,12 +232,27 @@ export default function AppConfigForm({
               readOnlyLabel="From selected resource (read-only):"
             />
           )}
-        <KeyValueList
-          items={headers}
-          onChange={onHeadersChange}
-          ariaLabel="Headers"
-          disabled={disabled}
-        />
+        <div className="relative">
+          <KeyValueList
+            items={headers}
+            onChange={onHeadersChange}
+            onBlur={(items) => {
+              onKeyValueFieldBlur?.("headers", items);
+            }}
+            ariaLabel="Headers"
+            disabled={disabled || getFieldState("headers").updating}
+          />
+          {mode === "edit" && (
+            <div className="absolute right-3 top-3">
+              <FieldIndicator state={getFieldState("headers")} />
+            </div>
+          )}
+        </div>
+        {getFieldState("headers").errorMessage && (
+          <div className="text-red-500 text-sm mt-1">
+            {getFieldState("headers").errorMessage}
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -190,12 +268,27 @@ export default function AppConfigForm({
               readOnlyLabel="From selected resource (read-only):"
             />
           )}
-        <KeyValueList
-          items={body}
-          onChange={onBodyChange}
-          ariaLabel="JSON body"
-          disabled={disabled}
-        />
+        <div className="relative">
+          <KeyValueList
+            items={body}
+            onChange={onBodyChange}
+            onBlur={(items) => {
+              onKeyValueFieldBlur?.("body", items);
+            }}
+            ariaLabel="JSON body"
+            disabled={disabled || getFieldState("body").updating}
+          />
+          {mode === "edit" && (
+            <div className="absolute right-3 top-3">
+              <FieldIndicator state={getFieldState("body")} />
+            </div>
+          )}
+        </div>
+        {getFieldState("body").errorMessage && (
+          <div className="text-red-500 text-sm mt-1">
+            {getFieldState("body").errorMessage}
+          </div>
+        )}
       </div>
     </div>
   );
