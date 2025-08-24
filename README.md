@@ -186,10 +186,10 @@ let updateName (newName: string) (user: User) : Result<User, DomainError> =
     else
         // Update business data
         let updatedData = { user.State with Name = newName.Trim() }
-        
+
         // Collect domain event
         let nameChangedEvent = UserEvents.userUpdated user.State.Id [NameChanged(oldName, newName)]
-        
+
         // Return updated aggregate with new event
         Ok {
             State = updatedData
@@ -204,21 +204,21 @@ The Infrastructure layer saves both business data and events atomically:
 // Infrastructure Layer - UserRepository.fs
 member _.UpdateAsync(user: ValidatedUser) : Task<Result<unit, DomainError>> = task {
     use transaction = context.Database.BeginTransaction()
-    
+
     try
         // 1. Save business data to Users table
         let! _ = context.SaveChangesAsync()
-        
+
         // 2. Save events to Events table (SAME transaction)
         let events = User.getUncommittedEvents user
         for event in events do
             do! eventRepository.SaveEventAsync event
-        
+
         // 3. Commit everything atomically
         transaction.Commit()
         return Ok()
     with
-    | ex -> 
+    | ex ->
         transaction.Rollback()
         return Error(InvalidOperation "Transaction failed")
 }
@@ -303,16 +303,16 @@ Domain events enable comprehensive testing without infrastructure dependencies:
 let ``User name update should generate correct event`` () =
     // Arrange
     let user = User.create "John Doe" email None
-    
+
     // Act
     let result = User.updateName "Jane Doe" user
-    
+
     // Assert
     match result with
     | Ok updatedUser ->
         let events = User.getUncommittedEvents updatedUser
         Assert.Single(events)
-        
+
         match events.[0] with
         | :? UserUpdatedEvent as event ->
             Assert.Equal("John Doe", event.Changes.[0].OldValue)
@@ -451,7 +451,7 @@ This project uses **SQLite** with **DBUp** for database migrations. SQLite is a 
    ```bash
    docker-compose up --build
    ```
-   
+
    **The database will be created automatically on first run!** The application uses DBUp to:
    - Create the database if it doesn't exist
    - Run all migration scripts automatically
@@ -572,7 +572,13 @@ F# requires dependencies to be ordered correctly in `.fsproj` files. Always ensu
 
 # 💻 Deploying
 
-Freetool is meant to be deployed behind a [Tailscale](https://tailscale.com) network. When deployed via Tailscale Serve, Tailscale will automatically set [identity headers](https://tailscale.com/kb/1312/serve#identity-headers), obviating the need for this app to handle auth at all.
+Freetool is meant to be deployed behind a [Tailscale](https://tailscale.com) network **under the /freetool** path.
+
+When deployed via Tailscale Serve, Tailscale will automatically set [identity headers](https://tailscale.com/kb/1312/serve#identity-headers), obviating the need for this app to handle auth at all.
+
+```bash
+tailscale serve --bg --set-path=/freetool 5001
+```
 
 # 📄 License & 🙏 Acknowledgements
 

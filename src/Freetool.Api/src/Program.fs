@@ -3,6 +3,7 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Configuration
 open Microsoft.EntityFrameworkCore
+open Microsoft.AspNetCore.StaticFiles
 open System.Text.Json.Serialization
 open System.Diagnostics
 open OpenTelemetry.Resources
@@ -40,14 +41,13 @@ let main args =
     builder.Services.AddEndpointsApiExplorer() |> ignore
 
     builder.Services.AddSwaggerGen(fun c ->
-        c.SupportNonNullableReferenceTypes() |> ignore
-        c.UseAllOfToExtendReferenceSchemas() |> ignore
+        c.SupportNonNullableReferenceTypes()
+        c.UseAllOfToExtendReferenceSchemas()
 
         c.MapType<FolderLocation>(fun () -> Microsoft.OpenApi.Models.OpenApiSchema(Type = "string", Nullable = true))
-        |> ignore
 
-        c.SchemaFilter<FSharpUnionSchemaFilter>() |> ignore
-        c.OperationFilter<FSharpQueryParameterOperationFilter>() |> ignore)
+        c.SchemaFilter<FSharpUnionSchemaFilter>()
+        c.OperationFilter<FSharpQueryParameterOperationFilter>())
     |> ignore
 
     builder.Services.AddDbContext<FreetoolDbContext>(fun options ->
@@ -133,7 +133,7 @@ let main args =
                 .AddAspNetCoreInstrumentation()
                 .AddEntityFrameworkCoreInstrumentation()
                 .AddOtlpExporter(fun options ->
-                    let endpoint = builder.Configuration.["OTEL_EXPORTER_OTLP_ENDPOINT"]
+                    let endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]
 
                     if not (System.String.IsNullOrEmpty(endpoint)) then
                         options.Endpoint <- System.Uri(endpoint)
@@ -145,6 +145,11 @@ let main args =
 
     let app = builder.Build()
 
+    // Debug logging for paths
+    eprintfn "Content root: %s" builder.Environment.ContentRootPath
+    eprintfn "Web root: %s" builder.Environment.WebRootPath
+    eprintfn "Current directory: %s" (System.IO.Directory.GetCurrentDirectory())
+
     let connectionString =
         builder.Configuration.GetConnectionString("DefaultConnection")
 
@@ -155,7 +160,11 @@ let main args =
 
     app.UseHttpsRedirection() |> ignore
 
-    app.UseStaticFiles() |> ignore
+    let provider = FileExtensionContentTypeProvider()
+    provider.Mappings[".js"] <- "application/javascript"
+    let staticFileOptions = StaticFileOptions()
+    staticFileOptions.ContentTypeProvider <- provider
+    app.UseStaticFiles(staticFileOptions) |> ignore
 
     app.UseMiddleware<TailscaleAuthMiddleware>() |> ignore
 

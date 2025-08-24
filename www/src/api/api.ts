@@ -3,7 +3,7 @@ import type { paths } from "../schema";
 import { KeyValuePair } from "@/features/workspace/types";
 
 const client = createClient<paths>({
-  baseUrl: "https://chanders-macbook-pro.koala-snake.ts.net:8443",
+  baseUrl: "https://chanders-macbook-pro.koala-snake.ts.net/freetool",
 });
 
 /**

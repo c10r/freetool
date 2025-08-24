@@ -18,7 +18,7 @@ const NotFound = () => {
         <p className="text-xl text-muted-foreground mb-4">
           Oops! Page not found
         </p>
-        <a href="/" className="text-primary underline">
+        <a href="/freetool" className="text-primary underline">
           Return to Home
         </a>
       </div>
