@@ -4,10 +4,12 @@ import {
   updateAppBody,
   updateAppHeaders,
   updateAppQueryParams,
+  updateAppUrlPath,
 } from "@/api/api";
 
 export interface AppFormData {
-  queryParameters: KeyValuePair[];
+  urlPath: string;
+  urlParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
 }
@@ -20,7 +22,8 @@ interface FieldState {
 }
 
 type FieldStates = {
-  queryParameters: FieldState;
+  urlPath: FieldState;
+  urlParameters: FieldState;
   headers: FieldState;
   body: FieldState;
 };
@@ -33,7 +36,8 @@ const initialFieldState: FieldState = {
 };
 
 const initialFieldStates: FieldStates = {
-  queryParameters: initialFieldState,
+  urlPath: initialFieldState,
+  urlParameters: initialFieldState,
   headers: initialFieldState,
   body: initialFieldState,
 };
@@ -72,7 +76,7 @@ export function useAppForm(
 
   const updateKeyValueField = useCallback(
     async (
-      field: "queryParameters" | "headers" | "body",
+      field: "urlParameters" | "headers" | "body",
       value: KeyValuePair[],
     ) => {
       if (!appId) {
@@ -100,7 +104,7 @@ export function useAppForm(
         const updatedData = { ...formData, [field]: filteredValue };
 
         let response;
-        if (field === "queryParameters") {
+        if (field === "urlParameters") {
           response = await updateAppQueryParams(appId, filteredValue);
         } else if (field === "headers") {
           response = await updateAppHeaders(appId, filteredValue);
@@ -162,11 +166,81 @@ export function useAppForm(
     [appId, onUpdate, setFieldState, formData],
   );
 
+  const updateUrlPathField = useCallback(
+    async (value: string) => {
+      if (!appId) {
+        return;
+      }
+
+      // Don't make network request if value hasn't changed
+      if (value === savedDataRef.current.urlPath) {
+        return;
+      }
+
+      setFieldState("urlPath", { updating: true, saved: false, error: false });
+
+      try {
+        const response = await updateAppUrlPath(appId, value);
+
+        if (response && response.error) {
+          const errorMessage =
+            response.error.message || "Failed to save URL path";
+          setFieldState("urlPath", {
+            updating: false,
+            error: true,
+            errorMessage,
+          });
+
+          // Reset the field value on error
+          setFormData((prev) => ({
+            ...prev,
+            urlPath: savedDataRef.current.urlPath || "",
+          }));
+
+          setTimeout(() => {
+            setFieldState("urlPath", { error: false, errorMessage: "" });
+          }, 2000);
+
+          return;
+        }
+
+        // Update local state on success
+        const updatedData = { ...formData, urlPath: value };
+        savedDataRef.current = { ...savedDataRef.current, urlPath: value };
+        setFormData(updatedData);
+        onUpdate?.(updatedData);
+
+        setFieldState("urlPath", { updating: false, saved: true });
+        setTimeout(() => {
+          setFieldState("urlPath", { saved: false });
+        }, 2000);
+      } catch (error) {
+        setFieldState("urlPath", {
+          updating: false,
+          error: true,
+          errorMessage: "Network error occurred",
+        });
+
+        // Reset the field value on error
+        setFormData((prev) => ({
+          ...prev,
+          urlPath: savedDataRef.current.urlPath || "",
+        }));
+
+        setTimeout(() => {
+          setFieldState("urlPath", { error: false, errorMessage: "" });
+        }, 2000);
+      }
+    },
+    [appId, onUpdate, setFieldState, formData],
+  );
+
   return {
     formData,
     fieldStates,
     updateFormData,
     updateKeyValueField,
+    updateUrlPathField,
     resetFieldStates,
     setFormData,
   };

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -17,6 +18,7 @@ interface Resource {
   id: string;
   name: string;
   httpMethod: string;
+  baseUrl?: string;
   urlParameters?: KeyValuePair[];
   headers?: KeyValuePair[];
   body?: KeyValuePair[];
@@ -31,11 +33,13 @@ interface FieldState {
 
 interface AppConfigFormProps {
   resourceId?: string;
+  urlPath?: string;
   queryParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
   onResourceChange: (resourceId: string | undefined) => void;
-  onQueryParametersChange: (queryParameters: KeyValuePair[]) => void;
+  onUrlPathChange?: (urlPath: string) => void;
+  onQueryParametersChange: (urlParameters: KeyValuePair[]) => void;
   onHeadersChange: (headers: KeyValuePair[]) => void;
   onBodyChange: (body: KeyValuePair[]) => void;
   disabled?: boolean;
@@ -43,14 +47,16 @@ interface AppConfigFormProps {
   resourceSelectorLabel?: string;
   mode?: "create" | "edit";
   fieldStates?: {
-    queryParameters: FieldState;
+    urlPath?: FieldState;
+    urlParameters: FieldState;
     headers: FieldState;
     body: FieldState;
   };
   onKeyValueFieldBlur?: (
-    field: "queryParameters" | "headers" | "body",
+    field: "urlParameters" | "headers" | "body",
     value: KeyValuePair[],
   ) => void;
+  onUrlPathFieldBlur?: (value: string) => void;
 }
 
 const FieldIndicator = ({ state }: { state: FieldState }) => {
@@ -70,10 +76,12 @@ const FieldIndicator = ({ state }: { state: FieldState }) => {
 
 export default function AppConfigForm({
   resourceId,
+  urlPath = "",
   queryParameters,
   headers,
   body,
   onResourceChange,
+  onUrlPathChange,
   onQueryParametersChange,
   onHeadersChange,
   onBodyChange,
@@ -83,6 +91,7 @@ export default function AppConfigForm({
   mode = "create",
   fieldStates,
   onKeyValueFieldBlur,
+  onUrlPathFieldBlur,
 }: AppConfigFormProps) {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loadingResources, setLoadingResources] = useState(false);
@@ -93,7 +102,7 @@ export default function AppConfigForm({
     : undefined;
 
   const getFieldState = (
-    field: "queryParameters" | "headers" | "body",
+    field: "urlPath" | "urlParameters" | "headers" | "body",
   ): FieldState => {
     const state = fieldStates?.[field] || {
       updating: false,
@@ -118,9 +127,19 @@ export default function AppConfigForm({
             id: item.id!,
             name: item.name,
             httpMethod: item.httpMethod,
-            urlParameters: item.urlParameters || [],
-            headers: item.headers || [],
-            body: item.body || [],
+            baseUrl: item.baseUrl,
+            urlParameters: (item.urlParameters || []).map((kvp) => ({
+              key: kvp.key || "",
+              value: kvp.value || "",
+            })),
+            headers: (item.headers || []).map((kvp) => ({
+              key: kvp.key || "",
+              value: kvp.value || "",
+            })),
+            body: (item.body || []).map((kvp) => ({
+              key: kvp.key || "",
+              value: kvp.value || "",
+            })),
           }));
           setResources(resourceList);
         } else {
@@ -183,6 +202,58 @@ export default function AppConfigForm({
         </div>
       )}
 
+      {selectedResource && (
+        <div className="space-y-2">
+          <Label>URL</Label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Label
+                htmlFor="base-url"
+                className="text-sm text-muted-foreground"
+              >
+                Base URL (from resource)
+              </Label>
+              <Input
+                id="base-url"
+                value={
+                  selectedResource.baseUrl
+                    ? selectedResource.baseUrl.substring(0, 50) +
+                      (selectedResource.baseUrl.length > 50 ? "..." : "")
+                    : ""
+                }
+                disabled
+                className="bg-muted"
+              />
+            </div>
+            <div className="flex-1">
+              <Label htmlFor="url-path" className="text-sm">
+                Custom Path
+              </Label>
+              <div className="relative">
+                <Input
+                  id="url-path"
+                  value={urlPath}
+                  onChange={(e) => onUrlPathChange?.(e.target.value)}
+                  onBlur={(e) => onUrlPathFieldBlur?.(e.target.value)}
+                  placeholder="Example: /api/users"
+                  disabled={disabled || getFieldState("urlPath").updating}
+                />
+                {mode === "edit" && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <FieldIndicator state={getFieldState("urlPath")} />
+                  </div>
+                )}
+              </div>
+              {getFieldState("urlPath").errorMessage && (
+                <div className="text-red-500 text-sm mt-1">
+                  {getFieldState("urlPath").errorMessage}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label>Query Parameters</Label>
         {selectedResource &&
@@ -201,20 +272,20 @@ export default function AppConfigForm({
             items={queryParameters}
             onChange={onQueryParametersChange}
             onBlur={(items) => {
-              onKeyValueFieldBlur?.("queryParameters", items);
+              onKeyValueFieldBlur?.("urlParameters", items);
             }}
             ariaLabel="Query parameters"
-            disabled={disabled || getFieldState("queryParameters").updating}
+            disabled={disabled || getFieldState("urlParameters").updating}
           />
           {mode === "edit" && (
             <div className="absolute right-3 top-3">
-              <FieldIndicator state={getFieldState("queryParameters")} />
+              <FieldIndicator state={getFieldState("urlParameters")} />
             </div>
           )}
         </div>
-        {getFieldState("queryParameters").errorMessage && (
+        {getFieldState("urlParameters").errorMessage && (
           <div className="text-red-500 text-sm mt-1">
-            {getFieldState("queryParameters").errorMessage}
+            {getFieldState("urlParameters").errorMessage}
           </div>
         )}
       </div>

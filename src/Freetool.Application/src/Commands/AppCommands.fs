@@ -20,3 +20,4 @@ type AppCommand =
     | UpdateAppQueryParameters of actorUserId: UserId * appId: string * UpdateAppQueryParametersDto
     | UpdateAppBody of actorUserId: UserId * appId: string * UpdateAppBodyDto
     | UpdateAppHeaders of actorUserId: UserId * appId: string * UpdateAppHeadersDto
+    | UpdateAppUrlPath of actorUserId: UserId * appId: string * UpdateAppUrlPathDto

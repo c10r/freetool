@@ -86,6 +86,7 @@ export default function FolderView({
   const [appFormData, setAppFormData] = useState({
     name: "",
     resourceId: "",
+    urlPath: "",
     queryParameters: [] as KeyValuePair[],
     headers: [] as KeyValuePair[],
     body: [] as KeyValuePair[],
@@ -236,17 +237,21 @@ export default function FolderView({
 
     try {
       // Call createApp with both name and resourceId
-      // Note: We'll need to update the createApp signature to accept resourceId
       await createApp(
         folder.id,
         appFormData.name.trim(),
         appFormData.resourceId,
+        appFormData.urlPath,
+        appFormData.queryParameters,
+        appFormData.headers,
+        appFormData.body,
       );
 
       // Reset form and close on success
       setAppFormData({
         name: "",
         resourceId: "",
+        urlPath: "",
         queryParameters: [],
         headers: [],
         body: [],
@@ -461,11 +466,15 @@ export default function FolderView({
 
             <AppConfigForm
               resourceId={appFormData.resourceId}
+              urlPath={appFormData.urlPath}
               queryParameters={appFormData.queryParameters}
               headers={appFormData.headers}
               body={appFormData.body}
               onResourceChange={(resourceId) =>
                 setAppFormData({ ...appFormData, resourceId })
+              }
+              onUrlPathChange={(urlPath) =>
+                setAppFormData({ ...appFormData, urlPath })
               }
               onQueryParametersChange={(queryParameters) =>
                 setAppFormData({ ...appFormData, queryParameters })

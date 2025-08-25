@@ -50,7 +50,8 @@ export interface AppNode extends BaseNode {
   fields: AppField[];
   endpointId?: string; // selected endpoint to call on submit
   resourceId?: string; // selected resource to use for the app
-  queryParameters?: KeyValuePair[]; // query parameters for the app
+  urlPath?: string; // custom URL path to append to resource's base URL
+  urlParameters?: KeyValuePair[]; // query parameters for the app
   headers?: KeyValuePair[]; // headers for the app
   body?: KeyValuePair[]; // JSON body for the app
 }
@@ -67,6 +68,7 @@ export interface WorkspaceMainProps {
     parentId: string,
     name?: string,
     resourceId?: string,
+    urlPath?: string,
   ) => Promise<void>;
   deleteNode: (id: string) => void;
   endpoints: Record<string, Endpoint>;

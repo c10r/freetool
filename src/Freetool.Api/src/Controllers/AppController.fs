@@ -32,7 +32,11 @@ type AppController
         let userId = this.CurrentUserId
         let createRequest = AppMapper.fromCreateDto createDto
 
-        // Parse FolderId and ResourceId
+        let urlPathValidation =
+            match createDto.UrlPath with
+            | Some urlPath when urlPath.Length > 500 -> Error(ValidationError "URL path cannot exceed 500 characters")
+            | _ -> Ok()
+
         let folderIdResult =
             match System.Guid.TryParse createRequest.FolderId with
             | true, guid -> Ok(FolderId.FromGuid(guid))
@@ -43,10 +47,11 @@ type AppController
             | true, guid -> Ok(ResourceId.FromGuid(guid))
             | false, _ -> Error(ValidationError "Invalid resource ID format")
 
-        match folderIdResult, resourceIdResult with
-        | Error error, _
-        | _, Error error -> return this.HandleDomainError(error)
-        | Ok folderId, Ok resourceId ->
+        match folderIdResult, resourceIdResult, urlPathValidation with
+        | Error error, _, _ -> return this.HandleDomainError(error)
+        | _, Error error, _ -> return this.HandleDomainError(error)
+        | _, _, Error error -> return this.HandleDomainError(error)
+        | Ok folderId, Ok resourceId, Ok _ ->
             // Fetch the resource to validate against
             let! resourceOption = resourceRepository.GetByIdAsync resourceId
 
@@ -234,6 +239,27 @@ type AppController
             | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
             | Error error -> this.HandleDomainError(error)
+    }
+
+    [<HttpPut("{id}/url-path")>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.UpdateAppUrlPath(id: string, [<FromBody>] updateDto: UpdateAppUrlPathDto) : Task<IActionResult> = task {
+        let userId = this.CurrentUserId
+
+        match updateDto.UrlPath with
+        | Some urlPath when urlPath.Length > 500 ->
+            let error = ValidationError "URL path cannot exceed 500 characters"
+            return this.HandleDomainError(error)
+        | _ ->
+            let! result = commandHandler.HandleCommand appRepository (UpdateAppUrlPath(userId, id, updateDto))
+
+            match result with
+            | Ok(AppResult appDto) -> return this.Ok(appDto) :> IActionResult
+            | Ok _ -> return this.StatusCode(500, "Unexpected result type") :> IActionResult
+            | Error error -> return this.HandleDomainError(error)
     }
 
     [<HttpDelete("{id}")>]

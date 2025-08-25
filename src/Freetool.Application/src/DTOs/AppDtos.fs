@@ -26,7 +26,6 @@ type CreateAppDto = {
     Inputs: AppInputDto list
 
     // Intentionally not moved to SharedDtos yet - this is only the first usage
-    [<StringLength(500, ErrorMessage = "URL path cannot exceed 500 characters")>]
     UrlPath: string option
 
     UrlParameters: KeyValuePairDto list
@@ -54,3 +53,5 @@ type UpdateAppQueryParametersDto = { UrlParameters: KeyValuePairDto list }
 type UpdateAppBodyDto = { Body: KeyValuePairDto list }
 
 type UpdateAppHeadersDto = { Headers: KeyValuePairDto list }
+
+type UpdateAppUrlPathDto = { UrlPath: string option }

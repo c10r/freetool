@@ -664,6 +664,80 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/app/{id}/url-path": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["UpdateAppUrlPathDto"];
+          "text/json": components["schemas"]["UpdateAppUrlPathDto"];
+          "application/*+json": components["schemas"]["UpdateAppUrlPathDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["AppData"];
+            "application/json": components["schemas"]["AppData"];
+            "text/json": components["schemas"]["AppData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/app/{id}/run": {
     parameters: {
       query?: never;
@@ -3350,6 +3424,9 @@ export interface components {
     };
     UpdateAppQueryParametersDto: {
       urlParameters?: components["schemas"]["KeyValuePairDto"][] | null;
+    };
+    UpdateAppUrlPathDto: {
+      urlPath?: (string & components["schemas"]["StringFSharpOption"]) | null;
     };
     UpdateFolderNameDto: {
       name: string;

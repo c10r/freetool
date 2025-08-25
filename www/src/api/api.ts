@@ -147,6 +147,17 @@ export const updateAppQueryParams = (
   });
 };
 
+export const updateAppUrlPath = (appId: string, urlPath: string) => {
+  return client.PUT("/app/{id}/url-path", {
+    params: {
+      path: { id: appId },
+    },
+    body: {
+      urlPath,
+    },
+  });
+};
+
 /**
  * Audit Log
  */

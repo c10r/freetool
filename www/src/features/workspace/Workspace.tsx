@@ -2,7 +2,13 @@ import { useMemo, useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import SidebarTree from "./SidebarTree";
 import WorkspaceMain from "./WorkspaceMain";
-import { WorkspaceNode, FolderNode, AppNode, Endpoint } from "./types";
+import {
+  WorkspaceNode,
+  FolderNode,
+  AppNode,
+  Endpoint,
+  KeyValuePair,
+} from "./types";
 import {
   getAllFolders,
   getAppByFolder,
@@ -181,6 +187,19 @@ export default function Workspace() {
                 fields: [], // TODO: Transform apiApp inputs to fields if needed
                 endpointId: undefined, // TODO: Map from apiApp if available
                 resourceId: apiApp.resourceId || undefined,
+                urlPath: apiApp.urlPath || "",
+                urlParameters: (apiApp.urlParameters || []).map((kvp) => ({
+                  key: kvp.key || "",
+                  value: kvp.value || "",
+                })),
+                headers: (apiApp.headers || []).map((kvp) => ({
+                  key: kvp.key || "",
+                  value: kvp.value || "",
+                })),
+                body: (apiApp.body || []).map((kvp) => ({
+                  key: kvp.key || "",
+                  value: kvp.value || "",
+                })),
               };
               appsToAdd[apiApp.id] = appNode;
               appIds.push(apiApp.id);
@@ -253,6 +272,10 @@ export default function Workspace() {
     parentId: string,
     name: string = "New App",
     resourceId: string = "",
+    urlPath: string = "",
+    urlParameters: KeyValuePair[] = [],
+    headers: KeyValuePair[] = [],
+    body: KeyValuePair[] = [],
   ) => {
     // Call backend API to create the app
     const response = await createAppAPI({
@@ -260,9 +283,10 @@ export default function Workspace() {
       folderId: parentId === "root" ? null : parentId,
       inputs: [],
       resourceId: resourceId || "",
-      body: [],
-      headers: [],
-      urlParameters: [],
+      urlPath: urlPath || "",
+      body: body,
+      headers: headers,
+      urlParameters: urlParameters,
     });
 
     if (response.error) {

@@ -45,11 +45,13 @@ export default function AppView({
     fieldStates: appFieldStates,
     updateFormData: updateAppFormData,
     updateKeyValueField,
+    updateUrlPathField,
     resetFieldStates,
     setFormData: setAppFormData,
   } = useAppForm(
     {
-      queryParameters: app.queryParameters || [],
+      urlPath: app.urlPath || "",
+      urlParameters: app.urlParameters || [],
       headers: app.headers || [],
       body: app.body || [],
     },
@@ -58,14 +60,15 @@ export default function AppView({
       // Update the app node when autosave occurs
       updateNode({
         ...app,
-        queryParameters: updatedData.queryParameters,
+        urlPath: updatedData.urlPath,
+        urlParameters: updatedData.urlParameters,
         headers: updatedData.headers,
         body: updatedData.body,
       });
     },
   );
 
-  // Update name when app changes
+  // Update form data when app changes
   useEffect(() => {
     setName(app.name);
     setEditing(false);
@@ -77,7 +80,8 @@ export default function AppView({
 
     // Update app form data when app changes
     setAppFormData({
-      queryParameters: app.queryParameters || [],
+      urlPath: app.urlPath || "",
+      urlParameters: app.urlParameters || [],
       headers: app.headers || [],
       body: app.body || [],
     });
@@ -103,8 +107,8 @@ export default function AppView({
     updateNode({ ...app, fields: [...app.fields, nf] });
   };
 
-  const updateQueryParameters = (queryParameters: KeyValuePair[]) => {
-    updateAppFormData("queryParameters", queryParameters);
+  const updateUrlParameters = (urlParameters: KeyValuePair[]) => {
+    updateAppFormData("urlParameters", urlParameters);
     // Don't update the app node immediately - wait for autosave
   };
 
@@ -115,6 +119,11 @@ export default function AppView({
 
   const updateBody = (body: KeyValuePair[]) => {
     updateAppFormData("body", body);
+    // Don't update the app node immediately - wait for autosave
+  };
+
+  const updateUrlPath = (urlPath: string) => {
+    updateAppFormData("urlPath", urlPath);
     // Don't update the app node immediately - wait for autosave
   };
 
@@ -309,13 +318,15 @@ export default function AppView({
             <CardContent className="py-4">
               <AppConfigForm
                 resourceId={app.resourceId}
-                queryParameters={appFormData.queryParameters}
+                urlPath={appFormData.urlPath}
+                queryParameters={appFormData.urlParameters}
                 headers={appFormData.headers}
                 body={appFormData.body}
                 onResourceChange={(resourceId) =>
                   updateNode({ ...app, resourceId })
                 }
-                onQueryParametersChange={updateQueryParameters}
+                onUrlPathChange={updateUrlPath}
+                onQueryParametersChange={updateUrlParameters}
                 onHeadersChange={updateHeaders}
                 onBodyChange={updateBody}
                 showResourceSelector={false}
@@ -323,6 +334,9 @@ export default function AppView({
                 fieldStates={appFieldStates}
                 onKeyValueFieldBlur={(field, items) => {
                   updateKeyValueField(field, items);
+                }}
+                onUrlPathFieldBlur={(value) => {
+                  updateUrlPathField(value);
                 }}
               />
             </CardContent>
