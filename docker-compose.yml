@@ -9,6 +9,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18889
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+    volumes:
+      - freetool-db:/app/data
     depends_on:
       - aspire-dashboard
 
@@ -20,3 +22,6 @@ services:
       - 4317:18889
     environment:
       - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
+
+volumes:
+  freetool-db:
