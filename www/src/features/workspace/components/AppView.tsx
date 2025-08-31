@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,7 +30,6 @@ export default function AppView({
   updateNode,
   endpoints,
 }: WorkspaceMainProps & { app: AppNode }) {
-  const [tab, setTab] = useState("build");
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(app.name);
   const [nameUpdating, setNameUpdating] = useState(false);
@@ -247,105 +245,81 @@ export default function AppView({
         )}
       </header>
       <Separator />
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="build">Build</TabsTrigger>
-          <TabsTrigger value="fill">Fill</TabsTrigger>
-        </TabsList>
-        <TabsContent value="build" className="space-y-6">
-          {app.fields.length === 0 && (
-            <Card>
-              <CardContent className="py-10 text-center text-muted-foreground">
-                No fields. Add one to start.
-              </CardContent>
-            </Card>
-          )}
-          {app.fields.map((f) => (
-            <Card key={f.id}>
-              <CardContent className="py-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                <div className="md:col-span-4">
-                  <Input
-                    value={f.label}
-                    onChange={(e) =>
-                      updateField(f.id, { label: e.target.value })
-                    }
-                    aria-label="Field label"
-                  />
-                </div>
-                <div className="md:col-span-3">
-                  <Select
-                    value={f.type}
-                    onValueChange={(v: FieldType) =>
-                      updateField(f.id, { type: v })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="text">Text</SelectItem>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="date">Date</SelectItem>
-                      <SelectItem value="integer">Integer</SelectItem>
-                      <SelectItem value="boolean">Boolean</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="md:col-span-3 flex items-center gap-2">
-                  <Switch
-                    checked={!!f.required}
-                    onCheckedChange={(v) => updateField(f.id, { required: v })}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    Required
-                  </span>
-                </div>
-                <div className="md:col-span-2 flex justify-end">
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={() => deleteField(f.id)}
-                    aria-label="Delete field"
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          <Card>
-            <CardContent className="py-4">
-              <AppConfigForm
-                resourceId={app.resourceId}
-                urlPath={appFormData.urlPath}
-                queryParameters={appFormData.urlParameters}
-                headers={appFormData.headers}
-                body={appFormData.body}
-                onResourceChange={(resourceId) =>
-                  updateNode({ ...app, resourceId })
-                }
-                onUrlPathChange={updateUrlPath}
-                onQueryParametersChange={updateUrlParameters}
-                onHeadersChange={updateHeaders}
-                onBodyChange={updateBody}
-                showResourceSelector={false}
-                mode="edit"
-                fieldStates={appFieldStates}
-                onKeyValueFieldBlur={(field, items) => {
-                  updateKeyValueField(field, items);
-                }}
-                onUrlPathFieldBlur={(value) => {
-                  updateUrlPathField(value);
-                }}
+      {app.fields.map((f) => (
+        <Card key={f.id}>
+          <CardContent className="py-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+            <div className="md:col-span-4">
+              <Input
+                value={f.label}
+                onChange={(e) => updateField(f.id, { label: e.target.value })}
+                aria-label="Field label"
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="fill">
-          <AppFormRenderer app={app} endpoint={selectedEndpoint} />
-        </TabsContent>
-      </Tabs>
+            </div>
+            <div className="md:col-span-3">
+              <Select
+                value={f.type}
+                onValueChange={(v: FieldType) => updateField(f.id, { type: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">Text</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="date">Date</SelectItem>
+                  <SelectItem value="integer">Integer</SelectItem>
+                  <SelectItem value="boolean">Boolean</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-3 flex items-center gap-2">
+              <Switch
+                checked={!!f.required}
+                onCheckedChange={(v) => updateField(f.id, { required: v })}
+              />
+              <span className="text-sm text-muted-foreground">Required</span>
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => deleteField(f.id)}
+                aria-label="Delete field"
+              >
+                <Trash2 size={16} />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      <Card>
+        <CardContent className="py-4">
+          <AppConfigForm
+            resourceId={app.resourceId}
+            urlPath={appFormData.urlPath}
+            queryParameters={appFormData.urlParameters}
+            headers={appFormData.headers}
+            body={appFormData.body}
+            onResourceChange={(resourceId) =>
+              updateNode({ ...app, resourceId })
+            }
+            onUrlPathChange={updateUrlPath}
+            onQueryParametersChange={updateUrlParameters}
+            onHeadersChange={updateHeaders}
+            onBodyChange={updateBody}
+            showResourceSelector={false}
+            mode="edit"
+            fieldStates={appFieldStates}
+            onKeyValueFieldBlur={(field, items) => {
+              updateKeyValueField(field, items);
+            }}
+            onUrlPathFieldBlur={(value) => {
+              updateUrlPathField(value);
+            }}
+          />
+        </CardContent>
+      </Card>
     </section>
   );
 }
