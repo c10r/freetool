@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
-import { Plus, FolderPlus, FilePlus2, Edit, Trash2 } from "lucide-react";
+import { Plus, FolderPlus, FilePlus2, Edit, Trash2, Play } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import {
   deleteFolder as deleteFolderAPI,
   deleteApp,
   updateFolderName,
+  runApp,
 } from "@/api/api";
 import AppConfigForm from "./AppConfigForm";
 
@@ -41,6 +43,7 @@ export default function FolderView({
   updateNode,
   deleteNode,
 }: WorkspaceMainProps & { folder: FolderNode }) {
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(folder.name);
 
@@ -91,6 +94,11 @@ export default function FolderView({
     headers: [] as KeyValuePair[],
     body: [] as KeyValuePair[],
   });
+
+  // App running state
+  const [runningAppId, setRunningAppId] = useState<string | null>(null);
+  const [runResult, setRunResult] = useState<any>(null);
+  const [runError, setRunError] = useState<string | null>(null);
 
   const children = useMemo(
     () => folder.childrenIds.map((id) => nodes[id]).filter(Boolean),
@@ -283,6 +291,18 @@ export default function FolderView({
       headers: [],
       body: [],
     });
+  };
+
+  const handleRunApp = (appId: string) => {
+    navigate(`/workspaces/${appId}/run`);
+  };
+
+  const handleCardClick = (child: any) => {
+    if (child.type === "app") {
+      handleRunApp(child.id);
+    } else {
+      onSelect(child.id);
+    }
   };
 
   return (
@@ -511,7 +531,7 @@ export default function FolderView({
           <Card
             key={child.id}
             className="transition-transform hover:scale-[1.01] cursor-pointer"
-            onClick={() => onSelect(child.id)}
+            onClick={() => handleCardClick(child)}
           >
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base font-medium">
@@ -597,17 +617,30 @@ export default function FolderView({
                     </PopoverContent>
                   </Popover>
                 ) : (
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelect(child.id);
-                    }}
-                    aria-label="Edit"
-                  >
-                    <Edit size={16} />
-                  </Button>
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRunApp(child.id);
+                      }}
+                      aria-label="Run App"
+                    >
+                      <Play size={16} />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelect(child.id);
+                      }}
+                      aria-label="Edit"
+                    >
+                      <Edit size={16} />
+                    </Button>
+                  </>
                 )}
                 <Button
                   variant="secondary"

@@ -82,6 +82,17 @@ export const deleteApp = (appId: string) => {
   });
 };
 
+export const runApp = (appId: string) => {
+  return client.POST("/app/{id}/run", {
+    params: {
+      path: { id: appId },
+    },
+    body: {
+      inputValues: [],
+    },
+  });
+};
+
 export const updateAppInputs = (
   appId: string,
   body?: KeyValuePair[],

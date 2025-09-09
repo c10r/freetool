@@ -14,18 +14,15 @@ type RunRepository(context: FreetoolDbContext, eventRepository: IEventRepository
     interface IRunRepository with
 
         member _.GetByIdAsync(runId: RunId) : Task<ValidatedRun option> = task {
-            let guidId = runId.Value
-            let! runData = context.Runs.FirstOrDefaultAsync(fun r -> r.Id.Value = guidId)
+            let! runData = context.Runs.FirstOrDefaultAsync(fun r -> r.Id = runId)
 
             return runData |> Option.ofObj |> Option.map (fun data -> Run.fromData data)
         }
 
         member _.GetByAppIdAsync (appId: AppId) (skip: int) (take: int) : Task<ValidatedRun list> = task {
-            let appGuidId = appId.Value
-
             let! runDatas =
                 context.Runs
-                    .Where(fun r -> r.AppId.Value = appGuidId)
+                    .Where(fun r -> r.AppId = appId)
                     .OrderByDescending(fun r -> r.CreatedAt)
                     .Skip(skip)
                     .Take(take)
@@ -53,11 +50,9 @@ type RunRepository(context: FreetoolDbContext, eventRepository: IEventRepository
             (take: int)
             : Task<ValidatedRun list> =
             task {
-                let appGuidId = appId.Value
-
                 let! runDatas =
                     context.Runs
-                        .Where(fun r -> r.AppId.Value = appGuidId && r.Status = status)
+                        .Where(fun r -> r.AppId = appId && r.Status = status)
                         .OrderByDescending(fun r -> r.CreatedAt)
                         .Skip(skip)
                         .Take(take)
@@ -86,9 +81,9 @@ type RunRepository(context: FreetoolDbContext, eventRepository: IEventRepository
 
         member _.UpdateAsync(run: ValidatedRun) : Task<Result<unit, DomainError>> = task {
             try
-                let runId = (Run.getId run).Value
+                let runIdObj = Run.getId run
 
-                let! existingData = context.Runs.FirstOrDefaultAsync(fun r -> r.Id.Value = runId)
+                let! existingData = context.Runs.FirstOrDefaultAsync(fun r -> r.Id = runIdObj)
                 let existingDataOption = Option.ofObj existingData
 
                 match existingDataOption with
@@ -105,22 +100,17 @@ type RunRepository(context: FreetoolDbContext, eventRepository: IEventRepository
 
                     // Save changes to database
                     let! _ = context.SaveChangesAsync()
-
                     return Ok()
             with ex ->
                 return Error(InvalidOperation $"Failed to update run: {ex.Message}")
         }
 
-        member _.ExistsAsync(runId: RunId) : Task<bool> = task {
-            let guidId = runId.Value
-            return! context.Runs.AnyAsync(fun r -> r.Id.Value = guidId)
-        }
+        member _.ExistsAsync(runId: RunId) : Task<bool> = task { return! context.Runs.AnyAsync(fun r -> r.Id = runId) }
 
         member _.GetCountAsync() : Task<int> = task { return! context.Runs.CountAsync() }
 
         member _.GetCountByAppIdAsync(appId: AppId) : Task<int> = task {
-            let appGuidId = appId.Value
-            return! context.Runs.CountAsync(fun r -> r.AppId.Value = appGuidId)
+            return! context.Runs.CountAsync(fun r -> r.AppId = appId)
         }
 
         member _.GetCountByStatusAsync(status: RunStatus) : Task<int> = task {
@@ -128,6 +118,5 @@ type RunRepository(context: FreetoolDbContext, eventRepository: IEventRepository
         }
 
         member _.GetCountByAppIdAndStatusAsync (appId: AppId) (status: RunStatus) : Task<int> = task {
-            let appGuidId = appId.Value
-            return! context.Runs.CountAsync(fun r -> r.AppId.Value = appGuidId && r.Status = status)
+            return! context.Runs.CountAsync(fun r -> r.AppId = appId && r.Status = status)
         }

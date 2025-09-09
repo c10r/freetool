@@ -195,6 +195,35 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun r -> r.AppId).HasConversion(appIdConverter) |> ignore
             entity.Property(fun r -> r.Status).HasConversion(runStatusConverter) |> ignore
 
+            // JSON converter for InputValues list
+            let runInputValueListConverter =
+                ValueConverter<Freetool.Domain.RunInputValue list, string>(
+                    (fun inputValues ->
+                        let serializable =
+                            inputValues |> List.map (fun iv -> {| Title = iv.Title; Value = iv.Value |})
+
+                        System.Text.Json.JsonSerializer.Serialize(serializable)),
+                    (fun json ->
+                        if System.String.IsNullOrEmpty(json) then
+                            []
+                        else
+                            let deserialized =
+                                System.Text.Json.JsonSerializer.Deserialize<{| Title: string; Value: string |} list>(
+                                    json
+                                )
+
+                            deserialized
+                            |> List.map (fun item -> {
+                                Freetool.Domain.RunInputValue.Title = item.Title
+                                Freetool.Domain.RunInputValue.Value = item.Value
+                            }))
+                )
+
+            entity
+                .Property(fun r -> r.InputValues)
+                .HasConversion(runInputValueListConverter)
+            |> ignore
+
             entity
                 .Property(fun r -> r.StartedAt)
                 .HasConversion<System.Nullable<DateTime>>(optionDateTimeConverter)

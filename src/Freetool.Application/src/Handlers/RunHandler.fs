@@ -66,22 +66,29 @@ module RunHandler =
                                     match! runRepository.AddAsync runWithExecutableRequest with
                                     | Error error -> return Error error
                                     | Ok() ->
-                                        // Mark as running and execute the request in background
-                                        let runningRun = Run.markAsRunning actorUserId runWithExecutableRequest
+                                        // Get fresh run from database to avoid event conflicts
+                                        let runId = Run.getId runWithExecutableRequest
+                                        let! freshRunOption = runRepository.GetByIdAsync runId
 
-                                        // Execute the HTTP request (this would typically be done asynchronously)
-                                        let executableRequest = Run.getExecutableRequest runningRun |> Option.get
-                                        let! executeResult = HttpExecutionService.executeRequest executableRequest
+                                        match freshRunOption with
+                                        | None -> return Error(NotFound "Run not found after save")
+                                        | Some freshRun ->
+                                            // Mark as running and execute the request in background
+                                            let runningRun = Run.markAsRunning actorUserId freshRun
 
-                                        let finalRun =
-                                            match executeResult with
-                                            | Ok response -> Run.markAsSuccess actorUserId response runningRun
-                                            | Error err -> Run.markAsFailure actorUserId (err.ToString()) runningRun
+                                            // Execute the HTTP request (this would typically be done asynchronously)
+                                            let executableRequest = Run.getExecutableRequest runningRun |> Option.get
+                                            let! executeResult = HttpExecutionService.executeRequest executableRequest
 
-                                        // Update the run with final status
-                                        match! runRepository.UpdateAsync finalRun with
-                                        | Error error -> return Error error
-                                        | Ok() -> return Ok(RunResult(finalRun.State))
+                                            let finalRun =
+                                                match executeResult with
+                                                | Ok response -> Run.markAsSuccess actorUserId response runningRun
+                                                | Error err -> Run.markAsFailure actorUserId (err.ToString()) runningRun
+
+                                            // Update the run with final status
+                                            match! runRepository.UpdateAsync finalRun with
+                                            | Error error -> return Error error
+                                            | Ok() -> return Ok(RunResult(finalRun.State))
 
             | GetRunById runId ->
                 match Guid.TryParse runId with
