@@ -28,18 +28,13 @@ let ``App creation should generate AppCreatedEvent`` () =
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
-    let inputs = [
-        {
-            Title = "Email"
+    let inputs =
+        [ { Title = "Email"
             Type = InputType.Email()
-            Required = true
-        }
-        {
-            Title = "Password"
+            Required = true }
+          { Title = "Password"
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
-            Required = true
-        }
-    ]
+            Required = true } ]
 
     // Act
     let resourceId = ResourceId.NewId()
@@ -100,13 +95,10 @@ let ``App inputs update should generate correct event`` () =
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
-    let initialInputs = [
-        {
-            Title = "Name"
+    let initialInputs =
+        [ { Title = "Name"
             Type = InputType.Text(100) |> Result.defaultValue (InputType.Email())
-            Required = true
-        }
-    ]
+            Required = true } ]
 
     let resourceId = ResourceId.NewId()
 
@@ -114,23 +106,16 @@ let ``App inputs update should generate correct event`` () =
         createAppForTesting actorUserId "Test App" folderId initialInputs None [] [] []
         |> unwrapResult
 
-    let newInputs = [
-        {
-            Title = "First Name"
+    let newInputs =
+        [ { Title = "First Name"
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
-            Required = true
-        }
-        {
-            Title = "Last Name"
+            Required = true }
+          { Title = "Last Name"
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
-            Required = false
-        }
-        {
-            Title = "Age"
+            Required = false }
+          { Title = "Age"
             Type = InputType.Integer()
-            Required = true
-        }
-    ]
+            Required = true } ]
 
     // Act
     let result = App.updateInputs actorUserId newInputs app
@@ -215,13 +200,10 @@ let ``App validation should reject invalid input title`` () =
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
-    let invalidInputs = [
-        {
-            Title = ""
+    let invalidInputs =
+        [ { Title = ""
             Type = InputType.Email()
-            Required = true
-        }
-    ] // Empty title
+            Required = true } ] // Empty title
 
     // Act
     let resourceId = ResourceId.NewId()
@@ -259,7 +241,9 @@ let ``App creation with headers should work correctly`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
-    let headers = [ "Authorization", "Bearer token123"; "Content-Type", "application/json" ]
+
+    let headers =
+        [ "Authorization", "Bearer token123"; "Content-Type", "application/json" ]
 
     // Act
     let result =
@@ -489,7 +473,9 @@ let ``App createWithResource should reject URL parameter conflicts`` () =
             resource
             []
             None
-            [ ("format", "xml"); ("new_param", "value") ] [] []
+            [ ("format", "xml"); ("new_param", "value") ]
+            []
+            []
 
     // Assert
     match result with
@@ -520,10 +506,16 @@ let ``App createWithResource should reject header conflicts`` () =
 
     // Act - Try to create App with conflicting header "Content-Type"
     let result =
-        App.createWithResource actorUserId "Test App" folderId resource [] None [] [
-            "Content-Type", "application/xml"
-            "Authorization", "Bearer token"
-        ] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            []
+            None
+            []
+            [ "Content-Type", "application/xml"; "Authorization", "Bearer token" ]
+            []
 
     // Assert
     match result with
@@ -554,10 +546,16 @@ let ``App createWithResource should reject body parameter conflicts`` () =
 
     // Act - Try to create App with conflicting body parameter "client_id"
     let result =
-        App.createWithResource actorUserId "Test App" folderId resource [] None [] [] [
-            "client_id", "override"
-            "new_param", "value"
-        ]
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            []
+            None
+            []
+            []
+            [ "client_id", "override"; "new_param", "value" ]
 
     // Assert
     match result with
@@ -588,9 +586,16 @@ let ``App createWithResource should reject multiple conflicts`` () =
 
     // Act - Try to create App with conflicts in all categories
     let result =
-        App.createWithResource actorUserId "Test App" folderId resource [] None [ ("version", "v2") ] [
-            ("Content-Type", "application/xml")
-        ] [ ("client_id", "override") ]
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            []
+            None
+            [ ("version", "v2") ]
+            [ ("Content-Type", "application/xml") ]
+            [ ("client_id", "override") ]
 
     // Assert
     match result with
@@ -623,9 +628,16 @@ let ``App createWithResource should allow extending with no conflicts`` () =
 
     // Act - Create App with only new values (no conflicts)
     let result =
-        App.createWithResource actorUserId "Test App" folderId resource [] None [ "page", "1"; "size", "10" ] [
-            ("Authorization", "Bearer token")
-        ] [ ("include_metadata", "true") ]
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            []
+            None
+            [ "page", "1"; "size", "10" ]
+            [ ("Authorization", "Bearer token") ]
+            [ ("include_metadata", "true") ]
 
     // Assert
     match result with

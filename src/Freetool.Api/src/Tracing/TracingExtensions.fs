@@ -52,10 +52,9 @@ module Tracing =
                 ActivityEvent(
                     "domain_error",
                     DateTimeOffset.UtcNow,
-                    ActivityTagsCollection [
-                        KeyValuePair.Create("error.type", errorType)
-                        KeyValuePair.Create("error.message", message)
-                    ]
+                    ActivityTagsCollection
+                        [ KeyValuePair.Create("error.type", errorType)
+                          KeyValuePair.Create("error.message", message) ]
                 )
             )
             |> ignore

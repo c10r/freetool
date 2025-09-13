@@ -43,7 +43,9 @@ let ``RequestComposer should combine Resource and App correctly`` () =
             resource
             []
             (Some "/users/profile")
-            [ "page", "1"; "size", "10" ] [ ("Authorization", "Bearer token123") ] [ ("include_metadata", "true") ]
+            [ "page", "1"; "size", "10" ]
+            [ ("Authorization", "Bearer token123") ]
+            [ ("include_metadata", "true") ]
 
     let app = unwrapResult appResult
 
@@ -84,16 +86,16 @@ let ``RequestComposer should handle URL path composition correctly`` () =
     let folderId = FolderId.NewId()
 
     // Test different URL path scenarios
-    let testCases = [
-        // (Resource BaseUrl, App UrlPath, Expected Result)
-        "https://api.test.com", Some "/users", "https://api.test.com/users"
-        "https://api.test.com/", Some "/users", "https://api.test.com/users"
-        "https://api.test.com", Some "users", "https://api.test.com/users"
-        "https://api.test.com/", Some "users", "https://api.test.com/users"
-        "https://api.test.com/v1", Some "/users", "https://api.test.com/v1/users"
-        "https://api.test.com", None, "https://api.test.com"
-        "https://api.test.com/", None, "https://api.test.com/"
-    ]
+    let testCases =
+        [
+          // (Resource BaseUrl, App UrlPath, Expected Result)
+          "https://api.test.com", Some "/users", "https://api.test.com/users"
+          "https://api.test.com/", Some "/users", "https://api.test.com/users"
+          "https://api.test.com", Some "users", "https://api.test.com/users"
+          "https://api.test.com/", Some "users", "https://api.test.com/users"
+          "https://api.test.com/v1", Some "/users", "https://api.test.com/v1/users"
+          "https://api.test.com", None, "https://api.test.com"
+          "https://api.test.com/", None, "https://api.test.com/" ]
 
     for baseUrl, urlPath, expected in testCases do
         // Create Resource with specific base URL
@@ -136,9 +138,16 @@ let ``RequestComposer should allow App extending Resource with new values`` () =
 
     // App that only adds new values (no overrides)
     let appResult =
-        App.createWithResource actorUserId "Extend App" folderId resource [] None [ ("page", "1"); ("size", "10") ] [
-            "Authorization", "Bearer xyz"
-        ] [ "include_metadata", "true" ]
+        App.createWithResource
+            actorUserId
+            "Extend App"
+            folderId
+            resource
+            []
+            None
+            [ ("page", "1"); ("size", "10") ]
+            [ "Authorization", "Bearer xyz" ]
+            [ "include_metadata", "true" ]
 
     let app = unwrapResult appResult
 

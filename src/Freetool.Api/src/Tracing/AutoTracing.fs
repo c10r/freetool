@@ -208,8 +208,7 @@ module AutoTracing =
                             Tracing.addDomainErrorEvent activity error
                             Tracing.setSpanStatus activity false None
                             return result
-                    })
-        }
+                    }) }
 
     let createMultiRepositoryTracingDecorator<'TCommand, 'TResult>
         (entityName: string)
@@ -238,5 +237,4 @@ module AutoTracing =
                             Tracing.addDomainErrorEvent activity error
                             Tracing.setSpanStatus activity false None
                             return result
-                    })
-        }
+                    }) }

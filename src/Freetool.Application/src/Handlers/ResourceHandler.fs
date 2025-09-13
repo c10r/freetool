@@ -137,12 +137,11 @@ module ResourceHandler =
 
                         let appConflictData =
                             apps
-                            |> List.map (fun app -> {
-                                AppId = (App.getId app).Value.ToString()
-                                UrlParameters = App.getUrlParameters app
-                                Headers = App.getHeaders app
-                                Body = App.getBody app
-                            })
+                            |> List.map (fun app ->
+                                { AppId = (App.getId app).Value.ToString()
+                                  UrlParameters = App.getUrlParameters app
+                                  Headers = App.getHeaders app
+                                  Body = App.getBody app })
 
                         match ResourceMapper.fromUpdateUrlParametersDto actorUserId dto appConflictData resource with
                         | Error error -> return Error error
@@ -165,12 +164,11 @@ module ResourceHandler =
 
                         let appConflictData =
                             apps
-                            |> List.map (fun app -> {
-                                AppId = (App.getId app).Value.ToString()
-                                UrlParameters = App.getUrlParameters app
-                                Headers = App.getHeaders app
-                                Body = App.getBody app
-                            })
+                            |> List.map (fun app ->
+                                { AppId = (App.getId app).Value.ToString()
+                                  UrlParameters = App.getUrlParameters app
+                                  Headers = App.getHeaders app
+                                  Body = App.getBody app })
 
                         match ResourceMapper.fromUpdateHeadersDto actorUserId dto appConflictData resource with
                         | Error error -> return Error error
@@ -193,12 +191,11 @@ module ResourceHandler =
 
                         let appConflictData =
                             apps
-                            |> List.map (fun app -> {
-                                AppId = (App.getId app).Value.ToString()
-                                UrlParameters = App.getUrlParameters app
-                                Headers = App.getHeaders app
-                                Body = App.getBody app
-                            })
+                            |> List.map (fun app ->
+                                { AppId = (App.getId app).Value.ToString()
+                                  UrlParameters = App.getUrlParameters app
+                                  Headers = App.getHeaders app
+                                  Body = App.getBody app })
 
                         match ResourceMapper.fromUpdateBodyDto actorUserId dto appConflictData resource with
                         | Error error -> return Error error
@@ -227,12 +224,11 @@ module ResourceHandler =
                     let! resources = resourceRepository.GetAllAsync skip take
                     let! totalCount = resourceRepository.GetCountAsync()
 
-                    let result = {
-                        Items = resources |> List.map (fun resource -> resource.State)
-                        TotalCount = totalCount
-                        Skip = skip
-                        Take = take
-                    }
+                    let result =
+                        { Items = resources |> List.map (fun resource -> resource.State)
+                          TotalCount = totalCount
+                          Skip = skip
+                          Take = take }
 
                     return Ok(ResourcesResult result)
         }

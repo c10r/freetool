@@ -126,12 +126,11 @@ module AppHandler =
                         let! apps = appRepository.GetByFolderIdAsync folderIdObj skip take
                         let! totalCount = appRepository.GetCountByFolderIdAsync folderIdObj
 
-                        let result = {
-                            Items = apps |> List.map (fun app -> app.State)
-                            TotalCount = totalCount
-                            Skip = skip
-                            Take = take
-                        }
+                        let result =
+                            { Items = apps |> List.map (fun app -> app.State)
+                              TotalCount = totalCount
+                              Skip = skip
+                              Take = take }
 
                         return Ok(AppsResult result)
 
@@ -144,12 +143,11 @@ module AppHandler =
                     let! apps = appRepository.GetAllAsync skip take
                     let! totalCount = appRepository.GetCountAsync()
 
-                    let result = {
-                        Items = apps |> List.map (fun app -> app.State)
-                        TotalCount = totalCount
-                        Skip = skip
-                        Take = take
-                    }
+                    let result =
+                        { Items = apps |> List.map (fun app -> app.State)
+                          TotalCount = totalCount
+                          Skip = skip
+                          Take = take }
 
                     return Ok(AppsResult result)
 

@@ -13,48 +13,47 @@ open Freetool.Domain.Events
 [<Index([| "Name"; "FolderId" |], IsUnique = true, Name = "IX_Apps_Name_FolderId")>]
 // CLIMutable for EntityFramework
 [<CLIMutable>]
-type AppData = {
-    [<Key>]
-    Id: AppId
+type AppData =
+    { [<Key>]
+      Id: AppId
 
-    [<Required>]
-    [<MaxLength(100)>]
-    Name: string
+      [<Required>]
+      [<MaxLength(100)>]
+      Name: string
 
-    [<Required>]
-    FolderId: FolderId
+      [<Required>]
+      FolderId: FolderId
 
-    [<Required>]
-    ResourceId: ResourceId
+      [<Required>]
+      ResourceId: ResourceId
 
-    [<Required>]
-    [<Column(TypeName = "TEXT")>] // JSON serialized list of inputs
-    Inputs: Input list
+      [<Required>]
+      [<Column(TypeName = "TEXT")>] // JSON serialized list of inputs
+      Inputs: Input list
 
-    [<MaxLength(500)>]
-    UrlPath: string option
+      [<MaxLength(500)>]
+      UrlPath: string option
 
-    [<Required>]
-    [<Column(TypeName = "TEXT")>] // JSON serialized key-value pairs
-    UrlParameters: KeyValuePair list
+      [<Required>]
+      [<Column(TypeName = "TEXT")>] // JSON serialized key-value pairs
+      UrlParameters: KeyValuePair list
 
-    [<Required>]
-    [<Column(TypeName = "TEXT")>] // JSON serialized key-value pairs
-    Headers: KeyValuePair list
+      [<Required>]
+      [<Column(TypeName = "TEXT")>] // JSON serialized key-value pairs
+      Headers: KeyValuePair list
 
-    [<Required>]
-    [<Column(TypeName = "TEXT")>] // JSON serialized key-value pairs
-    Body: KeyValuePair list
+      [<Required>]
+      [<Column(TypeName = "TEXT")>] // JSON serialized key-value pairs
+      Body: KeyValuePair list
 
-    [<Required>]
-    CreatedAt: DateTime
+      [<Required>]
+      CreatedAt: DateTime
 
-    [<Required>]
-    UpdatedAt: DateTime
+      [<Required>]
+      UpdatedAt: DateTime
 
-    [<JsonIgnore>]
-    IsDeleted: bool
-}
+      [<JsonIgnore>]
+      IsDeleted: bool }
 
 type App = EventSourcingAggregate<AppData>
 
@@ -63,8 +62,7 @@ module AppAggregateHelpers =
 
     let implementsIEntity (app: App) =
         { new IEntity<AppId> with
-            member _.Id = app.State.Id
-        }
+            member _.Id = app.State.Id }
 
 // Type aliases for clarity
 type UnvalidatedApp = App // From DTOs - potentially unsafe
@@ -77,10 +75,9 @@ module App =
         | Error err -> Error err
         | Ok validTitle -> Ok { input with Title = validTitle.Value }
 
-    let fromData (appData: AppData) : ValidatedApp = {
-        State = appData
-        UncommittedEvents = []
-    }
+    let fromData (appData: AppData) : ValidatedApp =
+        { State = appData
+          UncommittedEvents = [] }
 
     let validate (app: UnvalidatedApp) : Result<ValidatedApp, DomainError> =
         let appData = app.State
@@ -103,14 +100,12 @@ module App =
             match validateInputs appData.Inputs with
             | Error err -> Error err
             | Ok validInputs ->
-                Ok {
-                    State = {
-                        appData with
+                Ok
+                    { State =
+                        { appData with
                             Name = validName.Value
-                            Inputs = validInputs
-                    }
-                    UncommittedEvents = app.UncommittedEvents
-                }
+                            Inputs = validInputs }
+                      UncommittedEvents = app.UncommittedEvents }
 
     let updateName (actorUserId: UserId) (newName: string) (app: ValidatedApp) : Result<ValidatedApp, DomainError> =
         match AppName.Create(Some newName) with
@@ -119,19 +114,17 @@ module App =
             let oldName =
                 AppName.Create(Some app.State.Name) |> Result.defaultValue (AppName(""))
 
-            let updatedAppData = {
-                app.State with
+            let updatedAppData =
+                { app.State with
                     Name = validName.Value
-                    UpdatedAt = DateTime.UtcNow
-            }
+                    UpdatedAt = DateTime.UtcNow }
 
             let nameChangedEvent =
                 AppEvents.appUpdated actorUserId app.State.Id [ AppChange.NameChanged(oldName, validName) ]
 
-            Ok {
-                State = updatedAppData
-                UncommittedEvents = app.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
-            }
+            Ok
+                { State = updatedAppData
+                  UncommittedEvents = app.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ] }
 
     let updateInputs
         (actorUserId: UserId)
@@ -154,19 +147,17 @@ module App =
         | Ok validInputs ->
             let oldInputs = app.State.Inputs
 
-            let updatedAppData = {
-                app.State with
+            let updatedAppData =
+                { app.State with
                     Inputs = validInputs
-                    UpdatedAt = DateTime.UtcNow
-            }
+                    UpdatedAt = DateTime.UtcNow }
 
             let inputsChangedEvent =
                 AppEvents.appUpdated actorUserId app.State.Id [ AppChange.InputsChanged(oldInputs, validInputs) ]
 
-            Ok {
-                State = updatedAppData
-                UncommittedEvents = app.UncommittedEvents @ [ inputsChangedEvent :> IDomainEvent ]
-            }
+            Ok
+                { State = updatedAppData
+                  UncommittedEvents = app.UncommittedEvents @ [ inputsChangedEvent :> IDomainEvent ] }
 
     let private checkResourceConflicts
         (resource: ResourceAppConflictData)
@@ -210,25 +201,23 @@ module App =
                 match validateKeyValuePairs body with
                 | Error err -> Error err
                 | Ok validBody ->
-                    let appData = {
-                        Id = AppId.NewId()
-                        Name = name
-                        FolderId = folderId
-                        ResourceId = resourceId
-                        Inputs = inputs
-                        UrlPath = urlPath
-                        UrlParameters = validUrlParameters
-                        Headers = validHeaders
-                        Body = validBody
-                        CreatedAt = DateTime.UtcNow
-                        UpdatedAt = DateTime.UtcNow
-                        IsDeleted = false
-                    }
+                    let appData =
+                        { Id = AppId.NewId()
+                          Name = name
+                          FolderId = folderId
+                          ResourceId = resourceId
+                          Inputs = inputs
+                          UrlPath = urlPath
+                          UrlParameters = validUrlParameters
+                          Headers = validHeaders
+                          Body = validBody
+                          CreatedAt = DateTime.UtcNow
+                          UpdatedAt = DateTime.UtcNow
+                          IsDeleted = false }
 
-                    let unvalidatedApp = {
-                        State = appData
-                        UncommittedEvents = []
-                    }
+                    let unvalidatedApp =
+                        { State = appData
+                          UncommittedEvents = [] }
 
                     match validate unvalidatedApp with
                     | Error err -> Error err
@@ -238,10 +227,9 @@ module App =
                         let appCreatedEvent =
                             AppEvents.appCreated actorUserId appData.Id validName (Some folderId) resourceId inputs
 
-                        Ok {
-                            validatedApp with
-                                UncommittedEvents = [ appCreatedEvent :> IDomainEvent ]
-                        }
+                        Ok
+                            { validatedApp with
+                                UncommittedEvents = [ appCreatedEvent :> IDomainEvent ] }
 
     let createWithResource
         (actorUserId: UserId)
@@ -268,10 +256,8 @@ module App =
     let markForDeletion (actorUserId: UserId) (app: ValidatedApp) : ValidatedApp =
         let appDeletedEvent = AppEvents.appDeleted actorUserId app.State.Id
 
-        {
-            app with
-                UncommittedEvents = app.UncommittedEvents @ [ appDeletedEvent :> IDomainEvent ]
-        }
+        { app with
+            UncommittedEvents = app.UncommittedEvents @ [ appDeletedEvent :> IDomainEvent ] }
 
     let getUncommittedEvents (app: ValidatedApp) : IDomainEvent list = app.UncommittedEvents
 
@@ -302,31 +288,28 @@ module App =
     let getBody (app: App) : (string * string) list =
         app.State.Body |> List.map (fun kvp -> (kvp.Key, kvp.Value))
 
-    let toConflictData (app: App) : AppResourceConflictData = {
-        AppId = (getId app).ToString()
-        UrlParameters = getUrlParameters app
-        Headers = getHeaders app
-        Body = getBody app
-    }
+    let toConflictData (app: App) : AppResourceConflictData =
+        { AppId = (getId app).ToString()
+          UrlParameters = getUrlParameters app
+          Headers = getHeaders app
+          Body = getBody app }
 
     let updateUrlPath
         (actorUserId: UserId)
         (newUrlPath: string option)
         (app: ValidatedApp)
         : Result<ValidatedApp, DomainError> =
-        let updatedAppData = {
-            app.State with
+        let updatedAppData =
+            { app.State with
                 UrlPath = newUrlPath
-                UpdatedAt = DateTime.UtcNow
-        }
+                UpdatedAt = DateTime.UtcNow }
 
         let urlPathChangedEvent =
             AppEvents.appUpdated actorUserId app.State.Id [ AppChange.UrlPathChanged(app.State.UrlPath, newUrlPath) ]
 
-        Ok {
-            State = updatedAppData
-            UncommittedEvents = app.UncommittedEvents @ [ urlPathChangedEvent :> IDomainEvent ]
-        }
+        Ok
+            { State = updatedAppData
+              UncommittedEvents = app.UncommittedEvents @ [ urlPathChangedEvent :> IDomainEvent ] }
 
     let updateUrlParameters
         (actorUserId: UserId)
@@ -355,21 +338,20 @@ module App =
             | Ok() ->
                 let oldUrlParams = app.State.UrlParameters
 
-                let updatedAppData = {
-                    app.State with
+                let updatedAppData =
+                    { app.State with
                         UrlParameters = validUrlParams
-                        UpdatedAt = DateTime.UtcNow
-                }
+                        UpdatedAt = DateTime.UtcNow }
 
                 let urlParamsChangedEvent =
-                    AppEvents.appUpdated actorUserId app.State.Id [
-                        AppChange.UrlParametersChanged(oldUrlParams, validUrlParams)
-                    ]
+                    AppEvents.appUpdated
+                        actorUserId
+                        app.State.Id
+                        [ AppChange.UrlParametersChanged(oldUrlParams, validUrlParams) ]
 
-                Ok {
-                    State = updatedAppData
-                    UncommittedEvents = app.UncommittedEvents @ [ urlParamsChangedEvent :> IDomainEvent ]
-                }
+                Ok
+                    { State = updatedAppData
+                      UncommittedEvents = app.UncommittedEvents @ [ urlParamsChangedEvent :> IDomainEvent ] }
 
     let updateHeaders
         (actorUserId: UserId)
@@ -398,19 +380,17 @@ module App =
             | Ok() ->
                 let oldHeaders = app.State.Headers
 
-                let updatedAppData = {
-                    app.State with
+                let updatedAppData =
+                    { app.State with
                         Headers = validHeaders
-                        UpdatedAt = DateTime.UtcNow
-                }
+                        UpdatedAt = DateTime.UtcNow }
 
                 let headersChangedEvent =
                     AppEvents.appUpdated actorUserId app.State.Id [ AppChange.HeadersChanged(oldHeaders, validHeaders) ]
 
-                Ok {
-                    State = updatedAppData
-                    UncommittedEvents = app.UncommittedEvents @ [ headersChangedEvent :> IDomainEvent ]
-                }
+                Ok
+                    { State = updatedAppData
+                      UncommittedEvents = app.UncommittedEvents @ [ headersChangedEvent :> IDomainEvent ] }
 
     let updateBody
         (actorUserId: UserId)
@@ -439,16 +419,14 @@ module App =
             | Ok() ->
                 let oldBody = app.State.Body
 
-                let updatedAppData = {
-                    app.State with
+                let updatedAppData =
+                    { app.State with
                         Body = validBody
-                        UpdatedAt = DateTime.UtcNow
-                }
+                        UpdatedAt = DateTime.UtcNow }
 
                 let bodyChangedEvent =
                     AppEvents.appUpdated actorUserId app.State.Id [ AppChange.BodyChanged(oldBody, validBody) ]
 
-                Ok {
-                    State = updatedAppData
-                    UncommittedEvents = app.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ]
-                }
+                Ok
+                    { State = updatedAppData
+                      UncommittedEvents = app.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ] }

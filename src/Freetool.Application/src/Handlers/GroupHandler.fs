@@ -31,10 +31,11 @@ module GroupHandler =
                     // Validate UserIds if any are provided
                     let! validationResults =
                         userIds
-                        |> List.map (fun userId -> task {
-                            let! exists = userRepository.ExistsAsync userId
-                            return (userId, exists)
-                        })
+                        |> List.map (fun userId ->
+                            task {
+                                let! exists = userRepository.ExistsAsync userId
+                                return (userId, exists)
+                            })
                         |> Task.WhenAll
 
                     let invalidUserIds =
@@ -194,12 +195,11 @@ module GroupHandler =
                         let! groups = groupRepository.GetByUserIdAsync userIdObj
                         let numGroups = List.length groups
 
-                        let result = {
-                            Items = groups |> List.map (fun group -> group.State)
-                            TotalCount = numGroups
-                            Skip = 0
-                            Take = numGroups
-                        }
+                        let result =
+                            { Items = groups |> List.map (fun group -> group.State)
+                              TotalCount = numGroups
+                              Skip = 0
+                              Take = numGroups }
 
                         return Ok(GroupsResult result)
 
@@ -212,12 +212,11 @@ module GroupHandler =
                     let! groups = groupRepository.GetAllAsync skip take
                     let! totalCount = groupRepository.GetCountAsync()
 
-                    let result = {
-                        Items = groups |> List.map (fun group -> group.State)
-                        TotalCount = totalCount
-                        Skip = skip
-                        Take = take
-                    }
+                    let result =
+                        { Items = groups |> List.map (fun group -> group.State)
+                          TotalCount = totalCount
+                          Skip = skip
+                          Take = take }
 
                     return Ok(GroupsResult result)
         }

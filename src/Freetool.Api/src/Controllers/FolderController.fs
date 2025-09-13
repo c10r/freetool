@@ -23,165 +23,170 @@ type FolderController
     [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status201Created)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.CreateFolder([<FromBody>] createDto: CreateFolderDto) : Task<IActionResult> = task {
-        let userId = this.CurrentUserId
+    member this.CreateFolder([<FromBody>] createDto: CreateFolderDto) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
 
-        match FolderMapper.fromCreateDto userId createDto with
-        | Error domainError -> return this.HandleDomainError(domainError)
-        | Ok validatedFolder ->
-            let! result = commandHandler.HandleCommand folderRepository (CreateFolder(userId, validatedFolder))
+            match FolderMapper.fromCreateDto userId createDto with
+            | Error domainError -> return this.HandleDomainError(domainError)
+            | Ok validatedFolder ->
+                let! result = commandHandler.HandleCommand folderRepository (CreateFolder(userId, validatedFolder))
 
-            return
-                match result with
-                | Ok(FolderResult folderDto) ->
-                    this.CreatedAtAction(nameof this.GetFolderById, {| id = folderDto.Id |}, folderDto) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
-    }
+                return
+                    match result with
+                    | Ok(FolderResult folderDto) ->
+                        this.CreatedAtAction(nameof this.GetFolderById, {| id = folderDto.Id |}, folderDto)
+                        :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError(error)
+        }
 
     [<HttpGet("{id}")>]
     [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.GetFolderById(id: string) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand folderRepository (GetFolderById id)
+    member this.GetFolderById(id: string) : Task<IActionResult> =
+        task {
+            let! result = commandHandler.HandleCommand folderRepository (GetFolderById id)
 
-        return
-            match result with
-            | Ok(FolderResult folderDto) -> this.Ok(folderDto) :> IActionResult
-            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-            | Error error -> this.HandleDomainError(error)
-    }
+            return
+                match result with
+                | Ok(FolderResult folderDto) -> this.Ok(folderDto) :> IActionResult
+                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                | Error error -> this.HandleDomainError(error)
+        }
 
     [<HttpGet("{id}/children")>]
     [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.GetFolderWithChildren(id: string) : Task<IActionResult> = task {
-        let! result = commandHandler.HandleCommand folderRepository (GetFolderWithChildren id)
+    member this.GetFolderWithChildren(id: string) : Task<IActionResult> =
+        task {
+            let! result = commandHandler.HandleCommand folderRepository (GetFolderWithChildren id)
 
-        return
-            match result with
-            | Ok(FolderResult folderWithChildrenData) -> this.Ok(folderWithChildrenData) :> IActionResult
-            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-            | Error error -> this.HandleDomainError(error)
-    }
+            return
+                match result with
+                | Ok(FolderResult folderWithChildrenData) -> this.Ok(folderWithChildrenData) :> IActionResult
+                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                | Error error -> this.HandleDomainError(error)
+        }
 
     [<HttpGet("root")>]
     [<ProducesResponseType(typeof<PagedResult<FolderData>>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.GetRootFolders([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> = task {
-        let skipValue = if skip < 0 then 0 else skip
+    member this.GetRootFolders([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> =
+        task {
+            let skipValue = if skip < 0 then 0 else skip
 
-        let takeValue =
-            if take <= 0 then 10
-            elif take > 100 then 100
-            else take
+            let takeValue =
+                if take <= 0 then 10
+                elif take > 100 then 100
+                else take
 
-        let! result = commandHandler.HandleCommand folderRepository (GetRootFolders(skipValue, takeValue))
+            let! result = commandHandler.HandleCommand folderRepository (GetRootFolders(skipValue, takeValue))
 
-        return
-            match result with
-            | Ok(FoldersResult pagedFolders) -> this.Ok(pagedFolders) :> IActionResult
-            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-            | Error error -> this.HandleDomainError(error)
-    }
+            return
+                match result with
+                | Ok(FoldersResult pagedFolders) -> this.Ok(pagedFolders) :> IActionResult
+                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                | Error error -> this.HandleDomainError(error)
+        }
 
     [<HttpGet>]
     [<ProducesResponseType(typeof<PagedResult<FolderData>>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.GetAllFolders([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> = task {
-        let skipValue = if skip < 0 then 0 else skip
+    member this.GetAllFolders([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> =
+        task {
+            let skipValue = if skip < 0 then 0 else skip
 
-        let takeValue =
-            if take <= 0 then 10
-            elif take > 100 then 100
-            else take
+            let takeValue =
+                if take <= 0 then 10
+                elif take > 100 then 100
+                else take
 
-        let! result = commandHandler.HandleCommand folderRepository (GetAllFolders(skipValue, takeValue))
+            let! result = commandHandler.HandleCommand folderRepository (GetAllFolders(skipValue, takeValue))
 
-        return
-            match result with
-            | Ok(FoldersResult pagedFolders) -> this.Ok(pagedFolders) :> IActionResult
-            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-            | Error error -> this.HandleDomainError(error)
-    }
+            return
+                match result with
+                | Ok(FoldersResult pagedFolders) -> this.Ok(pagedFolders) :> IActionResult
+                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                | Error error -> this.HandleDomainError(error)
+        }
 
     [<HttpPut("{id}/name")>]
     [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.UpdateFolderName(id: string, [<FromBody>] updateDto: UpdateFolderNameDto) : Task<IActionResult> = task {
-        let userId = this.CurrentUserId
-        let! result = commandHandler.HandleCommand folderRepository (UpdateFolderName(userId, id, updateDto))
+    member this.UpdateFolderName(id: string, [<FromBody>] updateDto: UpdateFolderNameDto) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+            let! result = commandHandler.HandleCommand folderRepository (UpdateFolderName(userId, id, updateDto))
 
-        return
-            match result with
-            | Ok(FolderResult folderDto) -> this.Ok(folderDto) :> IActionResult
-            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-            | Error error -> this.HandleDomainError(error)
-    }
+            return
+                match result with
+                | Ok(FolderResult folderDto) -> this.Ok(folderDto) :> IActionResult
+                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                | Error error -> this.HandleDomainError(error)
+        }
 
     [<HttpPut("{id}/move")>]
     [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.MoveFolder(id: string, [<FromBody>] moveDto: MoveFolderDto) : Task<IActionResult> = task {
-        let userId = this.CurrentUserId
-        let! result = commandHandler.HandleCommand folderRepository (MoveFolder(userId, id, moveDto))
+    member this.MoveFolder(id: string, [<FromBody>] moveDto: MoveFolderDto) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+            let! result = commandHandler.HandleCommand folderRepository (MoveFolder(userId, id, moveDto))
 
-        return
-            match result with
-            | Ok(FolderResult folderDto) -> this.Ok(folderDto) :> IActionResult
-            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-            | Error error -> this.HandleDomainError(error)
-    }
+            return
+                match result with
+                | Ok(FolderResult folderDto) -> this.Ok(folderDto) :> IActionResult
+                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                | Error error -> this.HandleDomainError(error)
+        }
 
     [<HttpDelete("{id}")>]
     [<ProducesResponseType(StatusCodes.Status204NoContent)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.DeleteFolder(id: string) : Task<IActionResult> = task {
-        let userId = this.CurrentUserId
-        let! result = commandHandler.HandleCommand folderRepository (DeleteFolder(userId, id))
+    member this.DeleteFolder(id: string) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+            let! result = commandHandler.HandleCommand folderRepository (DeleteFolder(userId, id))
 
-        return
-            match result with
-            | Ok(FolderUnitResult _) -> this.NoContent() :> IActionResult
-            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-            | Error error -> this.HandleDomainError(error)
-    }
+            return
+                match result with
+                | Ok(FolderUnitResult _) -> this.NoContent() :> IActionResult
+                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                | Error error -> this.HandleDomainError(error)
+        }
 
     member private this.HandleDomainError(error: DomainError) : IActionResult =
         match error with
         | ValidationError message ->
-            this.BadRequest {|
-                error = "Validation failed"
-                message = message
-            |}
+            this.BadRequest
+                {| error = "Validation failed"
+                   message = message |}
             :> IActionResult
         | NotFound message ->
-            this.NotFound {|
-                error = "Resource not found"
-                message = message
-            |}
+            this.NotFound
+                {| error = "Resource not found"
+                   message = message |}
             :> IActionResult
         | Conflict message ->
-            this.Conflict {|
-                error = "Conflict"
-                message = message
-            |}
+            this.Conflict
+                {| error = "Conflict"
+                   message = message |}
             :> IActionResult
         | InvalidOperation message ->
-            this.UnprocessableEntity {|
-                error = "Invalid operation"
-                message = message
-            |}
+            this.UnprocessableEntity
+                {| error = "Invalid operation"
+                   message = message |}
             :> IActionResult

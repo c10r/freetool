@@ -76,31 +76,29 @@ let ``AppData with complex JSON properties can be persisted and retrieved`` () =
         | Ok inputType -> inputType
         | Error _ -> failwith "Failed to create test InputType"
 
-    let testInput: Freetool.Domain.Events.Input = {
-        Title = "Test Input"
-        Type = testInputType
-        Required = true
-    }
+    let testInput: Freetool.Domain.Events.Input =
+        { Title = "Test Input"
+          Type = testInputType
+          Required = true }
 
     let testKeyValuePair =
         match KeyValuePair.Create("testKey", "testValue") with
         | Ok kvp -> kvp
         | Error _ -> failwith "Failed to create test KeyValuePair"
 
-    let appData: AppData = {
-        Id = AppId.NewId()
-        Name = "Test App"
-        FolderId = FolderId.NewId()
-        ResourceId = ResourceId.NewId()
-        Inputs = [ testInput ]
-        UrlPath = Some "/test"
-        UrlParameters = [ testKeyValuePair ]
-        Headers = [ testKeyValuePair ]
-        Body = [ testKeyValuePair ]
-        CreatedAt = DateTime.UtcNow
-        UpdatedAt = DateTime.UtcNow
-        IsDeleted = false
-    }
+    let appData: AppData =
+        { Id = AppId.NewId()
+          Name = "Test App"
+          FolderId = FolderId.NewId()
+          ResourceId = ResourceId.NewId()
+          Inputs = [ testInput ]
+          UrlPath = Some "/test"
+          UrlParameters = [ testKeyValuePair ]
+          Headers = [ testKeyValuePair ]
+          Body = [ testKeyValuePair ]
+          CreatedAt = DateTime.UtcNow
+          UpdatedAt = DateTime.UtcNow
+          IsDeleted = false }
 
     // Act - This will fail if JSON serialization doesn't work
     context.Apps.Add(appData) |> ignore
@@ -151,19 +149,18 @@ let ``ResourceData with complex JSON properties can be persisted and retrieved``
         | Ok url -> url
         | Error _ -> failwith "Failed to create BaseUrl"
 
-    let resourceData: ResourceData = {
-        Id = ResourceId.NewId()
-        Name = resourceName
-        Description = resourceDescription
-        HttpMethod = HttpMethod.Get
-        BaseUrl = baseUrl
-        UrlParameters = [ testKeyValuePair ]
-        Headers = [ testKeyValuePair ]
-        Body = [ testKeyValuePair ]
-        CreatedAt = DateTime.UtcNow
-        UpdatedAt = DateTime.UtcNow
-        IsDeleted = false
-    }
+    let resourceData: ResourceData =
+        { Id = ResourceId.NewId()
+          Name = resourceName
+          Description = resourceDescription
+          HttpMethod = HttpMethod.Get
+          BaseUrl = baseUrl
+          UrlParameters = [ testKeyValuePair ]
+          Headers = [ testKeyValuePair ]
+          Body = [ testKeyValuePair ]
+          CreatedAt = DateTime.UtcNow
+          UpdatedAt = DateTime.UtcNow
+          IsDeleted = false }
 
     // Act - This will fail if JSON serialization doesn't work
     context.Resources.Add(resourceData) |> ignore
@@ -202,16 +199,15 @@ let ``Entity Framework model validation passes for all configured entities`` () 
         entityTypes |> Seq.map (fun et -> et.ClrType.Name) |> Set.ofSeq
 
     let expectedTypes =
-        Set.ofList [
-            "AppData"
-            "ResourceData"
-            "UserData"
-            "FolderData"
-            "EventData"
-            "RunData"
-            "GroupData"
-            "UserGroupData"
-        ]
+        Set.ofList
+            [ "AppData"
+              "ResourceData"
+              "UserData"
+              "FolderData"
+              "EventData"
+              "RunData"
+              "GroupData"
+              "UserGroupData" ]
 
     Assert.True(
         expectedTypes.IsSubsetOf(entityTypeNames),

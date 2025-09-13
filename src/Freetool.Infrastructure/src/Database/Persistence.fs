@@ -14,18 +14,20 @@ module Persistence =
         builder.DataSource <- dataSource
         builder.ToString()
 
-    let getDbConnectionAsync connectionString : Async<DbConnection> = async {
-        let dbConnection = new SqliteConnection(connectionString)
-        return dbConnection
-    }
+    let getDbConnectionAsync connectionString : Async<DbConnection> =
+        async {
+            let dbConnection = new SqliteConnection(connectionString)
+            return dbConnection
+        }
 
     let getDatabaseConnection connectionString : DbConnection = new SqliteConnection(connectionString)
 
-    let withDbIoAsync connectionString (callbackAsync: DbConnection -> Async<'a>) = async {
-        use dbConnection = new SqliteConnection(connectionString)
-        do! dbConnection.OpenAsync() |> Async.AwaitTask
-        return! callbackAsync dbConnection
-    }
+    let withDbIoAsync connectionString (callbackAsync: DbConnection -> Async<'a>) =
+        async {
+            use dbConnection = new SqliteConnection(connectionString)
+            do! dbConnection.OpenAsync() |> Async.AwaitTask
+            return! callbackAsync dbConnection
+        }
 
     let upgradeDatabase (connectionString: string) =
         // SQLite creates the database file automatically if it doesn't exist

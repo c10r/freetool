@@ -13,44 +13,41 @@ type ResourceChange =
     | BodyChanged of oldValue: KeyValuePair list * newValue: KeyValuePair list
     | HttpMethodChanged of oldValue: HttpMethod * newValue: HttpMethod
 
-type ResourceCreatedEvent = {
-    ResourceId: ResourceId
-    Name: ResourceName
-    Description: ResourceDescription
-    HttpMethod: HttpMethod
-    BaseUrl: BaseUrl
-    UrlParameters: KeyValuePair list
-    Headers: KeyValuePair list
-    Body: KeyValuePair list
-    OccurredAt: DateTime
-    EventId: Guid
-    ActorUserId: UserId
-} with
+type ResourceCreatedEvent =
+    { ResourceId: ResourceId
+      Name: ResourceName
+      Description: ResourceDescription
+      HttpMethod: HttpMethod
+      BaseUrl: BaseUrl
+      UrlParameters: KeyValuePair list
+      Headers: KeyValuePair list
+      Body: KeyValuePair list
+      OccurredAt: DateTime
+      EventId: Guid
+      ActorUserId: UserId }
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
         member this.UserId = this.ActorUserId
 
-type ResourceUpdatedEvent = {
-    ResourceId: ResourceId
-    Changes: ResourceChange list
-    OccurredAt: DateTime
-    EventId: Guid
-    ActorUserId: UserId
-} with
+type ResourceUpdatedEvent =
+    { ResourceId: ResourceId
+      Changes: ResourceChange list
+      OccurredAt: DateTime
+      EventId: Guid
+      ActorUserId: UserId }
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
         member this.UserId = this.ActorUserId
 
-type ResourceDeletedEvent = {
-    ResourceId: ResourceId
-    OccurredAt: DateTime
-    EventId: Guid
-    ActorUserId: UserId
-} with
+type ResourceDeletedEvent =
+    { ResourceId: ResourceId
+      OccurredAt: DateTime
+      EventId: Guid
+      ActorUserId: UserId }
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
@@ -69,36 +66,30 @@ module ResourceEvents =
         (body: KeyValuePair list)
         (httpMethod: HttpMethod)
         =
-        {
-            ResourceId = resourceId
-            Name = name
-            Description = description
-            HttpMethod = httpMethod
-            BaseUrl = baseUrl
-            UrlParameters = urlParameters
-            Headers = headers
-            Body = body
-            OccurredAt = DateTime.UtcNow
-            EventId = Guid.NewGuid()
-            ActorUserId = actorUserId
-        }
+        { ResourceId = resourceId
+          Name = name
+          Description = description
+          HttpMethod = httpMethod
+          BaseUrl = baseUrl
+          UrlParameters = urlParameters
+          Headers = headers
+          Body = body
+          OccurredAt = DateTime.UtcNow
+          EventId = Guid.NewGuid()
+          ActorUserId = actorUserId }
         : ResourceCreatedEvent
 
     let resourceUpdated (actorUserId: UserId) (resourceId: ResourceId) (changes: ResourceChange list) =
-        {
-            ResourceId = resourceId
-            Changes = changes
-            OccurredAt = DateTime.UtcNow
-            EventId = Guid.NewGuid()
-            ActorUserId = actorUserId
-        }
+        { ResourceId = resourceId
+          Changes = changes
+          OccurredAt = DateTime.UtcNow
+          EventId = Guid.NewGuid()
+          ActorUserId = actorUserId }
         : ResourceUpdatedEvent
 
     let resourceDeleted (actorUserId: UserId) (resourceId: ResourceId) =
-        {
-            ResourceId = resourceId
-            OccurredAt = DateTime.UtcNow
-            EventId = Guid.NewGuid()
-            ActorUserId = actorUserId
-        }
+        { ResourceId = resourceId
+          OccurredAt = DateTime.UtcNow
+          EventId = Guid.NewGuid()
+          ActorUserId = actorUserId }
         : ResourceDeletedEvent

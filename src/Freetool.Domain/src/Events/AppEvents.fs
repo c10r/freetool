@@ -6,11 +6,10 @@ open Freetool.Domain.ValueObjects
 
 // CLIMutable for EntityFramework
 [<CLIMutable>]
-type Input = {
-    Title: string
-    Type: InputType
-    Required: bool
-}
+type Input =
+    { Title: string
+      Type: InputType
+      Required: bool }
 
 type AppChange =
     | NameChanged of oldValue: AppName * newValue: AppName
@@ -21,41 +20,38 @@ type AppChange =
     | HeadersChanged of oldHeaders: KeyValuePair list * newHeaders: KeyValuePair list
     | BodyChanged of oldBody: KeyValuePair list * newBody: KeyValuePair list
 
-type AppCreatedEvent = {
-    AppId: AppId
-    Name: AppName
-    FolderId: FolderId option
-    ResourceId: ResourceId
-    Inputs: Input list
-    OccurredAt: DateTime
-    EventId: Guid
-    ActorUserId: UserId
-} with
+type AppCreatedEvent =
+    { AppId: AppId
+      Name: AppName
+      FolderId: FolderId option
+      ResourceId: ResourceId
+      Inputs: Input list
+      OccurredAt: DateTime
+      EventId: Guid
+      ActorUserId: UserId }
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
         member this.UserId = this.ActorUserId
 
-type AppUpdatedEvent = {
-    AppId: AppId
-    Changes: AppChange list
-    OccurredAt: DateTime
-    EventId: Guid
-    ActorUserId: UserId
-} with
+type AppUpdatedEvent =
+    { AppId: AppId
+      Changes: AppChange list
+      OccurredAt: DateTime
+      EventId: Guid
+      ActorUserId: UserId }
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
         member this.EventId = this.EventId
         member this.UserId = this.ActorUserId
 
-type AppDeletedEvent = {
-    AppId: AppId
-    OccurredAt: DateTime
-    EventId: Guid
-    ActorUserId: UserId
-} with
+type AppDeletedEvent =
+    { AppId: AppId
+      OccurredAt: DateTime
+      EventId: Guid
+      ActorUserId: UserId }
 
     interface IDomainEvent with
         member this.OccurredAt = this.OccurredAt
@@ -71,33 +67,27 @@ module AppEvents =
         (resourceId: ResourceId)
         (inputs: Input list)
         =
-        {
-            AppId = appId
-            Name = name
-            FolderId = folderId
-            ResourceId = resourceId
-            Inputs = inputs
-            OccurredAt = DateTime.UtcNow
-            EventId = Guid.NewGuid()
-            ActorUserId = actorUserId
-        }
+        { AppId = appId
+          Name = name
+          FolderId = folderId
+          ResourceId = resourceId
+          Inputs = inputs
+          OccurredAt = DateTime.UtcNow
+          EventId = Guid.NewGuid()
+          ActorUserId = actorUserId }
         : AppCreatedEvent
 
     let appUpdated (actorUserId: UserId) (appId: AppId) (changes: AppChange list) =
-        {
-            AppId = appId
-            Changes = changes
-            OccurredAt = DateTime.UtcNow
-            EventId = Guid.NewGuid()
-            ActorUserId = actorUserId
-        }
+        { AppId = appId
+          Changes = changes
+          OccurredAt = DateTime.UtcNow
+          EventId = Guid.NewGuid()
+          ActorUserId = actorUserId }
         : AppUpdatedEvent
 
     let appDeleted (actorUserId: UserId) (appId: AppId) =
-        {
-            AppId = appId
-            OccurredAt = DateTime.UtcNow
-            EventId = Guid.NewGuid()
-            ActorUserId = actorUserId
-        }
+        { AppId = appId
+          OccurredAt = DateTime.UtcNow
+          EventId = Guid.NewGuid()
+          ActorUserId = actorUserId }
         : AppDeletedEvent

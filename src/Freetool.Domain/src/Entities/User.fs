@@ -13,32 +13,31 @@ open Freetool.Domain.Events
 [<Index([| "Email" |], IsUnique = true, Name = "IX_Users_Email")>]
 // CLIMutable for EntityFramework
 [<CLIMutable>]
-type UserData = {
-    [<Key>]
-    Id: UserId
+type UserData =
+    { [<Key>]
+      Id: UserId
 
-    [<Required>]
-    [<MaxLength(100)>]
-    Name: string
+      [<Required>]
+      [<MaxLength(100)>]
+      Name: string
 
-    [<Required>]
-    [<MaxLength(254)>]
-    Email: string
+      [<Required>]
+      [<MaxLength(254)>]
+      Email: string
 
-    [<MaxLength(2_000)>]
-    ProfilePicUrl: string option
+      [<MaxLength(2_000)>]
+      ProfilePicUrl: string option
 
-    [<Required>]
-    [<JsonIgnore>]
-    CreatedAt: DateTime
+      [<Required>]
+      [<JsonIgnore>]
+      CreatedAt: DateTime
 
-    [<Required>]
-    [<JsonIgnore>]
-    UpdatedAt: DateTime
+      [<Required>]
+      [<JsonIgnore>]
+      UpdatedAt: DateTime
 
-    [<JsonIgnore>]
-    IsDeleted: bool
-}
+      [<JsonIgnore>]
+      IsDeleted: bool }
 
 type User = EventSourcingAggregate<UserData>
 
@@ -47,8 +46,7 @@ module UserAggregateHelpers =
 
     let implementsIEntity (user: User) =
         { new IEntity<UserId> with
-            member _.Id = user.State.Id
-        }
+            member _.Id = user.State.Id }
 
 // Type aliases for clarity
 type UnvalidatedUser = User // From DTOs - potentially unsafe
@@ -56,15 +54,14 @@ type ValidatedUser = User // Validated domain model and database data
 
 module User =
     let create (name: string) (email: Email) (profilePicUrl: string option) : ValidatedUser =
-        let userData = {
-            Id = UserId.NewId()
-            Name = name.Trim()
-            Email = email.Value
-            ProfilePicUrl = profilePicUrl
-            CreatedAt = DateTime.UtcNow
-            UpdatedAt = DateTime.UtcNow
-            IsDeleted = false
-        }
+        let userData =
+            { Id = UserId.NewId()
+              Name = name.Trim()
+              Email = email.Value
+              ProfilePicUrl = profilePicUrl
+              CreatedAt = DateTime.UtcNow
+              UpdatedAt = DateTime.UtcNow
+              IsDeleted = false }
 
         let userCreatedEvent =
             let profilePicUrlOption =
@@ -73,15 +70,12 @@ module User =
 
             UserEvents.userCreated userData.Id userData.Id userData.Name email profilePicUrlOption
 
-        {
-            State = userData
-            UncommittedEvents = [ userCreatedEvent :> IDomainEvent ]
-        }
+        { State = userData
+          UncommittedEvents = [ userCreatedEvent :> IDomainEvent ] }
 
-    let fromData (userData: UserData) : ValidatedUser = {
-        State = userData
-        UncommittedEvents = []
-    }
+    let fromData (userData: UserData) : ValidatedUser =
+        { State = userData
+          UncommittedEvents = [] }
 
     let validate (user: UnvalidatedUser) : Result<ValidatedUser, DomainError> =
         let userData = user.State
@@ -97,35 +91,29 @@ module User =
                 // Validate profile pic URL if present
                 match userData.ProfilePicUrl with
                 | None ->
-                    Ok {
-                        State = {
-                            userData with
+                    Ok
+                        { State =
+                            { userData with
                                 Name = name.Trim()
-                                Email = validEmail.Value
-                        }
-                        UncommittedEvents = user.UncommittedEvents
-                    }
+                                Email = validEmail.Value }
+                          UncommittedEvents = user.UncommittedEvents }
                 | Some urlString ->
                     match Url.Create(Some urlString) with
                     | Error err -> Error err
                     | Ok validUrl ->
-                        Ok {
-                            State = {
-                                userData with
+                        Ok
+                            { State =
+                                { userData with
                                     Name = name.Trim()
                                     Email = validEmail.Value
-                                    ProfilePicUrl = Some validUrl.Value
-                            }
-                            UncommittedEvents = user.UncommittedEvents
-                        }
+                                    ProfilePicUrl = Some validUrl.Value }
+                              UncommittedEvents = user.UncommittedEvents }
 
     let markForDeletion (actorUserId: UserId) (user: ValidatedUser) : ValidatedUser =
         let userDeletedEvent = UserEvents.userDeleted actorUserId user.State.Id
 
-        {
-            user with
-                UncommittedEvents = user.UncommittedEvents @ [ userDeletedEvent :> IDomainEvent ]
-        }
+        { user with
+            UncommittedEvents = user.UncommittedEvents @ [ userDeletedEvent :> IDomainEvent ] }
 
     let getUncommittedEvents (user: ValidatedUser) : IDomainEvent list = user.UncommittedEvents
 
@@ -156,19 +144,17 @@ module User =
         | Some nameValue ->
             let oldName = user.State.Name
 
-            let updatedUserData = {
-                user.State with
+            let updatedUserData =
+                { user.State with
                     Name = nameValue.Trim()
-                    UpdatedAt = DateTime.UtcNow
-            }
+                    UpdatedAt = DateTime.UtcNow }
 
             let nameChangedEvent =
                 UserEvents.userUpdated actorUserId user.State.Id [ UserChange.NameChanged(oldName, nameValue.Trim()) ]
 
-            Ok {
-                State = updatedUserData
-                UncommittedEvents = user.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
-            }
+            Ok
+                { State = updatedUserData
+                  UncommittedEvents = user.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ] }
 
     let updateEmail
         (actorUserId: UserId)
@@ -181,19 +167,17 @@ module User =
             match Email.Create(Some user.State.Email) with
             | Error _ -> Error(ValidationError "Current user email is invalid")
             | Ok oldEmailObj ->
-                let updatedUserData = {
-                    user.State with
+                let updatedUserData =
+                    { user.State with
                         Email = newEmailObj.Value
-                        UpdatedAt = DateTime.UtcNow
-                }
+                        UpdatedAt = DateTime.UtcNow }
 
                 let emailChangedEvent =
                     UserEvents.userUpdated actorUserId user.State.Id [ EmailChanged(oldEmailObj, newEmailObj) ]
 
-                Ok {
-                    State = updatedUserData
-                    UncommittedEvents = user.UncommittedEvents @ [ emailChangedEvent :> IDomainEvent ]
-                }
+                Ok
+                    { State = updatedUserData
+                      UncommittedEvents = user.UncommittedEvents @ [ emailChangedEvent :> IDomainEvent ] }
 
     let updateProfilePic
         (actorUserId: UserId)
@@ -210,55 +194,49 @@ module User =
 
         match newProfilePicUrl with
         | None ->
-            let updatedUserData = {
-                user.State with
+            let updatedUserData =
+                { user.State with
                     ProfilePicUrl = None
-                    UpdatedAt = DateTime.UtcNow
-            }
+                    UpdatedAt = DateTime.UtcNow }
 
             let profilePicChangedEvent =
                 UserEvents.userUpdated actorUserId user.State.Id [ ProfilePicChanged(oldProfilePicUrl, None) ]
 
-            Ok {
-                State = updatedUserData
-                UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
-            }
+            Ok
+                { State = updatedUserData
+                  UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ] }
         | Some urlString ->
             match Url.Create(Some urlString) with
             | Error err -> Error err
             | Ok validUrl ->
 
-                let updatedUserData = {
-                    user.State with
+                let updatedUserData =
+                    { user.State with
                         ProfilePicUrl = Some(validUrl.Value)
-                        UpdatedAt = DateTime.UtcNow
-                }
+                        UpdatedAt = DateTime.UtcNow }
 
                 let profilePicChangedEvent =
-                    UserEvents.userUpdated actorUserId user.State.Id [
-                        ProfilePicChanged(oldProfilePicUrl, newProfilePicUrlObj)
-                    ]
+                    UserEvents.userUpdated
+                        actorUserId
+                        user.State.Id
+                        [ ProfilePicChanged(oldProfilePicUrl, newProfilePicUrlObj) ]
 
-                Ok {
-                    State = updatedUserData
-                    UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
-                }
+                Ok
+                    { State = updatedUserData
+                      UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ] }
 
     let removeProfilePicture (actorUserId: UserId) (user: ValidatedUser) : ValidatedUser =
         let oldProfilePicUrl =
             user.State.ProfilePicUrl
             |> Option.bind (fun url -> Url.Create(Some url) |> Result.toOption)
 
-        let updatedUserData = {
-            user.State with
+        let updatedUserData =
+            { user.State with
                 ProfilePicUrl = None
-                UpdatedAt = DateTime.UtcNow
-        }
+                UpdatedAt = DateTime.UtcNow }
 
         let profilePicChangedEvent =
             UserEvents.userUpdated actorUserId user.State.Id [ ProfilePicChanged(oldProfilePicUrl, None) ]
 
-        {
-            State = updatedUserData
-            UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ]
-        }
+        { State = updatedUserData
+          UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ] }

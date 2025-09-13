@@ -18,7 +18,10 @@ let ``Resource creation should generate ResourceCreatedEvent`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let urlParams = [ "userId", "123"; "format", "json" ]
-    let headers = [ "Authorization", "Bearer token"; "Content-Type", "application/json" ]
+
+    let headers =
+        [ "Authorization", "Bearer token"; "Content-Type", "application/json" ]
+
     let body = [ "name", "John Doe"; "email", "john@example.com" ]
 
     // Act
@@ -189,7 +192,8 @@ let ``Resource headers update should generate correct event`` () =
         Resource.create actorUserId "API Name" "Description" "https://api.example.com" [] initialHeaders [] "DELETE"
         |> unwrapResult
 
-    let newHeaders = [ "Authorization", "Bearer token"; "Content-Type", "application/json" ]
+    let newHeaders =
+        [ "Authorization", "Bearer token"; "Content-Type", "application/json" ]
 
     // Act
     let result = Resource.updateHeaders actorUserId newHeaders [] resource

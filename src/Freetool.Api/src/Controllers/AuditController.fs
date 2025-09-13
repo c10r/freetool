@@ -15,10 +15,11 @@ type AuditController(eventRepository: IEventRepository) =
     [<HttpGet("events")>]
     [<ProducesResponseType(typeof<PagedResult<EventData>>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
-    member this.GetAllEvents([<FromQuery>] filterDto: EventFilterDTO) : Task<IActionResult> = task {
-        match EventFilterValidator.validate filterDto with
-        | Ok filter ->
-            let! result = eventRepository.GetEventsAsync filter
-            return this.Ok(result) :> IActionResult
-        | Error errors -> return this.BadRequest errors :> IActionResult
-    }
+    member this.GetAllEvents([<FromQuery>] filterDto: EventFilterDTO) : Task<IActionResult> =
+        task {
+            match EventFilterValidator.validate filterDto with
+            | Ok filter ->
+                let! result = eventRepository.GetEventsAsync filter
+                return this.Ok(result) :> IActionResult
+            | Error errors -> return this.BadRequest errors :> IActionResult
+        }

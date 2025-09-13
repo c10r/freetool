@@ -13,49 +13,48 @@ open Freetool.Domain.Events
 [<Index([| "Name" |], IsUnique = true, Name = "IX_Resources_Name")>]
 // CLIMutable for EntityFramework
 [<CLIMutable>]
-type ResourceData = {
-    [<Key>]
-    Id: ResourceId
+type ResourceData =
+    { [<Key>]
+      Id: ResourceId
 
-    [<Required>]
-    [<MaxLength(100)>]
-    Name: ResourceName
+      [<Required>]
+      [<MaxLength(100)>]
+      Name: ResourceName
 
-    [<Required>]
-    [<MaxLength(500)>]
-    Description: ResourceDescription
+      [<Required>]
+      [<MaxLength(500)>]
+      Description: ResourceDescription
 
-    [<Required>]
-    [<MaxLength(10)>]
-    HttpMethod: HttpMethod
+      [<Required>]
+      [<MaxLength(10)>]
+      HttpMethod: HttpMethod
 
-    [<Required>]
-    [<MaxLength(1_000)>]
-    BaseUrl: BaseUrl
+      [<Required>]
+      [<MaxLength(1_000)>]
+      BaseUrl: BaseUrl
 
-    [<Required>]
-    [<Column(TypeName = "TEXT")>] // JSON string
-    UrlParameters: KeyValuePair list
+      [<Required>]
+      [<Column(TypeName = "TEXT")>] // JSON string
+      UrlParameters: KeyValuePair list
 
-    [<Required>]
-    [<Column(TypeName = "TEXT")>] // JSON string
-    Headers: KeyValuePair list
+      [<Required>]
+      [<Column(TypeName = "TEXT")>] // JSON string
+      Headers: KeyValuePair list
 
-    [<Required>]
-    [<Column(TypeName = "TEXT")>] // JSON string
-    Body: KeyValuePair list
+      [<Required>]
+      [<Column(TypeName = "TEXT")>] // JSON string
+      Body: KeyValuePair list
 
-    [<Required>]
-    [<JsonIgnore>]
-    CreatedAt: DateTime
+      [<Required>]
+      [<JsonIgnore>]
+      CreatedAt: DateTime
 
-    [<Required>]
-    [<JsonIgnore>]
-    UpdatedAt: DateTime
+      [<Required>]
+      [<JsonIgnore>]
+      UpdatedAt: DateTime
 
-    [<JsonIgnore>]
-    IsDeleted: bool
-}
+      [<JsonIgnore>]
+      IsDeleted: bool }
 
 type Resource = EventSourcingAggregate<ResourceData>
 
@@ -64,18 +63,16 @@ module ResourceAggregateHelpers =
 
     let implementsIEntity (resource: Resource) =
         { new IEntity<ResourceId> with
-            member _.Id = resource.State.Id
-        }
+            member _.Id = resource.State.Id }
 
 // Type aliases for clarity
 type UnvalidatedResource = Resource // From DTOs - potentially unsafe
 type ValidatedResource = Resource // Validated domain model and database data
 
 module Resource =
-    let fromData (resourceData: ResourceData) : ValidatedResource = {
-        State = resourceData
-        UncommittedEvents = []
-    }
+    let fromData (resourceData: ResourceData) : ValidatedResource =
+        { State = resourceData
+          UncommittedEvents = [] }
 
     let create
         (actorUserId: UserId)
@@ -126,19 +123,18 @@ module Resource =
                                 match HttpMethod.Create(httpMethod) with
                                 | Error err -> Error err
                                 | Ok validHttpMethod ->
-                                    let resourceData = {
-                                        Id = ResourceId.NewId()
-                                        Name = validName
-                                        Description = validDescription
-                                        HttpMethod = validHttpMethod
-                                        BaseUrl = validBaseUrl
-                                        UrlParameters = validUrlParams
-                                        Headers = validHeaders
-                                        Body = validBody
-                                        CreatedAt = DateTime.UtcNow
-                                        UpdatedAt = DateTime.UtcNow
-                                        IsDeleted = false
-                                    }
+                                    let resourceData =
+                                        { Id = ResourceId.NewId()
+                                          Name = validName
+                                          Description = validDescription
+                                          HttpMethod = validHttpMethod
+                                          BaseUrl = validBaseUrl
+                                          UrlParameters = validUrlParams
+                                          Headers = validHeaders
+                                          Body = validBody
+                                          CreatedAt = DateTime.UtcNow
+                                          UpdatedAt = DateTime.UtcNow
+                                          IsDeleted = false }
 
                                     let resourceCreatedEvent =
                                         ResourceEvents.resourceCreated
@@ -152,10 +148,9 @@ module Resource =
                                             validBody
                                             validHttpMethod
 
-                                    Ok {
-                                        State = resourceData
-                                        UncommittedEvents = [ resourceCreatedEvent :> IDomainEvent ]
-                                    }
+                                    Ok
+                                        { State = resourceData
+                                          UncommittedEvents = [ resourceCreatedEvent :> IDomainEvent ] }
 
     let updateName
         (actorUserId: UserId)
@@ -167,21 +162,20 @@ module Resource =
         | Ok validName ->
             let oldName = resource.State.Name
 
-            let updatedResourceData = {
-                resource.State with
+            let updatedResourceData =
+                { resource.State with
                     Name = validName
-                    UpdatedAt = DateTime.UtcNow
-            }
+                    UpdatedAt = DateTime.UtcNow }
 
             let nameChangedEvent =
-                ResourceEvents.resourceUpdated actorUserId resource.State.Id [
-                    ResourceChange.NameChanged(oldName, validName)
-                ]
+                ResourceEvents.resourceUpdated
+                    actorUserId
+                    resource.State.Id
+                    [ ResourceChange.NameChanged(oldName, validName) ]
 
-            Ok {
-                State = updatedResourceData
-                UncommittedEvents = resource.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
-            }
+            Ok
+                { State = updatedResourceData
+                  UncommittedEvents = resource.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ] }
 
     let updateDescription
         (actorUserId: UserId)
@@ -193,21 +187,20 @@ module Resource =
         | Ok validDescription ->
             let oldDescription = resource.State.Description
 
-            let updatedResourceData = {
-                resource.State with
+            let updatedResourceData =
+                { resource.State with
                     Description = validDescription
-                    UpdatedAt = DateTime.UtcNow
-            }
+                    UpdatedAt = DateTime.UtcNow }
 
             let descriptionChangedEvent =
-                ResourceEvents.resourceUpdated actorUserId resource.State.Id [
-                    ResourceChange.DescriptionChanged(oldDescription, validDescription)
-                ]
+                ResourceEvents.resourceUpdated
+                    actorUserId
+                    resource.State.Id
+                    [ ResourceChange.DescriptionChanged(oldDescription, validDescription) ]
 
-            Ok {
-                State = updatedResourceData
-                UncommittedEvents = resource.UncommittedEvents @ [ descriptionChangedEvent :> IDomainEvent ]
-            }
+            Ok
+                { State = updatedResourceData
+                  UncommittedEvents = resource.UncommittedEvents @ [ descriptionChangedEvent :> IDomainEvent ] }
 
     let updateBaseUrl
         (actorUserId: UserId)
@@ -219,21 +212,20 @@ module Resource =
         | Ok validBaseUrl ->
             let oldBaseUrl = resource.State.BaseUrl
 
-            let updatedResourceData = {
-                resource.State with
+            let updatedResourceData =
+                { resource.State with
                     BaseUrl = validBaseUrl
-                    UpdatedAt = DateTime.UtcNow
-            }
+                    UpdatedAt = DateTime.UtcNow }
 
             let baseUrlChangedEvent =
-                ResourceEvents.resourceUpdated actorUserId resource.State.Id [
-                    ResourceChange.BaseUrlChanged(oldBaseUrl, validBaseUrl)
-                ]
+                ResourceEvents.resourceUpdated
+                    actorUserId
+                    resource.State.Id
+                    [ ResourceChange.BaseUrlChanged(oldBaseUrl, validBaseUrl) ]
 
-            Ok {
-                State = updatedResourceData
-                UncommittedEvents = resource.UncommittedEvents @ [ baseUrlChangedEvent :> IDomainEvent ]
-            }
+            Ok
+                { State = updatedResourceData
+                  UncommittedEvents = resource.UncommittedEvents @ [ baseUrlChangedEvent :> IDomainEvent ] }
 
     let private checkAppConflicts
         (apps: AppResourceConflictData list)
@@ -270,21 +262,20 @@ module Resource =
             | Ok() ->
                 let oldUrlParams = resource.State.UrlParameters
 
-                let updatedResourceData = {
-                    resource.State with
+                let updatedResourceData =
+                    { resource.State with
                         UrlParameters = validUrlParams
-                        UpdatedAt = DateTime.UtcNow
-                }
+                        UpdatedAt = DateTime.UtcNow }
 
                 let urlParamsChangedEvent =
-                    ResourceEvents.resourceUpdated actorUserId resource.State.Id [
-                        ResourceChange.UrlParametersChanged(oldUrlParams, validUrlParams)
-                    ]
+                    ResourceEvents.resourceUpdated
+                        actorUserId
+                        resource.State.Id
+                        [ ResourceChange.UrlParametersChanged(oldUrlParams, validUrlParams) ]
 
-                Ok {
-                    State = updatedResourceData
-                    UncommittedEvents = resource.UncommittedEvents @ [ urlParamsChangedEvent :> IDomainEvent ]
-                }
+                Ok
+                    { State = updatedResourceData
+                      UncommittedEvents = resource.UncommittedEvents @ [ urlParamsChangedEvent :> IDomainEvent ] }
 
     let updateHeaders
         (actorUserId: UserId)
@@ -313,21 +304,20 @@ module Resource =
             | Ok() ->
                 let oldHeaders = resource.State.Headers
 
-                let updatedResourceData = {
-                    resource.State with
+                let updatedResourceData =
+                    { resource.State with
                         Headers = validHeaders
-                        UpdatedAt = DateTime.UtcNow
-                }
+                        UpdatedAt = DateTime.UtcNow }
 
                 let headersChangedEvent =
-                    ResourceEvents.resourceUpdated actorUserId resource.State.Id [
-                        ResourceChange.HeadersChanged(oldHeaders, validHeaders)
-                    ]
+                    ResourceEvents.resourceUpdated
+                        actorUserId
+                        resource.State.Id
+                        [ ResourceChange.HeadersChanged(oldHeaders, validHeaders) ]
 
-                Ok {
-                    State = updatedResourceData
-                    UncommittedEvents = resource.UncommittedEvents @ [ headersChangedEvent :> IDomainEvent ]
-                }
+                Ok
+                    { State = updatedResourceData
+                      UncommittedEvents = resource.UncommittedEvents @ [ headersChangedEvent :> IDomainEvent ] }
 
     let updateBody
         (actorUserId: UserId)
@@ -356,37 +346,32 @@ module Resource =
             | Ok() ->
                 let oldBody = resource.State.Body
 
-                let updatedResourceData = {
-                    resource.State with
+                let updatedResourceData =
+                    { resource.State with
                         Body = validBody
-                        UpdatedAt = DateTime.UtcNow
-                }
+                        UpdatedAt = DateTime.UtcNow }
 
                 let bodyChangedEvent =
-                    ResourceEvents.resourceUpdated actorUserId resource.State.Id [
-                        ResourceChange.BodyChanged(oldBody, validBody)
-                    ]
+                    ResourceEvents.resourceUpdated
+                        actorUserId
+                        resource.State.Id
+                        [ ResourceChange.BodyChanged(oldBody, validBody) ]
 
-                Ok {
-                    State = updatedResourceData
-                    UncommittedEvents = resource.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ]
-                }
+                Ok
+                    { State = updatedResourceData
+                      UncommittedEvents = resource.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ] }
 
     let markForDeletion (actorUserId: UserId) (resource: ValidatedResource) : ValidatedResource =
         let resourceDeletedEvent =
             ResourceEvents.resourceDeleted actorUserId resource.State.Id
 
-        {
-            resource with
-                UncommittedEvents = resource.UncommittedEvents @ [ resourceDeletedEvent :> IDomainEvent ]
-        }
+        { resource with
+            UncommittedEvents = resource.UncommittedEvents @ [ resourceDeletedEvent :> IDomainEvent ] }
 
     let getUncommittedEvents (resource: ValidatedResource) : IDomainEvent list = resource.UncommittedEvents
 
-    let markEventsAsCommitted (resource: ValidatedResource) : ValidatedResource = {
-        resource with
-            UncommittedEvents = []
-    }
+    let markEventsAsCommitted (resource: ValidatedResource) : ValidatedResource =
+        { resource with UncommittedEvents = [] }
 
     let getId (resource: Resource) : ResourceId = resource.State.Id
 
@@ -411,8 +396,7 @@ module Resource =
 
     let getUpdatedAt (resource: Resource) : DateTime = resource.State.UpdatedAt
 
-    let toConflictData (resource: Resource) : ResourceAppConflictData = {
-        UrlParameters = getUrlParameters resource
-        Headers = getHeaders resource
-        Body = getBody resource
-    }
+    let toConflictData (resource: Resource) : ResourceAppConflictData =
+        { UrlParameters = getUrlParameters resource
+          Headers = getHeaders resource
+          Body = getBody resource }

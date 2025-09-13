@@ -2,28 +2,25 @@ namespace Freetool.Application.DTOs
 
 open System.ComponentModel.DataAnnotations
 
-type RunInputDto = {
-    [<Required>]
-    [<StringLength(ValidationConstants.InputTitleMaxLength,
-                   MinimumLength = ValidationConstants.InputTitleMinLength,
-                   ErrorMessage = ValidationConstants.InputTitleErrorMessage)>]
-    Title: string
+type RunInputDto =
+    { [<Required>]
+      [<StringLength(ValidationConstants.InputTitleMaxLength,
+                     MinimumLength = ValidationConstants.InputTitleMinLength,
+                     ErrorMessage = ValidationConstants.InputTitleErrorMessage)>]
+      Title: string
 
-    [<Required>]
-    [<StringLength(ValidationConstants.InputValueMaxLength, ErrorMessage = ValidationConstants.InputValueErrorMessage)>]
-    Value: string
-}
+      [<Required>]
+      [<StringLength(ValidationConstants.InputValueMaxLength, ErrorMessage = ValidationConstants.InputValueErrorMessage)>]
+      Value: string }
 
-type CreateRunDto = {
-    [<Required>]
-    InputValues: RunInputDto list
-}
+type CreateRunDto =
+    { [<Required>]
+      InputValues: RunInputDto list }
 
 // Output DTOs
-type ExecutableHttpRequestDto = {
-    BaseUrl: string
-    UrlParameters: KeyValuePairDto list
-    Headers: KeyValuePairDto list
-    Body: KeyValuePairDto list
-    HttpMethod: string
-}
+type ExecutableHttpRequestDto =
+    { BaseUrl: string
+      UrlParameters: KeyValuePairDto list
+      Headers: KeyValuePairDto list
+      Body: KeyValuePairDto list
+      HttpMethod: string }

@@ -71,17 +71,15 @@ let ``Group creation with name exceeding 100 characters should fail`` () =
 [<Fact>]
 let ``Group validation should trim name and succeed`` () =
     // Arrange
-    let group = {
-        State = {
-            Id = GroupId.NewId()
-            Name = "  Marketing Team  "
-            CreatedAt = DateTime.UtcNow
-            UpdatedAt = DateTime.UtcNow
-            IsDeleted = false
-            UserIds = []
-        }
-        UncommittedEvents = []
-    }
+    let group =
+        { State =
+            { Id = GroupId.NewId()
+              Name = "  Marketing Team  "
+              CreatedAt = DateTime.UtcNow
+              UpdatedAt = DateTime.UtcNow
+              IsDeleted = false
+              UserIds = [] }
+          UncommittedEvents = [] }
 
     // Act
     let result = Group.validate group
@@ -298,14 +296,13 @@ let ``Mark group for deletion should generate GroupDeletedEvent`` () =
 [<Fact>]
 let ``Group created from data should have no uncommitted events`` () =
     // Arrange
-    let groupData = {
-        Id = GroupId.NewId()
-        Name = "Test Group"
-        CreatedAt = DateTime.UtcNow
-        UpdatedAt = DateTime.UtcNow
-        IsDeleted = false
-        UserIds = []
-    }
+    let groupData =
+        { Id = GroupId.NewId()
+          Name = "Test Group"
+          CreatedAt = DateTime.UtcNow
+          UpdatedAt = DateTime.UtcNow
+          IsDeleted = false
+          UserIds = [] }
 
     // Act
     let group = Group.fromData groupData
@@ -445,17 +442,16 @@ let ``Group validation with duplicate UserIds should remove duplicates`` () =
     let user1 = UserId.NewId()
     let user2 = UserId.NewId()
 
-    let group = {
-        State = {
-            Id = GroupId.NewId()
-            Name = "Test Team"
-            CreatedAt = DateTime.UtcNow
-            UpdatedAt = DateTime.UtcNow
-            IsDeleted = false
-            UserIds = [ user1; user2; user1; user2 ] // Duplicates for testing
-        }
-        UncommittedEvents = []
-    }
+    let group =
+        { State =
+            { Id = GroupId.NewId()
+              Name = "Test Team"
+              CreatedAt = DateTime.UtcNow
+              UpdatedAt = DateTime.UtcNow
+              IsDeleted = false
+              UserIds = [ user1; user2; user1; user2 ] // Duplicates for testing
+            }
+          UncommittedEvents = [] }
 
     // Act
     let result = Group.validate group

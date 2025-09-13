@@ -61,20 +61,18 @@ module ValidationConstants =
     let URLErrorMessage = "URL cannot exceed 2000 characters"
 
 
-type PagedResult<'T> = {
-    Items: 'T list
-    TotalCount: int
-    Skip: int
-    Take: int
-}
+type PagedResult<'T> =
+    { Items: 'T list
+      TotalCount: int
+      Skip: int
+      Take: int }
 
-type InputDto = {
-    [<Required>]
-    [<StringLength(ValidationConstants.InputTitleMaxLength,
-                   MinimumLength = ValidationConstants.InputTitleMinLength,
-                   ErrorMessage = ValidationConstants.InputTitleErrorMessage)>]
-    Title: string
+type InputDto =
+    { [<Required>]
+      [<StringLength(ValidationConstants.InputTitleMaxLength,
+                     MinimumLength = ValidationConstants.InputTitleMinLength,
+                     ErrorMessage = ValidationConstants.InputTitleErrorMessage)>]
+      Title: string
 
-    [<Required>]
-    Type: InputTypeDto
-}
+      [<Required>]
+      Type: InputTypeDto }

@@ -113,10 +113,9 @@ module RequestComposer =
                     | Error error -> Error error
                     | Ok body ->
                         // Return composed ExecutableHttpRequest
-                        Ok {
-                            BaseUrl = composedBaseUrl
-                            UrlParameters = urlParams
-                            Headers = headers
-                            Body = body
-                            HttpMethod = httpMethod
-                        }
+                        Ok
+                            { BaseUrl = composedBaseUrl
+                              UrlParameters = urlParams
+                              Headers = headers
+                              Body = body
+                              HttpMethod = httpMethod }

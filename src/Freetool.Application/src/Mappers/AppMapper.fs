@@ -65,34 +65,30 @@ module AppMapper =
             | Ok inputType -> inputType
             | Error _ -> failwith "Invalid MultiInteger configuration"
 
-    let inputToDto (input: Input) : AppInputDto = {
-        Input = {
-            Title = input.Title
-            Type = inputTypeToDtoType input.Type
-        }
-        Required = input.Required
-    }
+    let inputToDto (input: Input) : AppInputDto =
+        { Input =
+            { Title = input.Title
+              Type = inputTypeToDtoType input.Type }
+          Required = input.Required }
 
-    let inputFromDto (inputDto: AppInputDto) : Input = {
-        Title = inputDto.Input.Title
-        Type = inputTypeFromDtoType inputDto.Input.Type
-        Required = inputDto.Required
-    }
+    let inputFromDto (inputDto: AppInputDto) : Input =
+        { Title = inputDto.Input.Title
+          Type = inputTypeFromDtoType inputDto.Input.Type
+          Required = inputDto.Required }
 
     let keyValuePairToDto (kvp: KeyValuePair) : KeyValuePairDto = { Key = kvp.Key; Value = kvp.Value }
 
     let keyValuePairFromDto (dto: KeyValuePairDto) : (string * string) = (dto.Key, dto.Value)
 
-    type CreateAppRequest = {
-        Name: string
-        FolderId: string
-        ResourceId: string
-        Inputs: Input list
-        UrlPath: string option
-        UrlParameters: (string * string) list
-        Headers: (string * string) list
-        Body: (string * string) list
-    }
+    type CreateAppRequest =
+        { Name: string
+          FolderId: string
+          ResourceId: string
+          Inputs: Input list
+          UrlPath: string option
+          UrlParameters: (string * string) list
+          Headers: (string * string) list
+          Body: (string * string) list }
 
     let fromCreateDto (dto: CreateAppDto) : CreateAppRequest =
         let inputs = dto.Inputs |> List.map inputFromDto
@@ -100,34 +96,27 @@ module AppMapper =
         let headers = dto.Headers |> List.map keyValuePairFromDto
         let body = dto.Body |> List.map keyValuePairFromDto
 
-        {
-            Name = dto.Name
-            FolderId = dto.FolderId
-            ResourceId = dto.ResourceId
-            Inputs = inputs
-            UrlPath = dto.UrlPath
-            UrlParameters = urlParameters
-            Headers = headers
-            Body = body
-        }
+        { Name = dto.Name
+          FolderId = dto.FolderId
+          ResourceId = dto.ResourceId
+          Inputs = inputs
+          UrlPath = dto.UrlPath
+          UrlParameters = urlParameters
+          Headers = headers
+          Body = body }
 
-    let fromUpdateNameDto (dto: UpdateAppNameDto) (app: ValidatedApp) : UnvalidatedApp = {
-        State = {
-            app.State with
+    let fromUpdateNameDto (dto: UpdateAppNameDto) (app: ValidatedApp) : UnvalidatedApp =
+        { State =
+            { app.State with
                 Name = dto.Name
-                UpdatedAt = DateTime.UtcNow
-        }
-        UncommittedEvents = app.UncommittedEvents
-    }
+                UpdatedAt = DateTime.UtcNow }
+          UncommittedEvents = app.UncommittedEvents }
 
     let fromUpdateInputsDto (dto: UpdateAppInputsDto) (app: ValidatedApp) : UnvalidatedApp =
         let inputs = dto.Inputs |> List.map inputFromDto
 
-        {
-            State = {
-                app.State with
-                    Inputs = inputs
-                    UpdatedAt = DateTime.UtcNow
-            }
-            UncommittedEvents = app.UncommittedEvents
-        }
+        { State =
+            { app.State with
+                Inputs = inputs
+                UpdatedAt = DateTime.UtcNow }
+          UncommittedEvents = app.UncommittedEvents }

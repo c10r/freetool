@@ -11,13 +11,12 @@ type DomainError =
 type IEntity<'TId> =
     abstract member Id: 'TId
 
-type ExecutableHttpRequest = {
-    BaseUrl: string
-    UrlParameters: (string * string) list
-    Headers: (string * string) list
-    Body: (string * string) list
-    HttpMethod: string
-}
+type ExecutableHttpRequest =
+    { BaseUrl: string
+      UrlParameters: (string * string) list
+      Headers: (string * string) list
+      Body: (string * string) list
+      HttpMethod: string }
 
 // CLIMutable for EntityFramework
 [<CLIMutable>]

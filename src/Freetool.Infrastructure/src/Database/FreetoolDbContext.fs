@@ -133,16 +133,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                 )
 
             // Explicit property configuration to help with constructor binding
-            entity
-                .Property(fun f -> f.Id)
-                .HasColumnName("Id")
-                .HasConversion(folderIdConverter)
+            entity.Property(fun f -> f.Id).HasColumnName("Id").HasConversion(folderIdConverter)
             |> ignore
 
-            entity
-                .Property(fun f -> f.Name)
-                .HasColumnName("Name")
-                .HasConversion(folderNameConverter)
+            entity.Property(fun f -> f.Name).HasColumnName("Name").HasConversion(folderNameConverter)
             |> ignore
 
             entity.Property(fun f -> f.CreatedAt).HasColumnName("CreatedAt") |> ignore
@@ -213,25 +207,18 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                                 )
 
                             deserialized
-                            |> List.map (fun item -> {
-                                Freetool.Domain.RunInputValue.Title = item.Title
-                                Freetool.Domain.RunInputValue.Value = item.Value
-                            }))
+                            |> List.map (fun item ->
+                                { Freetool.Domain.RunInputValue.Title = item.Title
+                                  Freetool.Domain.RunInputValue.Value = item.Value }))
                 )
 
-            entity
-                .Property(fun r -> r.InputValues)
-                .HasConversion(runInputValueListConverter)
+            entity.Property(fun r -> r.InputValues).HasConversion(runInputValueListConverter)
             |> ignore
 
-            entity
-                .Property(fun r -> r.StartedAt)
-                .HasConversion<System.Nullable<DateTime>>(optionDateTimeConverter)
+            entity.Property(fun r -> r.StartedAt).HasConversion<System.Nullable<DateTime>>(optionDateTimeConverter)
             |> ignore
 
-            entity
-                .Property(fun r -> r.CompletedAt)
-                .HasConversion<System.Nullable<DateTime>>(optionDateTimeConverter)
+            entity.Property(fun r -> r.CompletedAt).HasConversion<System.Nullable<DateTime>>(optionDateTimeConverter)
             |> ignore
 
             entity.HasOne<AppData>().WithMany().HasForeignKey(fun r -> r.AppId :> obj)
@@ -307,9 +294,7 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun r -> r.Id).HasConversion(resourceIdConverter) |> ignore
             entity.Property(fun r -> r.Name).HasConversion(resourceNameConverter) |> ignore
 
-            entity
-                .Property(fun r -> r.Description)
-                .HasConversion(resourceDescriptionConverter)
+            entity.Property(fun r -> r.Description).HasConversion(resourceDescriptionConverter)
             |> ignore
 
             entity.Property(fun r -> r.HttpMethod).HasConversion(httpMethodConverter)
@@ -317,9 +302,7 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
             entity.Property(fun r -> r.BaseUrl).HasConversion(baseUrlConverter) |> ignore
 
-            entity
-                .Property(fun r -> r.UrlParameters)
-                .HasConversion(keyValuePairListConverter)
+            entity.Property(fun r -> r.UrlParameters).HasConversion(keyValuePairListConverter)
             |> ignore
 
             entity.Property(fun r -> r.Headers).HasConversion(keyValuePairListConverter)
@@ -358,10 +341,7 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
             entity.Property(fun a -> a.FolderId).HasConversion(folderIdConverter) |> ignore
 
-            entity
-                .Property(fun a -> a.ResourceId)
-                .HasColumnName("ResourceId")
-                .HasConversion(resourceIdConverter)
+            entity.Property(fun a -> a.ResourceId).HasColumnName("ResourceId").HasConversion(resourceIdConverter)
             |> ignore
 
             entity.Property(fun a -> a.CreatedAt).HasColumnName("CreatedAt") |> ignore
@@ -372,22 +352,19 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             let serializeInputs (inputs: Freetool.Domain.Events.Input list) =
                 let serializable =
                     inputs
-                    |> List.map (fun input -> {|
-                        Title = input.Title
-                        Type = input.Type.ToString()
-                        Required = input.Required
-                    |})
+                    |> List.map (fun input ->
+                        {| Title = input.Title
+                           Type = input.Type.ToString()
+                           Required = input.Required |})
 
                 System.Text.Json.JsonSerializer.Serialize(serializable)
 
             let deserializeInputs (json: string) =
                 let deserialized =
                     System.Text.Json.JsonSerializer.Deserialize<
-                        {|
-                            Title: string
-                            Type: string
-                            Required: bool
-                        |} list
+                        {| Title: string
+                           Type: string
+                           Required: bool |} list
                      >(
                         json
                     )
@@ -415,11 +392,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                             )
 
                     match inputType with
-                    | Ok validInputType -> {
-                        Freetool.Domain.Events.Input.Title = item.Title
-                        Freetool.Domain.Events.Input.Type = validInputType
-                        Freetool.Domain.Events.Input.Required = item.Required
-                      }
+                    | Ok validInputType ->
+                        { Freetool.Domain.Events.Input.Title = item.Title
+                          Freetool.Domain.Events.Input.Type = validInputType
+                          Freetool.Domain.Events.Input.Required = item.Required }
                     | Error _ -> failwith $"Invalid InputType in database: {item.Type}")
 
             let inputListConverter =
@@ -472,9 +448,7 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun a -> a.UrlPath).HasConversion(optionStringConverter)
             |> ignore
 
-            entity
-                .Property(fun a -> a.UrlParameters)
-                .HasConversion(keyValuePairListConverter)
+            entity.Property(fun a -> a.UrlParameters).HasConversion(keyValuePairListConverter)
             |> ignore
 
             entity.Property(fun a -> a.Headers).HasConversion(keyValuePairListConverter)
@@ -517,16 +491,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun e -> e.Id).HasColumnName("Id") |> ignore
             entity.Property(fun e -> e.EventId).HasColumnName("EventId") |> ignore
 
-            entity
-                .Property(fun e -> e.EventType)
-                .HasColumnName("EventType")
-                .HasConversion(eventTypeConverter)
+            entity.Property(fun e -> e.EventType).HasColumnName("EventType").HasConversion(eventTypeConverter)
             |> ignore
 
-            entity
-                .Property(fun e -> e.EntityType)
-                .HasColumnName("EntityType")
-                .HasConversion(entityTypeConverter)
+            entity.Property(fun e -> e.EntityType).HasColumnName("EntityType").HasConversion(entityTypeConverter)
             |> ignore
 
             entity.Property(fun e -> e.EntityId).HasColumnName("EntityId") |> ignore
@@ -545,10 +513,7 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                 )
 
             // Explicit property configuration to help with constructor binding
-            entity
-                .Property(fun g -> g.Id)
-                .HasColumnName("Id")
-                .HasConversion(groupIdConverter)
+            entity.Property(fun g -> g.Id).HasColumnName("Id").HasConversion(groupIdConverter)
             |> ignore
 
             entity.Property(fun g -> g.Name).HasColumnName("Name") |> ignore

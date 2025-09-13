@@ -215,12 +215,11 @@ module FolderHandler =
                     let! folders = folderRepository.GetRootFoldersAsync skip take
                     let! totalCount = folderRepository.GetRootCountAsync()
 
-                    let result = {
-                        Items = folders |> List.map (fun folder -> folder.State)
-                        TotalCount = totalCount
-                        Skip = skip
-                        Take = take
-                    }
+                    let result =
+                        { Items = folders |> List.map (fun folder -> folder.State)
+                          TotalCount = totalCount
+                          Skip = skip
+                          Take = take }
 
                     return Ok(FoldersResult result)
 
@@ -233,12 +232,11 @@ module FolderHandler =
                     let! folders = folderRepository.GetAllAsync skip take
                     let! totalCount = folderRepository.GetCountAsync()
 
-                    let result = {
-                        Items = folders |> List.map (fun folder -> folder.State)
-                        TotalCount = totalCount
-                        Skip = skip
-                        Take = take
-                    }
+                    let result =
+                        { Items = folders |> List.map (fun folder -> folder.State)
+                          TotalCount = totalCount
+                          Skip = skip
+                          Take = take }
 
                     return Ok(FoldersResult result)
         }

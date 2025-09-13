@@ -17,23 +17,18 @@ module GroupMapper =
                 | false, _ -> None)
             |> List.distinct
 
-        {
-            State = {
-                Id = GroupId.NewId()
-                Name = dto.Name
-                CreatedAt = DateTime.UtcNow
-                UpdatedAt = DateTime.UtcNow
-                IsDeleted = false
-                UserIds = userIds
-            }
-            UncommittedEvents = []
-        }
+        { State =
+            { Id = GroupId.NewId()
+              Name = dto.Name
+              CreatedAt = DateTime.UtcNow
+              UpdatedAt = DateTime.UtcNow
+              IsDeleted = false
+              UserIds = userIds }
+          UncommittedEvents = [] }
 
-    let fromUpdateNameDto (dto: UpdateGroupNameDto) (group: ValidatedGroup) : UnvalidatedGroup = {
-        State = {
-            group.State with
+    let fromUpdateNameDto (dto: UpdateGroupNameDto) (group: ValidatedGroup) : UnvalidatedGroup =
+        { State =
+            { group.State with
                 Name = dto.Name
-                UpdatedAt = DateTime.UtcNow
-        }
-        UncommittedEvents = []
-    }
+                UpdatedAt = DateTime.UtcNow }
+          UncommittedEvents = [] }

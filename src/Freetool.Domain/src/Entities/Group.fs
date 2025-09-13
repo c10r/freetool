@@ -13,49 +13,47 @@ open Freetool.Domain.Events
 [<Index([| "Name" |], IsUnique = true, Name = "IX_Groups_Name")>]
 // CLIMutable for EntityFramework
 [<CLIMutable>]
-type GroupData = {
-    [<Key>]
-    Id: GroupId
+type GroupData =
+    { [<Key>]
+      Id: GroupId
 
-    [<Required>]
-    [<MaxLength(100)>]
-    Name: string
+      [<Required>]
+      [<MaxLength(100)>]
+      Name: string
 
-    [<Required>]
-    [<JsonIgnore>]
-    CreatedAt: DateTime
+      [<Required>]
+      [<JsonIgnore>]
+      CreatedAt: DateTime
 
-    [<Required>]
-    [<JsonIgnore>]
-    UpdatedAt: DateTime
+      [<Required>]
+      [<JsonIgnore>]
+      UpdatedAt: DateTime
 
-    [<JsonIgnore>]
-    IsDeleted: bool
+      [<JsonIgnore>]
+      IsDeleted: bool
 
-    [<NotMapped>]
-    [<JsonPropertyName("userIds")>]
-    mutable UserIds: UserId list
-}
+      [<NotMapped>]
+      [<JsonPropertyName("userIds")>]
+      mutable UserIds: UserId list }
 
 // Junction entity for many-to-many relationship
 [<Table("UserGroups")>]
 [<Index([| "UserId"; "GroupId" |], IsUnique = true, Name = "IX_UserGroups_UserId_GroupId")>]
 // CLIMutable for EntityFramework
 [<CLIMutable>]
-type UserGroupData = {
-    [<Key>]
-    Id: Guid
+type UserGroupData =
+    { [<Key>]
+      Id: Guid
 
-    [<Required>]
-    UserId: UserId
+      [<Required>]
+      UserId: UserId
 
-    [<Required>]
-    GroupId: GroupId
+      [<Required>]
+      GroupId: GroupId
 
-    [<Required>]
-    [<JsonIgnore>]
-    CreatedAt: DateTime
-}
+      [<Required>]
+      [<JsonIgnore>]
+      CreatedAt: DateTime }
 
 type Group = EventSourcingAggregate<GroupData>
 
@@ -64,8 +62,7 @@ module GroupAggregateHelpers =
 
     let implementsIEntity (group: Group) =
         { new IEntity<GroupId> with
-            member _.Id = group.State.Id
-        }
+            member _.Id = group.State.Id }
 
 // Type aliases for clarity
 type UnvalidatedGroup = Group // From DTOs - potentially unsafe
@@ -84,27 +81,24 @@ module Group =
             // Handle userIds - remove duplicates and default to empty list if None
             let validatedUserIds = userIds |> Option.defaultValue [] |> List.distinct
 
-            let groupData = {
-                Id = GroupId.NewId()
-                Name = nameValue.Trim()
-                CreatedAt = DateTime.UtcNow
-                UpdatedAt = DateTime.UtcNow
-                IsDeleted = false
-                UserIds = validatedUserIds
-            }
+            let groupData =
+                { Id = GroupId.NewId()
+                  Name = nameValue.Trim()
+                  CreatedAt = DateTime.UtcNow
+                  UpdatedAt = DateTime.UtcNow
+                  IsDeleted = false
+                  UserIds = validatedUserIds }
 
             let groupCreatedEvent =
                 GroupEvents.groupCreated actorUserId groupData.Id groupData.Name validatedUserIds
 
-            Ok {
-                State = groupData
-                UncommittedEvents = [ groupCreatedEvent :> IDomainEvent ]
-            }
+            Ok
+                { State = groupData
+                  UncommittedEvents = [ groupCreatedEvent :> IDomainEvent ] }
 
-    let fromData (groupData: GroupData) : ValidatedGroup = {
-        State = groupData
-        UncommittedEvents = []
-    }
+    let fromData (groupData: GroupData) : ValidatedGroup =
+        { State = groupData
+          UncommittedEvents = [] }
 
     let validate (group: UnvalidatedGroup) : Result<ValidatedGroup, DomainError> =
         let groupData = group.State
@@ -116,16 +110,14 @@ module Group =
             // Remove duplicates from UserIds
             let distinctUserIds = groupData.UserIds |> List.distinct
 
-            let updatedGroupData = {
-                groupData with
+            let updatedGroupData =
+                { groupData with
                     Name = nameValue.Trim()
-                    UserIds = distinctUserIds
-            }
+                    UserIds = distinctUserIds }
 
-            Ok {
-                State = updatedGroupData
-                UncommittedEvents = group.UncommittedEvents
-            }
+            Ok
+                { State = updatedGroupData
+                  UncommittedEvents = group.UncommittedEvents }
 
     let updateName
         (actorUserId: UserId)
@@ -142,39 +134,36 @@ module Group =
             if oldName = trimmedName then
                 Ok group // No change needed
             else
-                let updatedGroupData = {
-                    group.State with
+                let updatedGroupData =
+                    { group.State with
                         Name = trimmedName
-                        UpdatedAt = DateTime.UtcNow
-                }
+                        UpdatedAt = DateTime.UtcNow }
 
                 let nameChangedEvent =
-                    GroupEvents.groupUpdated actorUserId group.State.Id [
-                        GroupChange.NameChanged(oldName, trimmedName)
-                    ]
+                    GroupEvents.groupUpdated
+                        actorUserId
+                        group.State.Id
+                        [ GroupChange.NameChanged(oldName, trimmedName) ]
 
-                Ok {
-                    State = updatedGroupData
-                    UncommittedEvents = group.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ]
-                }
+                Ok
+                    { State = updatedGroupData
+                      UncommittedEvents = group.UncommittedEvents @ [ nameChangedEvent :> IDomainEvent ] }
 
     let addUser (actorUserId: UserId) (userId: UserId) (group: ValidatedGroup) : Result<ValidatedGroup, DomainError> =
         if List.contains userId group.State.UserIds then
             Error(Conflict "User is already a member of this group")
         else
-            let updatedGroupData = {
-                group.State with
+            let updatedGroupData =
+                { group.State with
                     UpdatedAt = DateTime.UtcNow
-                    UserIds = userId :: group.State.UserIds
-            }
+                    UserIds = userId :: group.State.UserIds }
 
             let userAddedEvent =
                 GroupEvents.groupUpdated actorUserId group.State.Id [ GroupChange.UserAdded(userId) ]
 
-            Ok {
-                State = updatedGroupData
-                UncommittedEvents = group.UncommittedEvents @ [ userAddedEvent :> IDomainEvent ]
-            }
+            Ok
+                { State = updatedGroupData
+                  UncommittedEvents = group.UncommittedEvents @ [ userAddedEvent :> IDomainEvent ] }
 
     let removeUser
         (actorUserId: UserId)
@@ -184,27 +173,23 @@ module Group =
         if not (List.contains userId group.State.UserIds) then
             Error(NotFound "User is not a member of this group")
         else
-            let updatedGroupData = {
-                group.State with
+            let updatedGroupData =
+                { group.State with
                     UpdatedAt = DateTime.UtcNow
-                    UserIds = List.filter (fun id -> id <> userId) group.State.UserIds
-            }
+                    UserIds = List.filter (fun id -> id <> userId) group.State.UserIds }
 
             let userRemovedEvent =
                 GroupEvents.groupUpdated actorUserId group.State.Id [ GroupChange.UserRemoved(userId) ]
 
-            Ok {
-                State = updatedGroupData
-                UncommittedEvents = group.UncommittedEvents @ [ userRemovedEvent :> IDomainEvent ]
-            }
+            Ok
+                { State = updatedGroupData
+                  UncommittedEvents = group.UncommittedEvents @ [ userRemovedEvent :> IDomainEvent ] }
 
     let markForDeletion (actorUserId: UserId) (group: ValidatedGroup) : ValidatedGroup =
         let groupDeletedEvent = GroupEvents.groupDeleted actorUserId group.State.Id
 
-        {
-            group with
-                UncommittedEvents = group.UncommittedEvents @ [ groupDeletedEvent :> IDomainEvent ]
-        }
+        { group with
+            UncommittedEvents = group.UncommittedEvents @ [ groupDeletedEvent :> IDomainEvent ] }
 
     let getUncommittedEvents (group: ValidatedGroup) : IDomainEvent list = group.UncommittedEvents
 
