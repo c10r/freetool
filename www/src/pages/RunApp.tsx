@@ -2,7 +2,18 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Play, Loader } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  ArrowLeft,
+  Play,
+  Loader,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { getAppById, runApp } from "@/api/api";
 
 const RunApp = () => {
@@ -15,6 +26,7 @@ const RunApp = () => {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+  const [isRequestCollapsed, setIsRequestCollapsed] = useState(true);
 
   // Load app details
   useEffect(() => {
@@ -252,16 +264,110 @@ const RunApp = () => {
           </CardContent>
         </Card>
 
-        {/* Results Display */}
+        {/* Request Details */}
         {result && (
           <Card>
             <CardHeader>
-              <CardTitle>Results</CardTitle>
+              <CardTitle>
+                <Collapsible
+                  open={!isRequestCollapsed}
+                  onOpenChange={(open) => setIsRequestCollapsed(!open)}
+                >
+                  <CollapsibleTrigger className="flex items-center gap-2 w-full justify-start">
+                    {isRequestCollapsed ? (
+                      <ChevronRight className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                    Request Details
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="mt-4">
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-medium mb-2">Method & URL</h4>
+                          <p className="text-sm bg-muted p-2 rounded font-mono">
+                            {result.executableRequest.httpMethod}{" "}
+                            {result.executableRequest.baseUrl}
+                            {result.executableRequest.urlParameters?.length >
+                              0 &&
+                              `?${result.executableRequest.urlParameters.map(([key, value]: [string, string]) => `${key}=${value}`).join("&")}`}
+                          </p>
+                        </div>
+
+                        {result.executableRequest.headers?.length > 0 && (
+                          <div>
+                            <h4 className="font-medium mb-2">Headers</h4>
+                            <div className="bg-muted p-3 rounded">
+                              <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
+                                {JSON.stringify(
+                                  Object.fromEntries(
+                                    result.executableRequest.headers,
+                                  ),
+                                  null,
+                                  2,
+                                )}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+
+                        {result.executableRequest.body?.length > 0 && (
+                          <div>
+                            <h4 className="font-medium mb-2">Body</h4>
+                            <div className="bg-muted p-3 rounded">
+                              <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
+                                {JSON.stringify(
+                                  Object.fromEntries(
+                                    result.executableRequest.body,
+                                  ),
+                                  null,
+                                  2,
+                                )}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+
+                        <div>
+                          <h4 className="font-medium mb-2">Timing</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Started:{" "}
+                            {new Date(result.startedAt).toLocaleString()}
+                            <br />
+                            Completed:{" "}
+                            {new Date(result.completedAt).toLocaleString()}
+                            <br />
+                            Duration:{" "}
+                            {(
+                              (new Date(result.completedAt).getTime() -
+                                new Date(result.startedAt).getTime()) /
+                              1000
+                            ).toFixed(2)}
+                            s
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        )}
+
+        {/* Response Display */}
+        {result && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Response</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="bg-muted p-4 rounded-lg">
                 <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
-                  {JSON.stringify(result, null, 2)}
+                  {result.response
+                    ? JSON.stringify(JSON.parse(result.response), null, 2)
+                    : "No response data"}
                 </pre>
               </div>
             </CardContent>
