@@ -40,7 +40,11 @@ module RequestComposer =
                     // Ensure proper URL composition
                     let trimmedBaseUrl = resourceBaseUrl.TrimEnd('/')
                     let trimmedPath = path.TrimStart('/')
-                    $"{trimmedBaseUrl}/{trimmedPath}"
+
+                    if trimmedPath = "" then
+                        trimmedBaseUrl
+                    else
+                        $"{trimmedBaseUrl}/{trimmedPath}"
 
             // Merge URL parameters (app can only add new parameters, cannot override existing resource parameters)
             let mergedUrlParameters =

@@ -1,6 +1,5 @@
 module Freetool.Domain.Tests.HttpExecutionServiceTests
 
-open System
 open System.Net
 open System.Net.Http
 open System.Text

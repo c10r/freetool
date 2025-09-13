@@ -687,8 +687,7 @@ let ``Run creation should validate MultiText input type with valid choice`` () =
         App.createWithResource actorUserId "Test App" folderId resource inputs (Some "/test") [] [] []
         |> unwrapResult
 
-    let inputValues =
-        [ { Title = "priority"; Value = "high" } ] // Valid text choice
+    let inputValues = [ { Title = "priority"; Value = "high" } ] // Valid text choice
 
     // Act
     let result = Run.createWithValidation actorUserId app inputValues
