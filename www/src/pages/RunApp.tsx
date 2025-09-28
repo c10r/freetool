@@ -16,6 +16,24 @@ import {
 } from "lucide-react";
 import { getAppById, runApp } from "@/api/api";
 
+// Helper function to safely format response content
+const formatResponse = (
+  response: string,
+): { content: string; isJson: boolean } => {
+  try {
+    const parsed = JSON.parse(response);
+    return {
+      content: JSON.stringify(parsed, null, 2),
+      isJson: true,
+    };
+  } catch {
+    return {
+      content: response,
+      isJson: false,
+    };
+  }
+};
+
 const RunApp = () => {
   const { nodeId } = useParams<{ nodeId: string }>();
   const navigate = useNavigate();
@@ -363,13 +381,31 @@ const RunApp = () => {
               <CardTitle>Response</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="bg-muted p-4 rounded-lg">
-                <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
-                  {result.response
-                    ? JSON.stringify(JSON.parse(result.response), null, 2)
-                    : "No response data"}
-                </pre>
-              </div>
+              {result.response ? (
+                (() => {
+                  const { content, isJson } = formatResponse(result.response);
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          Content Type: {isJson ? "JSON" : "Text/HTML"}
+                        </span>
+                      </div>
+                      <div className="bg-muted p-4 rounded-lg">
+                        <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
+                          {content}
+                        </pre>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="bg-muted p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    No response data
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

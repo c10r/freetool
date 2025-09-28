@@ -5,6 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getAuditEvents } from "@/api/api";
 
+// Safe JSON parsing helper
+const safeJsonParse = (jsonString: string): any => {
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.warn("Failed to parse JSON:", error);
+    return { error: "Invalid JSON data", raw: jsonString };
+  }
+};
+
 type UserEvents = "UserCreatedEvent" | "UserUpdatedEvent" | "UserDeletedEvent";
 
 type AppEvents = "AppCreatedEvent" | "AppUpdatedEvent" | "AppDeletedEvent";
@@ -99,7 +109,7 @@ export default function AuditLogView() {
             entityType: item.entityType,
             userId: item.userId,
             occurredAt: item.occurredAt,
-            eventData: JSON.parse(item.eventData),
+            eventData: safeJsonParse(item.eventData),
           };
         });
         setEvents(mappedItems);
