@@ -144,7 +144,7 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
 
                     Userset(union = unionUsersets)
 
-                // Add all 7 permissions with the same pattern
+                // Add all 10 permissions with the same pattern
                 for permission in
                     [ "create_resource"
                       "edit_resource"
@@ -152,7 +152,10 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                       "create_app"
                       "edit_app"
                       "delete_app"
-                      "run_app" ] do
+                      "run_app"
+                      "create_folder"
+                      "edit_folder"
+                      "delete_folder" ] do
                     workspaceRelations.[permission] <- createPermissionUserset ()
 
                 let workspaceMetadata =
@@ -173,7 +176,10 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                       "create_app"
                       "edit_app"
                       "delete_app"
-                      "run_app" ] do
+                      "run_app"
+                      "create_folder"
+                      "edit_folder"
+                      "delete_folder" ] do
                     workspaceMetadata.[permission] <-
                         RelationMetadata(
                             DirectlyRelatedUserTypes =

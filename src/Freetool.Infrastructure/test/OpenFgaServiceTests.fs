@@ -490,3 +490,131 @@ let ``Team admin cannot delete teams`` () : Task =
         let! canDelete = service.CheckPermissionAsync "user:frank" "delete" "team:engineering"
         Assert.False(canDelete, "Team admin should NOT be able to delete teams (only org admin can)")
     }
+
+[<Fact>]
+let ``Team admin has all folder permissions`` () : Task =
+    task {
+        // Arrange - Create store, write model
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-folder-perms-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        // Make George a team admin
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:george"
+                    Relation = "admin"
+                    Object = "team:engineering" } ]
+            )
+
+        // Associate workspace with team
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "team:engineering"
+                    Relation = "team"
+                    Object = "workspace:main" } ]
+            )
+
+        // Act & Assert - Verify George has all 3 folder permissions
+        let! canCreateFolder = service.CheckPermissionAsync "user:george" "create_folder" "workspace:main"
+        Assert.True(canCreateFolder, "Team admin should have create_folder permission")
+
+        let! canEditFolder = service.CheckPermissionAsync "user:george" "edit_folder" "workspace:main"
+        Assert.True(canEditFolder, "Team admin should have edit_folder permission")
+
+        let! canDeleteFolder = service.CheckPermissionAsync "user:george" "delete_folder" "workspace:main"
+        Assert.True(canDeleteFolder, "Team admin should have delete_folder permission")
+    }
+
+[<Fact>]
+let ``Global admin has all folder permissions`` () : Task =
+    task {
+        // Arrange - Create store, write model
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-global-folder-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        // Make Hannah a global admin
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:hannah"
+                    Relation = "admin"
+                    Object = "organization:acme" } ]
+            )
+
+        // Associate workspace with team
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "team:engineering"
+                    Relation = "team"
+                    Object = "workspace:main" } ]
+            )
+
+        // Grant global admins folder permissions on the workspace
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "organization:acme#admin"
+                    Relation = "create_folder"
+                    Object = "workspace:main" }
+                  { User = "organization:acme#admin"
+                    Relation = "edit_folder"
+                    Object = "workspace:main" }
+                  { User = "organization:acme#admin"
+                    Relation = "delete_folder"
+                    Object = "workspace:main" } ]
+            )
+
+        // Act & Assert - Verify Hannah has all folder permissions
+        let! canCreateFolder = service.CheckPermissionAsync "user:hannah" "create_folder" "workspace:main"
+        Assert.True(canCreateFolder, "Global admin should have create_folder permission")
+
+        let! canEditFolder = service.CheckPermissionAsync "user:hannah" "edit_folder" "workspace:main"
+        Assert.True(canEditFolder, "Global admin should have edit_folder permission")
+
+        let! canDeleteFolder = service.CheckPermissionAsync "user:hannah" "delete_folder" "workspace:main"
+        Assert.True(canDeleteFolder, "Global admin should have delete_folder permission")
+    }
+
+[<Fact>]
+let ``Team member with granted folder permission can manage folders`` () : Task =
+    task {
+        // Arrange - Create store, write model
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-member-folder-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        // Make Ivan a team member
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:ivan"
+                    Relation = "member"
+                    Object = "team:engineering" } ]
+            )
+
+        // Grant Ivan specific folder permissions on workspace
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:ivan"
+                    Relation = "create_folder"
+                    Object = "workspace:main" }
+                  { User = "user:ivan"
+                    Relation = "edit_folder"
+                    Object = "workspace:main" } ]
+            )
+
+        // Act & Assert
+        let! canCreateFolder = service.CheckPermissionAsync "user:ivan" "create_folder" "workspace:main"
+        Assert.True(canCreateFolder, "User should have explicitly granted create_folder permission")
+
+        let! canEditFolder = service.CheckPermissionAsync "user:ivan" "edit_folder" "workspace:main"
+        Assert.True(canEditFolder, "User should have explicitly granted edit_folder permission")
+
+        let! canDeleteFolder = service.CheckPermissionAsync "user:ivan" "delete_folder" "workspace:main"
+        Assert.False(canDeleteFolder, "User should NOT have delete_folder permission (not granted)")
+    }

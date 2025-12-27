@@ -335,7 +335,7 @@ The authorization system enforces a hierarchical permission model:
 - **Organization** - Global scope with organization-wide admins
 - **Workspaces** - Top-level folders scoped to specific teams
 
-**Permissions (7 total):**
+**Permissions (10 total):**
 1. `create_resource` - Create new API resources
 2. `edit_resource` - Modify existing resources
 3. `delete_resource` - Remove resources
@@ -343,10 +343,13 @@ The authorization system enforces a hierarchical permission model:
 5. `edit_app` - Modify existing applications
 6. `delete_app` - Remove applications
 7. `run_app` - Execute applications
+8. `create_folder` - Create new folders
+9. `edit_folder` - Modify existing folders
+10. `delete_folder` - Remove folders
 
 **Authorization Rules:**
-- **Global Admins** → All 7 permissions on ALL workspaces
-- **Team Admins** → All 7 permissions on their team's workspaces + manage team membership
+- **Global Admins** → All 10 permissions on ALL workspaces
+- **Team Admins** → All 10 permissions on their team's workspaces + manage team membership
 - **Team Members** → Specific permissions granted by team admin
 - **Global Admins** → Can assign team admins
 
@@ -429,6 +432,9 @@ type workspace
     define edit_app: [user, organization#admin] or admin from team
     define delete_app: [user, organization#admin] or admin from team
     define run_app: [user, organization#admin] or admin from team
+    define create_folder: [user, organization#admin] or admin from team
+    define edit_folder: [user, organization#admin] or admin from team
+    define delete_folder: [user, organization#admin] or admin from team
 ```
 
 ### 🔧 Managing Relationships
