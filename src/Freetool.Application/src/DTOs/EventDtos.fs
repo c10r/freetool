@@ -70,3 +70,18 @@ module EventFilterValidator =
                   Take = dto.Take |> Option.defaultValue 10 }
         else
             Error(List.rev errors)
+
+[<CLIMutable>]
+type EnhancedEventData =
+    { Id: Guid
+      EventId: string
+      EventType: EventType
+      EntityType: EntityType
+      EntityId: string
+      EntityName: string
+      EventData: string
+      OccurredAt: DateTime
+      CreatedAt: DateTime
+      UserId: UserId
+      UserName: string
+      EventSummary: string }

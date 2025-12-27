@@ -16,6 +16,7 @@ open Freetool.Application.Interfaces
 open Freetool.Application.Handlers
 open Freetool.Application.Commands
 open Freetool.Application.DTOs
+open Freetool.Application.Services
 open Freetool.Api.Tracing
 open Freetool.Api.Middleware
 open Freetool.Api.OpenApi
@@ -73,6 +74,12 @@ let main args =
     builder.Services.AddScoped<IRunRepository, RunRepository>() |> ignore
     builder.Services.AddScoped<IEventRepository, EventRepository>() |> ignore
     builder.Services.AddScoped<IEventPublisher, EventPublisher>() |> ignore
+
+    builder.Services.AddScoped<IEventEnhancementService>(fun serviceProvider ->
+        let userRepository = serviceProvider.GetRequiredService<IUserRepository>()
+        let appRepository = serviceProvider.GetRequiredService<IAppRepository>()
+        EventEnhancementService(userRepository, appRepository) :> IEventEnhancementService)
+    |> ignore
 
     builder.Services.AddScoped<UserHandler>() |> ignore
 

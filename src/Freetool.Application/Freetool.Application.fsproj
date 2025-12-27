@@ -48,6 +48,7 @@
     <Compile Include="src/Handlers/FolderHandler.fs" />
     <Compile Include="src/Handlers/AppHandler.fs" />
     <Compile Include="src/Handlers/RunHandler.fs" />
+    <Compile Include="src/Services/EventEnhancementService.fs" />
   </ItemGroup>
 
 </Project>

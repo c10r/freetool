@@ -51,9 +51,14 @@ interface AuditEvent {
   eventId: string;
   eventType: EventType;
   entityType: EntityType;
+  entityId: string;
+  entityName: string;
   userId: string;
+  userName: string;
+  eventSummary: string;
   occurredAt: string;
-  eventData: Record<string, object>;
+  createdAt: string;
+  eventData: string;
 }
 
 const getEventTypeColor = (eventType: EventType): string => {
@@ -107,9 +112,14 @@ export default function AuditLogView() {
             eventId: item.eventId,
             eventType: item.eventType,
             entityType: item.entityType,
+            entityId: item.entityId,
+            entityName: item.entityName,
             userId: item.userId,
+            userName: item.userName,
+            eventSummary: item.eventSummary,
             occurredAt: item.occurredAt,
-            eventData: safeJsonParse(item.eventData),
+            createdAt: item.createdAt,
+            eventData: item.eventData,
           };
         });
         setEvents(mappedItems);
@@ -172,7 +182,7 @@ export default function AuditLogView() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <Badge className={getEventTypeColor(event.eventType)}>
-                      {event.eventType}
+                      {event.eventType.replace('Event', '')}
                     </Badge>
                     <Badge className={getEntityTypeColor(event.entityType)}>
                       {event.entityType}
@@ -180,17 +190,20 @@ export default function AuditLogView() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">
-                      User: {event.userId}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
                       {formatDate(event.occurredAt)}
                     </span>
                   </div>
                 </div>
 
+                <div className="mb-3">
+                  <div className="text-sm font-medium">
+                    {event.eventSummary}
+                  </div>
+                </div>
+
                 <div className="flex justify-between items-center">
-                  <div className="text-sm text-muted-foreground">
-                    Event ID: {event.eventId}
+                  <div className="text-xs text-muted-foreground">
+                    Event ID: {event.eventId.substring(0, 8)}...
                   </div>
                   <Button
                     variant="ghost"
@@ -204,11 +217,22 @@ export default function AuditLogView() {
                 </div>
 
                 {expandedEvent === event.id && (
-                  <div className="mt-4 pt-4 border-t">
-                    <h4 className="font-medium mb-2">Event Data:</h4>
-                    <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto">
-                      {JSON.stringify(event.eventData, null, 2)}
-                    </pre>
+                  <div className="mt-4 pt-4 border-t space-y-4">
+                    <div>
+                      <h4 className="font-medium mb-2">Details:</h4>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <div><strong>User:</strong> {event.userName} ({event.userId})</div>
+                        <div><strong>Entity:</strong> {event.entityName} ({event.entityId})</div>
+                        <div><strong>Event ID:</strong> {event.eventId}</div>
+                        <div><strong>Created At:</strong> {formatDate(event.createdAt)}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Raw Event Data:</h4>
+                      <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto">
+                        {JSON.stringify(safeJsonParse(event.eventData), null, 2)}
+                      </pre>
+                    </div>
                   </div>
                 )}
               </CardContent>
