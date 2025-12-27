@@ -119,7 +119,12 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
             with ex ->
                 let entityTypeStr = EntityTypeConverter.toString entityType
                 // Include some of the raw event data for debugging
-                let dataPreview = if eventData.Length > 100 then eventData.Substring(0, 100) + "..." else eventData
+                let dataPreview =
+                    if eventData.Length > 100 then
+                        eventData.Substring(0, 100) + "..."
+                    else
+                        eventData
+
                 return $"{entityTypeStr} (Parse Error: {ex.Message} | Data: {dataPreview})"
         }
 

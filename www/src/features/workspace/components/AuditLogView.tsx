@@ -182,7 +182,7 @@ export default function AuditLogView() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <Badge className={getEventTypeColor(event.eventType)}>
-                      {event.eventType.replace('Event', '')}
+                      {event.eventType.replace("Event", "")}
                     </Badge>
                     <Badge className={getEntityTypeColor(event.entityType)}>
                       {event.entityType}
@@ -221,16 +221,31 @@ export default function AuditLogView() {
                     <div>
                       <h4 className="font-medium mb-2">Details:</h4>
                       <div className="text-sm text-muted-foreground space-y-1">
-                        <div><strong>User:</strong> {event.userName} ({event.userId})</div>
-                        <div><strong>Entity:</strong> {event.entityName} ({event.entityId})</div>
-                        <div><strong>Event ID:</strong> {event.eventId}</div>
-                        <div><strong>Created At:</strong> {formatDate(event.createdAt)}</div>
+                        <div>
+                          <strong>User:</strong> {event.userName} (
+                          {event.userId})
+                        </div>
+                        <div>
+                          <strong>Entity:</strong> {event.entityName} (
+                          {event.entityId})
+                        </div>
+                        <div>
+                          <strong>Event ID:</strong> {event.eventId}
+                        </div>
+                        <div>
+                          <strong>Created At:</strong>{" "}
+                          {formatDate(event.createdAt)}
+                        </div>
                       </div>
                     </div>
                     <div>
                       <h4 className="font-medium mb-2">Raw Event Data:</h4>
                       <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto">
-                        {JSON.stringify(safeJsonParse(event.eventData), null, 2)}
+                        {JSON.stringify(
+                          safeJsonParse(event.eventData),
+                          null,
+                          2,
+                        )}
                       </pre>
                     </div>
                   </div>

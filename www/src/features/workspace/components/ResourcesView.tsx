@@ -2,17 +2,28 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { getResources, createResource } from "@/api/api";
+import {
+  getResources,
+  createResource,
+  deleteResource,
+  getApps,
+} from "@/api/api";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import HttpMethodBadge from "./HttpMethodBadge";
 import ResourceForm, { ResourceFormData } from "./ResourceForm";
 import { useResourceForm } from "../hooks/useResourceForm";
-import { Edit } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { KeyValuePair } from "../types";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -46,6 +57,12 @@ export default function ResourcesView() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [apps, setApps] = useState<
+    Array<{ id: string; name: string; resourceId?: string }>
+  >([]);
+  const [deletingResourceId, setDeletingResourceId] = useState<string | null>(
+    null,
+  );
 
   // Create form state
   const {
@@ -74,6 +91,22 @@ export default function ResourcesView() {
     setEditingResource((prev) => (prev ? { ...prev, ...updatedData } : null));
   });
 
+  const fetchApps = async () => {
+    try {
+      const response = await getApps();
+      if (response.data?.items) {
+        const mappedApps = response.data.items.map((item) => ({
+          id: item.id!,
+          name: item.name,
+          resourceId: item.resourceId,
+        }));
+        setApps(mappedApps);
+      }
+    } catch (err) {
+      console.error("Failed to load apps:", err);
+    }
+  };
+
   const fetchResources = async () => {
     try {
       setLoading(true);
@@ -94,10 +127,36 @@ export default function ResourcesView() {
         });
         setResources(mappedItems);
       }
+      // Also fetch apps to check resource usage
+      await fetchApps();
     } catch (err) {
       setError("Failed to load resources");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getAppsUsingResource = (resourceId: string) => {
+    return apps.filter((app) => app.resourceId === resourceId);
+  };
+
+  const canDeleteResource = (resourceId: string) => {
+    return getAppsUsingResource(resourceId).length === 0;
+  };
+
+  const handleDeleteResource = async (resourceId: string) => {
+    if (!canDeleteResource(resourceId)) {
+      return;
+    }
+
+    try {
+      setDeletingResourceId(resourceId);
+      await deleteResource(resourceId);
+      await fetchResources();
+    } catch (err) {
+      setError("Failed to delete resource. Please try again.");
+    } finally {
+      setDeletingResourceId(null);
     }
   };
 
@@ -266,6 +325,43 @@ export default function ResourcesView() {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleDeleteResource(resource.id)}
+                              disabled={
+                                !canDeleteResource(resource.id) ||
+                                deletingResourceId === resource.id
+                              }
+                            >
+                              <Trash2
+                                className={`h-4 w-4 text-red-500 ${
+                                  !canDeleteResource(resource.id) ||
+                                  deletingResourceId === resource.id
+                                    ? "opacity-50"
+                                    : ""
+                                }`}
+                              />
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {!canDeleteResource(resource.id) ? (
+                            <p>
+                              There are still apps that use this resource.
+                              Please delete those first.
+                            </p>
+                          ) : (
+                            <p>Delete resource</p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </CardTitle>
               </CardHeader>
