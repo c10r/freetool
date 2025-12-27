@@ -13,6 +13,7 @@ services:
       - freetool-db:/app/data
     depends_on:
       - aspire-dashboard
+      - openfga
 
   aspire-dashboard:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
@@ -23,5 +24,39 @@ services:
     environment:
       - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
 
+  openfga-migrate:
+    image: openfga/openfga:latest
+    container_name: openfga-migrate
+    command: migrate
+    user: nonroot
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=sqlite
+      - OPENFGA_DATASTORE_URI=file:/home/nonroot/openfga.db
+    volumes:
+      - openfga:/home/nonroot
+
+  openfga:
+    image: openfga/openfga:latest
+    container_name: openfga
+    command: run
+    user: nonroot
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=sqlite
+      - OPENFGA_DATASTORE_URI=file:/home/nonroot/openfga.db
+      - OPENFGA_LOG_FORMAT=json
+      - OPENFGA_HTTP_ADDR=0.0.0.0:8090
+      - OPENFGA_GRPC_ADDR=0.0.0.0:8091
+      - OPENFGA_PLAYGROUND_PORT=3030
+    volumes:
+      - openfga:/home/nonroot
+    ports:
+      - "8090:8090"
+      - "8091:8091"
+      - "3030:3030"
+    depends_on:
+      openfga-migrate:
+        condition: service_completed_successfully
+
 volumes:
   freetool-db:
+  openfga:

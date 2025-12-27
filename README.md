@@ -321,6 +321,218 @@ let ``User name update should generate correct event`` () =
 
 This event store integration pattern ensures that Freetool maintains perfect audit compliance while preserving clean architecture principles and providing comprehensive observability.
 
+## 🔐 Authorization with OpenFGA
+
+Freetool implements **fine-grained authorization** using [OpenFGA](https://openfga.dev/), a high-performance authorization system based on Google's Zanzibar. This enables flexible, relationship-based access control across all resources while maintaining clean onion architecture separation.
+
+### 🎯 Authorization Model
+
+The authorization system enforces a hierarchical permission model:
+
+**Entities:**
+- **Users** - Individual users in the system
+- **Teams** - Groups of users with shared access
+- **Organization** - Global scope with organization-wide admins
+- **Workspaces** - Top-level folders scoped to specific teams
+
+**Permissions (7 total):**
+1. `create_resource` - Create new API resources
+2. `edit_resource` - Modify existing resources
+3. `delete_resource` - Remove resources
+4. `create_app` - Create new applications
+5. `edit_app` - Modify existing applications
+6. `delete_app` - Remove applications
+7. `run_app` - Execute applications
+
+**Authorization Rules:**
+- **Global Admins** → All 7 permissions on ALL workspaces
+- **Team Admins** → All 7 permissions on their team's workspaces + manage team membership
+- **Team Members** → Specific permissions granted by team admin
+- **Global Admins** → Can assign team admins
+
+### 🏗️ Architecture Implementation
+
+Following onion architecture principles, OpenFGA is integrated across all layers:
+
+#### Domain Layer
+Authorization concepts are expressed as pure domain concerns (future):
+- Permission value objects
+- Resource ownership rules
+- Access control domain events
+
+#### Application Layer (`Freetool.Application/Interfaces/IAuthorizationService.fs`)
+Defines contracts for authorization operations:
+
+```fsharp
+type IAuthorizationService =
+    // Store management
+    abstract member CreateStoreAsync: CreateStoreRequest -> Task<StoreResponse>
+    abstract member WriteAuthorizationModelAsync: unit -> Task<AuthorizationModelResponse>
+
+    // Relationship management
+    abstract member CreateRelationshipsAsync: RelationshipTuple list -> Task<unit>
+    abstract member UpdateRelationshipsAsync: UpdateRelationshipsRequest -> Task<unit>
+    abstract member DeleteRelationshipsAsync: RelationshipTuple list -> Task<unit>
+
+    // Permission checking
+    abstract member CheckPermissionAsync: user:string -> relation:string -> object:string -> Task<bool>
+```
+
+#### Infrastructure Layer (`Freetool.Infrastructure/Services/OpenFgaService.fs`)
+Implements OpenFGA client integration:
+- Manages OpenFGA SDK client lifecycle
+- Translates domain concepts to OpenFGA tuples
+- Handles store and model operations
+- Executes permission checks
+
+#### API Layer (`Freetool.Api/Program.fs`)
+Wires up authorization service in dependency injection:
+
+```fsharp
+builder.Services.AddScoped<IAuthorizationService>(fun serviceProvider ->
+    let apiUrl = builder.Configuration["OpenFGA:ApiUrl"]
+    let storeId = builder.Configuration["OpenFGA:StoreId"]
+
+    if System.String.IsNullOrEmpty(storeId) then
+        OpenFgaService(apiUrl)
+    else
+        OpenFgaService(apiUrl, storeId)
+)
+```
+
+### 📝 OpenFGA Model Definition
+
+The authorization model uses OpenFGA DSL syntax:
+
+```
+model
+  schema 1.1
+
+type user
+
+type organization
+  relations
+    define admin: [user]
+
+type team
+  relations
+    define member: [user]
+    define admin: [user, organization#admin]
+
+type workspace
+  relations
+    define team: [team]
+    define create_resource: [user, organization#admin] or admin from team
+    define edit_resource: [user, organization#admin] or admin from team
+    define delete_resource: [user, organization#admin] or admin from team
+    define create_app: [user, organization#admin] or admin from team
+    define edit_app: [user, organization#admin] or admin from team
+    define delete_app: [user, organization#admin] or admin from team
+    define run_app: [user, organization#admin] or admin from team
+```
+
+### 🔧 Managing Relationships
+
+**Creating Relationships:**
+```fsharp
+// Make Alice a member of the engineering team
+authService.CreateRelationshipsAsync([
+    { User = "user:alice"
+      Relation = "member"
+      Object = "team:engineering" }
+])
+
+// Grant Bob create_resource permission on main workspace
+authService.CreateRelationshipsAsync([
+    { User = "user:bob"
+      Relation = "create_resource"
+      Object = "workspace:main" }
+])
+```
+
+**Updating Relationships (Atomic):**
+```fsharp
+// Promote Carol from member to admin
+authService.UpdateRelationshipsAsync({
+    TuplesToAdd = [{ User = "user:carol"; Relation = "admin"; Object = "team:engineering" }]
+    TuplesToRemove = [{ User = "user:carol"; Relation = "member"; Object = "team:engineering" }]
+})
+```
+
+**Deleting Relationships:**
+```fsharp
+// Revoke Dave's run_app permission
+authService.DeleteRelationshipsAsync([
+    { User = "user:dave"
+      Relation = "run_app"
+      Object = "workspace:main" }
+])
+```
+
+### 🔍 Permission Checks
+
+```fsharp
+// Check if Alice can create resources in main workspace
+let! canCreate = authService.CheckPermissionAsync("user:alice", "create_resource", "workspace:main")
+
+// Check if Bob is a team admin
+let! isAdmin = authService.CheckPermissionAsync("user:bob", "admin", "team:engineering")
+```
+
+### ⚙️ Configuration
+
+**Environment Variables:**
+```bash
+# OpenFGA server endpoint
+OPENFGA_API_URL=http://openfga:8090
+
+# Store ID (obtained after creating a store)
+OPENFGA_STORE_ID=01HVMMBCMGZNT3SED4Z17ECXCA
+```
+
+**appsettings.Development.json:**
+```json
+{
+  "OpenFGA": {
+    "ApiUrl": "http://openfga:8090",
+    "StoreId": ""
+  }
+}
+```
+
+### 🐳 Docker Setup
+
+OpenFGA runs as a containerized service in `docker-compose.yml`:
+
+```yaml
+openfga-migrate:
+  image: openfga/openfga:latest
+  command: migrate
+  environment:
+    - OPENFGA_DATASTORE_ENGINE=sqlite
+    - OPENFGA_DATASTORE_URI=file:/home/nonroot/openfga.db
+
+openfga:
+  image: openfga/openfga:latest
+  command: run
+  ports:
+    - "8090:8090"  # HTTP API
+    - "8091:8091"  # gRPC API
+    - "3030:3030"  # Playground UI
+  depends_on:
+    openfga-migrate:
+      condition: service_completed_successfully
+```
+
+### 🎯 Benefits
+
+- **Scalable**: Handles millions of authorization checks per second
+- **Flexible**: Relationship-based model adapts to complex permission requirements
+- **Auditable**: All permission changes tracked as relationship tuples
+- **Testable**: Authorization logic isolated from business logic
+- **Architecture Compliant**: Clean separation via onion architecture layers
+- **Type Safe**: F# types ensure correct permission structures at compile time
+
 ## 📁 Project Structure
 
 ```

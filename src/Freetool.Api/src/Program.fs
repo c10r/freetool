@@ -75,6 +75,20 @@ let main args =
     builder.Services.AddScoped<IEventRepository, EventRepository>() |> ignore
     builder.Services.AddScoped<IEventPublisher, EventPublisher>() |> ignore
 
+    builder.Services.AddScoped<IAuthorizationService>(fun serviceProvider ->
+        let apiUrl = builder.Configuration["OpenFGA:ApiUrl"]
+        let storeId = builder.Configuration["OpenFGA:StoreId"]
+
+        // Create service with optional store ID (empty string means no store ID yet)
+        let service =
+            if System.String.IsNullOrEmpty(storeId) then
+                OpenFgaService(apiUrl)
+            else
+                OpenFgaService(apiUrl, storeId)
+
+        service :> IAuthorizationService)
+    |> ignore
+
     builder.Services.AddScoped<IEventEnhancementService>(fun serviceProvider ->
         let userRepository = serviceProvider.GetRequiredService<IUserRepository>()
         let appRepository = serviceProvider.GetRequiredService<IAppRepository>()
