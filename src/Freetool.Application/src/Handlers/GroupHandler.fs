@@ -81,7 +81,7 @@ module GroupHandler =
                         // Delete group and save event atomically
                         match! groupRepository.DeleteAsync groupWithDeleteEvent with
                         | Error error -> return Error error
-                        | Ok() -> return Ok(UnitResult())
+                        | Ok() -> return Ok(GroupCommandResult.UnitResult())
 
             | UpdateGroupName(actorUserId, groupId, dto) ->
                 match Guid.TryParse groupId with

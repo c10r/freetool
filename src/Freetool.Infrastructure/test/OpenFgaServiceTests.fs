@@ -21,7 +21,7 @@ let createServiceWithStore storeId =
 let ``CreateStoreAsync creates a new store successfully`` () : Task =
     task {
         // Arrange
-        let service = createServiceWithoutStore()
+        let service = createServiceWithoutStore ()
         let storeName = $"test-store-{Guid.NewGuid()}"
 
         // Act
@@ -37,7 +37,7 @@ let ``CreateStoreAsync creates a new store successfully`` () : Task =
 let ``WriteAuthorizationModelAsync writes the model successfully`` () : Task =
     task {
         // Arrange - Create a store first
-        let serviceWithoutStore = createServiceWithoutStore()
+        let serviceWithoutStore = createServiceWithoutStore ()
         let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-model-store-{Guid.NewGuid()}" })
 
         let service = createServiceWithStore storeResponse.Id
@@ -54,17 +54,16 @@ let ``WriteAuthorizationModelAsync writes the model successfully`` () : Task =
 let ``CreateRelationshipsAsync creates tuples successfully`` () : Task =
     task {
         // Arrange - Create store and write model
-        let serviceWithoutStore = createServiceWithoutStore()
+        let serviceWithoutStore = createServiceWithoutStore ()
         let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-tuples-store-{Guid.NewGuid()}" })
 
         let service = createServiceWithStore storeResponse.Id
         let! _ = service.WriteAuthorizationModelAsync()
 
-        let tuples = [
-            { User = "user:alice"
-              Relation = "member"
-              Object = "team:engineering" }
-        ]
+        let tuples =
+            [ { User = "user:alice"
+                Relation = "member"
+                Object = "team:engineering" } ]
 
         // Act
         do! service.CreateRelationshipsAsync(tuples)
@@ -77,7 +76,7 @@ let ``CreateRelationshipsAsync creates tuples successfully`` () : Task =
 let ``DeleteRelationshipsAsync removes tuples successfully`` () : Task =
     task {
         // Arrange - Create store, write model, and add a tuple
-        let serviceWithoutStore = createServiceWithoutStore()
+        let serviceWithoutStore = createServiceWithoutStore ()
         let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-delete-store-{Guid.NewGuid()}" })
 
         let service = createServiceWithStore storeResponse.Id
@@ -88,10 +87,10 @@ let ``DeleteRelationshipsAsync removes tuples successfully`` () : Task =
               Relation = "member"
               Object = "team:engineering" }
 
-        do! service.CreateRelationshipsAsync([tuple])
+        do! service.CreateRelationshipsAsync([ tuple ])
 
         // Act
-        do! service.DeleteRelationshipsAsync([tuple])
+        do! service.DeleteRelationshipsAsync([ tuple ])
 
         // Assert - If no exception is thrown, the operation succeeded
         Assert.True(true)
@@ -101,7 +100,7 @@ let ``DeleteRelationshipsAsync removes tuples successfully`` () : Task =
 let ``UpdateRelationshipsAsync adds and removes tuples atomically`` () : Task =
     task {
         // Arrange - Create store, write model
-        let serviceWithoutStore = createServiceWithoutStore()
+        let serviceWithoutStore = createServiceWithoutStore ()
         let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-update-store-{Guid.NewGuid()}" })
 
         let service = createServiceWithStore storeResponse.Id
@@ -113,7 +112,7 @@ let ``UpdateRelationshipsAsync adds and removes tuples atomically`` () : Task =
               Relation = "member"
               Object = "team:engineering" }
 
-        do! service.CreateRelationshipsAsync([memberTuple])
+        do! service.CreateRelationshipsAsync([ memberTuple ])
 
         let adminTuple =
             { User = "user:carol"
@@ -121,10 +120,11 @@ let ``UpdateRelationshipsAsync adds and removes tuples atomically`` () : Task =
               Object = "team:engineering" }
 
         // Act - Promote Carol from member to admin
-        do! service.UpdateRelationshipsAsync({
-            TuplesToAdd = [adminTuple]
-            TuplesToRemove = [memberTuple]
-        })
+        do!
+            service.UpdateRelationshipsAsync(
+                { TuplesToAdd = [ adminTuple ]
+                  TuplesToRemove = [ memberTuple ] }
+            )
 
         // Assert - Verify Carol is now an admin
         let! isAdmin = service.CheckPermissionAsync "user:carol" "admin" "team:engineering"
@@ -139,7 +139,7 @@ let ``UpdateRelationshipsAsync adds and removes tuples atomically`` () : Task =
 let ``CheckPermissionAsync returns true for granted permission`` () : Task =
     task {
         // Arrange - Create store, write model, and add permission
-        let serviceWithoutStore = createServiceWithoutStore()
+        let serviceWithoutStore = createServiceWithoutStore ()
         let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-check-granted-{Guid.NewGuid()}" })
 
         let service = createServiceWithStore storeResponse.Id
@@ -150,7 +150,7 @@ let ``CheckPermissionAsync returns true for granted permission`` () : Task =
               Relation = "member"
               Object = "team:engineering" }
 
-        do! service.CreateRelationshipsAsync([tuple])
+        do! service.CreateRelationshipsAsync([ tuple ])
 
         // Act
         let! hasPermission = service.CheckPermissionAsync "user:dave" "member" "team:engineering"
@@ -163,7 +163,7 @@ let ``CheckPermissionAsync returns true for granted permission`` () : Task =
 let ``CheckPermissionAsync returns false for denied permission`` () : Task =
     task {
         // Arrange - Create store and write model (no tuples)
-        let serviceWithoutStore = createServiceWithoutStore()
+        let serviceWithoutStore = createServiceWithoutStore ()
         let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-check-denied-{Guid.NewGuid()}" })
 
         let service = createServiceWithStore storeResponse.Id
@@ -180,25 +180,27 @@ let ``CheckPermissionAsync returns false for denied permission`` () : Task =
 let ``Team admin has all workspace permissions`` () : Task =
     task {
         // Arrange - Create store, write model
-        let serviceWithoutStore = createServiceWithoutStore()
+        let serviceWithoutStore = createServiceWithoutStore ()
         let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-admin-perms-{Guid.NewGuid()}" })
 
         let service = createServiceWithStore storeResponse.Id
         let! _ = service.WriteAuthorizationModelAsync()
 
         // Make Frank a team admin
-        do! service.CreateRelationshipsAsync([
-            { User = "user:frank"
-              Relation = "admin"
-              Object = "team:engineering" }
-        ])
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:frank"
+                    Relation = "admin"
+                    Object = "team:engineering" } ]
+            )
 
         // Associate workspace with team
-        do! service.CreateRelationshipsAsync([
-            { User = "team:engineering"
-              Relation = "team"
-              Object = "workspace:main" }
-        ])
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "team:engineering"
+                    Relation = "team"
+                    Object = "workspace:main" } ]
+            )
 
         // Act & Assert - Verify Frank has all 7 permissions
         let! canCreateResource = service.CheckPermissionAsync "user:frank" "create_resource" "workspace:main"
@@ -227,35 +229,38 @@ let ``Team admin has all workspace permissions`` () : Task =
 let ``Global admin has all workspace permissions`` () : Task =
     task {
         // Arrange - Create store, write model
-        let serviceWithoutStore = createServiceWithoutStore()
+        let serviceWithoutStore = createServiceWithoutStore ()
         let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-global-admin-{Guid.NewGuid()}" })
 
         let service = createServiceWithStore storeResponse.Id
         let! _ = service.WriteAuthorizationModelAsync()
 
         // Make Grace a global admin
-        do! service.CreateRelationshipsAsync([
-            { User = "user:grace"
-              Relation = "admin"
-              Object = "organization:acme" }
-        ])
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:grace"
+                    Relation = "admin"
+                    Object = "organization:acme" } ]
+            )
 
         // Associate workspace with team
-        do! service.CreateRelationshipsAsync([
-            { User = "team:sales"
-              Relation = "team"
-              Object = "workspace:sales-dashboard" }
-        ])
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "team:sales"
+                    Relation = "team"
+                    Object = "workspace:sales-dashboard" } ]
+            )
 
         // Grant global admins all permissions on the workspace
-        do! service.CreateRelationshipsAsync([
-            { User = "organization:acme#admin"
-              Relation = "create_resource"
-              Object = "workspace:sales-dashboard" }
-            { User = "organization:acme#admin"
-              Relation = "run_app"
-              Object = "workspace:sales-dashboard" }
-        ])
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "organization:acme#admin"
+                    Relation = "create_resource"
+                    Object = "workspace:sales-dashboard" }
+                  { User = "organization:acme#admin"
+                    Relation = "run_app"
+                    Object = "workspace:sales-dashboard" } ]
+            )
 
         // Act & Assert - Verify Grace has all permissions on any workspace
         let! canCreateResource = service.CheckPermissionAsync "user:grace" "create_resource" "workspace:sales-dashboard"
@@ -269,25 +274,27 @@ let ``Global admin has all workspace permissions`` () : Task =
 let ``Team member with granted permission can access resource`` () : Task =
     task {
         // Arrange - Create store, write model
-        let serviceWithoutStore = createServiceWithoutStore()
+        let serviceWithoutStore = createServiceWithoutStore ()
         let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-member-perm-{Guid.NewGuid()}" })
 
         let service = createServiceWithStore storeResponse.Id
         let! _ = service.WriteAuthorizationModelAsync()
 
         // Make Henry a team member
-        do! service.CreateRelationshipsAsync([
-            { User = "user:henry"
-              Relation = "member"
-              Object = "team:engineering" }
-        ])
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:henry"
+                    Relation = "member"
+                    Object = "team:engineering" } ]
+            )
 
         // Grant Henry specific permission on workspace
-        do! service.CreateRelationshipsAsync([
-            { User = "user:henry"
-              Relation = "run_app"
-              Object = "workspace:main" }
-        ])
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:henry"
+                    Relation = "run_app"
+                    Object = "workspace:main" } ]
+            )
 
         // Act
         let! canRunApp = service.CheckPermissionAsync "user:henry" "run_app" "workspace:main"
@@ -296,4 +303,190 @@ let ``Team member with granted permission can access resource`` () : Task =
         // Assert
         Assert.True(canRunApp, "User should have explicitly granted run_app permission")
         Assert.False(canEditApp, "User should NOT have edit_app permission (not granted)")
+    }
+
+[<Fact>]
+let ``Only organization admin can create workspaces`` () : Task =
+    task {
+        // Arrange - Create store, write model
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-workspace-create-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        // Make Alice an organization admin
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:alice"
+                    Relation = "admin"
+                    Object = "organization:acme" } ]
+            )
+
+        // Associate workspace with organization
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "organization:acme"
+                    Relation = "organization"
+                    Object = "workspace:new-workspace" } ]
+            )
+
+        // Act & Assert - Verify Alice can create workspaces
+        let! canCreate = service.CheckPermissionAsync "user:alice" "create_workspace" "workspace:new-workspace"
+        Assert.True(canCreate, "Organization admin should be able to create workspaces")
+    }
+
+[<Fact>]
+let ``Team admin cannot create workspaces`` () : Task =
+    task {
+        // Arrange - Create store, write model
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-team-no-create-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        // Make Bob a team admin (NOT an org admin)
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:bob"
+                    Relation = "admin"
+                    Object = "team:engineering" } ]
+            )
+
+        // Associate workspace with organization
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "organization:acme"
+                    Relation = "organization"
+                    Object = "workspace:new-workspace" } ]
+            )
+
+        // Act & Assert - Verify Bob CANNOT create workspaces
+        let! canCreate = service.CheckPermissionAsync "user:bob" "create_workspace" "workspace:new-workspace"
+        Assert.False(canCreate, "Team admin should NOT be able to create workspaces (only org admin can)")
+    }
+
+[<Fact>]
+let ``Only organization admin can rename teams`` () : Task =
+    task {
+        // Arrange - Create store, write model
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-team-rename-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        // Make Carol an organization admin
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:carol"
+                    Relation = "admin"
+                    Object = "organization:acme" } ]
+            )
+
+        // Associate team with organization
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "organization:acme"
+                    Relation = "organization"
+                    Object = "team:engineering" } ]
+            )
+
+        // Act & Assert - Verify Carol can rename teams
+        let! canRename = service.CheckPermissionAsync "user:carol" "rename" "team:engineering"
+        Assert.True(canRename, "Organization admin should be able to rename teams")
+    }
+
+[<Fact>]
+let ``Team admin cannot rename teams`` () : Task =
+    task {
+        // Arrange - Create store, write model
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-team-no-rename-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        // Make Dave a team admin (NOT an org admin)
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:dave"
+                    Relation = "admin"
+                    Object = "team:engineering" } ]
+            )
+
+        // Associate team with organization
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "organization:acme"
+                    Relation = "organization"
+                    Object = "team:engineering" } ]
+            )
+
+        // Act & Assert - Verify Dave CANNOT rename teams
+        let! canRename = service.CheckPermissionAsync "user:dave" "rename" "team:engineering"
+        Assert.False(canRename, "Team admin should NOT be able to rename teams (only org admin can)")
+    }
+
+[<Fact>]
+let ``Only organization admin can delete teams`` () : Task =
+    task {
+        // Arrange - Create store, write model
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-team-delete-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        // Make Eve an organization admin
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:eve"
+                    Relation = "admin"
+                    Object = "organization:acme" } ]
+            )
+
+        // Associate team with organization
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "organization:acme"
+                    Relation = "organization"
+                    Object = "team:engineering" } ]
+            )
+
+        // Act & Assert - Verify Eve can delete teams
+        let! canDelete = service.CheckPermissionAsync "user:eve" "delete" "team:engineering"
+        Assert.True(canDelete, "Organization admin should be able to delete teams")
+    }
+
+[<Fact>]
+let ``Team admin cannot delete teams`` () : Task =
+    task {
+        // Arrange - Create store, write model
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-team-no-delete-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        // Make Frank a team admin (NOT an org admin)
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "user:frank"
+                    Relation = "admin"
+                    Object = "team:engineering" } ]
+            )
+
+        // Associate team with organization
+        do!
+            service.CreateRelationshipsAsync(
+                [ { User = "organization:acme"
+                    Relation = "organization"
+                    Object = "team:engineering" } ]
+            )
+
+        // Act & Assert - Verify Frank CANNOT delete teams
+        let! canDelete = service.CheckPermissionAsync "user:frank" "delete" "team:engineering"
+        Assert.False(canDelete, "Team admin should NOT be able to delete teams (only org admin can)")
     }

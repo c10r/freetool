@@ -68,6 +68,12 @@ let main args =
         GroupRepository(context, eventRepository))
     |> ignore
 
+    builder.Services.AddScoped<IWorkspaceRepository>(fun serviceProvider ->
+        let context = serviceProvider.GetRequiredService<FreetoolDbContext>()
+        let eventRepository = serviceProvider.GetRequiredService<IEventRepository>()
+        WorkspaceRepository(context, eventRepository))
+    |> ignore
+
     builder.Services.AddScoped<IResourceRepository, ResourceRepository>() |> ignore
     builder.Services.AddScoped<IFolderRepository, FolderRepository>() |> ignore
     builder.Services.AddScoped<IAppRepository, AppRepository>() |> ignore
@@ -99,6 +105,8 @@ let main args =
 
     builder.Services.AddScoped<GroupHandler>() |> ignore
 
+    builder.Services.AddScoped<WorkspaceHandler>() |> ignore
+
     builder.Services.AddScoped<ResourceHandler>(fun serviceProvider ->
         let resourceRepository = serviceProvider.GetRequiredService<IResourceRepository>()
         let appRepository = serviceProvider.GetRequiredService<IAppRepository>()
@@ -125,6 +133,13 @@ let main args =
         let groupHandler = serviceProvider.GetRequiredService<GroupHandler>()
         let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
         AutoTracing.createMultiRepositoryTracingDecorator "group" groupHandler activitySource)
+    |> ignore
+
+    builder.Services.AddScoped<IMultiRepositoryCommandHandler<WorkspaceCommand, WorkspaceCommandResult>>
+        (fun serviceProvider ->
+            let workspaceHandler = serviceProvider.GetRequiredService<WorkspaceHandler>()
+            let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
+            AutoTracing.createMultiRepositoryTracingDecorator "workspace" workspaceHandler activitySource)
     |> ignore
 
     builder.Services.AddScoped<IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>>

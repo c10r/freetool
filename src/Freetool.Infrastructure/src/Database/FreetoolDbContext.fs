@@ -19,6 +19,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     val mutable private _userGroups: DbSet<UserGroupData>
 
     [<DefaultValue>]
+    val mutable private _workspaces: DbSet<WorkspaceData>
+
+    [<DefaultValue>]
     val mutable private _resources: DbSet<ResourceData>
 
     [<DefaultValue>]
@@ -44,6 +47,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     member this.UserGroups
         with get () = this._userGroups
         and set value = this._userGroups <- value
+
+    member this.Workspaces
+        with get () = this._workspaces
+        and set value = this._workspaces <- value
 
     member this.Resources
         with get () = this._resources
@@ -119,6 +126,12 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                         | Error _ -> failwith $"Invalid FolderName in database: {str}")
                 )
 
+            let workspaceIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.WorkspaceId, System.Guid>(
+                    (fun workspaceId -> workspaceId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.WorkspaceId(guid))
+                )
+
             let optionFolderIdConverter =
                 ValueConverter<Freetool.Domain.ValueObjects.FolderId option, System.Nullable<System.Guid>>(
                     (fun opt ->
@@ -139,6 +152,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun f -> f.Name).HasColumnName("Name").HasConversion(folderNameConverter)
             |> ignore
 
+            entity.Property(fun f -> f.WorkspaceId).HasColumnName("WorkspaceId").HasConversion(workspaceIdConverter)
+            |> ignore
+
             entity.Property(fun f -> f.CreatedAt).HasColumnName("CreatedAt") |> ignore
             entity.Property(fun f -> f.UpdatedAt).HasColumnName("UpdatedAt") |> ignore
             entity.Property(fun f -> f.IsDeleted).HasColumnName("IsDeleted") |> ignore
@@ -147,6 +163,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Ignore("Children") |> ignore
 
             entity.Property(fun f -> f.ParentId).HasConversion(optionFolderIdConverter)
+            |> ignore
+
+            // Configure foreign key relationship to workspace
+            entity.HasOne<WorkspaceData>().WithMany().HasForeignKey(fun f -> f.WorkspaceId :> obj)
             |> ignore
 
             // Global query filter for soft delete
@@ -552,4 +572,37 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
             entity.HasOne<GroupData>().WithMany().HasForeignKey(fun ug -> ug.GroupId :> obj)
             |> ignore)
+        |> ignore
+
+        // Configure WorkspaceData
+        modelBuilder.Entity<WorkspaceData>(fun entity ->
+            let workspaceIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.WorkspaceId, System.Guid>(
+                    (fun workspaceId -> workspaceId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.WorkspaceId(guid))
+                )
+
+            let groupIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.GroupId, System.Guid>(
+                    (fun groupId -> groupId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.GroupId(guid))
+                )
+
+            // Explicit property configuration
+            entity.Property(fun w -> w.Id).HasColumnName("Id").HasConversion(workspaceIdConverter)
+            |> ignore
+
+            entity.Property(fun w -> w.GroupId).HasColumnName("GroupId").HasConversion(groupIdConverter)
+            |> ignore
+
+            entity.Property(fun w -> w.CreatedAt).HasColumnName("CreatedAt") |> ignore
+            entity.Property(fun w -> w.UpdatedAt).HasColumnName("UpdatedAt") |> ignore
+            entity.Property(fun w -> w.IsDeleted).HasColumnName("IsDeleted") |> ignore
+
+            // Configure foreign key relationship
+            entity.HasOne<GroupData>().WithMany().HasForeignKey(fun w -> w.GroupId :> obj)
+            |> ignore
+
+            // Global query filter for soft delete
+            entity.HasQueryFilter(fun w -> not w.IsDeleted) |> ignore)
         |> ignore

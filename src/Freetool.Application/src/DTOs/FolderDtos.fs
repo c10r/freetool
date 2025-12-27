@@ -13,7 +13,10 @@ type CreateFolderDto =
 
       [<JsonConverter(typeof<FolderLocationConverter>)>]
       [<Description("Parent folder ID. Leave null to create a root folder.")>]
-      Location: FolderLocation }
+      Location: FolderLocation
+
+      [<Required>]
+      WorkspaceId: string }
 
 type UpdateFolderNameDto =
     { [<Required>]

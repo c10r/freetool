@@ -17,7 +17,8 @@ let unwrapResult result =
 let ``Folder creation should generate FolderCreatedEvent`` () =
     // Arrange & Act
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let result = Folder.create actorUserId "My Documents" None
+    let workspaceId = WorkspaceId.NewId()
+    let result = Folder.create actorUserId "My Documents" None workspaceId
 
     // Assert
     match result with
@@ -37,9 +38,10 @@ let ``Folder creation with parent should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let parentId = FolderId.NewId()
+    let workspaceId = WorkspaceId.NewId()
 
     // Act
-    let result = Folder.create actorUserId "Sub Folder" (Some parentId)
+    let result = Folder.create actorUserId "Sub Folder" (Some parentId) workspaceId
 
     // Assert
     match result with
@@ -58,7 +60,10 @@ let ``Folder creation with parent should generate correct event`` () =
 let ``Folder name update should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let folder = Folder.create actorUserId "Old Folder Name" None |> unwrapResult
+    let workspaceId = WorkspaceId.NewId()
+
+    let folder =
+        Folder.create actorUserId "Old Folder Name" None workspaceId |> unwrapResult
 
     // Act
     let result = Folder.updateName actorUserId "New Folder Name" folder
@@ -85,7 +90,11 @@ let ``Folder name update should generate correct event`` () =
 let ``Folder move to parent should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let folder = Folder.create actorUserId "Mobile Folder" None |> unwrapResult
+    let workspaceId = WorkspaceId.NewId()
+
+    let folder =
+        Folder.create actorUserId "Mobile Folder" None workspaceId |> unwrapResult
+
     let newParentId = FolderId.NewId()
 
     // Act
@@ -111,9 +120,11 @@ let ``Folder move to root should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let parentId = FolderId.NewId()
+    let workspaceId = WorkspaceId.NewId()
 
     let folder =
-        Folder.create actorUserId "Child Folder" (Some parentId) |> unwrapResult
+        Folder.create actorUserId "Child Folder" (Some parentId) workspaceId
+        |> unwrapResult
 
     // Act
     let movedFolder = Folder.moveToParent actorUserId None folder
@@ -137,7 +148,8 @@ let ``Folder move to root should generate correct event`` () =
 let ``Folder creation should reject empty name`` () =
     // Act
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let result = Folder.create actorUserId "" None
+    let workspaceId = WorkspaceId.NewId()
+    let result = Folder.create actorUserId "" None workspaceId
 
     // Assert
     match result with
@@ -149,9 +161,10 @@ let ``Folder creation should reject name longer than 100 characters`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let longName = String.replicate 101 "a"
+    let workspaceId = WorkspaceId.NewId()
 
     // Act
-    let result = Folder.create actorUserId longName None
+    let result = Folder.create actorUserId longName None workspaceId
 
     // Assert
     match result with
@@ -162,7 +175,10 @@ let ``Folder creation should reject name longer than 100 characters`` () =
 let ``Folder deletion should generate FolderDeletedEvent`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let folder = Folder.create actorUserId "Test Folder" None |> unwrapResult
+    let workspaceId = WorkspaceId.NewId()
+
+    let folder =
+        Folder.create actorUserId "Test Folder" None workspaceId |> unwrapResult
 
     // Act
     let deletedFolder = Folder.markForDeletion actorUserId folder
@@ -179,11 +195,16 @@ let ``Folder deletion should generate FolderDeletedEvent`` () =
 let ``Root folder should be identified correctly`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let rootFolder = Folder.create actorUserId "Root Folder" None |> unwrapResult
+    let workspaceId = WorkspaceId.NewId()
+
+    let rootFolder =
+        Folder.create actorUserId "Root Folder" None workspaceId |> unwrapResult
+
     let parentId = FolderId.NewId()
 
     let childFolder =
-        Folder.create actorUserId "Child Folder" (Some parentId) |> unwrapResult
+        Folder.create actorUserId "Child Folder" (Some parentId) workspaceId
+        |> unwrapResult
 
     // Act & Assert
     Assert.True(Folder.isRoot rootFolder)

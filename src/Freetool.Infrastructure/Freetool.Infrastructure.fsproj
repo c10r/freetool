@@ -32,6 +32,7 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.009_AddUserIdToEventsTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.010_AddHttpMethodToResourcesTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.011_UpdateAppUniqueIndexForSoftDelete.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.012_CreateWorkspacesTableAndUpdateFolders.sql" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,6 +40,7 @@
     <Compile Include="src/Database/Persistence.fs" />
     <Compile Include="src/Database/Repositories/UserRepository.fs" />
     <Compile Include="src/Database/Repositories/GroupRepository.fs" />
+    <Compile Include="src/Database/Repositories/WorkspaceRepository.fs" />
     <Compile Include="src/Database/Repositories/ResourceRepository.fs" />
     <Compile Include="src/Database/Repositories/FolderRepository.fs" />
     <Compile Include="src/Database/Repositories/AppRepository.fs" />
