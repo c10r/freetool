@@ -126,7 +126,9 @@ type FolderController
     [<ProducesResponseType(typeof<PagedResult<FolderData>>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.GetAllFolders([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> =
+    member this.GetAllFolders
+        ([<FromQuery>] workspaceId: string, [<FromQuery>] skip: int, [<FromQuery>] take: int)
+        : Task<IActionResult> =
         task {
             let skipValue = if skip < 0 then 0 else skip
 
@@ -135,13 +137,33 @@ type FolderController
                 elif take > 100 then 100
                 else take
 
-            let! result = commandHandler.HandleCommand folderRepository (GetAllFolders(skipValue, takeValue))
+            // Parse optional workspaceId
+            if System.String.IsNullOrWhiteSpace(workspaceId) then
+                // No workspace filter - backward compatibility
+                let! result = commandHandler.HandleCommand folderRepository (GetAllFolders(None, skipValue, takeValue))
 
-            return
-                match result with
-                | Ok(FoldersResult pagedFolders) -> this.Ok(pagedFolders) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+                return
+                    match result with
+                    | Ok(FoldersResult pagedFolders) -> this.Ok(pagedFolders) :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError(error)
+            else
+                // Validate and parse workspace ID
+                match Guid.TryParse(workspaceId) with
+                | false, _ -> return this.HandleDomainError(ValidationError "Invalid workspace ID format")
+                | true, guid ->
+                    let workspaceIdObj = WorkspaceId.FromGuid(guid)
+
+                    let! result =
+                        commandHandler.HandleCommand
+                            folderRepository
+                            (GetAllFolders(Some workspaceIdObj, skipValue, takeValue))
+
+                    return
+                        match result with
+                        | Ok(FoldersResult pagedFolders) -> this.Ok(pagedFolders) :> IActionResult
+                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                        | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpPut("{id}/name")>]

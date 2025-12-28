@@ -35,6 +35,11 @@ type RunEvents =
     | RunCreatedEvent
     | RunStatusChangedEvent
 
+type WorkspaceEvents =
+    | WorkspaceCreatedEvent
+    | WorkspaceUpdatedEvent
+    | WorkspaceDeletedEvent
+
 type EventType =
     | UserEvents of UserEvents
     | AppEvents of AppEvents
@@ -42,6 +47,7 @@ type EventType =
     | FolderEvents of FolderEvents
     | GroupEvents of GroupEvents
     | RunEvents of RunEvents
+    | WorkspaceEvents of WorkspaceEvents
 
 type EntityType =
     | User
@@ -50,6 +56,7 @@ type EntityType =
     | Folder
     | Group
     | Run
+    | Workspace
 
 module EventTypeConverter =
     let toString (eventType: EventType) : string =
@@ -83,6 +90,11 @@ module EventTypeConverter =
             match runEvent with
             | RunCreatedEvent -> "RunCreatedEvent"
             | RunStatusChangedEvent -> "RunStatusChangedEvent"
+        | WorkspaceEvents workspaceEvent ->
+            match workspaceEvent with
+            | WorkspaceCreatedEvent -> "WorkspaceCreatedEvent"
+            | WorkspaceUpdatedEvent -> "WorkspaceUpdatedEvent"
+            | WorkspaceDeletedEvent -> "WorkspaceDeletedEvent"
 
     let fromString (str: string) : EventType option =
         match str with
@@ -103,6 +115,9 @@ module EventTypeConverter =
         | "GroupDeletedEvent" -> Some(GroupEvents GroupDeletedEvent)
         | "RunCreatedEvent" -> Some(RunEvents RunCreatedEvent)
         | "RunStatusChangedEvent" -> Some(RunEvents RunStatusChangedEvent)
+        | "WorkspaceCreatedEvent" -> Some(WorkspaceEvents WorkspaceCreatedEvent)
+        | "WorkspaceUpdatedEvent" -> Some(WorkspaceEvents WorkspaceUpdatedEvent)
+        | "WorkspaceDeletedEvent" -> Some(WorkspaceEvents WorkspaceDeletedEvent)
         | _ -> None
 
 module EntityTypeConverter =
@@ -114,6 +129,7 @@ module EntityTypeConverter =
         | Folder -> "Folder"
         | Group -> "Group"
         | Run -> "Run"
+        | Workspace -> "Workspace"
 
     let fromString (str: string) : EntityType option =
         match str with
@@ -123,6 +139,7 @@ module EntityTypeConverter =
         | "Folder" -> Some Folder
         | "Group" -> Some Group
         | "Run" -> Some Run
+        | "Workspace" -> Some Workspace
         | _ -> None
 
 [<Table("Events")>]

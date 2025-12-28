@@ -30,6 +30,7 @@ type EventRepository(context: FreetoolDbContext) =
                     | FolderEvents _ -> EntityType.Folder
                     | GroupEvents _ -> EntityType.Group
                     | RunEvents _ -> EntityType.Run
+                    | WorkspaceEvents _ -> EntityType.Workspace
 
                 let jsonOptions = JsonSerializerOptions()
                 jsonOptions.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull
@@ -64,6 +65,12 @@ type EventRepository(context: FreetoolDbContext) =
                     | :? Events.RunCreatedEvent as e -> (e.RunId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.RunStatusChangedEvent as e ->
                         (e.RunId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.WorkspaceCreatedEvent as e ->
+                        (e.WorkspaceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.WorkspaceUpdatedEvent as e ->
+                        (e.WorkspaceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.WorkspaceDeletedEvent as e ->
+                        (e.WorkspaceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | _ -> ("unknown", JsonSerializer.Serialize(event, jsonOptions))
 
                 // Temporary debug logging

@@ -14,6 +14,9 @@ type IFolderRepository =
 
     abstract member GetAllAsync: skip: int -> take: int -> Task<ValidatedFolder list>
 
+    abstract member GetByWorkspaceAsync:
+        workspaceId: WorkspaceId -> skip: int -> take: int -> Task<ValidatedFolder list>
+
     abstract member AddAsync: ValidatedFolder -> Task<Result<unit, DomainError>>
 
     abstract member UpdateAsync: ValidatedFolder -> Task<Result<unit, DomainError>>
@@ -25,6 +28,8 @@ type IFolderRepository =
     abstract member ExistsByNameInParentAsync: FolderName -> FolderId option -> Task<bool>
 
     abstract member GetCountAsync: unit -> Task<int>
+
+    abstract member GetCountByWorkspaceAsync: workspaceId: WorkspaceId -> Task<int>
 
     abstract member GetRootCountAsync: unit -> Task<int>
 

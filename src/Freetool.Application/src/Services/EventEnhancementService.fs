@@ -132,6 +132,26 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
                             )
 
                         return $"Run {runEventData.RunId.Value}"
+                | WorkspaceEvents workspaceEvent ->
+                    match workspaceEvent with
+                    | WorkspaceCreatedEvent ->
+                        let workspaceEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.WorkspaceCreatedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        return $"Workspace {workspaceEventData.WorkspaceId.Value}"
+                    | _ ->
+                        // For update/delete events, try to get workspace ID
+                        let jsonDocument = JsonDocument.Parse(eventData)
+                        let root = jsonDocument.RootElement
+                        let mutable workspaceIdElement = Unchecked.defaultof<JsonElement>
+
+                        if root.TryGetProperty("WorkspaceId", &workspaceIdElement) then
+                            return $"Workspace {workspaceIdElement.GetString()}"
+                        else
+                            return "Workspace (Unknown)"
             with ex ->
                 let entityTypeStr = EntityTypeConverter.toString entityType
                 // Include some of the raw event data for debugging
@@ -187,6 +207,11 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
             match runEvent with
             | RunCreatedEvent -> $"{userName} ran \"{entityName}\""
             | RunStatusChangedEvent -> $"{userName} changed status of \"{entityName}\""
+        | WorkspaceEvents workspaceEvent ->
+            match workspaceEvent with
+            | WorkspaceCreatedEvent -> $"{userName} created workspace \"{entityName}\""
+            | WorkspaceUpdatedEvent -> $"{userName} updated workspace \"{entityName}\""
+            | WorkspaceDeletedEvent -> $"{userName} deleted workspace \"{entityName}\""
 
     interface IEventEnhancementService with
         member this.EnhanceEventAsync(event: EventData) : Task<EnhancedEventData> =

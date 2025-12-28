@@ -110,6 +110,40 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
                 return List.rev folderList
             }
 
+        member _.GetByWorkspaceAsync (workspaceId: WorkspaceId) (skip: int) (take: int) : Task<ValidatedFolder list> =
+            task {
+                let! folderDatas =
+                    context.Folders
+                        .Where(fun f -> f.WorkspaceId = workspaceId)
+                        .OrderBy(fun f -> f.Name)
+                        .Skip(skip)
+                        .Take(take)
+                        .ToListAsync()
+
+                // Initialize Children for all retrieved folders
+                folderDatas |> Seq.iter (fun data -> data.Children <- [])
+
+                // Load children for each folder
+                let folders = []
+                let mutable folderList = folders
+
+                for data in folderDatas do
+                    // Load children for this folder
+                    let dataId = data.Id
+
+                    let! childrenData =
+                        context.Folders.Where(fun f -> f.ParentId = Some(dataId)).OrderBy(fun f -> f.Name).ToListAsync()
+
+                    // Initialize children for retrieved child data
+                    childrenData |> Seq.iter (fun childData -> childData.Children <- [])
+                    // Populate children field
+                    data.Children <- childrenData |> Seq.toList
+                    let folder = Folder.fromData data
+                    folderList <- folder :: folderList
+
+                return List.rev folderList
+            }
+
         member _.AddAsync(folder: ValidatedFolder) : Task<Result<unit, DomainError>> =
             task {
                 try
@@ -219,6 +253,9 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
 
         member _.GetCountAsync() : Task<int> =
             task { return! context.Folders.CountAsync() }
+
+        member _.GetCountByWorkspaceAsync(workspaceId: WorkspaceId) : Task<int> =
+            task { return! context.Folders.CountAsync(fun f -> f.WorkspaceId = workspaceId) }
 
         member _.GetRootCountAsync() : Task<int> =
             task { return! context.Folders.CountAsync(fun f -> f.ParentId = None) }

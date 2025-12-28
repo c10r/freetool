@@ -223,22 +223,37 @@ module FolderHandler =
 
                     return Ok(FoldersResult result)
 
-            | GetAllFolders(skip, take) ->
+            | GetAllFolders(workspaceId, skip, take) ->
                 if skip < 0 then
                     return Error(ValidationError "Skip cannot be negative")
                 elif take <= 0 || take > 100 then
                     return Error(ValidationError "Take must be between 1 and 100")
                 else
-                    let! folders = folderRepository.GetAllAsync skip take
-                    let! totalCount = folderRepository.GetCountAsync()
+                    match workspaceId with
+                    | None ->
+                        // No workspace filter - return all folders (backward compatibility)
+                        let! folders = folderRepository.GetAllAsync skip take
+                        let! totalCount = folderRepository.GetCountAsync()
 
-                    let result =
-                        { Items = folders |> List.map (fun folder -> folder.State)
-                          TotalCount = totalCount
-                          Skip = skip
-                          Take = take }
+                        let result =
+                            { Items = folders |> List.map (fun folder -> folder.State)
+                              TotalCount = totalCount
+                              Skip = skip
+                              Take = take }
 
-                    return Ok(FoldersResult result)
+                        return Ok(FoldersResult result)
+                    | Some wId ->
+                        // Filter by workspace
+                        let! folders = folderRepository.GetByWorkspaceAsync wId skip take
+                        let! totalCount = folderRepository.GetCountByWorkspaceAsync wId
+
+                        let result =
+                            { Items = folders |> List.map (fun folder -> folder.State)
+                              TotalCount = totalCount
+                              Skip = skip
+                              Take = take }
+
+                        return Ok(FoldersResult result)
         }
 
 type FolderHandler() =

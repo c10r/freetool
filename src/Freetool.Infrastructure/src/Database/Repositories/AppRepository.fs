@@ -59,21 +59,20 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                 if List.isEmpty workspaceIds then
                     return []
                 else
-                    let workspaceGuidArray =
-                        workspaceIds |> List.map (fun id -> id.Value) |> List.toArray
+                    let workspaceIdArray = workspaceIds |> List.toArray
+
+                    // Get folder IDs that belong to the workspaces first
+                    // Note: Compare WorkspaceId directly (not .Value) - EF Core's ValueConverter handles translation
+                    let! folderIds =
+                        context.Folders
+                            .Where(fun f -> workspaceIdArray.Contains(f.WorkspaceId))
+                            .Select(fun f -> f.Id)
+                            .ToListAsync()
 
                     let! appDatas =
                         context.Apps
-                            .Join(
-                                context.Folders,
-                                (fun app -> app.FolderId),
-                                (fun folder -> folder.Id),
-                                (fun app folder -> struct (app, folder))
-                            )
-                            .Where(fun struct (_, folder: FolderData) ->
-                                workspaceGuidArray.Contains(folder.WorkspaceId.Value))
-                            .OrderBy(fun struct (app: AppData, _) -> app.CreatedAt)
-                            .Select(fun struct (app, _) -> app)
+                            .Where(fun a -> folderIds.Contains(a.FolderId))
+                            .OrderBy(fun a -> a.CreatedAt)
                             .Skip(skip)
                             .Take(take)
                             .ToListAsync()
@@ -179,21 +178,17 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                 if List.isEmpty workspaceIds then
                     return 0
                 else
-                    let workspaceGuidArray =
-                        workspaceIds |> List.map (fun id -> id.Value) |> List.toArray
+                    let workspaceIdArray = workspaceIds |> List.toArray
 
-                    return!
-                        context.Apps
-                            .Join(
-                                context.Folders,
-                                (fun app -> app.FolderId),
-                                (fun folder -> folder.Id),
-                                (fun app folder -> struct (app, folder))
-                            )
-                            .Where(fun struct (_, folder: FolderData) ->
-                                workspaceGuidArray.Contains(folder.WorkspaceId.Value))
-                            .Select(fun struct (app, _) -> app.Id)
-                            .CountAsync()
+                    // Get folder IDs that belong to the workspaces first
+                    // Note: Compare WorkspaceId directly (not .Value) - EF Core's ValueConverter handles translation
+                    let! folderIds =
+                        context.Folders
+                            .Where(fun f -> workspaceIdArray.Contains(f.WorkspaceId))
+                            .Select(fun f -> f.Id)
+                            .ToListAsync()
+
+                    return! context.Apps.Where(fun a -> folderIds.Contains(a.FolderId)).CountAsync()
             }
 
         member _.GetByResourceIdAsync(resourceId: ResourceId) : Task<ValidatedApp list> =

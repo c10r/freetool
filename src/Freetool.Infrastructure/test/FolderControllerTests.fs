@@ -38,12 +38,14 @@ type MockFolderRepository(getByIdFn: FolderId -> Task<ValidatedFolder option>) =
         member _.GetChildrenAsync(_) = Task.FromResult([])
         member _.GetRootFoldersAsync _ _ = Task.FromResult([])
         member _.GetAllAsync _ _ = Task.FromResult([])
+        member _.GetByWorkspaceAsync _ _ _ = Task.FromResult([])
         member _.AddAsync(_) = Task.FromResult(Ok())
         member _.UpdateAsync(_) = Task.FromResult(Ok())
         member _.DeleteAsync(_) = Task.FromResult(Ok())
         member _.ExistsAsync(_) = Task.FromResult(false)
         member _.ExistsByNameInParentAsync _ _ = Task.FromResult(false)
         member _.GetCountAsync() = Task.FromResult(0)
+        member _.GetCountByWorkspaceAsync(_) = Task.FromResult(0)
         member _.GetRootCountAsync() = Task.FromResult(0)
         member _.GetChildCountAsync(_) = Task.FromResult(0)
 
@@ -514,10 +516,10 @@ let ``GetAllFolders allows any authenticated user`` () : Task =
         let controller = createTestController checkPermission getById handleCommand userId
 
         // Act
-        let! result = controller.GetAllFolders(0, 10)
+        let! result = controller.GetAllFolders("", 0, 10) // Empty string = no workspace filter
 
         // Assert - Should succeed (200 OK) without auth check
         match result with
-        | :? OkObjectResult as okResult -> Assert.NotNull(okResult)
+        | :? OkObjectResult as okResult -> Assert.NotNull(okResult.Value)
         | _ -> () // Test passes as long as no 403 is returned
     }
