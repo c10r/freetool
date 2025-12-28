@@ -1,6 +1,6 @@
+import { Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -8,10 +8,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { KeyValuePair } from "../types";
-import KeyValueList from "./KeyValueList";
+import { Textarea } from "@/components/ui/textarea";
+import type { KeyValuePair } from "../types";
 import HttpMethodBadge from "./HttpMethodBadge";
-import { Check, X } from "lucide-react";
+import KeyValueList from "./KeyValueList";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -45,17 +45,20 @@ interface ResourceFormProps {
     headers: FieldState;
     body: FieldState;
   };
-  onFieldBlur?: (field: keyof ResourceFormData, value: string | KeyValuePair[]) => void;
+  onFieldBlur?: (
+    field: keyof ResourceFormData,
+    value: string | KeyValuePair[]
+  ) => void;
   onKeyValueFieldBlur?: (
     field: "urlParameters" | "headers" | "body",
-    value: KeyValuePair[],
+    value: KeyValuePair[]
   ) => void;
 }
 
 const FieldIndicator = ({ state }: { state: FieldState }) => {
   if (state.updating) {
     return (
-      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900" />
     );
   }
   if (state.saved && !state.error) {
@@ -76,7 +79,10 @@ export default function ResourceForm({
   onFieldBlur,
   onKeyValueFieldBlur,
 }: ResourceFormProps) {
-  const updateData = (field: keyof ResourceFormData, value: string | HttpMethod | KeyValuePair[]) => {
+  const updateData = (
+    field: keyof ResourceFormData,
+    value: string | HttpMethod | KeyValuePair[]
+  ) => {
     onChange({ ...data, [field]: value });
   };
 

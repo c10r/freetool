@@ -1,7 +1,7 @@
-import { Input } from "@/components/ui/input";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { X, Plus } from "lucide-react";
-import { KeyValuePair } from "../types";
+import { Input } from "@/components/ui/input";
+import type { KeyValuePair } from "../types";
 
 interface KeyValueListProps {
   items: KeyValuePair[] | undefined;
@@ -53,7 +53,7 @@ export default function KeyValueList({
                 aria-label={`Value ${i + 1}`}
                 readOnly
               />
-              <div className="col-span-1"></div>
+              <div className="col-span-1" />
             </div>
           ))
         )}
@@ -73,8 +73,9 @@ export default function KeyValueList({
             const relatedTarget = e.relatedTarget;
 
             if (
-              !relatedTarget ||
-              !e.currentTarget.contains(relatedTarget as Node)
+              !(
+                relatedTarget && e.currentTarget.contains(relatedTarget as Node)
+              )
             ) {
               onBlur?.(items || []);
             }

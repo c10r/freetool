@@ -74,7 +74,7 @@ export interface WorkspaceMainProps {
     parentId: string,
     name?: string,
     resourceId?: string,
-    urlPath?: string,
+    urlPath?: string
   ) => Promise<void>;
   deleteNode: (id: string) => void;
   endpoints: Record<string, Endpoint>;

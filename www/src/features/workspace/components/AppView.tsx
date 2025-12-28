@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Check, X, Eye } from "lucide-react";
+import { Check, Edit, Eye, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { updateAppName } from "@/api/api";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,21 +13,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-  AppNode,
+import { Switch } from "@/components/ui/switch";
+import { useHasPermission } from "@/hooks/usePermissions";
+import { useAppForm } from "../hooks/useAppForm";
+import type {
   AppField,
+  AppNode,
   FieldType,
-  WorkspaceMainProps,
   KeyValuePair,
+  WorkspaceMainProps,
 } from "../types";
-import AppFormRenderer from "./AppFormRenderer";
 import AppConfigForm from "./AppConfigForm";
 import ResourceSelector from "./ResourceSelector";
-import { Switch } from "@/components/ui/switch";
-import { updateAppName } from "@/api/api";
-import { useAppForm } from "../hooks/useAppForm";
-import { useHasPermission } from "@/hooks/usePermissions";
-import { Badge } from "@/components/ui/badge";
 
 export default function AppView({
   app,
@@ -71,7 +70,7 @@ export default function AppView({
           body: updatedData.body,
         });
       }
-    },
+    }
   );
 
   // Update form data when app changes
@@ -92,7 +91,15 @@ export default function AppView({
       body: app.body || [],
     });
     resetFieldStates();
-  }, [app.id, app.name, app.urlPath, app.urlParameters, app.headers, app.body, setAppFormData, resetFieldStates]);
+  }, [
+    app.name,
+    app.urlPath,
+    app.urlParameters,
+    app.headers,
+    app.body,
+    setAppFormData,
+    resetFieldStates,
+  ]);
 
   const updateField = (id: string, patch: Partial<AppField>) => {
     updateNode({
@@ -133,7 +140,7 @@ export default function AppView({
     // Don't update the app node immediately - wait for autosave
   };
 
-  const selectedEndpoint = app.endpointId
+  const _selectedEndpoint = app.endpointId
     ? endpoints[app.endpointId]
     : undefined;
 
@@ -152,7 +159,7 @@ export default function AppView({
                 />
                 {nameUpdating && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900" />
                   </div>
                 )}
                 {nameSaved && !nameUpdating && !nameError && (
@@ -205,7 +212,7 @@ export default function AppView({
                     setTimeout(() => {
                       setNameSaved(false);
                     }, 2_000);
-                  } catch (error) {
+                  } catch (_error) {
                     setNameError(true);
                     setNameErrorMessage("Network error occurred");
                     setName(app.name); // Reset to original name

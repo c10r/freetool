@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
-import { Label } from "@/components/ui/label";
+import { Check, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getResources } from "@/api/api";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -8,11 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { KeyValuePair, EndpointMethod } from "../types";
+import type { EndpointMethod, KeyValuePair } from "../types";
 import HttpMethodBadge from "./HttpMethodBadge";
 import KeyValueList from "./KeyValueList";
-import { getResources } from "@/api/api";
-import { Check, X } from "lucide-react";
 
 interface Resource {
   id: string;
@@ -54,7 +54,7 @@ interface AppConfigFormProps {
   };
   onKeyValueFieldBlur?: (
     field: "urlParameters" | "headers" | "body",
-    value: KeyValuePair[],
+    value: KeyValuePair[]
   ) => void;
   onUrlPathFieldBlur?: (value: string) => void;
 }
@@ -62,7 +62,7 @@ interface AppConfigFormProps {
 const FieldIndicator = ({ state }: { state: FieldState }) => {
   if (state.updating) {
     return (
-      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900" />
     );
   }
   if (state.saved && !state.error) {
@@ -102,7 +102,7 @@ export default function AppConfigForm({
     : undefined;
 
   const getFieldState = (
-    field: "urlPath" | "urlParameters" | "headers" | "body",
+    field: "urlPath" | "urlParameters" | "headers" | "body"
   ): FieldState => {
     const state = fieldStates?.[field] || {
       updating: false,
@@ -145,7 +145,7 @@ export default function AppConfigForm({
         } else {
           setResources([]);
         }
-      } catch (error) {
+      } catch (_error) {
         setResourcesError("Failed to load resources");
         setResources([]);
       } finally {
@@ -256,8 +256,7 @@ export default function AppConfigForm({
 
       <div className="space-y-2">
         <Label>Query Parameters</Label>
-        {selectedResource &&
-          selectedResource.urlParameters &&
+        {selectedResource?.urlParameters &&
           selectedResource.urlParameters.length > 0 && (
             <KeyValueList
               items={selectedResource.urlParameters}
@@ -292,17 +291,15 @@ export default function AppConfigForm({
 
       <div className="space-y-2">
         <Label>Headers</Label>
-        {selectedResource &&
-          selectedResource.headers &&
-          selectedResource.headers.length > 0 && (
-            <KeyValueList
-              items={selectedResource.headers}
-              onChange={() => {}} // No-op for read-only
-              ariaLabel="Headers"
-              readOnly
-              readOnlyLabel="From selected resource (read-only):"
-            />
-          )}
+        {selectedResource?.headers && selectedResource.headers.length > 0 && (
+          <KeyValueList
+            items={selectedResource.headers}
+            onChange={() => {}} // No-op for read-only
+            ariaLabel="Headers"
+            readOnly
+            readOnlyLabel="From selected resource (read-only):"
+          />
+        )}
         <div className="relative">
           <KeyValueList
             items={headers}
@@ -328,17 +325,15 @@ export default function AppConfigForm({
 
       <div className="space-y-2">
         <Label>JSON Body</Label>
-        {selectedResource &&
-          selectedResource.body &&
-          selectedResource.body.length > 0 && (
-            <KeyValueList
-              items={selectedResource.body}
-              onChange={() => {}} // No-op for read-only
-              ariaLabel="JSON body"
-              readOnly
-              readOnlyLabel="From selected resource (read-only):"
-            />
-          )}
+        {selectedResource?.body && selectedResource.body.length > 0 && (
+          <KeyValueList
+            items={selectedResource.body}
+            onChange={() => {}} // No-op for read-only
+            ariaLabel="JSON body"
+            readOnly
+            readOnlyLabel="From selected resource (read-only):"
+          />
+        )}
         <div className="relative">
           <KeyValueList
             items={body}

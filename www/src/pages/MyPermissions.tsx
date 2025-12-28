@@ -1,14 +1,14 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle, Shield, User, Users, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, CheckCircle, XCircle, Shield, Users } from "lucide-react";
 import {
   useCurrentUser,
   useWorkspacePermissions,
 } from "@/hooks/usePermissions";
 import { getPermissionLabel } from "@/lib/permissionMessages";
-import type { Permission } from "@/types/permissions";
 import { cn } from "@/lib/utils";
+import type { Permission } from "@/types/permissions";
 
 export default function MyPermissions() {
   const { currentUser, isLoading: userLoading } = useCurrentUser();
@@ -172,7 +172,7 @@ export default function MyPermissions() {
                       "flex items-center gap-3 p-3 border rounded-lg",
                       hasPermission
                         ? "bg-green-50 border-green-200"
-                        : "bg-gray-50 border-gray-200",
+                        : "bg-gray-50 border-gray-200"
                     )}
                   >
                     {hasPermission ? (
@@ -185,13 +185,13 @@ export default function MyPermissions() {
                         "text-sm font-medium",
                         hasPermission
                           ? "text-green-900"
-                          : "text-muted-foreground",
+                          : "text-muted-foreground"
                       )}
                     >
                       {getPermissionLabel(permission)}
                     </span>
                   </div>
-                ),
+                )
               )}
             </div>
           ) : (

@@ -8,8 +8,8 @@
 import { createContext } from "react";
 import type {
   CurrentUser,
-  WorkspacePermissions,
   Permission,
+  WorkspacePermissions,
 } from "@/types/permissions";
 
 /**

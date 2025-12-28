@@ -1,16 +1,17 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { getAuditEvents } from "@/api/api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { getAuditEvents } from "@/api/api";
 
 // Safe JSON parsing helper
-const safeJsonParse = (jsonString: string): Record<string, unknown> | { error: string; raw: string } => {
+const safeJsonParse = (
+  jsonString: string
+): Record<string, unknown> | { error: string; raw: string } => {
   try {
     return JSON.parse(jsonString) as Record<string, unknown>;
-  } catch (error) {
-    console.warn("Failed to parse JSON:", error);
+  } catch (_error) {
     return { error: "Invalid JSON data", raw: jsonString };
   }
 };
@@ -62,11 +63,18 @@ interface AuditEvent {
 }
 
 const getEventTypeColor = (eventType: EventType): string => {
-  if (eventType.includes("Created")) return "bg-green-100 text-green-800";
-  if (eventType.includes("Updated")) return "bg-blue-100 text-blue-800";
-  if (eventType.includes("Deleted")) return "bg-red-100 text-red-800";
-  if (eventType.includes("StatusChanged"))
+  if (eventType.includes("Created")) {
+    return "bg-green-100 text-green-800";
+  }
+  if (eventType.includes("Updated")) {
+    return "bg-blue-100 text-blue-800";
+  }
+  if (eventType.includes("Deleted")) {
+    return "bg-red-100 text-red-800";
+  }
+  if (eventType.includes("StatusChanged")) {
     return "bg-yellow-100 text-yellow-800";
+  }
   return "bg-gray-100 text-gray-800";
 };
 
@@ -124,7 +132,7 @@ export default function AuditLogView() {
         });
         setEvents(mappedItems);
       }
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to load audit events");
     } finally {
       setLoading(false);
@@ -133,7 +141,7 @@ export default function AuditLogView() {
 
   useEffect(() => {
     fetchAuditEvents();
-  }, []);
+  }, [fetchAuditEvents]);
 
   const toggleEventDetails = (eventId: string) => {
     setExpandedEvent(expandedEvent === eventId ? null : eventId);
@@ -163,7 +171,7 @@ export default function AuditLogView() {
         </Card>
       )}
 
-      {!loading && !error && events.length === 0 && (
+      {!(loading || error) && events.length === 0 && (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
             No audit events found.
@@ -171,7 +179,7 @@ export default function AuditLogView() {
         </Card>
       )}
 
-      {!loading && !error && events.length > 0 && (
+      {!(loading || error) && events.length > 0 && (
         <div className="space-y-2">
           {events.map((event) => (
             <Card
@@ -244,7 +252,7 @@ export default function AuditLogView() {
                         {JSON.stringify(
                           safeJsonParse(event.eventData),
                           null,
-                          2,
+                          2
                         )}
                       </pre>
                     </div>

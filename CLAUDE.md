@@ -346,7 +346,7 @@ The frontend uses `openapi-fetch` to generate a type-safe client from `openapi.s
 
 ## Frontend Code Quality Standards
 
-The frontend enforces strict ESLint rules to maintain code quality and prevent bugs. **All linting must pass with zero warnings before committing.**
+The frontend uses **Biome** for linting and formatting - a unified, high-performance tool that replaces ESLint + Prettier. **All linting must pass with zero warnings before committing.**
 
 ### Pre-commit Hooks
 
@@ -357,8 +357,7 @@ The frontend enforces strict ESLint rules to maintain code quality and prevent b
 - `dotnet test Freetool.sln` - Run all backend tests
 
 **For TypeScript files** (*.ts, *.tsx):
-- `eslint --fix` - Lint and auto-fix code
-- `prettier --write` - Format code
+- `biome check --write` - Lint, format, and auto-fix code in one command
 - `npm test` - Run frontend tests (Vitest)
 
 **How it works:**
@@ -374,7 +373,15 @@ git commit --no-verify
 
 **Note:** Fix all warnings before attempting to commit. The hooks enforce zero-warning policy.
 
-### Core ESLint Rules
+### Why Biome?
+
+- **Unified Tool**: Single tool replaces ESLint + Prettier (faster dev experience)
+- **Rust-based**: 10-100x faster than JavaScript tools
+- **80+ Strict Rules**: More comprehensive than previous ESLint setup
+- **Zero-config**: Works with sensible defaults
+- **React-aware**: Built-in React best practices
+
+### Core Biome Rules
 
 #### 1. No `any` Types (EVER)
 
@@ -412,6 +419,8 @@ function processUnknown(data: unknown) {
 #### 2. Component Files Export Only Components
 
 React Fast Refresh requires component files to export **only React components**. Extract everything else to separate files.
+
+**⚠️ CODE REVIEW CHECKPOINT**: This pattern is enforced via code review (Biome does not have an equivalent to ESLint's `react-refresh/only-export-components` rule). Pay close attention during PR reviews to ensure component files only export components.
 
 **Bad:**
 ```typescript
@@ -501,7 +510,7 @@ useEffect(() => {
 }, []);
 ```
 
-**Never disable the warning with `eslint-disable-next-line` unless you have a documented architectural reason.**
+**Never disable the warning with `biome-ignore` unless you have a documented architectural reason.**
 
 #### 4. Use ES6 Imports Only
 
@@ -552,42 +561,47 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 ```
 
-### Running Linting
+### Running Biome
 
 ```bash
 cd www
 
-# Check for issues (must pass with 0 warnings)
+# Check for linting issues only
 npm run lint
 
-# Auto-fix what can be fixed
-npm run lint -- --fix
-
-# Format code
+# Format code only
 npm run format
+
+# Check and fix both linting and formatting (recommended)
+npm run check
 ```
 
-### Common ESLint Violations and Fixes
+### Common Biome Violations and Fixes
 
 | Violation | Fix |
 |-----------|-----|
-| `@typescript-eslint/no-explicit-any` | Replace `any` with proper interface/type or `unknown` |
-| `react-refresh/only-export-components` | Move non-components to `.variants.ts`, `.hooks.ts`, etc. |
-| `react-hooks/exhaustive-deps` | Add missing dependencies or use functional updates |
-| `@typescript-eslint/no-var-requires` | Replace `require()` with `import` |
-| `@typescript-eslint/no-empty-interface` | Add properties or use type alias |
+| `suspicious/noExplicitAny` | Replace `any` with proper interface/type or `unknown` |
+| `correctness/useExhaustiveDependencies` | Add missing dependencies or use functional updates |
+| `correctness/noUnusedImports` | Remove unused imports |
+| `correctness/noUnusedVariables` | Remove unused variables or prefix with `_` if intentionally unused |
+| `suspicious/noConsoleLog` | Remove console.log or use proper logging |
+| `suspicious/noDebugger` | Remove debugger statements |
+| `style/noVar` | Replace `var` with `const` or `let` |
+| `style/useConst` | Use `const` instead of `let` for variables that are never reassigned |
 
 ### Why These Rules Matter
 
 1. **No `any`**: TypeScript without types is just JavaScript with extra steps. The `any` type defeats the entire purpose of TypeScript and hides bugs.
 
-2. **Component exports**: Fast Refresh (hot module reloading) breaks when component files export non-components. This slows down development significantly.
+2. **Component exports**: Fast Refresh (hot module reloading) breaks when component files export non-components. This slows down development significantly. **This is enforced via code review.**
 
 3. **Hook dependencies**: Missing dependencies cause stale closures - the most common React bug. These are real bugs that will bite you in production.
 
 4. **ES6 imports**: CommonJS `require()` doesn't work with TypeScript's type system and tree-shaking. Always use ES6 modules.
 
-5. **No empty interfaces**: Empty interfaces accept any object, providing zero type safety. If you don't have properties, you don't need an interface.
+5. **No console.log**: Console statements should be removed before committing. Use proper logging or debugging tools instead.
+
+6. **Prefer const**: Using `const` for variables that don't change makes code more predictable and prevents accidental reassignment bugs.
 
 ## Deployment
 

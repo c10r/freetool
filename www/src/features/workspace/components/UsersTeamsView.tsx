@@ -1,10 +1,18 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Edit, Plus, User, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  addGroupMember,
+  createGroup,
+  getGroupById,
+  getGroups,
+  getUsers,
+  removeGroupMember,
+  updateGroupName,
+} from "@/api/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -14,24 +22,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Users, User, Plus, Edit, X } from "lucide-react";
-import {
-  getUsers,
-  getGroups,
-  createGroup,
-  updateGroupName,
-  addGroupMember,
-  removeGroupMember,
-  getGroupById,
-} from "@/api/api";
-import { useIsOrgAdmin, useIsTeamAdmin } from "@/hooks/usePermissions";
+import { useIsOrgAdmin } from "@/hooks/usePermissions";
 
 interface User {
   id: string;
@@ -85,7 +85,7 @@ export default function UsersTeamsView() {
           });
           setUsers(userData);
         }
-      } catch (error) {
+      } catch (_error) {
         setUsersError("Failed to load users");
       } finally {
         setUsersLoading(false);
@@ -107,7 +107,7 @@ export default function UsersTeamsView() {
           });
           setGroups(groupData);
         }
-      } catch (error) {
+      } catch (_error) {
         setGroupsError("Failed to load teams");
       } finally {
         setGroupsLoading(false);
@@ -175,7 +175,7 @@ export default function UsersTeamsView() {
   };
 
   const handleUpdateGroup = async () => {
-    if (!editingGroup || !editGroupName.trim()) {
+    if (!(editingGroup && editGroupName.trim())) {
       return;
     }
 
@@ -192,10 +192,10 @@ export default function UsersTeamsView() {
         const currentUserIds = response.data.userIds || [];
 
         const usersToAdd = editSelectedUserIds.filter(
-          (id) => !currentUserIds.includes(id),
+          (id) => !currentUserIds.includes(id)
         );
         const usersToRemove = currentUserIds.filter(
-          (id) => !editSelectedUserIds.includes(id),
+          (id) => !editSelectedUserIds.includes(id)
         );
 
         for (const userId of usersToAdd) {
@@ -455,7 +455,7 @@ export default function UsersTeamsView() {
                             onCheckedChange={(checked) =>
                               handleEditUserSelection(
                                 user.id,
-                                checked as boolean,
+                                checked as boolean
                               )
                             }
                           />

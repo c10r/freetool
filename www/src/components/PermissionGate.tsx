@@ -5,7 +5,7 @@
  * Can either hide content entirely or show it in a disabled state with a tooltip.
  */
 
-import React, { ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -13,8 +13,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useHasPermission } from "@/hooks/usePermissions";
-import type { Permission } from "@/types/permissions";
 import { getPermissionMessage } from "@/lib/permissionMessages";
+import type { Permission } from "@/types/permissions";
 
 /**
  * Props for the PermissionGate component

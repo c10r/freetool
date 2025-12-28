@@ -13,8 +13,7 @@
       "dotnet fantomas"
     ],
     "www/**/*.{ts,tsx}": [
-      "bash -c 'cd www && npx eslint --max-warnings 0 --fix \"${@#www/}\"' _",
-      "bash -c 'cd www && npx prettier --write \"${@#www/}\"' _"
+      "bash -c 'cd www && npx biome check --write \"${@#www/}\"' _"
     ]
   }
 }

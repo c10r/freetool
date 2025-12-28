@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { EndpointMethod } from "../types";
+import type { EndpointMethod } from "../types";
 
 interface HttpMethodBadgeProps {
   method: EndpointMethod;
@@ -21,7 +21,7 @@ export default function HttpMethodBadge({
         method === "DELETE" && "bg-red-100 text-red-800",
         (method === "HEAD" || method === "OPTIONS") &&
           "bg-gray-100 text-gray-800",
-        className,
+        className
       )}
     >
       {method}

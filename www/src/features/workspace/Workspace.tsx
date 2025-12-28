@@ -1,27 +1,27 @@
-import { useMemo, useState, useEffect } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
-import SidebarTree from "./SidebarTree";
-import WorkspaceMain from "./WorkspaceMain";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-  WorkspaceNode,
-  FolderNode,
-  AppNode,
-  Endpoint,
-  KeyValuePair,
-} from "./types";
-import {
+  createApp as createAppAPI,
   getAllFolders,
   getAppByFolder,
-  createApp as createAppAPI,
 } from "@/api/api";
-import NotFound from "@/pages/NotFound";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
 import {
-  useWorkspacePermissions,
   useHasAnyPermission,
+  useWorkspacePermissions,
 } from "@/hooks/usePermissions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import NotFound from "@/pages/NotFound";
+import SidebarTree from "./SidebarTree";
+import type {
+  AppNode,
+  Endpoint,
+  FolderNode,
+  KeyValuePair,
+  WorkspaceNode,
+} from "./types";
+import WorkspaceMain from "./WorkspaceMain";
 
 function createFolder(id: string, name: string, parentId?: string): FolderNode {
   return { id, name, type: "folder", parentId, childrenIds: [] };
@@ -48,8 +48,8 @@ interface ApiFolderResponse {
 
 // Transform API folder data to workspace nodes structure
 function transformFoldersToNodes(
-  folders: Array<ApiFolderResponse>,
-  rootId: string,
+  folders: ApiFolderResponse[],
+  rootId: string
 ): Record<string, WorkspaceNode> {
   const nodes: Record<string, WorkspaceNode> = {};
 
@@ -92,12 +92,20 @@ function transformFoldersToNodes(
 // Helper functions to convert between selectedId and URL paths
 function getPathFromSelectedId(
   selectedId: string,
-  nodes: Record<string, WorkspaceNode>,
+  nodes: Record<string, WorkspaceNode>
 ): string {
-  if (selectedId === "resources") return "/resources";
-  if (selectedId === "users-&-teams") return "/users";
-  if (selectedId === "audit-log") return "/audit";
-  if (selectedId === "root") return "/workspaces";
+  if (selectedId === "resources") {
+    return "/resources";
+  }
+  if (selectedId === "users-&-teams") {
+    return "/users";
+  }
+  if (selectedId === "audit-log") {
+    return "/audit";
+  }
+  if (selectedId === "root") {
+    return "/workspaces";
+  }
 
   // For workspace nodes, use /workspaces/:nodeId
   if (nodes[selectedId]) {
@@ -110,14 +118,26 @@ function getPathFromSelectedId(
 function getSelectedIdFromPath(
   pathname: string,
   nodeId?: string,
-  rootId: string = "root",
+  rootId = "root"
 ): string {
-  if (pathname === "/resources") return "resources";
-  if (pathname === "/users") return "users-&-teams";
-  if (pathname === "/audit") return "audit-log";
-  if (pathname === "/workspaces" && !nodeId) return rootId;
-  if (pathname.startsWith("/workspaces/") && nodeId) return nodeId;
-  if (pathname === "/") return rootId;
+  if (pathname === "/resources") {
+    return "resources";
+  }
+  if (pathname === "/users") {
+    return "users-&-teams";
+  }
+  if (pathname === "/audit") {
+    return "audit-log";
+  }
+  if (pathname === "/workspaces" && !nodeId) {
+    return rootId;
+  }
+  if (pathname.startsWith("/workspaces/") && nodeId) {
+    return nodeId;
+  }
+  if (pathname === "/") {
+    return rootId;
+  }
 
   return rootId;
 }
@@ -159,11 +179,11 @@ function WorkspaceContent() {
           // Transform API response to nodes structure
           const transformedNodes = transformFoldersToNodes(
             response.data.items || [],
-            rootId,
+            rootId
           );
           setNodes(transformedNodes);
         }
-      } catch (err) {
+      } catch (_err) {
         setError("Failed to load workspace data");
       } finally {
         setLoading(false);
@@ -171,7 +191,7 @@ function WorkspaceContent() {
     };
 
     loadWorkspaceData();
-  }, [rootId]);
+  }, []);
 
   // Get selectedId from current URL
   const selectedId = getSelectedIdFromPath(location.pathname, nodeId, rootId);
@@ -248,20 +268,23 @@ function WorkspaceContent() {
           // Mark this folder as loaded
           setLoadedFolders((prev) => new Set([...prev, selectedId]));
         }
-      } catch (error) {
-        console.error("Failed to load apps for folder:", error);
-      }
+      } catch (_error) {}
     };
 
     loadAppsForFolder();
-  }, [selectedId, loading, rootId, loadedFolders, nodes]);
+  }, [selectedId, loading, loadedFolders, nodes]);
 
   // Check if the nodeId from URL is valid (only after data is loaded)
   const isValidNodeId = useMemo(() => {
-    if (loading) return true; // Don't validate while loading
-    if (!nodeId) return true; // Root path is always valid
-    if (["resources", "users-&-teams", "audit-log"].includes(selectedId))
+    if (loading) {
+      return true; // Don't validate while loading
+    }
+    if (!nodeId) {
+      return true; // Root path is always valid
+    }
+    if (["resources", "users-&-teams", "audit-log"].includes(selectedId)) {
       return true; // Special sections are valid
+    }
     return nodes[selectedId] !== undefined; // Check if node exists
   }, [loading, nodeId, selectedId, nodes]);
 
@@ -292,12 +315,12 @@ function WorkspaceContent() {
 
   const addApp = async (
     parentId: string,
-    name: string = "New App",
-    resourceId: string = "",
-    urlPath: string = "",
+    name = "New App",
+    resourceId = "",
+    urlPath = "",
     urlParameters: KeyValuePair[] = [],
     headers: KeyValuePair[] = [],
-    body: KeyValuePair[] = [],
+    body: KeyValuePair[] = []
   ) => {
     // Call backend API to create the app
     const response = await createAppAPI({
@@ -313,12 +336,12 @@ function WorkspaceContent() {
 
     if (response.error) {
       throw new Error(
-        (response.error.message as string) || "Failed to create app",
+        (response.error.message as string) || "Failed to create app"
       );
     }
 
     // Use the ID from the API response
-    const id = response.data!.id!;
+    const id = response.data?.id!;
 
     // Update local state only if API call succeeds
     setNodes((prev) => {
@@ -340,7 +363,9 @@ function WorkspaceContent() {
       const toDelete = collectSubtreeIds(prev, id);
       const newNodes: Record<string, WorkspaceNode> = {};
       for (const key in prev) {
-        if (!toDelete.has(key)) newNodes[key] = prev[key];
+        if (!toDelete.has(key)) {
+          newNodes[key] = prev[key];
+        }
       }
       // remove from parent's children
       const parentId = prev[id]?.parentId;
@@ -380,7 +405,7 @@ function WorkspaceContent() {
 
   const breadcrumbs = useMemo(
     () => buildBreadcrumb(nodes, selectedId),
-    [nodes, selectedId],
+    [nodes, selectedId]
   );
 
   // Show loading state (combined workspace data + permissions)
@@ -389,13 +414,13 @@ function WorkspaceContent() {
       <div className="h-screen flex overflow-hidden">
         <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
           <div className="text-center text-muted-foreground">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto mb-2"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto mb-2" />
             Loading workspace...
           </div>
         </aside>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-muted-foreground">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4" />
             Loading...
           </div>
         </div>
@@ -423,7 +448,7 @@ function WorkspaceContent() {
   }
 
   // Show no permissions state
-  if (!permissionsLoading && !hasAnyPermission) {
+  if (!(permissionsLoading || hasAnyPermission)) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Card className="max-w-md">
@@ -569,7 +594,9 @@ function buildBreadcrumb(nodes: Record<string, WorkspaceNode>, id: string) {
   let cur = nodes[id];
   while (cur) {
     list.unshift({ id: cur.id, name: cur.name });
-    if (!cur.parentId) break;
+    if (!cur.parentId) {
+      break;
+    }
     cur = nodes[cur.parentId];
   }
   return list;
@@ -580,7 +607,9 @@ function collectSubtreeIds(nodes: Record<string, WorkspaceNode>, id: string) {
   const walk = (nid: string) => {
     set.add(nid);
     const n = nodes[nid];
-    if (n?.type === "folder") n.childrenIds.forEach(walk);
+    if (n?.type === "folder") {
+      n.childrenIds.forEach(walk);
+    }
   };
   walk(id);
   return set;

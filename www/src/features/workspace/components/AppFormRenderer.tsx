@@ -1,10 +1,15 @@
 import { useMemo } from "react";
-import { useForm, Controller, UseFormRegister, Control } from "react-hook-form";
-import { AppNode, FieldType, Endpoint } from "../types";
-import { Input } from "@/components/ui/input";
+import {
+  type Control,
+  Controller,
+  type UseFormRegister,
+  useForm,
+} from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
+import type { AppNode, Endpoint, FieldType } from "../types";
 
 // Type for form field values - supports all possible field types
 type FormFieldValue = string | number | boolean;
@@ -43,7 +48,9 @@ export default function AppFormRenderer({
       // Build URL with query params (endpoint.query + form values for GET-like methods)
       const urlObj = new URL(endpoint.url);
       (endpoint.query || []).forEach(({ key, value }) => {
-        if (key) urlObj.searchParams.set(key, value);
+        if (key) {
+          urlObj.searchParams.set(key, value);
+        }
       });
 
       const method = endpoint.method || "POST";
@@ -51,30 +58,36 @@ export default function AppFormRenderer({
 
       if (isGetLike) {
         Object.entries(data || {}).forEach(([k, v]) => {
-          if (v !== undefined && v !== null)
+          if (v !== undefined && v !== null) {
             urlObj.searchParams.set(k, String(v));
+          }
         });
       }
 
       const headers = new Headers();
       (endpoint.headers || []).forEach(({ key, value }) => {
-        if (key) headers.set(key, value);
+        if (key) {
+          headers.set(key, value);
+        }
       });
 
-      let body: BodyInit | undefined = undefined;
+      let body: BodyInit | undefined;
       if (!isGetLike) {
         const staticBody: Record<string, string> = {};
         (endpoint.body || []).forEach(({ key, value }) => {
-          if (key) staticBody[key] = value;
+          if (key) {
+            staticBody[key] = value;
+          }
         });
         body = JSON.stringify({ ...data, ...staticBody });
-        if (!headers.has("Content-Type"))
+        if (!headers.has("Content-Type")) {
           headers.set("Content-Type", "application/json");
+        }
       }
 
       const res = await fetch(urlObj.toString(), { method, headers, body });
       const ok = res.ok;
-      const text = await res.text();
+      const _text = await res.text();
       if (ok) {
         toast({
           title: "Submitted",
@@ -86,7 +99,7 @@ export default function AppFormRenderer({
           description: `Request failed with ${res.status}.`,
         });
       }
-    } catch (err) {
+    } catch (_err) {
       toast({
         title: "Error",
         description: "Failed to call endpoint.",
@@ -120,7 +133,7 @@ function renderField(
   id: string,
   register: UseFormRegister<FormData>,
   control: Control<FormData>,
-  required: boolean,
+  required: boolean
 ) {
   switch (type) {
     case "text":

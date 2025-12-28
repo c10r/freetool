@@ -5,11 +5,10 @@
  * and handle loading states, caching, and error handling.
  */
 
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useAuthorization } from "@/hooks/useAuthorization";
-import type { Permission, WorkspacePermissions } from "@/types/permissions";
 import { getWorkspacePermissions } from "@/api/api";
+import { useAuthorization } from "@/hooks/useAuthorization";
+import type { Permission } from "@/types/permissions";
 
 /**
  * Cache time-to-live for permissions (5 minutes)
@@ -66,7 +65,9 @@ export function useWorkspacePermissions(workspaceId: string) {
    * Helper function to check if user has a specific permission
    */
   const can = (permission: Permission): boolean => {
-    if (!permissions) return false;
+    if (!permissions) {
+      return false;
+    }
     return permissions[permission] ?? false;
   };
 
@@ -104,7 +105,7 @@ export function useWorkspacePermissions(workspaceId: string) {
  */
 export function useHasPermission(
   workspaceId: string,
-  permission: Permission,
+  permission: Permission
 ): boolean {
   const { can } = useWorkspacePermissions(workspaceId);
   return can(permission);

@@ -5,8 +5,7 @@
  * Shows a tooltip explaining why the button is disabled.
  */
 
-import React from "react";
-import { Button, ButtonProps } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -14,9 +13,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useHasPermission } from "@/hooks/usePermissions";
-import type { Permission } from "@/types/permissions";
 import { getPermissionMessage } from "@/lib/permissionMessages";
 import { cn } from "@/lib/utils";
+import type { Permission } from "@/types/permissions";
 
 /**
  * Props for the PermissionButton component

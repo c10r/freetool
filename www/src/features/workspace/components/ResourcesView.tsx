@@ -1,33 +1,33 @@
-import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
+import { Edit, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  getResources,
   createResource,
   deleteResource,
   getApps,
+  getResources,
 } from "@/api/api";
+import { PermissionButton } from "@/components/PermissionButton";
+import { PermissionGate } from "@/components/PermissionGate";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import HttpMethodBadge from "./HttpMethodBadge";
-import ResourceForm, { ResourceFormData } from "./ResourceForm";
-import { useResourceForm } from "../hooks/useResourceForm";
-import { Edit, Trash2, Plus } from "lucide-react";
-import { KeyValuePair } from "../types";
-import { PermissionButton } from "@/components/PermissionButton";
-import { PermissionGate } from "@/components/PermissionGate";
 import { useHasPermission } from "@/hooks/usePermissions";
+import { useResourceForm } from "../hooks/useResourceForm";
+import type { KeyValuePair } from "../types";
+import HttpMethodBadge from "./HttpMethodBadge";
+import ResourceForm, { type ResourceFormData } from "./ResourceForm";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -70,7 +70,7 @@ export default function ResourcesView({
     Array<{ id: string; name: string; resourceId?: string }>
   >([]);
   const [deletingResourceId, setDeletingResourceId] = useState<string | null>(
-    null,
+    null
   );
 
   // Permission checks
@@ -96,8 +96,8 @@ export default function ResourcesView({
     // Update the resources list when edit form data changes
     setResources((prev) =>
       prev.map((r) =>
-        r.id === editingResource?.id ? { ...r, ...updatedData } : r,
-      ),
+        r.id === editingResource?.id ? { ...r, ...updatedData } : r
+      )
     );
     // Update the editing resource
     setEditingResource((prev) => (prev ? { ...prev, ...updatedData } : null));
@@ -114,9 +114,7 @@ export default function ResourcesView({
         }));
         setApps(mappedApps);
       }
-    } catch (err) {
-      console.error("Failed to load apps:", err);
-    }
+    } catch (_err) {}
   };
 
   const fetchResources = useCallback(async () => {
@@ -141,12 +139,12 @@ export default function ResourcesView({
       }
       // Also fetch apps to check resource usage
       await fetchApps();
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to load resources");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchApps]);
 
   const getAppsUsingResource = (resourceId: string) => {
     return apps.filter((app) => app.resourceId === resourceId);
@@ -165,7 +163,7 @@ export default function ResourcesView({
       setDeletingResourceId(resourceId);
       await deleteResource(resourceId);
       await fetchResources();
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to delete resource. Please try again.");
     } finally {
       setDeletingResourceId(null);
@@ -177,7 +175,7 @@ export default function ResourcesView({
   }, [fetchResources]);
 
   const handleCreateResource = async () => {
-    if (!createFormData.name.trim() || !createFormData.baseUrl.trim()) {
+    if (!(createFormData.name.trim() && createFormData.baseUrl.trim())) {
       setCreateError("Name and Base URL are required");
       return;
     }
@@ -199,7 +197,7 @@ export default function ResourcesView({
       setCreateFormData(initialFormData);
       setShowCreateForm(false);
       await fetchResources();
-    } catch (err) {
+    } catch (_err) {
       setCreateError("Failed to create resource. Please try again.");
     } finally {
       setCreating(false);
@@ -313,7 +311,7 @@ export default function ResourcesView({
         </Card>
       )}
 
-      {!loading && !error && resources.length === 0 && (
+      {!(loading || error) && resources.length === 0 && (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
             No resources found.
@@ -321,7 +319,7 @@ export default function ResourcesView({
         </Card>
       )}
 
-      {!loading && !error && resources.length > 0 && (
+      {!(loading || error) && resources.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
           {resources.map((resource) => (
             <Card
@@ -382,13 +380,13 @@ export default function ResourcesView({
                             </span>
                           </TooltipTrigger>
                           <TooltipContent>
-                            {!canDeleteResource(resource.id) ? (
+                            {canDeleteResource(resource.id) ? (
+                              <p>Delete resource</p>
+                            ) : (
                               <p>
                                 There are still apps that use this resource.
                                 Please delete those first.
                               </p>
-                            ) : (
-                              <p>Delete resource</p>
                             )}
                           </TooltipContent>
                         </Tooltip>

@@ -1,5 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ChevronDown,
+  ChevronRight,
+  Loader,
+  Play,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { getAppById, getFolderById, runApp } from "@/api/api";
+import { PermissionButton } from "@/components/PermissionButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -7,16 +17,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  ArrowLeft,
-  Play,
-  Loader,
-  ChevronDown,
-  ChevronRight,
-  AlertCircle,
-} from "lucide-react";
-import { getAppById, getFolderById, runApp } from "@/api/api";
-import { PermissionButton } from "@/components/PermissionButton";
 import { useHasPermission } from "@/hooks/usePermissions";
 import type { components } from "@/schema";
 
@@ -26,7 +26,7 @@ type KeyValuePair = components["schemas"]["KeyValuePair"];
 
 // Helper function to safely format response content
 const formatResponse = (
-  response: string,
+  response: string
 ): { content: string; isJson: boolean } => {
   try {
     const parsed = JSON.parse(response);
@@ -74,7 +74,7 @@ const RunApp = () => {
         } else if (response.data) {
           setApp(response.data);
         }
-      } catch (err) {
+      } catch (_err) {
         setError("Failed to load app details");
       } finally {
         setLoading(false);
@@ -112,7 +112,7 @@ const RunApp = () => {
         }
 
         setWorkspaceId(folderWorkspaceId);
-      } catch (err) {
+      } catch (_err) {
         setError("Failed to load workspace information");
       } finally {
         setWorkspaceLoading(false);
@@ -125,7 +125,9 @@ const RunApp = () => {
   }, [app]);
 
   const handleRunApp = useCallback(async () => {
-    if (!nodeId) return;
+    if (!nodeId) {
+      return;
+    }
 
     setRunning(true);
     setRunError(null);
@@ -282,17 +284,19 @@ const RunApp = () => {
               <div>
                 <h4 className="font-medium mb-2">URL Parameters</h4>
                 <div className="space-y-1">
-                  {app.urlParameters.map((param: KeyValuePair, index: number) => (
-                    <div
-                      key={index}
-                      className="text-sm bg-muted p-2 rounded flex justify-between"
-                    >
-                      <span className="font-mono">{param.key}</span>
-                      <span className="text-muted-foreground">
-                        {param.value}
-                      </span>
-                    </div>
-                  ))}
+                  {app.urlParameters.map(
+                    (param: KeyValuePair, index: number) => (
+                      <div
+                        key={index}
+                        className="text-sm bg-muted p-2 rounded flex justify-between"
+                      >
+                        <span className="font-mono">{param.key}</span>
+                        <span className="text-muted-foreground">
+                          {param.value}
+                        </span>
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -392,10 +396,13 @@ const RunApp = () => {
                             {result.executableRequest?.value?.httpMethod}{" "}
                             {result.executableRequest?.value?.baseUrl}
                             {result.executableRequest?.value?.urlParameters &&
-                              result.executableRequest.value.urlParameters.length >
-                                0 &&
+                              result.executableRequest.value.urlParameters
+                                .length > 0 &&
                               `?${result.executableRequest.value.urlParameters
-                                .map((tuple) => `${tuple.item1 ?? ""}=${tuple.item2 ?? ""}`)
+                                .map(
+                                  (tuple) =>
+                                    `${tuple.item1 ?? ""}=${tuple.item2 ?? ""}`
+                                )
                                 .join("&")}`}
                           </p>
                         </div>
@@ -416,7 +423,7 @@ const RunApp = () => {
                                       )
                                     ),
                                     null,
-                                    2,
+                                    2
                                   )}
                                 </pre>
                               </div>
@@ -439,7 +446,7 @@ const RunApp = () => {
                                       )
                                     ),
                                     null,
-                                    2,
+                                    2
                                   )}
                                 </pre>
                               </div>

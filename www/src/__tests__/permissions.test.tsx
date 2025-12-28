@@ -7,15 +7,15 @@
  * To run tests: npm test
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as api from "@/api/api";
+import { PermissionButton } from "@/components/PermissionButton";
+import { PermissionGate } from "@/components/PermissionGate";
 import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
-import { PermissionGate } from "@/components/PermissionGate";
-import { PermissionButton } from "@/components/PermissionButton";
-import { useHasPermission, useIsOrgAdmin } from "@/hooks/usePermissions";
-import * as api from "@/api/api";
+import { useHasPermission } from "@/hooks/usePermissions";
 
 // Mock the API module
 vi.mock("@/api/api");
@@ -33,7 +33,7 @@ function renderWithProviders(ui: React.ReactElement) {
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthorizationProvider>{ui}</AuthorizationProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -191,7 +191,7 @@ describe("PermissionGate component", () => {
     renderWithProviders(
       <PermissionGate workspaceId="ws-1" permission="create_app">
         <button>Create App</button>
-      </PermissionGate>,
+      </PermissionGate>
     );
 
     await waitFor(() => {
@@ -236,7 +236,7 @@ describe("PermissionGate component", () => {
     renderWithProviders(
       <PermissionGate workspaceId="ws-1" permission="create_app">
         <button>Create App</button>
-      </PermissionGate>,
+      </PermissionGate>
     );
 
     await waitFor(() => {
@@ -285,7 +285,7 @@ describe("PermissionGate component", () => {
         fallback={<div>No Permission</div>}
       >
         <button>Create App</button>
-      </PermissionGate>,
+      </PermissionGate>
     );
 
     await waitFor(() => {
@@ -337,7 +337,7 @@ describe("PermissionButton component", () => {
     renderWithProviders(
       <PermissionButton workspaceId="ws-1" permission="delete_app">
         Delete
-      </PermissionButton>,
+      </PermissionButton>
     );
 
     await waitFor(() => {
@@ -383,7 +383,7 @@ describe("PermissionButton component", () => {
     renderWithProviders(
       <PermissionButton workspaceId="ws-1" permission="delete_app">
         Delete
-      </PermissionButton>,
+      </PermissionButton>
     );
 
     await waitFor(() => {

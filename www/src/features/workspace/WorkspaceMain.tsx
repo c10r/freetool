@@ -1,9 +1,9 @@
-import { WorkspaceMainProps } from "./types";
 import AppView from "./components/AppView";
+import AuditLogView from "./components/AuditLogView";
 import FolderView from "./components/FolderView";
 import ResourcesView from "./components/ResourcesView";
-import AuditLogView from "./components/AuditLogView";
 import UsersTeamsView from "./components/UsersTeamsView";
+import type { WorkspaceMainProps } from "./types";
 
 export default function WorkspaceMain(props: WorkspaceMainProps) {
   const { nodes, selectedId, workspaceId } = props;
@@ -22,7 +22,9 @@ export default function WorkspaceMain(props: WorkspaceMainProps) {
     return <UsersTeamsView />;
   }
 
-  if (!selected) return null;
+  if (!selected) {
+    return null;
+  }
 
   if (selected.type === "folder") {
     return <FolderView {...props} folder={selected} />;

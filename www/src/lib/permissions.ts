@@ -15,54 +15,49 @@
  * ```
  */
 
-// Types
-export type {
-  Permission,
-  WorkspacePermissions,
-  CurrentUser,
-  TeamMembership,
-  CurrentUserResponse,
-  WorkspacePermissionsResponse,
-} from "@/types/permissions";
-
-// Hooks
-export {
-  useWorkspacePermissions,
-  useHasPermission,
-  useCurrentUser,
-  useIsOrgAdmin,
-  useIsTeamAdmin,
-  useHasAnyPermission,
-  useUserPermissions,
-} from "@/hooks/usePermissions";
-
-// Context
-export {
-  AuthorizationProvider,
-  type AuthorizationContextValue,
-} from "@/contexts/AuthorizationContext";
-export { useAuthorization } from "@/hooks/useAuthorization";
+// API
+export { getCurrentUser, getWorkspacePermissions } from "@/api/api";
+export type { PermissionButtonProps } from "@/components/PermissionButton";
+export { PermissionButton } from "@/components/PermissionButton";
+export type { PermissionGateProps } from "@/components/PermissionGate";
 
 // Components
 export { PermissionGate } from "@/components/PermissionGate";
-export type { PermissionGateProps } from "@/components/PermissionGate";
-
-export { PermissionButton } from "@/components/PermissionButton";
-export type { PermissionButtonProps } from "@/components/PermissionButton";
-
-export {
-  PermissionSkeleton,
-  InlinePermissionSkeleton,
-} from "@/components/PermissionSkeleton";
 export type { PermissionSkeletonProps } from "@/components/PermissionSkeleton";
+export {
+  InlinePermissionSkeleton,
+  PermissionSkeleton,
+} from "@/components/PermissionSkeleton";
+// Context
+export {
+  type AuthorizationContextValue,
+  AuthorizationProvider,
+} from "@/contexts/AuthorizationContext";
+export { useAuthorization } from "@/hooks/useAuthorization";
+// Hooks
+export {
+  useCurrentUser,
+  useHasAnyPermission,
+  useHasPermission,
+  useIsOrgAdmin,
+  useIsTeamAdmin,
+  useUserPermissions,
+  useWorkspacePermissions,
+} from "@/hooks/usePermissions";
 
 // Utilities
 export {
-  getPermissionMessage,
   getPermissionLabel,
+  getPermissionMessage,
   permissionMessages,
   roleMessages,
 } from "@/lib/permissionMessages";
-
-// API
-export { getCurrentUser, getWorkspacePermissions } from "@/api/api";
+// Types
+export type {
+  CurrentUser,
+  CurrentUserResponse,
+  Permission,
+  TeamMembership,
+  WorkspacePermissions,
+  WorkspacePermissionsResponse,
+} from "@/types/permissions";

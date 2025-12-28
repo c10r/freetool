@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { getResources } from "@/api/api";
 import {
   Select,
   SelectContent,
@@ -6,9 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EndpointMethod } from "../types";
+import type { EndpointMethod } from "../types";
 import HttpMethodBadge from "./HttpMethodBadge";
-import { getResources } from "@/api/api";
 
 interface Resource {
   id: string;
@@ -54,7 +54,7 @@ export default function ResourceSelector({
         } else {
           setResources([]);
         }
-      } catch (error) {
+      } catch (_error) {
         setError("Failed to load resources");
         setResources([]);
       } finally {

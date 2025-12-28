@@ -5,13 +5,13 @@
  * Shows a helpful message and provides a way to contact team admins.
  */
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { AlertCircle, Mail } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import type { Permission } from "@/types/permissions";
 import { getPermissionLabel } from "@/lib/permissionMessages";
+import type { Permission } from "@/types/permissions";
 
 /**
  * Props for the PermissionRequest component
@@ -76,7 +76,7 @@ export function PermissionRequest({
       });
 
       onRequestSent?.();
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to send permission request. Please try again.",

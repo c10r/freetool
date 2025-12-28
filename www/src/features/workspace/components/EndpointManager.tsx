@@ -1,6 +1,7 @@
+import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -10,11 +11,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Endpoint, EndpointMethod } from "../types";
-import KeyValueList from "./KeyValueList";
+import type { Endpoint, EndpointMethod } from "../types";
 import HttpMethodBadge from "./HttpMethodBadge";
-import { Trash2, Plus, ChevronDown, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import KeyValueList from "./KeyValueList";
 
 interface EndpointManagerProps {
   endpoints: Record<string, Endpoint>;
@@ -31,7 +30,7 @@ export default function EndpointManager({
 }: EndpointManagerProps) {
   const list = Object.values(endpoints);
   const [expandedEndpoints, setExpandedEndpoints] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
   const methods: EndpointMethod[] = [
     "GET",

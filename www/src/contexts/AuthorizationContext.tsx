@@ -5,13 +5,10 @@
  * Fetches and caches user permissions using TanStack Query.
  */
 
-import React, { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type {
-  WorkspacePermissions,
-  Permission,
-} from "@/types/permissions";
+import type { ReactNode } from "react";
 import { getCurrentUser, getWorkspacePermissions } from "@/api/api";
+import type { Permission, WorkspacePermissions } from "@/types/permissions";
 import {
   AuthorizationContext,
   type AuthorizationContextValue,
@@ -87,7 +84,7 @@ export function AuthorizationProvider({
    * Get cached workspace permissions
    */
   const getWorkspacePermissionsData = (
-    workspaceId: string,
+    workspaceId: string
   ): WorkspacePermissions | null => {
     const data = queryClient.getQueryData<{
       permissions: WorkspacePermissions;
@@ -100,7 +97,7 @@ export function AuthorizationProvider({
    */
   const hasPermission = (
     workspaceId: string,
-    permission: Permission,
+    permission: Permission
   ): boolean => {
     const permissions = getWorkspacePermissionsData(workspaceId);
     if (!permissions) {
@@ -120,10 +117,12 @@ export function AuthorizationProvider({
    * Check if current user is an admin of a specific team
    */
   const isTeamAdmin = (teamId: string): boolean => {
-    if (!currentUser) return false;
+    if (!currentUser) {
+      return false;
+    }
     return (
       currentUser.teams.some(
-        (team) => team.id === teamId && team.role === "admin",
+        (team) => team.id === teamId && team.role === "admin"
       ) ?? false
     );
   };
@@ -156,4 +155,3 @@ export function AuthorizationProvider({
     </AuthorizationContext.Provider>
   );
 }
-

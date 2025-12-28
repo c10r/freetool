@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import { KeyValuePair } from "../types";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   updateAppBody,
   updateAppHeaders,
   updateAppQueryParams,
   updateAppUrlPath,
 } from "@/api/api";
+import type { KeyValuePair } from "../types";
 
 export interface AppFormData {
   urlPath: string;
@@ -45,7 +45,7 @@ const initialFieldStates: FieldStates = {
 export function useAppForm(
   initialData: AppFormData,
   appId?: string,
-  onUpdate?: (updatedData: AppFormData) => void,
+  onUpdate?: (updatedData: AppFormData) => void
 ) {
   const [formData, setFormData] = useState<AppFormData>(initialData);
   const [fieldStates, setFieldStates] =
@@ -67,17 +67,20 @@ export function useAppForm(
         [field]: { ...prev[field], ...state },
       }));
     },
-    [],
+    []
   );
 
-  const updateFormData = useCallback((field: keyof AppFormData, value: string | KeyValuePair[]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  }, []);
+  const updateFormData = useCallback(
+    (field: keyof AppFormData, value: string | KeyValuePair[]) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
   const updateKeyValueField = useCallback(
     async (
       field: "urlParameters" | "headers" | "body",
-      value: KeyValuePair[],
+      value: KeyValuePair[]
     ) => {
       if (!appId) {
         return;
@@ -85,12 +88,12 @@ export function useAppForm(
 
       // Filter out empty key-value pairs
       const filteredValue = value.filter(
-        (pair) => pair.key.trim() !== "" && pair.value.trim() !== "",
+        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
       );
 
       // Don't make network request if value hasn't changed
       const currentValue = (savedDataRef.current[field] || []).filter(
-        (pair) => pair.key.trim() !== "" && pair.value.trim() !== "",
+        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
       );
 
       if (JSON.stringify(filteredValue) === JSON.stringify(currentValue)) {
@@ -112,7 +115,7 @@ export function useAppForm(
           response = await updateAppBody(appId, filteredValue);
         }
 
-        if (response && response.error) {
+        if (response?.error) {
           const errorMessage = response.error.message || "Failed to save";
           setFieldState(field, {
             updating: false,
@@ -145,7 +148,7 @@ export function useAppForm(
         setTimeout(() => {
           setFieldState(field, { saved: false });
         }, 2000);
-      } catch (error) {
+      } catch (_error) {
         setFieldState(field, {
           updating: false,
           error: true,
@@ -163,7 +166,7 @@ export function useAppForm(
         }, 2000);
       }
     },
-    [appId, onUpdate, setFieldState, formData],
+    [appId, onUpdate, setFieldState, formData]
   );
 
   const updateUrlPathField = useCallback(
@@ -182,7 +185,7 @@ export function useAppForm(
       try {
         const response = await updateAppUrlPath(appId, value);
 
-        if (response && response.error) {
+        if (response?.error) {
           const errorMessage =
             response.error.message || "Failed to save URL path";
           setFieldState("urlPath", {
@@ -214,7 +217,7 @@ export function useAppForm(
         setTimeout(() => {
           setFieldState("urlPath", { saved: false });
         }, 2000);
-      } catch (error) {
+      } catch (_error) {
         setFieldState("urlPath", {
           updating: false,
           error: true,
@@ -232,7 +235,7 @@ export function useAppForm(
         }, 2000);
       }
     },
-    [appId, onUpdate, setFieldState, formData],
+    [appId, onUpdate, setFieldState, formData]
   );
 
   return {

@@ -1,16 +1,16 @@
-import { useMemo, useState } from "react";
 import {
+  ChevronDown,
+  ChevronRight,
   Database,
+  FileType,
   FolderClosed,
   FolderOpen,
-  FileType,
-  Users,
   Shield,
-  ChevronRight,
-  ChevronDown,
+  Users,
 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { WorkspaceNode, TreeNode } from "./types";
+import type { TreeNode, WorkspaceNode } from "./types";
 
 interface SidebarTreeProps {
   nodes: Record<string, WorkspaceNode>;
@@ -29,7 +29,7 @@ export default function SidebarTree({
 }: SidebarTreeProps) {
   const tree = useMemo(() => buildTree(nodes, rootId), [nodes, rootId]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set([rootId]),
+    new Set([rootId])
   );
 
   const toggleExpanded = (folderId: string) => {
@@ -110,7 +110,7 @@ function SidebarSection({
       onClick={() => onSelect(sectionId)}
       className={cn(
         "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent font-semibold",
-        isSelected && "bg-accent",
+        isSelected && "bg-accent"
       )}
       aria-current={isSelected ? "page" : undefined}
     >
@@ -155,7 +155,7 @@ function TreeNodeComponent({
         onClick={handleFolderClick}
         className={cn(
           "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent",
-          isSelected && "bg-accent",
+          isSelected && "bg-accent"
         )}
         aria-current={isSelected ? "page" : undefined}
       >
@@ -203,9 +203,14 @@ function TreeNodeComponent({
   );
 }
 
-function buildTree(nodes: Record<string, WorkspaceNode>, id: string): TreeNode | null {
+function buildTree(
+  nodes: Record<string, WorkspaceNode>,
+  id: string
+): TreeNode | null {
   const n = nodes[id];
-  if (!n) return null;
+  if (!n) {
+    return null;
+  }
   if (n.type === "folder") {
     return {
       ...n,

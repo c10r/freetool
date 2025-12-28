@@ -1,13 +1,13 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import { KeyValuePair } from "../types";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  updateResourceName,
-  updateResourceDescription,
   updateResourceBaseUrl,
-  updateResourceUrlParameters,
-  updateResourceHeaders,
   updateResourceBody,
+  updateResourceDescription,
+  updateResourceHeaders,
+  updateResourceName,
+  updateResourceUrlParameters,
 } from "@/api/api";
+import type { KeyValuePair } from "../types";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -56,7 +56,7 @@ const initialFieldStates: FieldStates = {
 export function useResourceForm(
   initialData: ResourceFormData,
   resourceId?: string,
-  onUpdate?: (updatedData: ResourceFormData) => void,
+  onUpdate?: (updatedData: ResourceFormData) => void
 ) {
   const [formData, setFormData] = useState<ResourceFormData>(initialData);
   const [fieldStates, setFieldStates] =
@@ -78,19 +78,22 @@ export function useResourceForm(
         [field]: { ...prev[field], ...state },
       }));
     },
-    [],
+    []
   );
 
   const updateFormData = useCallback(
-    (field: keyof ResourceFormData, value: string | HttpMethod | KeyValuePair[]) => {
+    (
+      field: keyof ResourceFormData,
+      value: string | HttpMethod | KeyValuePair[]
+    ) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
     },
-    [],
+    []
   );
 
   const updateTextField = useCallback(
     async (field: "name" | "description" | "baseUrl", value: string) => {
-      if (!resourceId || !value.trim()) {
+      if (!(resourceId && value.trim())) {
         return;
       }
 
@@ -120,7 +123,7 @@ export function useResourceForm(
           });
         }
 
-        if (response && response.error) {
+        if (response?.error) {
           const errorMessage = response.error.message || "Failed to save";
           setFieldState(field, {
             updating: false,
@@ -155,7 +158,7 @@ export function useResourceForm(
         setTimeout(() => {
           setFieldState(field, { saved: false });
         }, 2000);
-      } catch (error) {
+      } catch (_error) {
         setFieldState(field, {
           updating: false,
           error: true,
@@ -173,13 +176,13 @@ export function useResourceForm(
         }, 2000);
       }
     },
-    [resourceId, onUpdate, setFieldState, formData],
+    [resourceId, onUpdate, setFieldState, formData]
   );
 
   const updateKeyValueField = useCallback(
     async (
       field: "urlParameters" | "headers" | "body",
-      value: KeyValuePair[],
+      value: KeyValuePair[]
     ) => {
       if (!resourceId) {
         return;
@@ -187,15 +190,16 @@ export function useResourceForm(
 
       // Filter out empty key-value pairs
       const filteredValue = value.filter(
-        (pair) => pair.key.trim() !== "" && pair.value.trim() !== "",
+        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
       );
 
       // Don't make network request if value hasn't changed
       const currentValue = (savedDataRef.current[field] || []).filter(
-        (pair) => pair.key.trim() !== "" && pair.value.trim() !== "",
+        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
       );
-      if (JSON.stringify(filteredValue) === JSON.stringify(currentValue))
+      if (JSON.stringify(filteredValue) === JSON.stringify(currentValue)) {
         return;
+      }
 
       setFieldState(field, { updating: true, saved: false, error: false });
 
@@ -218,7 +222,7 @@ export function useResourceForm(
           });
         }
 
-        if (response && response.error) {
+        if (response?.error) {
           const errorMessage = response.error.message || "Failed to save";
           setFieldState(field, {
             updating: false,
@@ -252,7 +256,7 @@ export function useResourceForm(
         setTimeout(() => {
           setFieldState(field, { saved: false });
         }, 2000);
-      } catch (error) {
+      } catch (_error) {
         setFieldState(field, {
           updating: false,
           error: true,
@@ -270,7 +274,7 @@ export function useResourceForm(
         }, 2000);
       }
     },
-    [resourceId, onUpdate, setFieldState, formData],
+    [resourceId, onUpdate, setFieldState, formData]
   );
 
   return {

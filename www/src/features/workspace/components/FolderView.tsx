@@ -1,16 +1,13 @@
-import { useMemo, useState, useEffect } from "react";
-import { Plus, FolderPlus, FilePlus2, Edit, Trash2, Play } from "lucide-react";
+import { Edit, FilePlus2, FolderPlus, Play, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  createFolder as createFolderAPI,
+  deleteApp,
+  deleteFolder as deleteFolderAPI,
+  updateFolderName,
+} from "@/api/api";
+import { PermissionButton } from "@/components/PermissionButton";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -19,25 +16,31 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FolderNode, WorkspaceMainProps, KeyValuePair, WorkspaceNode } from "../types";
-import {
-  createFolder as createFolderAPI,
-  deleteFolder as deleteFolderAPI,
-  deleteApp,
-  updateFolderName,
-  runApp,
-} from "@/api/api";
-import AppConfigForm from "./AppConfigForm";
-import { PermissionButton } from "@/components/PermissionButton";
-import { PermissionGate } from "@/components/PermissionGate";
 import { useHasPermission } from "@/hooks/usePermissions";
 import type { components } from "@/schema";
+import type {
+  FolderNode,
+  KeyValuePair,
+  WorkspaceMainProps,
+  WorkspaceNode,
+} from "../types";
+import AppConfigForm from "./AppConfigForm";
 
 export default function FolderView({
   folder,
@@ -53,18 +56,18 @@ export default function FolderView({
   const [name, setName] = useState(folder.name);
 
   // Permission checks
-  const canCreateFolder = useHasPermission(workspaceId, "create_folder");
-  const canEditFolder = useHasPermission(workspaceId, "edit_folder");
-  const canDeleteFolder = useHasPermission(workspaceId, "delete_folder");
-  const canCreateApp = useHasPermission(workspaceId, "create_app");
-  const canDeleteApp = useHasPermission(workspaceId, "delete_app");
+  const _canCreateFolder = useHasPermission(workspaceId, "create_folder");
+  const _canEditFolder = useHasPermission(workspaceId, "edit_folder");
+  const _canDeleteFolder = useHasPermission(workspaceId, "delete_folder");
+  const _canCreateApp = useHasPermission(workspaceId, "create_app");
+  const _canDeleteApp = useHasPermission(workspaceId, "delete_app");
 
   // Update name when folder changes
   useEffect(() => {
     setName(folder.name);
     setEditing(false);
     setRenameError(null);
-  }, [folder.id, folder.name]);
+  }, [folder.name]);
 
   // Reset app creation form when navigating to a different folder
   useEffect(() => {
@@ -77,14 +80,14 @@ export default function FolderView({
       headers: [],
       body: [],
     });
-  }, [folder.id]);
+  }, []);
   const [newFolderName, setNewFolderName] = useState("");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [cardPopoverOpen, setCardPopoverOpen] = useState(false);
   const [newFolderParentId, setNewFolderParentId] = useState<string>(folder.id);
   const [createFolderError, setCreateFolderError] = useState<string | null>(
-    null,
+    null
   );
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingChildId, setDeletingChildId] = useState<string | null>(null);
@@ -108,17 +111,21 @@ export default function FolderView({
   });
 
   // App running state
-  const [runningAppId, setRunningAppId] = useState<string | null>(null);
-  const [runResult, setRunResult] = useState<components["schemas"]["RunData"] | null>(null);
-  const [runError, setRunError] = useState<string | null>(null);
+  const [_runningAppId, _setRunningAppId] = useState<string | null>(null);
+  const [_runResult, _setRunResult] = useState<
+    components["schemas"]["RunData"] | null
+  >(null);
+  const [_runError, _setRunError] = useState<string | null>(null);
 
   const children = useMemo(
     () => folder.childrenIds.map((id) => nodes[id]).filter(Boolean),
-    [folder.childrenIds, nodes],
+    [folder.childrenIds, nodes]
   );
 
   const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) return;
+    if (!newFolderName.trim()) {
+      return;
+    }
 
     setIsCreatingFolder(true);
     setCreateFolderError(null);
@@ -126,7 +133,7 @@ export default function FolderView({
       const response = await createFolderAPI(newFolderName, newFolderParentId);
       if (response.error) {
         setCreateFolderError(
-          (response.error?.message as string) || "Failed to create folder",
+          (response.error?.message as string) || "Failed to create folder"
         );
       } else if (response.data) {
         // Add the new folder to the local state using the API response
@@ -158,7 +165,7 @@ export default function FolderView({
       }
     } catch (error) {
       setCreateFolderError(
-        error instanceof Error ? error.message : "Failed to create folder",
+        error instanceof Error ? error.message : "Failed to create folder"
       );
     } finally {
       setIsCreatingFolder(false);
@@ -173,7 +180,9 @@ export default function FolderView({
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deletingChildId) return;
+    if (!deletingChildId) {
+      return;
+    }
 
     const childToDelete = nodes[deletingChildId];
     if (!childToDelete || deleteConfirmName !== childToDelete.name) {
@@ -187,7 +196,7 @@ export default function FolderView({
       const response = await deleteFolderAPI(deletingChildId);
       if (response.error) {
         setDeleteError(
-          (response.error?.message as string) || "Failed to delete folder",
+          (response.error?.message as string) || "Failed to delete folder"
         );
       } else {
         // Remove from local state
@@ -199,7 +208,7 @@ export default function FolderView({
       }
     } catch (error) {
       setDeleteError(
-        error instanceof Error ? error.message : "Failed to delete folder",
+        error instanceof Error ? error.message : "Failed to delete folder"
       );
     } finally {
       setIsDeleting(false);
@@ -230,7 +239,7 @@ export default function FolderView({
       const response = await updateFolderName(folder.id, name.trim());
       if (response.error) {
         setRenameError(
-          (response.error?.message as string) || "Failed to rename folder",
+          (response.error?.message as string) || "Failed to rename folder"
         );
       } else {
         // Update local state
@@ -239,7 +248,7 @@ export default function FolderView({
       }
     } catch (error) {
       setRenameError(
-        error instanceof Error ? error.message : "Failed to rename folder",
+        error instanceof Error ? error.message : "Failed to rename folder"
       );
     } finally {
       setIsRenaming(false);
@@ -264,7 +273,7 @@ export default function FolderView({
         appFormData.urlPath,
         appFormData.queryParameters,
         appFormData.headers,
-        appFormData.body,
+        appFormData.body
       );
 
       // Reset form and close on success
@@ -328,7 +337,9 @@ export default function FolderView({
                   value={name}
                   onChange={(e) => {
                     setName(e.target.value);
-                    if (renameError) setRenameError(null);
+                    if (renameError) {
+                      setRenameError(null);
+                    }
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -409,7 +420,9 @@ export default function FolderView({
                     value={newFolderName}
                     onChange={(e) => {
                       setNewFolderName(e.target.value);
-                      if (createFolderError) setCreateFolderError(null);
+                      if (createFolderError) {
+                        setCreateFolderError(null);
+                      }
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -495,7 +508,9 @@ export default function FolderView({
                 value={appFormData.name}
                 onChange={(e) => {
                   setAppFormData({ ...appFormData, name: e.target.value });
-                  if (createAppError) setCreateAppError(null);
+                  if (createAppError) {
+                    setCreateAppError(null);
+                  }
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -603,7 +618,9 @@ export default function FolderView({
                             value={newFolderName}
                             onChange={(e) => {
                               setNewFolderName(e.target.value);
-                              if (createFolderError) setCreateFolderError(null);
+                              if (createFolderError) {
+                                setCreateFolderError(null);
+                              }
                             }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
@@ -692,17 +709,11 @@ export default function FolderView({
                       try {
                         const response = await deleteApp(child.id);
                         if (response.error) {
-                          console.error(
-                            "Failed to delete app:",
-                            response.error,
-                          );
                         } else {
                           // Remove from local state on successful API call
                           deleteNode(child.id);
                         }
-                      } catch (error) {
-                        console.error("Error deleting app:", error);
-                      }
+                      } catch (_error) {}
                     }
                   }}
                   aria-label="Delete"
@@ -762,7 +773,9 @@ export default function FolderView({
                 value={deleteConfirmName}
                 onChange={(e) => {
                   setDeleteConfirmName(e.target.value);
-                  if (deleteError) setDeleteError(null);
+                  if (deleteError) {
+                    setDeleteError(null);
+                  }
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -789,8 +802,7 @@ export default function FolderView({
               variant="destructive"
               onClick={handleDeleteConfirm}
               disabled={
-                !deletingChildId ||
-                !deleteConfirmName ||
+                !(deletingChildId && deleteConfirmName) ||
                 deleteConfirmName !== nodes[deletingChildId]?.name ||
                 isDeleting
               }

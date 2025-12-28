@@ -53,7 +53,7 @@ export const roleMessages = {
  */
 export function getPermissionMessage(
   permission: Permission,
-  customMessage?: string,
+  customMessage?: string
 ): string {
   return (
     customMessage ||

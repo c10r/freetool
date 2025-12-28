@@ -1,6 +1,6 @@
 import createClient from "openapi-fetch";
+import type { KeyValuePair } from "@/features/workspace/types";
 import type { paths } from "../schema";
-import { KeyValuePair } from "@/features/workspace/types";
 
 const client = createClient<paths>({
   baseUrl: `${typeof window !== "undefined" ? window.location.origin : "http://localhost:5000"}/freetool`,
@@ -51,7 +51,7 @@ export const getAppById = (appId: string) => {
 export const getAppByFolder = (
   folderId: string,
   skip?: number,
-  take?: number,
+  take?: number
 ) => {
   if (skip && take) {
     return client.GET("/app/folder/{folderId}", {
@@ -97,7 +97,7 @@ export const updateAppInputs = (
   appId: string,
   body?: KeyValuePair[],
   headers?: KeyValuePair[],
-  urlParameters?: KeyValuePair[],
+  urlParameters?: KeyValuePair[]
 ) => {
   return client.PUT("/app/{id}/inputs", {
     params: {
@@ -146,7 +146,7 @@ export const updateAppHeaders = (appId: string, headers: KeyValuePair[]) => {
 
 export const updateAppQueryParams = (
   appId: string,
-  urlParameters: KeyValuePair[],
+  urlParameters: KeyValuePair[]
 ) => {
   return client.PUT("/app/{id}/query-parameters", {
     params: {
@@ -572,14 +572,6 @@ export const getCurrentUser = async (): Promise<{
   data?: CurrentUserResponse;
   error?: { message: string };
 }> => {
-  // TODO: Replace with actual API call once backend implements GET /user/me
-  // return client.GET("/user/me");
-
-  // PLACEHOLDER: Return mock data for development
-  console.warn(
-    "[PLACEHOLDER] getCurrentUser: Backend endpoint GET /user/me not implemented. Returning mock data.",
-  );
-
   // Simulate API delay
   await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -611,23 +603,11 @@ export const getCurrentUser = async (): Promise<{
  * GET /workspace/{id}/permissions does not exist yet. This returns mock data.
  */
 export const getWorkspacePermissions = async (
-  workspaceId: string,
+  workspaceId: string
 ): Promise<{
   data?: WorkspacePermissionsResponse;
   error?: { message: string };
 }> => {
-  // TODO: Replace with actual API call once backend implements the endpoint
-  // return client.GET("/workspace/{id}/permissions", {
-  //   params: {
-  //     path: { id: workspaceId },
-  //   },
-  // });
-
-  // PLACEHOLDER: Return mock data for development
-  console.warn(
-    `[PLACEHOLDER] getWorkspacePermissions: Backend endpoint GET /workspace/${workspaceId}/permissions not implemented. Returning mock data.`,
-  );
-
   // Simulate API delay
   await new Promise((resolve) => setTimeout(resolve, 100));
 
