@@ -481,3 +481,79 @@ let ``All update endpoints require edit_app permission`` () : Task =
         Assert.True(canUpdateHeaders, "edit_app permission allows UpdateAppHeaders")
         Assert.True(canUpdateUrlPath, "edit_app permission allows UpdateAppUrlPath")
     }
+
+[<Fact>]
+let ``GetApps endpoint - Team member belongs without run_app permission`` () : Task =
+    task {
+        // Arrange
+        let serviceWithoutStore = createServiceWithoutStore ()
+
+        let! storeResponse =
+            serviceWithoutStore.CreateStoreAsync({ Name = $"test-list-apps-team-member-{Guid.NewGuid()}" })
+
+        let authService = createServiceWithStore storeResponse.Id
+        let! _ = authService.WriteAuthorizationModelAsync()
+
+        let userId = Guid.NewGuid().ToString()
+        let teamId = Guid.NewGuid().ToString()
+        let workspaceId = Guid.NewGuid().ToString()
+
+        // Associate workspace with team
+        do!
+            authService.CreateRelationshipsAsync(
+                [ { Subject = AuthSubject.Team teamId
+                    Relation = WorkspaceTeam
+                    Object = AuthObject.WorkspaceObject workspaceId } ]
+            )
+
+        // Add user as a team member only
+        do!
+            authService.CreateRelationshipsAsync(
+                [ { Subject = AuthSubject.User userId
+                    Relation = TeamMember
+                    Object = AuthObject.TeamObject teamId } ]
+            )
+
+        // Act
+        let! isTeamMember =
+            authService.CheckPermissionAsync (AuthSubject.User userId) TeamMember (AuthObject.TeamObject teamId)
+
+        let! canRun =
+            authService.CheckPermissionAsync (AuthSubject.User userId) AppRun (AuthObject.WorkspaceObject workspaceId)
+
+        // Assert
+        Assert.True(isTeamMember, "Team members should belong to the workspace even without app permissions")
+        Assert.False(canRun, "Team membership alone should not grant run_app permission")
+    }
+
+[<Fact>]
+let ``GetApps endpoint - User outside team is not considered a member`` () : Task =
+    task {
+        // Arrange
+        let serviceWithoutStore = createServiceWithoutStore ()
+
+        let! storeResponse =
+            serviceWithoutStore.CreateStoreAsync({ Name = $"test-list-apps-non-member-{Guid.NewGuid()}" })
+
+        let authService = createServiceWithStore storeResponse.Id
+        let! _ = authService.WriteAuthorizationModelAsync()
+
+        let userId = Guid.NewGuid().ToString()
+        let teamId = Guid.NewGuid().ToString()
+        let workspaceId = Guid.NewGuid().ToString()
+
+        // Associate workspace with team only
+        do!
+            authService.CreateRelationshipsAsync(
+                [ { Subject = AuthSubject.Team teamId
+                    Relation = WorkspaceTeam
+                    Object = AuthObject.WorkspaceObject workspaceId } ]
+            )
+
+        // Act
+        let! isTeamMember =
+            authService.CheckPermissionAsync (AuthSubject.User userId) TeamMember (AuthObject.TeamObject teamId)
+
+        // Assert
+        Assert.False(isTeamMember, "Users outside the workspace team should not be considered members")
+    }

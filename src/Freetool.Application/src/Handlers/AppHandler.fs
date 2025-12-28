@@ -151,6 +151,31 @@ module AppHandler =
 
                     return Ok(AppsResult result)
 
+            | GetAppsByWorkspaceIds(workspaceIds, skip, take) ->
+                if skip < 0 then
+                    return Error(ValidationError "Skip cannot be negative")
+                elif take <= 0 || take > 100 then
+                    return Error(ValidationError "Take must be between 1 and 100")
+                elif List.isEmpty workspaceIds then
+                    let result =
+                        { Items = []
+                          TotalCount = 0
+                          Skip = skip
+                          Take = take }
+
+                    return Ok(AppsResult result)
+                else
+                    let! apps = appRepository.GetByWorkspaceIdsAsync workspaceIds skip take
+                    let! totalCount = appRepository.GetCountByWorkspaceIdsAsync workspaceIds
+
+                    let result =
+                        { Items = apps |> List.map (fun app -> app.State)
+                          TotalCount = totalCount
+                          Skip = skip
+                          Take = take }
+
+                    return Ok(AppsResult result)
+
             | UpdateAppQueryParameters(actorUserId, appId, dto) ->
                 match Guid.TryParse appId with
                 | false, _ -> return Error(ValidationError "Invalid app ID format")

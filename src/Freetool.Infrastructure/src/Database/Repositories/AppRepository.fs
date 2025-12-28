@@ -3,6 +3,7 @@ namespace Freetool.Infrastructure.Database.Repositories
 open System.Linq
 open System.Threading.Tasks
 open Microsoft.EntityFrameworkCore
+open Microsoft.FSharp.Linq
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
@@ -47,6 +48,37 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                 let! appDatas = context.Apps.OrderBy(fun a -> a.CreatedAt).Skip(skip).Take(take).ToListAsync()
 
                 return appDatas |> Seq.map (fun data -> App.fromData data) |> Seq.toList
+            }
+
+        member _.GetByWorkspaceIdsAsync
+            (workspaceIds: WorkspaceId list)
+            (skip: int)
+            (take: int)
+            : Task<ValidatedApp list> =
+            task {
+                if List.isEmpty workspaceIds then
+                    return []
+                else
+                    let workspaceGuidArray =
+                        workspaceIds |> List.map (fun id -> id.Value) |> List.toArray
+
+                    let! appDatas =
+                        context.Apps
+                            .Join(
+                                context.Folders,
+                                (fun app -> app.FolderId),
+                                (fun folder -> folder.Id),
+                                (fun app folder -> struct (app, folder))
+                            )
+                            .Where(fun struct (_, folder: FolderData) ->
+                                workspaceGuidArray.Contains(folder.WorkspaceId.Value))
+                            .OrderBy(fun struct (app: AppData, _) -> app.CreatedAt)
+                            .Select(fun struct (app, _) -> app)
+                            .Skip(skip)
+                            .Take(take)
+                            .ToListAsync()
+
+                    return appDatas |> Seq.map (fun data -> App.fromData data) |> Seq.toList
             }
 
         member _.AddAsync(app: ValidatedApp) : Task<Result<unit, DomainError>> =
@@ -141,6 +173,28 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
 
         member _.GetCountByFolderIdAsync(folderId: FolderId) : Task<int> =
             task { return! context.Apps.CountAsync(fun a -> a.FolderId = folderId) }
+
+        member _.GetCountByWorkspaceIdsAsync(workspaceIds: WorkspaceId list) : Task<int> =
+            task {
+                if List.isEmpty workspaceIds then
+                    return 0
+                else
+                    let workspaceGuidArray =
+                        workspaceIds |> List.map (fun id -> id.Value) |> List.toArray
+
+                    return!
+                        context.Apps
+                            .Join(
+                                context.Folders,
+                                (fun app -> app.FolderId),
+                                (fun folder -> folder.Id),
+                                (fun app folder -> struct (app, folder))
+                            )
+                            .Where(fun struct (_, folder: FolderData) ->
+                                workspaceGuidArray.Contains(folder.WorkspaceId.Value))
+                            .Select(fun struct (app, _) -> app.Id)
+                            .CountAsync()
+            }
 
         member _.GetByResourceIdAsync(resourceId: ResourceId) : Task<ValidatedApp list> =
             task {

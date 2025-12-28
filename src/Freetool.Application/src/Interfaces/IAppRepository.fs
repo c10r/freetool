@@ -14,6 +14,9 @@ type IAppRepository =
 
     abstract member GetAllAsync: skip: int -> take: int -> Task<ValidatedApp list>
 
+    abstract member GetByWorkspaceIdsAsync:
+        workspaceIds: WorkspaceId list -> skip: int -> take: int -> Task<ValidatedApp list>
+
     abstract member AddAsync: ValidatedApp -> Task<Result<unit, DomainError>>
 
     abstract member UpdateAsync: ValidatedApp -> Task<Result<unit, DomainError>>
@@ -27,5 +30,7 @@ type IAppRepository =
     abstract member GetCountAsync: unit -> Task<int>
 
     abstract member GetCountByFolderIdAsync: FolderId -> Task<int>
+
+    abstract member GetCountByWorkspaceIdsAsync: WorkspaceId list -> Task<int>
 
     abstract member GetByResourceIdAsync: ResourceId -> Task<ValidatedApp list>

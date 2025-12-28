@@ -14,6 +14,7 @@ type AppCommand =
     | GetAppById of appId: string
     | GetAppsByFolderId of folderId: string * skip: int * take: int
     | GetAllApps of skip: int * take: int
+    | GetAppsByWorkspaceIds of workspaceIds: WorkspaceId list * skip: int * take: int
     | DeleteApp of actorUserId: UserId * appId: string
     | UpdateAppName of actorUserId: UserId * appId: string * UpdateAppNameDto
     | UpdateAppInputs of actorUserId: UserId * appId: string * UpdateAppInputsDto

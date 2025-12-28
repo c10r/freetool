@@ -20,6 +20,8 @@ type AppController
         resourceRepository: IResourceRepository,
         runRepository: IRunRepository,
         folderRepository: IFolderRepository,
+        groupRepository: IGroupRepository,
+        workspaceRepository: IWorkspaceRepository,
         authorizationService: IAuthorizationService,
         commandHandler: IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>
     ) =
@@ -70,6 +72,27 @@ type AppController
             else
                 let permissionName = AuthTypes.relationToString permission
                 return Error(InvalidOperation $"User does not have {permissionName} permission on this workspace")
+        }
+
+    member private this.GetAccessibleWorkspaceIdsForCurrentUser() : Task<WorkspaceId list> =
+        task {
+            let userId = this.CurrentUserId
+            let! groups = groupRepository.GetByUserIdAsync userId
+
+            if List.isEmpty groups then
+                return []
+            else
+                let! workspaceOptions =
+                    groups
+                    |> List.map (fun group ->
+                        task {
+                            let! workspaceOption = workspaceRepository.GetByGroupIdAsync(group.State.Id)
+                            return workspaceOption |> Option.map (fun workspace -> workspace.State.Id)
+                        })
+                    |> List.toArray
+                    |> Task.WhenAll
+
+                return workspaceOptions |> Array.choose id |> Array.distinct |> Array.toList
         }
 
     // Helper method to handle authorization errors
@@ -237,11 +260,6 @@ type AppController
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetApps([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> =
         task {
-            // TODO: This endpoint returns ALL apps across all workspaces.
-            // We should filter the results to only include apps from workspaces
-            // the user has run_app permission on. For now, we return all apps
-            // but this needs to be enhanced with proper authorization filtering.
-
             let skipValue = if skip < 0 then 0 else skip
 
             let takeValue =
@@ -249,13 +267,27 @@ type AppController
                 elif take > 100 then 100
                 else take
 
-            let! result = commandHandler.HandleCommand appRepository (GetAllApps(skipValue, takeValue))
+            let! workspaceIds = this.GetAccessibleWorkspaceIdsForCurrentUser()
 
-            return
-                match result with
-                | Ok(AppsResult pagedApps) -> this.Ok(pagedApps) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+            if List.isEmpty workspaceIds then
+                let emptyResult: PagedResult<AppData> =
+                    { Items = []
+                      TotalCount = 0
+                      Skip = skipValue
+                      Take = takeValue }
+
+                return this.Ok(emptyResult) :> IActionResult
+            else
+                let! result =
+                    commandHandler.HandleCommand
+                        appRepository
+                        (GetAppsByWorkspaceIds(workspaceIds, skipValue, takeValue))
+
+                return
+                    match result with
+                    | Ok(AppsResult pagedApps) -> this.Ok(pagedApps) :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpPut("{id}/name")>]
