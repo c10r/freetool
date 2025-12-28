@@ -275,6 +275,12 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                         | Error _ -> failwith $"Invalid ResourceDescription in database: {str}")
                 )
 
+            let workspaceIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.WorkspaceId, System.Guid>(
+                    (fun workspaceId -> workspaceId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.WorkspaceId(guid))
+                )
+
             let keyValuePairListConverter =
                 ValueConverter<Freetool.Domain.ValueObjects.KeyValuePair list, string>(
                     (fun kvps ->
@@ -317,6 +323,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun r -> r.Description).HasConversion(resourceDescriptionConverter)
             |> ignore
 
+            entity.Property(fun r -> r.WorkspaceId).HasConversion(workspaceIdConverter)
+            |> ignore
+
             entity.Property(fun r -> r.HttpMethod).HasConversion(httpMethodConverter)
             |> ignore
 
@@ -329,6 +338,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             |> ignore
 
             entity.Property(fun r -> r.Body).HasConversion(keyValuePairListConverter)
+            |> ignore
+
+            // Configure foreign key relationship to workspace
+            entity.HasOne<WorkspaceData>().WithMany().HasForeignKey(fun r -> r.WorkspaceId :> obj)
             |> ignore
 
             // Global query filter for soft delete

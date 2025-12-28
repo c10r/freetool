@@ -39,6 +39,7 @@
     <Compile Include="src/Controllers/FolderController.fs" />
     <Compile Include="src/Controllers/AppController.fs" />
     <Compile Include="src/Controllers/AuditController.fs" />
+    <Compile Include="src/Controllers/OpenFgaInitController.fs" />
     <Compile Include="src/Program.fs" />
   </ItemGroup>
 

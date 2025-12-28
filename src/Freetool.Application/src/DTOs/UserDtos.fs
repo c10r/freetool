@@ -40,3 +40,20 @@ type SetProfilePictureDto =
                      ErrorMessage = ValidationConstants.URLErrorMessage)>]
       [<Url(ErrorMessage = "Profile picture URL must be a valid URL")>]
       ProfilePicUrl: string }
+
+/// Represents a user's membership in a team/group
+type TeamMembershipDto =
+    { Id: string
+      Name: string
+      Role: string } // "admin" or "member"
+
+/// Response DTO for GET /user/me endpoint
+type CurrentUserDto =
+    { Id: string
+      Name: string
+      Email: string
+
+      [<JsonConverter(typeof<StringOptionConverter>)>]
+      ProfilePicUrl: string option
+      IsOrgAdmin: bool
+      Teams: TeamMembershipDto list }

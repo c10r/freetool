@@ -4,6 +4,7 @@ open System
 open System.Linq
 open Microsoft.EntityFrameworkCore
 open System.Text.Json
+open System.Text.Json.Serialization
 open Freetool.Domain
 open Freetool.Domain.Events
 open Freetool.Application.Interfaces
@@ -30,25 +31,45 @@ type EventRepository(context: FreetoolDbContext) =
                     | GroupEvents _ -> EntityType.Group
                     | RunEvents _ -> EntityType.Run
 
-                let entityId =
-                    match event with
-                    | :? Events.UserCreatedEvent as e -> e.UserId.ToString()
-                    | :? Events.UserUpdatedEvent as e -> e.UserId.ToString()
-                    | :? Events.UserDeletedEvent as e -> e.UserId.ToString()
-                    | :? Events.AppCreatedEvent as e -> e.AppId.ToString()
-                    | :? Events.AppUpdatedEvent as e -> e.AppId.ToString()
-                    | :? Events.AppDeletedEvent as e -> e.AppId.ToString()
-                    | :? Events.ResourceCreatedEvent as e -> e.ResourceId.ToString()
-                    | :? Events.ResourceUpdatedEvent as e -> e.ResourceId.ToString()
-                    | :? Events.ResourceDeletedEvent as e -> e.ResourceId.ToString()
-                    | :? Events.FolderCreatedEvent as e -> e.FolderId.ToString()
-                    | :? Events.FolderUpdatedEvent as e -> e.FolderId.ToString()
-                    | :? Events.FolderDeletedEvent as e -> e.FolderId.ToString()
-                    | _ -> "unknown"
-
                 let jsonOptions = JsonSerializerOptions()
-                jsonOptions.Converters.Add(UserIdConverter())
-                let eventData = JsonSerializer.Serialize(event, jsonOptions)
+                jsonOptions.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull
+                jsonOptions.Converters.Add(JsonFSharpConverter())
+
+                let (entityId, eventData) =
+                    match event with
+                    | :? Events.UserCreatedEvent as e -> (e.UserId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.UserUpdatedEvent as e -> (e.UserId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.UserDeletedEvent as e -> (e.UserId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.AppCreatedEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.AppUpdatedEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.AppDeletedEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.ResourceCreatedEvent as e ->
+                        (e.ResourceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.ResourceUpdatedEvent as e ->
+                        (e.ResourceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.ResourceDeletedEvent as e ->
+                        (e.ResourceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.FolderCreatedEvent as e ->
+                        (e.FolderId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.FolderUpdatedEvent as e ->
+                        (e.FolderId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.FolderDeletedEvent as e ->
+                        (e.FolderId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.GroupCreatedEvent as e ->
+                        (e.GroupId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.GroupUpdatedEvent as e ->
+                        (e.GroupId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.GroupDeletedEvent as e ->
+                        (e.GroupId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.RunCreatedEvent as e -> (e.RunId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.RunStatusChangedEvent as e ->
+                        (e.RunId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | _ -> ("unknown", JsonSerializer.Serialize(event, jsonOptions))
+
+                // Temporary debug logging
+                System.Console.WriteLine($"=== SERIALIZED EVENT DATA ===")
+                System.Console.WriteLine(eventData)
+                System.Console.WriteLine($"=============================\n")
 
                 let eventDataRecord: Entities.EventData =
                     { Id = Guid.NewGuid()

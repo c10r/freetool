@@ -5,6 +5,7 @@ open Microsoft.AspNetCore.Mvc
 open Microsoft.AspNetCore.Http
 open Freetool.Domain
 open Freetool.Domain.Entities
+open Freetool.Domain.ValueObjects
 open Freetool.Application.DTOs
 open Freetool.Application.Commands
 open Freetool.Application.Interfaces
@@ -15,7 +16,9 @@ open Freetool.Application.Mappers
 type WorkspaceController
     (
         commandHandler: IMultiRepositoryCommandHandler<WorkspaceCommand, WorkspaceCommandResult>,
-        authService: IAuthorizationService
+        authService: IAuthorizationService,
+        workspaceRepository: IWorkspaceRepository,
+        groupRepository: IGroupRepository
     ) =
     inherit AuthenticatedControllerBase()
 
@@ -114,6 +117,112 @@ type WorkspaceController
                 | Ok(WorkspacesResult pagedWorkspaces) -> this.Ok(pagedWorkspaces) :> IActionResult
                 | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                 | Error error -> this.HandleDomainError(error)
+        }
+
+    [<HttpGet("{id}/permissions")>]
+    [<ProducesResponseType(typeof<WorkspacePermissionsDto>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.GetWorkspacePermissions(id: string) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+            let userIdStr = userId.Value.ToString()
+
+            // Parse and validate workspace ID
+            match System.Guid.TryParse id with
+            | false, _ ->
+                return
+                    this.BadRequest
+                        {| error = "Validation failed"
+                           message = "Invalid workspace ID format" |}
+                    :> IActionResult
+            | true, workspaceGuid ->
+                let workspaceId = WorkspaceId.FromGuid(workspaceGuid)
+
+                // Get workspace to validate it exists
+                let! workspaceOption = workspaceRepository.GetByIdAsync workspaceId
+
+                match workspaceOption with
+                | None ->
+                    return
+                        this.NotFound
+                            {| error = "Resource not found"
+                               message = "Workspace not found" |}
+                        :> IActionResult
+                | Some workspace ->
+                    let workspaceData = workspace.State
+                    let workspaceIdStr = workspaceData.Id.Value.ToString()
+
+                    // Check if user is org admin
+                    let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:acme")
+
+                    // Get workspace's team/group
+                    let groupId = workspaceData.GroupId
+                    let groupIdStr = groupId.Value.ToString()
+
+                    // Check if user is team admin
+                    let! isTeamAdmin =
+                        authService.CheckPermissionAsync (User userIdStr) TeamAdmin (TeamObject groupIdStr)
+
+                    // Check all 10 workspace permissions
+                    let! createResource =
+                        authService.CheckPermissionAsync
+                            (User userIdStr)
+                            ResourceCreate
+                            (WorkspaceObject workspaceIdStr)
+
+                    let! editResource =
+                        authService.CheckPermissionAsync (User userIdStr) ResourceEdit (WorkspaceObject workspaceIdStr)
+
+                    let! deleteResource =
+                        authService.CheckPermissionAsync
+                            (User userIdStr)
+                            ResourceDelete
+                            (WorkspaceObject workspaceIdStr)
+
+                    let! createApp =
+                        authService.CheckPermissionAsync (User userIdStr) AppCreate (WorkspaceObject workspaceIdStr)
+
+                    let! editApp =
+                        authService.CheckPermissionAsync (User userIdStr) AppEdit (WorkspaceObject workspaceIdStr)
+
+                    let! deleteApp =
+                        authService.CheckPermissionAsync (User userIdStr) AppDelete (WorkspaceObject workspaceIdStr)
+
+                    let! runApp =
+                        authService.CheckPermissionAsync (User userIdStr) AppRun (WorkspaceObject workspaceIdStr)
+
+                    let! createFolder =
+                        authService.CheckPermissionAsync (User userIdStr) FolderCreate (WorkspaceObject workspaceIdStr)
+
+                    let! editFolder =
+                        authService.CheckPermissionAsync (User userIdStr) FolderEdit (WorkspaceObject workspaceIdStr)
+
+                    let! deleteFolder =
+                        authService.CheckPermissionAsync (User userIdStr) FolderDelete (WorkspaceObject workspaceIdStr)
+
+                    let permissions: WorkspacePermissionsData =
+                        { CreateResource = createResource
+                          EditResource = editResource
+                          DeleteResource = deleteResource
+                          CreateApp = createApp
+                          EditApp = editApp
+                          DeleteApp = deleteApp
+                          RunApp = runApp
+                          CreateFolder = createFolder
+                          EditFolder = editFolder
+                          DeleteFolder = deleteFolder }
+
+                    let dto: WorkspacePermissionsDto =
+                        { WorkspaceId = workspaceIdStr
+                          UserId = userIdStr
+                          Permissions = permissions
+                          IsOrgAdmin = isOrgAdmin
+                          IsTeamAdmin = isTeamAdmin
+                          TeamId = Some groupIdStr }
+
+                    return this.Ok(dto) :> IActionResult
         }
 
     [<HttpDelete("{id}")>]

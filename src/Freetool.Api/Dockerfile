@@ -7,7 +7,7 @@ COPY ./www .
 RUN npm run build
 
 # Build .NET App
-FROM mcr.microsoft.com/dotnet/sdk:9.0-bookworm-slim AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /source
 
 # Copy project files and restore as distinct layers
@@ -25,7 +25,7 @@ COPY . .
 RUN dotnet publish src/Freetool.Api/Freetool.Api.fsproj -c release -o /app
 
 # Final runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-bookworm-slim
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
 COPY --from=frontend-build /frontend/dist ./wwwroot

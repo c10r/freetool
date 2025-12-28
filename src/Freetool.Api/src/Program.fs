@@ -191,6 +191,22 @@ let main args =
 
     Persistence.upgradeDatabase connectionString
 
+    // Initialize OpenFGA authorization model if StoreId is configured
+    let storeId = builder.Configuration["OpenFGA:StoreId"]
+
+    if not (System.String.IsNullOrEmpty(storeId)) then
+        try
+            eprintfn "Initializing OpenFGA authorization model..."
+            use scope = app.Services.CreateScope()
+            let authService = scope.ServiceProvider.GetRequiredService<IAuthorizationService>()
+            let modelTask = authService.WriteAuthorizationModelAsync()
+            modelTask.Wait()
+            eprintfn "OpenFGA authorization model initialized successfully"
+        with ex ->
+            eprintfn "Warning: Could not initialize OpenFGA authorization model: %s" ex.Message
+            eprintfn "The application will continue, but authorization checks may fail."
+            eprintfn "You can manually initialize by calling POST /admin/openfga/write-model"
+
     app.UseSwagger() |> ignore
     app.UseSwaggerUI() |> ignore
 

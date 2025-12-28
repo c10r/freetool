@@ -3,6 +3,7 @@ namespace Freetool.Application.Services
 open System
 open System.Threading.Tasks
 open System.Text.Json
+open System.Text.Json.Serialization
 open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
@@ -14,6 +15,12 @@ type IEventEnhancementService =
 
 type EventEnhancementService(userRepository: IUserRepository, appRepository: IAppRepository) =
 
+    // Shared JSON options for deserializing F# event types
+    let jsonOptions =
+        let options = JsonSerializerOptions()
+        options.Converters.Add(JsonFSharpConverter())
+        options
+
     let extractEntityNameFromEventDataAsync
         (eventData: string)
         (eventType: EventType)
@@ -24,14 +31,14 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
                 match eventType with
                 | UserEvents _ ->
                     let userEventData =
-                        JsonSerializer.Deserialize<Freetool.Domain.Events.UserCreatedEvent>(eventData)
+                        JsonSerializer.Deserialize<Freetool.Domain.Events.UserCreatedEvent>(eventData, jsonOptions)
 
                     return userEventData.Name
                 | AppEvents appEvent ->
                     match appEvent with
                     | AppCreatedEvent ->
                         let appEventData =
-                            JsonSerializer.Deserialize<Freetool.Domain.Events.AppCreatedEvent>(eventData)
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.AppCreatedEvent>(eventData, jsonOptions)
 
                         return appEventData.Name.Value
                     | _ ->
@@ -48,7 +55,10 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
                     match folderEvent with
                     | FolderCreatedEvent ->
                         let folderEventData =
-                            JsonSerializer.Deserialize<Freetool.Domain.Events.FolderCreatedEvent>(eventData)
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.FolderCreatedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
 
                         return folderEventData.Name.Value
                     | _ ->
@@ -65,7 +75,10 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
                     match resourceEvent with
                     | ResourceCreatedEvent ->
                         let resourceEventData =
-                            JsonSerializer.Deserialize<Freetool.Domain.Events.ResourceCreatedEvent>(eventData)
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.ResourceCreatedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
 
                         return resourceEventData.Name.Value
                     | _ ->
@@ -82,7 +95,7 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
                     match groupEvent with
                     | GroupCreatedEvent ->
                         let groupEventData =
-                            JsonSerializer.Deserialize<Freetool.Domain.Events.GroupCreatedEvent>(eventData)
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.GroupCreatedEvent>(eventData, jsonOptions)
 
                         return groupEventData.Name
                     | _ ->
@@ -99,7 +112,7 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
                     match runEvent with
                     | RunCreatedEvent ->
                         let runEventData =
-                            JsonSerializer.Deserialize<Freetool.Domain.Events.RunCreatedEvent>(eventData)
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.RunCreatedEvent>(eventData, jsonOptions)
 
                         // Check if AppId is empty/null GUID
                         if runEventData.AppId.Value = Guid.Empty then
@@ -113,7 +126,10 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
                     | RunStatusChangedEvent ->
                         // For status changes, we don't have the AppId directly, so fallback to Run ID
                         let runEventData =
-                            JsonSerializer.Deserialize<Freetool.Domain.Events.RunStatusChangedEvent>(eventData)
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.RunStatusChangedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
 
                         return $"Run {runEventData.RunId.Value}"
             with ex ->

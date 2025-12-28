@@ -12,7 +12,12 @@ open Freetool.Application.Interfaces
 [<ApiController>]
 [<Route("user")>]
 type UserController
-    (userRepository: IUserRepository, commandHandler: ICommandHandler, authService: IAuthorizationService) =
+    (
+        userRepository: IUserRepository,
+        groupRepository: IGroupRepository,
+        commandHandler: ICommandHandler,
+        authService: IAuthorizationService
+    ) =
     inherit AuthenticatedControllerBase()
 
     // Helper to check if current user is an organization admin
@@ -92,6 +97,64 @@ type UserController
                 | Ok(UsersResult pagedUsers) -> this.Ok(pagedUsers) :> IActionResult
                 | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                 | Error error -> this.HandleDomainError(error)
+        }
+
+    [<HttpGet("me")>]
+    [<ProducesResponseType(typeof<CurrentUserDto>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.GetCurrentUser() : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+            let userIdStr = userId.Value.ToString()
+
+            // Get user details
+            let! result = commandHandler.HandleCommand userRepository (GetUserById userIdStr)
+
+            match result with
+            | Error error -> return this.HandleDomainError(error)
+            | Ok(UserResult userData) ->
+                // Check if user is org admin
+                let! isOrgAdmin =
+                    authService.CheckPermissionAsync (User userIdStr) TeamAdmin (OrganizationObject "acme")
+
+                // Get user's groups/teams using the group repository directly
+                let! groups = groupRepository.GetByUserIdAsync userId
+
+                // For each group, check if user is admin or member
+                let! teams =
+                    task {
+                        let mutable teamList = []
+
+                        for group in groups do
+                            let groupData = group.State
+                            let groupIdStr = groupData.Id.Value.ToString()
+
+                            let! isTeamAdmin =
+                                authService.CheckPermissionAsync (User userIdStr) TeamAdmin (TeamObject groupIdStr)
+
+                            let role = if isTeamAdmin then "admin" else "member"
+
+                            let teamDto: TeamMembershipDto =
+                                { Id = groupIdStr
+                                  Name = groupData.Name
+                                  Role = role }
+
+                            teamList <- teamDto :: teamList
+
+                        return List.rev teamList
+                    }
+
+                let currentUserDto: CurrentUserDto =
+                    { Id = userIdStr
+                      Name = userData.Name
+                      Email = userData.Email
+                      ProfilePicUrl = userData.ProfilePicUrl
+                      IsOrgAdmin = isOrgAdmin
+                      Teams = teams }
+
+                return this.Ok(currentUserDto) :> IActionResult
+            | Ok _ -> return this.StatusCode(500, "Unexpected result type") :> IActionResult
         }
 
     [<HttpPut("{id}/name")>]
