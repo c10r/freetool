@@ -54,19 +54,22 @@ type AppController
     // Helper method to check authorization
     member private this.CheckAuthorization
         (workspaceId: WorkspaceId)
-        (permission: string)
+        (permission: AuthRelation)
         : Task<Result<unit, DomainError>> =
         task {
             let userId = this.CurrentUserId
-            let userStr = $"user:{userId.Value}"
-            let workspaceStr = $"workspace:{workspaceId.Value}"
 
-            let! hasPermission = authorizationService.CheckPermissionAsync userStr permission workspaceStr
+            let! hasPermission =
+                authorizationService.CheckPermissionAsync
+                    (User(userId.Value.ToString()))
+                    permission
+                    (WorkspaceObject(workspaceId.Value.ToString()))
 
             if hasPermission then
                 return Ok()
             else
-                return Error(InvalidOperation $"User does not have {permission} permission on this workspace")
+                let permissionName = AuthTypes.relationToString permission
+                return Error(InvalidOperation $"User does not have {permissionName} permission on this workspace")
         }
 
     // Helper method to handle authorization errors
@@ -116,7 +119,7 @@ type AppController
                 match workspaceIdResult with
                 | Error error -> return this.HandleDomainError(error)
                 | Ok workspaceId ->
-                    let! authResult = this.CheckAuthorization workspaceId "create_app"
+                    let! authResult = this.CheckAuthorization workspaceId AppCreate
 
                     match authResult with
                     | Error _ -> return this.HandleAuthorizationError()
@@ -168,7 +171,7 @@ type AppController
             match workspaceIdResult with
             | Error error -> return this.HandleDomainError(error)
             | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId "run_app"
+                let! authResult = this.CheckAuthorization workspaceId AppRun
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -210,7 +213,7 @@ type AppController
                 match workspaceIdResult with
                 | Error error -> return this.HandleDomainError(error)
                 | Ok workspaceId ->
-                    let! authResult = this.CheckAuthorization workspaceId "run_app"
+                    let! authResult = this.CheckAuthorization workspaceId AppRun
 
                     match authResult with
                     | Error _ -> return this.HandleAuthorizationError()
@@ -271,7 +274,7 @@ type AppController
             match workspaceIdResult with
             | Error error -> return this.HandleDomainError(error)
             | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId "edit_app"
+                let! authResult = this.CheckAuthorization workspaceId AppEdit
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -301,7 +304,7 @@ type AppController
             match workspaceIdResult with
             | Error error -> return this.HandleDomainError(error)
             | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId "edit_app"
+                let! authResult = this.CheckAuthorization workspaceId AppEdit
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -333,7 +336,7 @@ type AppController
             match workspaceIdResult with
             | Error error -> return this.HandleDomainError(error)
             | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId "edit_app"
+                let! authResult = this.CheckAuthorization workspaceId AppEdit
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -367,7 +370,7 @@ type AppController
             match workspaceIdResult with
             | Error error -> return this.HandleDomainError(error)
             | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId "edit_app"
+                let! authResult = this.CheckAuthorization workspaceId AppEdit
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -401,7 +404,7 @@ type AppController
             match workspaceIdResult with
             | Error error -> return this.HandleDomainError(error)
             | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId "edit_app"
+                let! authResult = this.CheckAuthorization workspaceId AppEdit
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -440,7 +443,7 @@ type AppController
                 match workspaceIdResult with
                 | Error error -> return this.HandleDomainError(error)
                 | Ok workspaceId ->
-                    let! authResult = this.CheckAuthorization workspaceId "edit_app"
+                    let! authResult = this.CheckAuthorization workspaceId AppEdit
 
                     match authResult with
                     | Error _ -> return this.HandleAuthorizationError()
@@ -470,7 +473,7 @@ type AppController
             match workspaceIdResult with
             | Error error -> return this.HandleDomainError(error)
             | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId "delete_app"
+                let! authResult = this.CheckAuthorization workspaceId AppDelete
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -500,7 +503,7 @@ type AppController
             match workspaceIdResult with
             | Error error -> return this.HandleDomainError(error)
             | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId "run_app"
+                let! authResult = this.CheckAuthorization workspaceId AppRun
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()

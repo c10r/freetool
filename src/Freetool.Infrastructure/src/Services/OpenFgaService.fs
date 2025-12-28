@@ -212,7 +212,9 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
 
                 let writes =
                     tuples
-                    |> List.map (fun t -> ClientTupleKey(User = t.User, Relation = t.Relation, Object = t.Object))
+                    |> List.map (fun t ->
+                        let (user, relation, object) = RelationshipTuple.toStrings t
+                        ClientTupleKey(User = user, Relation = relation, Object = object))
                     |> ResizeArray
 
                 let body = ClientWriteRequest(Writes = writes)
@@ -227,13 +229,16 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
 
                 let writes =
                     request.TuplesToAdd
-                    |> List.map (fun t -> ClientTupleKey(User = t.User, Relation = t.Relation, Object = t.Object))
+                    |> List.map (fun t ->
+                        let (user, relation, object) = RelationshipTuple.toStrings t
+                        ClientTupleKey(User = user, Relation = relation, Object = object))
                     |> ResizeArray
 
                 let deletes =
                     request.TuplesToRemove
                     |> List.map (fun t ->
-                        ClientTupleKeyWithoutCondition(User = t.User, Relation = t.Relation, Object = t.Object))
+                        let (user, relation, object) = RelationshipTuple.toStrings t
+                        ClientTupleKeyWithoutCondition(User = user, Relation = relation, Object = object))
                     |> ResizeArray
 
                 let body = ClientWriteRequest(Writes = writes, Deletes = deletes)
@@ -250,7 +255,8 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                 let deletes =
                     tuples
                     |> List.map (fun t ->
-                        ClientTupleKeyWithoutCondition(User = t.User, Relation = t.Relation, Object = t.Object))
+                        let (user, relation, object) = RelationshipTuple.toStrings t
+                        ClientTupleKeyWithoutCondition(User = user, Relation = relation, Object = object))
                     |> ResizeArray
 
                 let body = ClientWriteRequest(Deletes = deletes)
@@ -259,11 +265,20 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
             }
 
         /// Checks if a user has a specific permission on an object
-        member _.CheckPermissionAsync (user: string) (relation: string) (object: string) : Task<bool> =
+        member _.CheckPermissionAsync
+            (subject: AuthSubject)
+            (relation: AuthRelation)
+            (object: AuthObject)
+            : Task<bool> =
             task {
                 use client = createClient ()
 
-                let body = ClientCheckRequest(User = user, Relation = relation, Object = object)
+                let user = AuthTypes.subjectToString subject
+                let relationStr = AuthTypes.relationToString relation
+                let objectStr = AuthTypes.objectToString object
+
+                let body =
+                    ClientCheckRequest(User = user, Relation = relationStr, Object = objectStr)
 
                 let! response = client.Check(body)
                 return response.Allowed.GetValueOrDefault(false)

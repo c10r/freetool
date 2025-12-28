@@ -37,7 +37,7 @@ let ``CreateResource - User with create_resource permission can create resources
         do!
             authService.CreateRelationshipsAsync(
                 [ { User = $"user:{userId}"
-                    Relation = "create_resource"
+                    Relation = ResourceCreate
                     Object = $"workspace:{workspaceId}" } ]
             )
 
@@ -92,7 +92,7 @@ let ``CreateResource - Team admin has create_resource permission via admin role`
         do!
             authService.CreateRelationshipsAsync(
                 [ { User = $"user:{userId}"
-                    Relation = "admin"
+                    Relation = TeamAdmin
                     Object = teamId } ]
             )
 
@@ -100,7 +100,7 @@ let ``CreateResource - Team admin has create_resource permission via admin role`
         do!
             authService.CreateRelationshipsAsync(
                 [ { User = teamId
-                    Relation = "team"
+                    Relation = WorkspaceTeam
                     Object = $"workspace:{workspaceId}" } ]
             )
 
@@ -185,7 +185,7 @@ let ``UpdateResource - Team admin has edit_resource permission via admin role`` 
         do!
             authService.CreateRelationshipsAsync(
                 [ { User = $"user:{userId}"
-                    Relation = "admin"
+                    Relation = TeamAdmin
                     Object = teamId } ]
             )
 
@@ -193,7 +193,7 @@ let ``UpdateResource - Team admin has edit_resource permission via admin role`` 
         do!
             authService.CreateRelationshipsAsync(
                 [ { User = teamId
-                    Relation = "team"
+                    Relation = WorkspaceTeam
                     Object = $"workspace:{workspaceId}" } ]
             )
 
@@ -279,7 +279,7 @@ let ``DeleteResource - Team admin has delete_resource permission via admin role`
         do!
             authService.CreateRelationshipsAsync(
                 [ { User = $"user:{userId}"
-                    Relation = "admin"
+                    Relation = TeamAdmin
                     Object = teamId } ]
             )
 
@@ -287,7 +287,7 @@ let ``DeleteResource - Team admin has delete_resource permission via admin role`
         do!
             authService.CreateRelationshipsAsync(
                 [ { User = teamId
-                    Relation = "team"
+                    Relation = WorkspaceTeam
                     Object = $"workspace:{workspaceId}" } ]
             )
 
@@ -317,20 +317,20 @@ let ``Global admin has all resource permissions on any workspace`` () : Task =
         do!
             authService.CreateRelationshipsAsync(
                 [ { User = $"user:{userId}"
-                    Relation = "admin"
-                    Object = "organization:acme" } ]
+                    Relation = TeamAdmin
+                    Object = OrganizationObject "acme" } ]
             )
 
         // Grant global admins permissions on workspace
         do!
             authService.CreateRelationshipsAsync(
-                [ { User = "organization:acme#admin"
-                    Relation = "create_resource"
+                [ { Subject = UserSetFromRelation("organization", "acme", "admin")
+                    Relation = ResourceCreate
                     Object = $"workspace:{workspaceId}" }
-                  { User = "organization:acme#admin"
+                  { Subject = UserSetFromRelation("organization", "acme", "admin")
                     Relation = "edit_resource"
                     Object = $"workspace:{workspaceId}" }
-                  { User = "organization:acme#admin"
+                  { Subject = UserSetFromRelation("organization", "acme", "admin")
                     Relation = "delete_resource"
                     Object = $"workspace:{workspaceId}" } ]
             )

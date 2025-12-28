@@ -21,7 +21,7 @@ type WorkspaceController
 
     /// Helper to check if a user is an organization admin
     member private _.IsOrganizationAdmin(userId: string, orgId: string) : Task<bool> =
-        authService.CheckPermissionAsync userId "admin" orgId
+        authService.CheckPermissionAsync (User userId) TeamAdmin (OrganizationObject orgId)
 
     [<HttpPost>]
     [<ProducesResponseType(typeof<WorkspaceData>, StatusCodes.Status201Created)>]

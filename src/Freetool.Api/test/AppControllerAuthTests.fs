@@ -20,25 +20,25 @@ let createServiceWithStore storeId =
     OpenFgaService(openFgaApiUrl, storeId) :> IAuthorizationService
 
 // Test setup helper to create a workspace with proper permissions
-let setupWorkspaceWithPermissions (authService: IAuthorizationService) (userId: string) (permission: string) =
+let setupWorkspaceWithPermissions (authService: IAuthorizationService) (userId: string) (permission: AuthRelation) =
     task {
         let workspaceId = Guid.NewGuid().ToString()
-        let teamId = "team:test-team"
+        let teamId = "test-team"
 
         // Associate workspace with team
         do!
             authService.CreateRelationshipsAsync(
-                [ { User = teamId
-                    Relation = "team"
-                    Object = $"workspace:{workspaceId}" } ]
+                [ { Subject = AuthSubject.Team teamId
+                    Relation = WorkspaceTeam
+                    Object = AuthObject.WorkspaceObject workspaceId } ]
             )
 
         // Grant permission to user
         do!
             authService.CreateRelationshipsAsync(
-                [ { User = $"user:{userId}"
+                [ { Subject = AuthSubject.User userId
                     Relation = permission
-                    Object = $"workspace:{workspaceId}" } ]
+                    Object = AuthObject.WorkspaceObject workspaceId } ]
             )
 
         return workspaceId
@@ -57,10 +57,13 @@ let ``CreateApp endpoint - User with create_app permission can create app`` () :
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId "create_app"
+        let! workspaceId = setupWorkspaceWithPermissions authService userId AppCreate
 
         // Act - Check if user can create app on workspace
-        let! canCreate = authService.CheckPermissionAsync $"user:{userId}" "create_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let relation = AppCreate
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let! canCreate = authService.CheckPermissionAsync subject relation obj
 
         // Assert
         Assert.True(canCreate, "User with create_app permission should be allowed to create apps")
@@ -80,7 +83,10 @@ let ``CreateApp endpoint - User without create_app permission is denied`` () : T
         let workspaceId = Guid.NewGuid().ToString()
 
         // Act - Check if user (without permission) can create app
-        let! canCreate = authService.CheckPermissionAsync $"user:{userId}" "create_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let relation = AppCreate
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let! canCreate = authService.CheckPermissionAsync subject relation obj
 
         // Assert
         Assert.False(canCreate, "User without create_app permission should be denied")
@@ -97,10 +103,13 @@ let ``GetAppById endpoint - User with run_app permission can view app`` () : Tas
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId "run_app"
+        let! workspaceId = setupWorkspaceWithPermissions authService userId AppRun
 
         // Act
-        let! canView = authService.CheckPermissionAsync $"user:{userId}" "run_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let relation = AppRun
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let! canView = authService.CheckPermissionAsync subject relation obj
 
         // Assert
         Assert.True(canView, "User with run_app permission should be allowed to view apps")
@@ -120,7 +129,10 @@ let ``GetAppById endpoint - User without run_app permission is denied`` () : Tas
         let workspaceId = Guid.NewGuid().ToString()
 
         // Act
-        let! canView = authService.CheckPermissionAsync $"user:{userId}" "run_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let relation = AppRun
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let! canView = authService.CheckPermissionAsync subject relation obj
 
         // Assert
         Assert.False(canView, "User without run_app permission should be denied")
@@ -137,10 +149,13 @@ let ``UpdateAppName endpoint - User with edit_app permission can update`` () : T
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId "edit_app"
+        let! workspaceId = setupWorkspaceWithPermissions authService userId AppEdit
 
         // Act
-        let! canEdit = authService.CheckPermissionAsync $"user:{userId}" "edit_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let relation = AppEdit
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let! canEdit = authService.CheckPermissionAsync subject relation obj
 
         // Assert
         Assert.True(canEdit, "User with edit_app permission should be allowed to update apps")
@@ -160,7 +175,10 @@ let ``UpdateAppName endpoint - User without edit_app permission is denied`` () :
         let workspaceId = Guid.NewGuid().ToString()
 
         // Act
-        let! canEdit = authService.CheckPermissionAsync $"user:{userId}" "edit_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let relation = AppEdit
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let! canEdit = authService.CheckPermissionAsync subject relation obj
 
         // Assert
         Assert.False(canEdit, "User without edit_app permission should be denied")
@@ -179,10 +197,13 @@ let ``DeleteApp endpoint - User with delete_app permission can delete`` () : Tas
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId "delete_app"
+        let! workspaceId = setupWorkspaceWithPermissions authService userId AppDelete
 
         // Act
-        let! canDelete = authService.CheckPermissionAsync $"user:{userId}" "delete_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let relation = AppDelete
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let! canDelete = authService.CheckPermissionAsync subject relation obj
 
         // Assert
         Assert.True(canDelete, "User with delete_app permission should be allowed to delete apps")
@@ -202,7 +223,10 @@ let ``DeleteApp endpoint - User without delete_app permission is denied`` () : T
         let workspaceId = Guid.NewGuid().ToString()
 
         // Act
-        let! canDelete = authService.CheckPermissionAsync $"user:{userId}" "delete_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let relation = AppDelete
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let! canDelete = authService.CheckPermissionAsync subject relation obj
 
         // Assert
         Assert.False(canDelete, "User without delete_app permission should be denied")
@@ -219,10 +243,13 @@ let ``RunApp endpoint - User with run_app permission can run`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId "run_app"
+        let! workspaceId = setupWorkspaceWithPermissions authService userId AppRun
 
         // Act
-        let! canRun = authService.CheckPermissionAsync $"user:{userId}" "run_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let relation = AppRun
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let! canRun = authService.CheckPermissionAsync subject relation obj
 
         // Assert
         Assert.True(canRun, "User with run_app permission should be allowed to run apps")
@@ -242,7 +269,10 @@ let ``RunApp endpoint - User without run_app permission is denied`` () : Task =
         let workspaceId = Guid.NewGuid().ToString()
 
         // Act
-        let! canRun = authService.CheckPermissionAsync $"user:{userId}" "run_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let relation = AppRun
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let! canRun = authService.CheckPermissionAsync subject relation obj
 
         // Assert
         Assert.False(canRun, "User without run_app permission should be denied")
@@ -259,36 +289,43 @@ let ``Team admin has all app permissions on workspace`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let teamId = $"team:{Guid.NewGuid()}"
+        let teamId = Guid.NewGuid().ToString()
         let workspaceId = Guid.NewGuid().ToString()
 
         // Make user a team admin
         do!
             authService.CreateRelationshipsAsync(
-                [ { User = $"user:{userId}"
-                    Relation = "admin"
-                    Object = teamId } ]
+                [ { Subject = AuthSubject.User userId
+                    Relation = TeamAdmin
+                    Object = AuthObject.TeamObject teamId } ]
             )
 
         // Associate workspace with team
         do!
             authService.CreateRelationshipsAsync(
-                [ { User = teamId
-                    Relation = "team"
-                    Object = $"workspace:{workspaceId}" } ]
+                [ { Subject = AuthSubject.Team teamId
+                    Relation = WorkspaceTeam
+                    Object = AuthObject.WorkspaceObject workspaceId } ]
             )
 
         // Act & Assert - Verify user has all app permissions
-        let! canCreateApp = authService.CheckPermissionAsync $"user:{userId}" "create_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+
+        let relation1 = AppCreate
+        let! canCreateApp = authService.CheckPermissionAsync subject relation1 obj
         Assert.True(canCreateApp, "Team admin should have create_app permission")
 
-        let! canEditApp = authService.CheckPermissionAsync $"user:{userId}" "edit_app" $"workspace:{workspaceId}"
+        let relation2 = AppEdit
+        let! canEditApp = authService.CheckPermissionAsync subject relation2 obj
         Assert.True(canEditApp, "Team admin should have edit_app permission")
 
-        let! canDeleteApp = authService.CheckPermissionAsync $"user:{userId}" "delete_app" $"workspace:{workspaceId}"
+        let relation3 = AppDelete
+        let! canDeleteApp = authService.CheckPermissionAsync subject relation3 obj
         Assert.True(canDeleteApp, "Team admin should have delete_app permission")
 
-        let! canRunApp = authService.CheckPermissionAsync $"user:{userId}" "run_app" $"workspace:{workspaceId}"
+        let relation4 = AppRun
+        let! canRunApp = authService.CheckPermissionAsync subject relation4 obj
         Assert.True(canRunApp, "Team admin should have run_app permission")
     }
 
@@ -303,45 +340,52 @@ let ``Global admin has all app permissions on any workspace`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let orgId = $"organization:{Guid.NewGuid()}"
+        let orgId = Guid.NewGuid().ToString()
         let workspaceId = Guid.NewGuid().ToString()
 
         // Make user a global admin
         do!
             authService.CreateRelationshipsAsync(
-                [ { User = $"user:{userId}"
-                    Relation = "admin"
-                    Object = orgId } ]
+                [ { Subject = AuthSubject.User userId
+                    Relation = TeamAdmin
+                    Object = AuthObject.OrganizationObject orgId } ]
             )
 
         // Grant global admin permissions on workspace
         do!
             authService.CreateRelationshipsAsync(
-                [ { User = $"{orgId}#admin"
-                    Relation = "create_app"
-                    Object = $"workspace:{workspaceId}" }
-                  { User = $"{orgId}#admin"
-                    Relation = "edit_app"
-                    Object = $"workspace:{workspaceId}" }
-                  { User = $"{orgId}#admin"
-                    Relation = "delete_app"
-                    Object = $"workspace:{workspaceId}" }
-                  { User = $"{orgId}#admin"
-                    Relation = "run_app"
-                    Object = $"workspace:{workspaceId}" } ]
+                [ { Subject = AuthSubject.UserSetFromRelation("organization", orgId, "admin")
+                    Relation = AppCreate
+                    Object = AuthObject.WorkspaceObject workspaceId }
+                  { Subject = AuthSubject.UserSetFromRelation("organization", orgId, "admin")
+                    Relation = AppEdit
+                    Object = AuthObject.WorkspaceObject workspaceId }
+                  { Subject = AuthSubject.UserSetFromRelation("organization", orgId, "admin")
+                    Relation = AppDelete
+                    Object = AuthObject.WorkspaceObject workspaceId }
+                  { Subject = AuthSubject.UserSetFromRelation("organization", orgId, "admin")
+                    Relation = AppRun
+                    Object = AuthObject.WorkspaceObject workspaceId } ]
             )
 
         // Act & Assert - Verify global admin has all permissions
-        let! canCreateApp = authService.CheckPermissionAsync $"user:{userId}" "create_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+
+        let relation1 = AppCreate
+        let! canCreateApp = authService.CheckPermissionAsync subject relation1 obj
         Assert.True(canCreateApp, "Global admin should have create_app permission")
 
-        let! canEditApp = authService.CheckPermissionAsync $"user:{userId}" "edit_app" $"workspace:{workspaceId}"
+        let relation2 = AppEdit
+        let! canEditApp = authService.CheckPermissionAsync subject relation2 obj
         Assert.True(canEditApp, "Global admin should have edit_app permission")
 
-        let! canDeleteApp = authService.CheckPermissionAsync $"user:{userId}" "delete_app" $"workspace:{workspaceId}"
+        let relation3 = AppDelete
+        let! canDeleteApp = authService.CheckPermissionAsync subject relation3 obj
         Assert.True(canDeleteApp, "Global admin should have delete_app permission")
 
-        let! canRunApp = authService.CheckPermissionAsync $"user:{userId}" "run_app" $"workspace:{workspaceId}"
+        let relation4 = AppRun
+        let! canRunApp = authService.CheckPermissionAsync subject relation4 obj
         Assert.True(canRunApp, "Global admin should have run_app permission")
     }
 
@@ -356,44 +400,51 @@ let ``Team member with specific permission can only perform allowed actions`` ()
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let teamId = $"team:{Guid.NewGuid()}"
+        let teamId = Guid.NewGuid().ToString()
         let workspaceId = Guid.NewGuid().ToString()
 
         // Make user a team member (not admin)
         do!
             authService.CreateRelationshipsAsync(
-                [ { User = $"user:{userId}"
-                    Relation = "member"
-                    Object = teamId } ]
+                [ { Subject = AuthSubject.User userId
+                    Relation = TeamMember
+                    Object = AuthObject.TeamObject teamId } ]
             )
 
         // Associate workspace with team
         do!
             authService.CreateRelationshipsAsync(
-                [ { User = teamId
-                    Relation = "team"
-                    Object = $"workspace:{workspaceId}" } ]
+                [ { Subject = AuthSubject.Team teamId
+                    Relation = WorkspaceTeam
+                    Object = AuthObject.WorkspaceObject workspaceId } ]
             )
 
         // Grant only run_app permission
         do!
             authService.CreateRelationshipsAsync(
-                [ { User = $"user:{userId}"
-                    Relation = "run_app"
-                    Object = $"workspace:{workspaceId}" } ]
+                [ { Subject = AuthSubject.User userId
+                    Relation = AppRun
+                    Object = AuthObject.WorkspaceObject workspaceId } ]
             )
 
         // Act & Assert
-        let! canRunApp = authService.CheckPermissionAsync $"user:{userId}" "run_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+
+        let relation1 = AppRun
+        let! canRunApp = authService.CheckPermissionAsync subject relation1 obj
         Assert.True(canRunApp, "Team member should have explicitly granted run_app permission")
 
-        let! canCreateApp = authService.CheckPermissionAsync $"user:{userId}" "create_app" $"workspace:{workspaceId}"
+        let relation2 = AppCreate
+        let! canCreateApp = authService.CheckPermissionAsync subject relation2 obj
         Assert.False(canCreateApp, "Team member should NOT have create_app permission (not granted)")
 
-        let! canEditApp = authService.CheckPermissionAsync $"user:{userId}" "edit_app" $"workspace:{workspaceId}"
+        let relation3 = AppEdit
+        let! canEditApp = authService.CheckPermissionAsync subject relation3 obj
         Assert.False(canEditApp, "Team member should NOT have edit_app permission (not granted)")
 
-        let! canDeleteApp = authService.CheckPermissionAsync $"user:{userId}" "delete_app" $"workspace:{workspaceId}"
+        let relation4 = AppDelete
+        let! canDeleteApp = authService.CheckPermissionAsync subject relation4 obj
         Assert.False(canDeleteApp, "Team member should NOT have delete_app permission (not granted)")
     }
 
@@ -408,18 +459,19 @@ let ``All update endpoints require edit_app permission`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId "edit_app"
+        let! workspaceId = setupWorkspaceWithPermissions authService userId AppEdit
 
         // Act - Verify that all these update operations use the same permission
-        let! canUpdateName = authService.CheckPermissionAsync $"user:{userId}" "edit_app" $"workspace:{workspaceId}"
-        let! canUpdateInputs = authService.CheckPermissionAsync $"user:{userId}" "edit_app" $"workspace:{workspaceId}"
+        let subject: AuthSubject = AuthSubject.User userId
+        let relation = AppEdit
+        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
 
-        let! canUpdateQueryParams =
-            authService.CheckPermissionAsync $"user:{userId}" "edit_app" $"workspace:{workspaceId}"
-
-        let! canUpdateBody = authService.CheckPermissionAsync $"user:{userId}" "edit_app" $"workspace:{workspaceId}"
-        let! canUpdateHeaders = authService.CheckPermissionAsync $"user:{userId}" "edit_app" $"workspace:{workspaceId}"
-        let! canUpdateUrlPath = authService.CheckPermissionAsync $"user:{userId}" "edit_app" $"workspace:{workspaceId}"
+        let! canUpdateName = authService.CheckPermissionAsync subject relation obj
+        let! canUpdateInputs = authService.CheckPermissionAsync subject relation obj
+        let! canUpdateQueryParams = authService.CheckPermissionAsync subject relation obj
+        let! canUpdateBody = authService.CheckPermissionAsync subject relation obj
+        let! canUpdateHeaders = authService.CheckPermissionAsync subject relation obj
+        let! canUpdateUrlPath = authService.CheckPermissionAsync subject relation obj
 
         // Assert - All should be true with edit_app permission
         Assert.True(canUpdateName, "edit_app permission allows UpdateAppName")

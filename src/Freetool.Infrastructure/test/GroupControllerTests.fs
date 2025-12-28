@@ -14,7 +14,7 @@ open Freetool.Application.Interfaces
 open Freetool.Api.Controllers
 
 // Mock authorization service for testing
-type MockAuthorizationService(checkPermissionFn: string -> string -> string -> bool) =
+type MockAuthorizationService(checkPermissionFn: AuthSubject -> AuthRelation -> AuthObject -> bool) =
     interface IAuthorizationService with
         member _.CreateStoreAsync(req) =
             Task.FromResult({ Id = "store-1"; Name = req.Name })
@@ -26,8 +26,8 @@ type MockAuthorizationService(checkPermissionFn: string -> string -> string -> b
         member _.UpdateRelationshipsAsync(_) = Task.FromResult(())
         member _.DeleteRelationshipsAsync(_) = Task.FromResult(())
 
-        member _.CheckPermissionAsync (user: string) (relation: string) (object: string) =
-            Task.FromResult(checkPermissionFn user relation object)
+        member _.CheckPermissionAsync (subject: AuthSubject) (relation: AuthRelation) (object: AuthObject) =
+            Task.FromResult(checkPermissionFn subject relation object)
 
 // Mock command handler for testing
 type MockGroupCommandHandler(handleCommandFn: GroupCommand -> Task<Result<GroupCommandResult, DomainError>>) =
@@ -36,7 +36,7 @@ type MockGroupCommandHandler(handleCommandFn: GroupCommand -> Task<Result<GroupC
 
 // Helper to create a test controller with mocked dependencies
 let createTestController
-    (checkPermissionFn: string -> string -> string -> bool)
+    (checkPermissionFn: AuthSubject -> AuthRelation -> AuthObject -> bool)
     (handleCommandFn: GroupCommand -> Task<Result<GroupCommandResult, DomainError>>)
     (userId: UserId)
     =
@@ -84,8 +84,10 @@ let ``CreateGroup succeeds when user is org admin`` () : Task =
         let userId = UserId.NewId()
 
         // Grant org admin permission
-        let checkPermission user relation obj =
-            user = $"user:{userId.Value}" && relation = "admin" && obj = "organization:acme"
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, TeamAdmin, OrganizationObject "acme" -> uid = userId.Value.ToString()
+            | _ -> false
 
         // Mock will return not found since we can't easily match the command
         let handleCommand _ =
@@ -133,8 +135,10 @@ let ``UpdateGroupName succeeds when user is org admin`` () : Task =
         let userId = UserId.NewId()
 
         // Grant org admin permission
-        let checkPermission user relation obj =
-            user = $"user:{userId.Value}" && relation = "admin" && obj = "organization:acme"
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, TeamAdmin, OrganizationObject "acme" -> uid = userId.Value.ToString()
+            | _ -> false
 
         let handleCommand _ =
             Task.FromResult(Error(NotFound "Group not found"))
@@ -182,8 +186,10 @@ let ``AddUserToGroup succeeds when user is org admin`` () : Task =
         let groupId = "group-123"
 
         // Grant org admin permission only
-        let checkPermission user relation obj =
-            user = $"user:{userId.Value}" && relation = "admin" && obj = "organization:acme"
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, TeamAdmin, OrganizationObject "acme" -> uid = userId.Value.ToString()
+            | _ -> false
 
         let handleCommand _ =
             Task.FromResult(Error(NotFound "Group not found"))
@@ -209,8 +215,10 @@ let ``AddUserToGroup succeeds when user is team admin`` () : Task =
         let groupId = "group-123"
 
         // Grant team admin permission only (not org admin)
-        let checkPermission user relation obj =
-            user = $"user:{userId.Value}" && relation = "admin" && obj = $"team:{groupId}"
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, TeamAdmin, TeamObject tid -> uid = userId.Value.ToString() && tid = groupId
+            | _ -> false
 
         let handleCommand _ =
             Task.FromResult(Error(NotFound "Group not found"))
@@ -260,8 +268,10 @@ let ``RemoveUserFromGroup succeeds when user is org admin`` () : Task =
         let groupId = "group-123"
 
         // Grant org admin permission only
-        let checkPermission user relation obj =
-            user = $"user:{userId.Value}" && relation = "admin" && obj = "organization:acme"
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, TeamAdmin, OrganizationObject "acme" -> uid = userId.Value.ToString()
+            | _ -> false
 
         let handleCommand _ =
             Task.FromResult(Error(NotFound "Group not found"))
@@ -289,8 +299,10 @@ let ``RemoveUserFromGroup succeeds when user is team admin`` () : Task =
         let groupId = "group-123"
 
         // Grant team admin permission only (not org admin)
-        let checkPermission user relation obj =
-            user = $"user:{userId.Value}" && relation = "admin" && obj = $"team:{groupId}"
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, TeamAdmin, TeamObject tid -> uid = userId.Value.ToString() && tid = groupId
+            | _ -> false
 
         let handleCommand _ =
             Task.FromResult(Error(NotFound "Group not found"))
@@ -338,8 +350,10 @@ let ``DeleteGroup succeeds when user is org admin`` () : Task =
         let userId = UserId.NewId()
 
         // Grant org admin permission
-        let checkPermission user relation obj =
-            user = $"user:{userId.Value}" && relation = "admin" && obj = "organization:acme"
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, TeamAdmin, OrganizationObject "acme" -> uid = userId.Value.ToString()
+            | _ -> false
 
         let handleCommand _ =
             Task.FromResult(Error(NotFound "Group not found"))

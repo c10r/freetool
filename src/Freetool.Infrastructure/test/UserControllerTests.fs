@@ -14,7 +14,7 @@ open Freetool.Application.Interfaces
 open Freetool.Api.Controllers
 
 // Mock authorization service for testing
-type MockAuthorizationService(permissions: Map<string * string * string, bool>) =
+type MockAuthorizationService(permissions: Map<AuthSubject * AuthRelation * AuthObject, bool>) =
     interface IAuthorizationService with
         member _.CreateStoreAsync(_) =
             Task.FromResult({ Id = "store-1"; Name = "test-store" })
@@ -26,8 +26,8 @@ type MockAuthorizationService(permissions: Map<string * string * string, bool>) 
         member _.UpdateRelationshipsAsync(_) = Task.FromResult(())
         member _.DeleteRelationshipsAsync(_) = Task.FromResult(())
 
-        member _.CheckPermissionAsync (user: string) (relation: string) (object: string) =
-            let key = (user, relation, object)
+        member _.CheckPermissionAsync (subject: AuthSubject) (relation: AuthRelation) (object: AuthObject) =
+            let key = (subject, relation, object)
             Task.FromResult(permissions.TryFind(key) |> Option.defaultValue false)
 
 // Mock command handler for testing - returns NotFound for all commands
@@ -37,7 +37,7 @@ type MockUserCommandHandler() =
             Task.FromResult(Error(NotFound "Mock: Command not found in test setup"))
 
 // Helper to create a test controller with mocked dependencies
-let createTestController (permissions: Map<string * string * string, bool>) (userId: UserId option) =
+let createTestController (permissions: Map<AuthSubject * AuthRelation * AuthObject, bool>) (userId: UserId option) =
     let authService = MockAuthorizationService(permissions) :> IAuthorizationService
     let commandHandler = MockUserCommandHandler() :> ICommandHandler
     let userRepository = Unchecked.defaultof<IUserRepository> // Not used in these tests
@@ -61,7 +61,7 @@ let ``UpdateUserName returns 403 when user is not self and not org admin`` () : 
 
         // No org admin permission
         let permissions =
-            Map.ofList [ ($"user:{userId.Value}", "admin", "organization:default"), false ]
+            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -83,7 +83,7 @@ let ``UpdateUserName succeeds when user updates their own profile`` () : Task =
         let userId = UserId.NewId()
 
         // User is updating themselves - no special permissions needed
-        let permissions = Map.empty<string * string * string, bool>
+        let permissions = Map.empty<AuthSubject * AuthRelation * AuthObject, bool>
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -108,7 +108,7 @@ let ``UpdateUserName succeeds when user is org admin updating another user`` () 
 
         // Grant org admin permission
         let permissions =
-            Map.ofList [ ($"user:{userId.Value}", "admin", "organization:default"), true ]
+            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), true) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -132,7 +132,7 @@ let ``UpdateUserEmail returns 403 when user is not self and not org admin`` () :
         let targetUserId = UserId.NewId()
 
         let permissions =
-            Map.ofList [ ($"user:{userId.Value}", "admin", "organization:default"), false ]
+            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -152,7 +152,7 @@ let ``UpdateUserEmail succeeds when user updates their own email`` () : Task =
     task {
         // Arrange
         let userId = UserId.NewId()
-        let permissions = Map.empty<string * string * string, bool>
+        let permissions = Map.empty<AuthSubject * AuthRelation * AuthObject, bool>
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -176,7 +176,7 @@ let ``SetProfilePicture returns 403 when user is not self and not org admin`` ()
         let targetUserId = UserId.NewId()
 
         let permissions =
-            Map.ofList [ ($"user:{userId.Value}", "admin", "organization:default"), false ]
+            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -196,7 +196,7 @@ let ``SetProfilePicture succeeds when user updates their own profile picture`` (
     task {
         // Arrange
         let userId = UserId.NewId()
-        let permissions = Map.empty<string * string * string, bool>
+        let permissions = Map.empty<AuthSubject * AuthRelation * AuthObject, bool>
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -220,7 +220,7 @@ let ``RemoveProfilePicture returns 403 when user is not self and not org admin``
         let targetUserId = UserId.NewId()
 
         let permissions =
-            Map.ofList [ ($"user:{userId.Value}", "admin", "organization:default"), false ]
+            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -238,7 +238,7 @@ let ``RemoveProfilePicture succeeds when user removes their own profile picture`
     task {
         // Arrange
         let userId = UserId.NewId()
-        let permissions = Map.empty<string * string * string, bool>
+        let permissions = Map.empty<AuthSubject * AuthRelation * AuthObject, bool>
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -261,7 +261,7 @@ let ``DeleteUser returns 403 when user is not org admin`` () : Task =
 
         // No org admin permission
         let permissions =
-            Map.ofList [ ($"user:{userId.Value}", "admin", "organization:default"), false ]
+            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -283,7 +283,7 @@ let ``DeleteUser succeeds when user is org admin`` () : Task =
 
         // Grant org admin permission
         let permissions =
-            Map.ofList [ ($"user:{userId.Value}", "admin", "organization:default"), true ]
+            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), true) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -305,7 +305,7 @@ let ``DeleteUser returns 403 even when user tries to delete themselves`` () : Ta
 
         // No org admin permission - even self-delete requires admin
         let permissions =
-            Map.ofList [ ($"user:{userId.Value}", "admin", "organization:default"), false ]
+            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -326,7 +326,7 @@ let ``GetUserById allows any authenticated user`` () : Task =
         let targetUserId = UserId.NewId()
 
         // No special permissions needed for read operations
-        let permissions = Map.empty<string * string * string, bool>
+        let permissions = Map.empty<AuthSubject * AuthRelation * AuthObject, bool>
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -348,7 +348,7 @@ let ``GetUserByEmail allows any authenticated user`` () : Task =
         let email = "test@example.com"
 
         // No special permissions needed for read operations
-        let permissions = Map.empty<string * string * string, bool>
+        let permissions = Map.empty<AuthSubject * AuthRelation * AuthObject, bool>
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -369,7 +369,7 @@ let ``GetUsers allows any authenticated user`` () : Task =
         let userId = UserId.NewId()
 
         // No special permissions needed for read operations
-        let permissions = Map.empty<string * string * string, bool>
+        let permissions = Map.empty<AuthSubject * AuthRelation * AuthObject, bool>
 
         let controller, _ = createTestController permissions (Some userId)
 

@@ -40,9 +40,9 @@ type FolderController
                 // Check authorization: user must have create_folder permission on workspace
                 let! hasPermission =
                     authorizationService.CheckPermissionAsync
-                        $"user:{userId}"
-                        "create_folder"
-                        $"workspace:{workspaceId}"
+                        (User(userId.ToString()))
+                        FolderCreate
+                        (WorkspaceObject(workspaceId.ToString()))
 
                 if not hasPermission then
                     return
@@ -171,9 +171,9 @@ type FolderController
                     // Check authorization: user must have edit_folder permission on workspace
                     let! hasPermission =
                         authorizationService.CheckPermissionAsync
-                            $"user:{userId}"
-                            "edit_folder"
-                            $"workspace:{workspaceId}"
+                            (User(userId.ToString()))
+                            FolderEdit
+                            (WorkspaceObject(workspaceId.ToString()))
 
                     if not hasPermission then
                         return
@@ -221,9 +221,9 @@ type FolderController
                     // Check authorization: user must have edit_folder permission on workspace
                     let! hasPermission =
                         authorizationService.CheckPermissionAsync
-                            $"user:{userId}"
-                            "edit_folder"
-                            $"workspace:{workspaceId}"
+                            (User(userId.ToString()))
+                            FolderEdit
+                            (WorkspaceObject(workspaceId.ToString()))
 
                     if not hasPermission then
                         return
@@ -270,9 +270,9 @@ type FolderController
                     // Check authorization: user must have delete_folder permission on workspace
                     let! hasPermission =
                         authorizationService.CheckPermissionAsync
-                            $"user:{userId}"
-                            "delete_folder"
-                            $"workspace:{workspaceId}"
+                            (User(userId.ToString()))
+                            FolderDelete
+                            (WorkspaceObject(workspaceId.ToString()))
 
                     if not hasPermission then
                         return

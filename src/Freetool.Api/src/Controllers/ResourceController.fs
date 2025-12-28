@@ -33,9 +33,9 @@ type ResourceController
             // Check authorization: user must have create_resource permission on the workspace
             let! canCreate =
                 authorizationService.CheckPermissionAsync
-                    $"user:{userId}"
-                    "create_resource"
-                    $"workspace:{createDto.WorkspaceId}"
+                    (User(userId.ToString()))
+                    ResourceCreate
+                    (WorkspaceObject createDto.WorkspaceId)
 
             if not canCreate then
                 return
@@ -122,9 +122,9 @@ type ResourceController
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
-                            $"user:{userId}"
-                            "edit_resource"
-                            $"workspace:{workspaceId}"
+                            (User(userId.ToString()))
+                            ResourceEdit
+                            (WorkspaceObject(workspaceId.ToString()))
 
                     if not canEdit then
                         return
@@ -170,9 +170,9 @@ type ResourceController
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
-                            $"user:{userId}"
-                            "edit_resource"
-                            $"workspace:{workspaceId}"
+                            (User(userId.ToString()))
+                            ResourceEdit
+                            (WorkspaceObject(workspaceId.ToString()))
 
                     if not canEdit then
                         return
@@ -217,9 +217,9 @@ type ResourceController
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
-                            $"user:{userId}"
-                            "edit_resource"
-                            $"workspace:{workspaceId}"
+                            (User(userId.ToString()))
+                            ResourceEdit
+                            (WorkspaceObject(workspaceId.ToString()))
 
                     if not canEdit then
                         return
@@ -264,9 +264,9 @@ type ResourceController
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
-                            $"user:{userId}"
-                            "edit_resource"
-                            $"workspace:{workspaceId}"
+                            (User(userId.ToString()))
+                            ResourceEdit
+                            (WorkspaceObject(workspaceId.ToString()))
 
                     if not canEdit then
                         return
@@ -311,9 +311,9 @@ type ResourceController
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
-                            $"user:{userId}"
-                            "edit_resource"
-                            $"workspace:{workspaceId}"
+                            (User(userId.ToString()))
+                            ResourceEdit
+                            (WorkspaceObject(workspaceId.ToString()))
 
                     if not canEdit then
                         return
@@ -356,9 +356,9 @@ type ResourceController
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
-                            $"user:{userId}"
-                            "edit_resource"
-                            $"workspace:{workspaceId}"
+                            (User(userId.ToString()))
+                            ResourceEdit
+                            (WorkspaceObject(workspaceId.ToString()))
 
                     if not canEdit then
                         return
@@ -402,9 +402,9 @@ type ResourceController
 
                     let! canDelete =
                         authorizationService.CheckPermissionAsync
-                            $"user:{userId}"
-                            "delete_resource"
-                            $"workspace:{workspaceId}"
+                            (User(userId.ToString()))
+                            ResourceDelete
+                            (WorkspaceObject(workspaceId.ToString()))
 
                     if not canDelete then
                         return

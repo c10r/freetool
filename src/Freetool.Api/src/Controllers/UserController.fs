@@ -15,15 +15,16 @@ type UserController
     (userRepository: IUserRepository, commandHandler: ICommandHandler, authService: IAuthorizationService) =
     inherit AuthenticatedControllerBase()
 
-    // Default organization for authorization checks
-    let defaultOrganization = "organization:default"
-
     // Helper to check if current user is an organization admin
     member private this.IsOrganizationAdmin() : Task<bool> =
         task {
             let userId = this.CurrentUserId
-            let userKey = $"user:{userId.Value}"
-            return! authService.CheckPermissionAsync userKey "admin" defaultOrganization
+
+            return!
+                authService.CheckPermissionAsync
+                    (User(userId.Value.ToString()))
+                    TeamAdmin
+                    (OrganizationObject "default")
         }
 
     // Helper to check if current user can modify a target user

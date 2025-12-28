@@ -61,9 +61,9 @@ let ``CreateRelationshipsAsync creates tuples successfully`` () : Task =
         let! _ = service.WriteAuthorizationModelAsync()
 
         let tuples =
-            [ { User = "user:alice"
-                Relation = "member"
-                Object = "team:engineering" } ]
+            [ { Subject = User "alice"
+                Relation = TeamMember
+                Object = TeamObject "engineering" } ]
 
         // Act
         do! service.CreateRelationshipsAsync(tuples)
@@ -83,9 +83,9 @@ let ``DeleteRelationshipsAsync removes tuples successfully`` () : Task =
         let! _ = service.WriteAuthorizationModelAsync()
 
         let tuple =
-            { User = "user:bob"
-              Relation = "member"
-              Object = "team:engineering" }
+            { Subject = User "bob"
+              Relation = TeamMember
+              Object = TeamObject "engineering" }
 
         do! service.CreateRelationshipsAsync([ tuple ])
 
@@ -108,16 +108,16 @@ let ``UpdateRelationshipsAsync adds and removes tuples atomically`` () : Task =
 
         // First add Carol as a member
         let memberTuple =
-            { User = "user:carol"
-              Relation = "member"
-              Object = "team:engineering" }
+            { Subject = User "carol"
+              Relation = TeamMember
+              Object = TeamObject "engineering" }
 
         do! service.CreateRelationshipsAsync([ memberTuple ])
 
         let adminTuple =
-            { User = "user:carol"
-              Relation = "admin"
-              Object = "team:engineering" }
+            { Subject = User "carol"
+              Relation = TeamAdmin
+              Object = TeamObject "engineering" }
 
         // Act - Promote Carol from member to admin
         do!
@@ -127,11 +127,11 @@ let ``UpdateRelationshipsAsync adds and removes tuples atomically`` () : Task =
             )
 
         // Assert - Verify Carol is now an admin
-        let! isAdmin = service.CheckPermissionAsync "user:carol" "admin" "team:engineering"
+        let! isAdmin = service.CheckPermissionAsync (User "carol") TeamAdmin (TeamObject "engineering")
         Assert.True(isAdmin)
 
         // Verify Carol is no longer just a member
-        let! isMember = service.CheckPermissionAsync "user:carol" "member" "team:engineering"
+        let! isMember = service.CheckPermissionAsync (User "carol") TeamMember (TeamObject "engineering")
         Assert.False(isMember)
     }
 
@@ -146,14 +146,14 @@ let ``CheckPermissionAsync returns true for granted permission`` () : Task =
         let! _ = service.WriteAuthorizationModelAsync()
 
         let tuple =
-            { User = "user:dave"
-              Relation = "member"
-              Object = "team:engineering" }
+            { Subject = User "dave"
+              Relation = TeamMember
+              Object = TeamObject "engineering" }
 
         do! service.CreateRelationshipsAsync([ tuple ])
 
         // Act
-        let! hasPermission = service.CheckPermissionAsync "user:dave" "member" "team:engineering"
+        let! hasPermission = service.CheckPermissionAsync (User "dave") TeamMember (TeamObject "engineering")
 
         // Assert
         Assert.True(hasPermission)
@@ -170,7 +170,7 @@ let ``CheckPermissionAsync returns false for denied permission`` () : Task =
         let! _ = service.WriteAuthorizationModelAsync()
 
         // Act
-        let! hasPermission = service.CheckPermissionAsync "user:eve" "admin" "team:engineering"
+        let! hasPermission = service.CheckPermissionAsync (User "eve") TeamAdmin (TeamObject "engineering")
 
         // Assert
         Assert.False(hasPermission)
@@ -189,39 +189,39 @@ let ``Team admin has all workspace permissions`` () : Task =
         // Make Frank a team admin
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:frank"
-                    Relation = "admin"
-                    Object = "team:engineering" } ]
+                [ { Subject = User "frank"
+                    Relation = TeamAdmin
+                    Object = TeamObject "engineering" } ]
             )
 
         // Associate workspace with team
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "team:engineering"
-                    Relation = "team"
-                    Object = "workspace:main" } ]
+                [ { Subject = Team "engineering"
+                    Relation = WorkspaceTeam
+                    Object = WorkspaceObject "main" } ]
             )
 
         // Act & Assert - Verify Frank has all 7 permissions
-        let! canCreateResource = service.CheckPermissionAsync "user:frank" "create_resource" "workspace:main"
+        let! canCreateResource = service.CheckPermissionAsync (User "frank") ResourceCreate (WorkspaceObject "main")
         Assert.True(canCreateResource, "Team admin should have create_resource permission")
 
-        let! canEditResource = service.CheckPermissionAsync "user:frank" "edit_resource" "workspace:main"
+        let! canEditResource = service.CheckPermissionAsync (User "frank") ResourceEdit (WorkspaceObject "main")
         Assert.True(canEditResource, "Team admin should have edit_resource permission")
 
-        let! canDeleteResource = service.CheckPermissionAsync "user:frank" "delete_resource" "workspace:main"
+        let! canDeleteResource = service.CheckPermissionAsync (User "frank") ResourceDelete (WorkspaceObject "main")
         Assert.True(canDeleteResource, "Team admin should have delete_resource permission")
 
-        let! canCreateApp = service.CheckPermissionAsync "user:frank" "create_app" "workspace:main"
+        let! canCreateApp = service.CheckPermissionAsync (User "frank") AppCreate (WorkspaceObject "main")
         Assert.True(canCreateApp, "Team admin should have create_app permission")
 
-        let! canEditApp = service.CheckPermissionAsync "user:frank" "edit_app" "workspace:main"
+        let! canEditApp = service.CheckPermissionAsync (User "frank") AppEdit (WorkspaceObject "main")
         Assert.True(canEditApp, "Team admin should have edit_app permission")
 
-        let! canDeleteApp = service.CheckPermissionAsync "user:frank" "delete_app" "workspace:main"
+        let! canDeleteApp = service.CheckPermissionAsync (User "frank") AppDelete (WorkspaceObject "main")
         Assert.True(canDeleteApp, "Team admin should have delete_app permission")
 
-        let! canRunApp = service.CheckPermissionAsync "user:frank" "run_app" "workspace:main"
+        let! canRunApp = service.CheckPermissionAsync (User "frank") AppRun (WorkspaceObject "main")
         Assert.True(canRunApp, "Team admin should have run_app permission")
     }
 
@@ -238,35 +238,37 @@ let ``Global admin has all workspace permissions`` () : Task =
         // Make Grace a global admin
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:grace"
-                    Relation = "admin"
-                    Object = "organization:acme" } ]
+                [ { Subject = User "grace"
+                    Relation = TeamAdmin
+                    Object = OrganizationObject "acme" } ]
             )
 
         // Associate workspace with team
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "team:sales"
-                    Relation = "team"
-                    Object = "workspace:sales-dashboard" } ]
+                [ { Subject = Team "sales"
+                    Relation = WorkspaceTeam
+                    Object = WorkspaceObject "sales-dashboard" } ]
             )
 
         // Grant global admins all permissions on the workspace
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "organization:acme#admin"
-                    Relation = "create_resource"
-                    Object = "workspace:sales-dashboard" }
-                  { User = "organization:acme#admin"
-                    Relation = "run_app"
-                    Object = "workspace:sales-dashboard" } ]
+                [ { Subject = UserSetFromRelation("organization", "acme", "admin")
+                    Relation = ResourceCreate
+                    Object = WorkspaceObject "sales-dashboard" }
+                  { Subject = UserSetFromRelation("organization", "acme", "admin")
+                    Relation = AppRun
+                    Object = WorkspaceObject "sales-dashboard" } ]
             )
 
         // Act & Assert - Verify Grace has all permissions on any workspace
-        let! canCreateResource = service.CheckPermissionAsync "user:grace" "create_resource" "workspace:sales-dashboard"
+        let! canCreateResource =
+            service.CheckPermissionAsync (User "grace") ResourceCreate (WorkspaceObject "sales-dashboard")
+
         Assert.True(canCreateResource, "Global admin should have create_resource permission")
 
-        let! canRunApp = service.CheckPermissionAsync "user:grace" "run_app" "workspace:sales-dashboard"
+        let! canRunApp = service.CheckPermissionAsync (User "grace") AppRun (WorkspaceObject "sales-dashboard")
         Assert.True(canRunApp, "Global admin should have run_app permission")
     }
 
@@ -283,22 +285,22 @@ let ``Team member with granted permission can access resource`` () : Task =
         // Make Henry a team member
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:henry"
-                    Relation = "member"
-                    Object = "team:engineering" } ]
+                [ { Subject = User "henry"
+                    Relation = TeamMember
+                    Object = TeamObject "engineering" } ]
             )
 
         // Grant Henry specific permission on workspace
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:henry"
-                    Relation = "run_app"
-                    Object = "workspace:main" } ]
+                [ { Subject = User "henry"
+                    Relation = AppRun
+                    Object = WorkspaceObject "main" } ]
             )
 
         // Act
-        let! canRunApp = service.CheckPermissionAsync "user:henry" "run_app" "workspace:main"
-        let! canEditApp = service.CheckPermissionAsync "user:henry" "edit_app" "workspace:main"
+        let! canRunApp = service.CheckPermissionAsync (User "henry") AppRun (WorkspaceObject "main")
+        let! canEditApp = service.CheckPermissionAsync (User "henry") AppEdit (WorkspaceObject "main")
 
         // Assert
         Assert.True(canRunApp, "User should have explicitly granted run_app permission")
@@ -318,21 +320,21 @@ let ``Only organization admin can create workspaces`` () : Task =
         // Make Alice an organization admin
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:alice"
-                    Relation = "admin"
-                    Object = "organization:acme" } ]
+                [ { Subject = User "alice"
+                    Relation = TeamAdmin
+                    Object = OrganizationObject "acme" } ]
             )
 
         // Associate workspace with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "organization:acme"
-                    Relation = "organization"
-                    Object = "workspace:new-workspace" } ]
+                [ { Subject = Organization "acme"
+                    Relation = TeamOrganization
+                    Object = WorkspaceObject "new-workspace" } ]
             )
 
         // Act & Assert - Verify Alice can create workspaces
-        let! canCreate = service.CheckPermissionAsync "user:alice" "create_workspace" "workspace:new-workspace"
+        let! canCreate = service.CheckPermissionAsync (User "alice") WorkspaceCreate (WorkspaceObject "new-workspace")
         Assert.True(canCreate, "Organization admin should be able to create workspaces")
     }
 
@@ -349,21 +351,21 @@ let ``Team admin cannot create workspaces`` () : Task =
         // Make Bob a team admin (NOT an org admin)
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:bob"
-                    Relation = "admin"
-                    Object = "team:engineering" } ]
+                [ { Subject = User "bob"
+                    Relation = TeamAdmin
+                    Object = TeamObject "engineering" } ]
             )
 
         // Associate workspace with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "organization:acme"
-                    Relation = "organization"
-                    Object = "workspace:new-workspace" } ]
+                [ { Subject = Organization "acme"
+                    Relation = TeamOrganization
+                    Object = WorkspaceObject "new-workspace" } ]
             )
 
         // Act & Assert - Verify Bob CANNOT create workspaces
-        let! canCreate = service.CheckPermissionAsync "user:bob" "create_workspace" "workspace:new-workspace"
+        let! canCreate = service.CheckPermissionAsync (User "bob") WorkspaceCreate (WorkspaceObject "new-workspace")
         Assert.False(canCreate, "Team admin should NOT be able to create workspaces (only org admin can)")
     }
 
@@ -380,21 +382,21 @@ let ``Only organization admin can rename teams`` () : Task =
         // Make Carol an organization admin
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:carol"
-                    Relation = "admin"
-                    Object = "organization:acme" } ]
+                [ { Subject = User "carol"
+                    Relation = TeamAdmin
+                    Object = OrganizationObject "acme" } ]
             )
 
         // Associate team with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "organization:acme"
-                    Relation = "organization"
-                    Object = "team:engineering" } ]
+                [ { Subject = Organization "acme"
+                    Relation = TeamOrganization
+                    Object = TeamObject "engineering" } ]
             )
 
         // Act & Assert - Verify Carol can rename teams
-        let! canRename = service.CheckPermissionAsync "user:carol" "rename" "team:engineering"
+        let! canRename = service.CheckPermissionAsync (User "carol") TeamRename (TeamObject "engineering")
         Assert.True(canRename, "Organization admin should be able to rename teams")
     }
 
@@ -411,21 +413,21 @@ let ``Team admin cannot rename teams`` () : Task =
         // Make Dave a team admin (NOT an org admin)
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:dave"
-                    Relation = "admin"
-                    Object = "team:engineering" } ]
+                [ { Subject = User "dave"
+                    Relation = TeamAdmin
+                    Object = TeamObject "engineering" } ]
             )
 
         // Associate team with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "organization:acme"
-                    Relation = "organization"
-                    Object = "team:engineering" } ]
+                [ { Subject = Organization "acme"
+                    Relation = TeamOrganization
+                    Object = TeamObject "engineering" } ]
             )
 
         // Act & Assert - Verify Dave CANNOT rename teams
-        let! canRename = service.CheckPermissionAsync "user:dave" "rename" "team:engineering"
+        let! canRename = service.CheckPermissionAsync (User "dave") TeamRename (TeamObject "engineering")
         Assert.False(canRename, "Team admin should NOT be able to rename teams (only org admin can)")
     }
 
@@ -442,21 +444,21 @@ let ``Only organization admin can delete teams`` () : Task =
         // Make Eve an organization admin
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:eve"
-                    Relation = "admin"
-                    Object = "organization:acme" } ]
+                [ { Subject = User "eve"
+                    Relation = TeamAdmin
+                    Object = OrganizationObject "acme" } ]
             )
 
         // Associate team with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "organization:acme"
-                    Relation = "organization"
-                    Object = "team:engineering" } ]
+                [ { Subject = Organization "acme"
+                    Relation = TeamOrganization
+                    Object = TeamObject "engineering" } ]
             )
 
         // Act & Assert - Verify Eve can delete teams
-        let! canDelete = service.CheckPermissionAsync "user:eve" "delete" "team:engineering"
+        let! canDelete = service.CheckPermissionAsync (User "eve") TeamDelete (TeamObject "engineering")
         Assert.True(canDelete, "Organization admin should be able to delete teams")
     }
 
@@ -473,21 +475,21 @@ let ``Team admin cannot delete teams`` () : Task =
         // Make Frank a team admin (NOT an org admin)
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:frank"
-                    Relation = "admin"
-                    Object = "team:engineering" } ]
+                [ { Subject = User "frank"
+                    Relation = TeamAdmin
+                    Object = TeamObject "engineering" } ]
             )
 
         // Associate team with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "organization:acme"
-                    Relation = "organization"
-                    Object = "team:engineering" } ]
+                [ { Subject = Organization "acme"
+                    Relation = TeamOrganization
+                    Object = TeamObject "engineering" } ]
             )
 
         // Act & Assert - Verify Frank CANNOT delete teams
-        let! canDelete = service.CheckPermissionAsync "user:frank" "delete" "team:engineering"
+        let! canDelete = service.CheckPermissionAsync (User "frank") TeamDelete (TeamObject "engineering")
         Assert.False(canDelete, "Team admin should NOT be able to delete teams (only org admin can)")
     }
 
@@ -504,27 +506,27 @@ let ``Team admin has all folder permissions`` () : Task =
         // Make George a team admin
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:george"
-                    Relation = "admin"
-                    Object = "team:engineering" } ]
+                [ { Subject = User "george"
+                    Relation = TeamAdmin
+                    Object = TeamObject "engineering" } ]
             )
 
         // Associate workspace with team
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "team:engineering"
-                    Relation = "team"
-                    Object = "workspace:main" } ]
+                [ { Subject = Team "engineering"
+                    Relation = WorkspaceTeam
+                    Object = WorkspaceObject "main" } ]
             )
 
         // Act & Assert - Verify George has all 3 folder permissions
-        let! canCreateFolder = service.CheckPermissionAsync "user:george" "create_folder" "workspace:main"
+        let! canCreateFolder = service.CheckPermissionAsync (User "george") FolderCreate (WorkspaceObject "main")
         Assert.True(canCreateFolder, "Team admin should have create_folder permission")
 
-        let! canEditFolder = service.CheckPermissionAsync "user:george" "edit_folder" "workspace:main"
+        let! canEditFolder = service.CheckPermissionAsync (User "george") FolderEdit (WorkspaceObject "main")
         Assert.True(canEditFolder, "Team admin should have edit_folder permission")
 
-        let! canDeleteFolder = service.CheckPermissionAsync "user:george" "delete_folder" "workspace:main"
+        let! canDeleteFolder = service.CheckPermissionAsync (User "george") FolderDelete (WorkspaceObject "main")
         Assert.True(canDeleteFolder, "Team admin should have delete_folder permission")
     }
 
@@ -541,41 +543,41 @@ let ``Global admin has all folder permissions`` () : Task =
         // Make Hannah a global admin
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:hannah"
-                    Relation = "admin"
-                    Object = "organization:acme" } ]
+                [ { Subject = User "hannah"
+                    Relation = TeamAdmin
+                    Object = OrganizationObject "acme" } ]
             )
 
         // Associate workspace with team
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "team:engineering"
-                    Relation = "team"
-                    Object = "workspace:main" } ]
+                [ { Subject = Team "engineering"
+                    Relation = WorkspaceTeam
+                    Object = WorkspaceObject "main" } ]
             )
 
         // Grant global admins folder permissions on the workspace
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "organization:acme#admin"
-                    Relation = "create_folder"
-                    Object = "workspace:main" }
-                  { User = "organization:acme#admin"
-                    Relation = "edit_folder"
-                    Object = "workspace:main" }
-                  { User = "organization:acme#admin"
-                    Relation = "delete_folder"
-                    Object = "workspace:main" } ]
+                [ { Subject = UserSetFromRelation("organization", "acme", "admin")
+                    Relation = FolderCreate
+                    Object = WorkspaceObject "main" }
+                  { Subject = UserSetFromRelation("organization", "acme", "admin")
+                    Relation = FolderEdit
+                    Object = WorkspaceObject "main" }
+                  { Subject = UserSetFromRelation("organization", "acme", "admin")
+                    Relation = FolderDelete
+                    Object = WorkspaceObject "main" } ]
             )
 
         // Act & Assert - Verify Hannah has all folder permissions
-        let! canCreateFolder = service.CheckPermissionAsync "user:hannah" "create_folder" "workspace:main"
+        let! canCreateFolder = service.CheckPermissionAsync (User "hannah") FolderCreate (WorkspaceObject "main")
         Assert.True(canCreateFolder, "Global admin should have create_folder permission")
 
-        let! canEditFolder = service.CheckPermissionAsync "user:hannah" "edit_folder" "workspace:main"
+        let! canEditFolder = service.CheckPermissionAsync (User "hannah") FolderEdit (WorkspaceObject "main")
         Assert.True(canEditFolder, "Global admin should have edit_folder permission")
 
-        let! canDeleteFolder = service.CheckPermissionAsync "user:hannah" "delete_folder" "workspace:main"
+        let! canDeleteFolder = service.CheckPermissionAsync (User "hannah") FolderDelete (WorkspaceObject "main")
         Assert.True(canDeleteFolder, "Global admin should have delete_folder permission")
     }
 
@@ -592,29 +594,29 @@ let ``Team member with granted folder permission can manage folders`` () : Task 
         // Make Ivan a team member
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:ivan"
-                    Relation = "member"
-                    Object = "team:engineering" } ]
+                [ { Subject = User "ivan"
+                    Relation = TeamMember
+                    Object = TeamObject "engineering" } ]
             )
 
         // Grant Ivan specific folder permissions on workspace
         do!
             service.CreateRelationshipsAsync(
-                [ { User = "user:ivan"
-                    Relation = "create_folder"
-                    Object = "workspace:main" }
-                  { User = "user:ivan"
-                    Relation = "edit_folder"
-                    Object = "workspace:main" } ]
+                [ { Subject = User "ivan"
+                    Relation = FolderCreate
+                    Object = WorkspaceObject "main" }
+                  { Subject = User "ivan"
+                    Relation = FolderEdit
+                    Object = WorkspaceObject "main" } ]
             )
 
         // Act & Assert
-        let! canCreateFolder = service.CheckPermissionAsync "user:ivan" "create_folder" "workspace:main"
+        let! canCreateFolder = service.CheckPermissionAsync (User "ivan") FolderCreate (WorkspaceObject "main")
         Assert.True(canCreateFolder, "User should have explicitly granted create_folder permission")
 
-        let! canEditFolder = service.CheckPermissionAsync "user:ivan" "edit_folder" "workspace:main"
+        let! canEditFolder = service.CheckPermissionAsync (User "ivan") FolderEdit (WorkspaceObject "main")
         Assert.True(canEditFolder, "User should have explicitly granted edit_folder permission")
 
-        let! canDeleteFolder = service.CheckPermissionAsync "user:ivan" "delete_folder" "workspace:main"
+        let! canDeleteFolder = service.CheckPermissionAsync (User "ivan") FolderDelete (WorkspaceObject "main")
         Assert.False(canDeleteFolder, "User should NOT have delete_folder permission (not granted)")
     }

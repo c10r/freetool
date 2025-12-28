@@ -14,7 +14,7 @@ open Freetool.Application.Interfaces
 open Freetool.Api.Controllers
 
 // Mock authorization service for testing
-type MockAuthorizationService(checkPermissionFn: string -> string -> string -> bool) =
+type MockAuthorizationService(checkPermissionFn: AuthSubject -> AuthRelation -> AuthObject -> bool) =
     interface IAuthorizationService with
         member _.CreateStoreAsync(req) =
             Task.FromResult({ Id = "store-1"; Name = req.Name })
@@ -26,8 +26,8 @@ type MockAuthorizationService(checkPermissionFn: string -> string -> string -> b
         member _.UpdateRelationshipsAsync(_) = Task.FromResult(())
         member _.DeleteRelationshipsAsync(_) = Task.FromResult(())
 
-        member _.CheckPermissionAsync (user: string) (relation: string) (object: string) =
-            Task.FromResult(checkPermissionFn user relation object)
+        member _.CheckPermissionAsync (subject: AuthSubject) (relation: AuthRelation) (object: AuthObject) =
+            Task.FromResult(checkPermissionFn subject relation object)
 
 // Mock folder repository for testing
 type MockFolderRepository(getByIdFn: FolderId -> Task<ValidatedFolder option>) =
@@ -54,7 +54,7 @@ type MockFolderCommandHandler
 
 // Helper to create a test controller with mocked dependencies
 let createTestController
-    (checkPermissionFn: string -> string -> string -> bool)
+    (checkPermissionFn: AuthSubject -> AuthRelation -> AuthObject -> bool)
     (getByIdFn: FolderId -> Task<ValidatedFolder option>)
     (handleCommandFn: IFolderRepository -> FolderCommand -> Task<Result<FolderCommandResult, DomainError>>)
     (userId: UserId)
@@ -134,10 +134,11 @@ let ``CreateFolder succeeds when user has create_folder permission`` () : Task =
         let workspaceId = WorkspaceId.NewId()
 
         // Grant create_folder permission
-        let checkPermission user relation obj =
-            user = $"user:{userId.Value}"
-            && relation = "create_folder"
-            && obj = $"workspace:{workspaceId.Value}"
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, FolderCreate, WorkspaceObject wid ->
+                uid = userId.Value.ToString() && wid = workspaceId.Value.ToString()
+            | _ -> false
 
         let getById _ = Task.FromResult(None)
 
@@ -217,10 +218,11 @@ let ``UpdateFolderName succeeds when user has edit_folder permission`` () : Task
         let folderId = FolderId.NewId()
 
         // Grant edit_folder permission
-        let checkPermission user relation obj =
-            user = $"user:{userId.Value}"
-            && relation = "edit_folder"
-            && obj = $"workspace:{workspaceId.Value}"
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, FolderEdit, WorkspaceObject wid ->
+                uid = userId.Value.ToString() && wid = workspaceId.Value.ToString()
+            | _ -> false
 
         let folder = createTestFolder workspaceId folderId
 
@@ -291,10 +293,11 @@ let ``MoveFolder succeeds when user has edit_folder permission`` () : Task =
         let folderId = FolderId.NewId()
 
         // Grant edit_folder permission
-        let checkPermission user relation obj =
-            user = $"user:{userId.Value}"
-            && relation = "edit_folder"
-            && obj = $"workspace:{workspaceId.Value}"
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, FolderEdit, WorkspaceObject wid ->
+                uid = userId.Value.ToString() && wid = workspaceId.Value.ToString()
+            | _ -> false
 
         let folder = createTestFolder workspaceId folderId
 
@@ -363,10 +366,11 @@ let ``DeleteFolder succeeds when user has delete_folder permission`` () : Task =
         let folderId = FolderId.NewId()
 
         // Grant delete_folder permission
-        let checkPermission user relation obj =
-            user = $"user:{userId.Value}"
-            && relation = "delete_folder"
-            && obj = $"workspace:{workspaceId.Value}"
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, FolderDelete, WorkspaceObject wid ->
+                uid = userId.Value.ToString() && wid = workspaceId.Value.ToString()
+            | _ -> false
 
         let folder = createTestFolder workspaceId folderId
 
