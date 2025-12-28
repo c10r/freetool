@@ -334,6 +334,229 @@ The frontend uses `openapi-fetch` to generate a type-safe client from `openapi.s
 2. Regenerate TypeScript types: `npm run generate-api-types` (if configured)
 3. Frontend automatically gets type checking for API calls
 
+## Frontend Code Quality Standards
+
+The frontend enforces strict ESLint rules to maintain code quality and prevent bugs. **All linting must pass with zero warnings before committing.**
+
+### Pre-commit Hooks
+
+Pre-commit hooks automatically run `npm run lint` - commits will be rejected if linting fails. Fix all warnings before attempting to commit.
+
+### Core ESLint Rules
+
+#### 1. No `any` Types (EVER)
+
+The `any` type bypasses TypeScript's type checking and is **strictly forbidden**.
+
+**Bad:**
+```typescript
+function processData(data: any) {
+  return data.map((item: any) => item.value);
+}
+```
+
+**Good:**
+```typescript
+interface DataItem {
+  value: string;
+  id: number;
+}
+
+function processData(data: DataItem[]) {
+  return data.map((item) => item.value);
+}
+
+// If you truly don't know the type, use `unknown` with type guards
+function processUnknown(data: unknown) {
+  if (Array.isArray(data)) {
+    return data.filter((item): item is DataItem =>
+      typeof item === 'object' && item !== null && 'value' in item
+    );
+  }
+  return [];
+}
+```
+
+#### 2. Component Files Export Only Components
+
+React Fast Refresh requires component files to export **only React components**. Extract everything else to separate files.
+
+**Bad:**
+```typescript
+// MyComponent.tsx
+export const BUTTON_VARIANTS = { primary: "...", secondary: "..." };
+
+export function useMyHook() {
+  return useState(0);
+}
+
+export function MyComponent() {
+  return <div>Hello</div>;
+}
+```
+
+**Good:**
+```typescript
+// MyComponent.variants.ts
+export const BUTTON_VARIANTS = { primary: "...", secondary: "..." };
+
+// MyComponent.hooks.ts
+export function useMyHook() {
+  return useState(0);
+}
+
+// MyComponent.tsx
+import { BUTTON_VARIANTS } from './MyComponent.variants';
+import { useMyHook } from './MyComponent.hooks';
+
+export function MyComponent() {
+  return <div>Hello</div>;
+}
+```
+
+**Naming Convention:**
+- `*.variants.ts` - Constants, variant configs, enums
+- `*.hooks.ts` - Custom React hooks
+- `*.utils.ts` - Utility functions
+- `*.types.ts` - Type definitions and interfaces
+
+#### 3. Fix React Hook Dependency Warnings
+
+React Hook dependency warnings are **not suggestions - they are bug reports**. Every warning represents a potential stale closure bug.
+
+**Bad:**
+```typescript
+const [count, setCount] = useState(0);
+
+useEffect(() => {
+  const timer = setInterval(() => {
+    console.log(count); // Stale closure! Always logs 0
+  }, 1000);
+  return () => clearInterval(timer);
+}, []); // Missing dependency: count
+```
+
+**Good - Option 1: Add the dependency**
+```typescript
+useEffect(() => {
+  const timer = setInterval(() => {
+    console.log(count); // Always current
+  }, 1000);
+  return () => clearInterval(timer);
+}, [count]);
+```
+
+**Good - Option 2: Use functional updates**
+```typescript
+useEffect(() => {
+  const timer = setInterval(() => {
+    setCount(c => c + 1); // No dependency needed
+  }, 1000);
+  return () => clearInterval(timer);
+}, []);
+```
+
+**Good - Option 3: Use refs for values that shouldn't trigger re-runs**
+```typescript
+const countRef = useRef(count);
+useEffect(() => { countRef.current = count; });
+
+useEffect(() => {
+  const timer = setInterval(() => {
+    console.log(countRef.current); // Always current, no re-runs
+  }, 1000);
+  return () => clearInterval(timer);
+}, []);
+```
+
+**Never disable the warning with `eslint-disable-next-line` unless you have a documented architectural reason.**
+
+#### 4. Use ES6 Imports Only
+
+Never use `require()` - always use ES6 `import` statements.
+
+**Bad:**
+```typescript
+const React = require('react');
+const { useState } = require('react');
+```
+
+**Good:**
+```typescript
+import React, { useState } from 'react';
+import type { ReactNode } from 'react';
+```
+
+#### 5. No Empty Interfaces
+
+Empty interfaces are forbidden - they provide no type safety.
+
+**Bad:**
+```typescript
+interface Props {}
+
+function MyComponent(props: Props) {
+  return <div />;
+}
+```
+
+**Good - Option 1: Use proper types**
+```typescript
+interface Props {
+  className?: string;
+  children?: ReactNode;
+}
+```
+
+**Good - Option 2: Use type alias for empty props**
+```typescript
+type Props = Record<string, never>;
+```
+
+**Good - Option 3: Extend existing types**
+```typescript
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary';
+}
+```
+
+### Running Linting
+
+```bash
+cd www
+
+# Check for issues (must pass with 0 warnings)
+npm run lint
+
+# Auto-fix what can be fixed
+npm run lint -- --fix
+
+# Format code
+npm run format
+```
+
+### Common ESLint Violations and Fixes
+
+| Violation | Fix |
+|-----------|-----|
+| `@typescript-eslint/no-explicit-any` | Replace `any` with proper interface/type or `unknown` |
+| `react-refresh/only-export-components` | Move non-components to `.variants.ts`, `.hooks.ts`, etc. |
+| `react-hooks/exhaustive-deps` | Add missing dependencies or use functional updates |
+| `@typescript-eslint/no-var-requires` | Replace `require()` with `import` |
+| `@typescript-eslint/no-empty-interface` | Add properties or use type alias |
+
+### Why These Rules Matter
+
+1. **No `any`**: TypeScript without types is just JavaScript with extra steps. The `any` type defeats the entire purpose of TypeScript and hides bugs.
+
+2. **Component exports**: Fast Refresh (hot module reloading) breaks when component files export non-components. This slows down development significantly.
+
+3. **Hook dependencies**: Missing dependencies cause stale closures - the most common React bug. These are real bugs that will bite you in production.
+
+4. **ES6 imports**: CommonJS `require()` doesn't work with TypeScript's type system and tree-shaking. Always use ES6 modules.
+
+5. **No empty interfaces**: Empty interfaces accept any object, providing zero type safety. If you don't have properties, you don't need an interface.
+
 ## Deployment
 
 Freetool is designed to run behind **Tailscale Serve** at the `/freetool` path:
@@ -406,15 +629,23 @@ tailscale serve --bg --set-path=/freetool 5001
 
 ## Common Gotchas
 
+### Backend
 1. **F# File Ordering**: Compilation errors about "not defined" usually mean wrong file order in `.fsproj`
 2. **Event Not Saved**: Ensure repository calls `eventRepository.SaveEventAsync` in transaction
 3. **Tracing Missing**: Check that handler is wrapped with `AutoTracing.createTracingDecorator` in DI
 4. **Authorization Failing**: Verify OpenFGA store has correct relationships (`CreateRelationshipsAsync`)
 5. **Migration Not Running**: Ensure SQL file is marked as `<EmbeddedResource>` in `.fsproj`
+
+### Frontend
 6. **Frontend Type Errors**: Regenerate types from OpenAPI spec after backend changes
+7. **Linting Fails on Commit**: Pre-commit hooks enforce zero warnings - run `npm run lint -- --fix` to auto-fix
+8. **Fast Refresh Not Working**: Component files must only export components - see [Frontend Code Quality Standards](#frontend-code-quality-standards)
+9. **Stale State in useEffect**: Fix React Hook dependency warnings immediately - they are real bugs
+10. **TypeScript Errors with `any`**: Never use `any` type - use proper interfaces or `unknown` with type guards
 
 ## Code Style
 
+### Backend (F#)
 - **Indentation**: 4 spaces (F# standard)
 - **Naming**: PascalCase for types/modules/DU cases, camelCase for functions/values
 - **Immutability**: Prefer immutable records, pure functions
@@ -422,3 +653,13 @@ tailscale serve --bg --set-path=/freetool 5001
 - **Error Handling**: Use `Result<'T, DomainError>` for domain operations
 - **Comments**: Avoid obvious comments; code should be self-documenting
 - **Format Before Commit**: Run `dotnet format Freetool.sln`
+
+### Frontend (TypeScript/React)
+- **Indentation**: 2 spaces (JavaScript/TypeScript standard)
+- **Naming**: PascalCase for components/types/interfaces, camelCase for functions/variables/props
+- **Type Safety**: Never use `any` - see [Frontend Code Quality Standards](#frontend-code-quality-standards)
+- **Component Organization**: One component per file, extract non-components to separate files
+- **Imports**: Always use ES6 `import`, never `require()`
+- **React Hooks**: Always fix dependency warnings - they are bugs, not suggestions
+- **Format Before Commit**: Run `npm run format` from `www/`
+- **Lint Must Pass**: Run `npm run lint` from `www/` - **zero warnings required**
