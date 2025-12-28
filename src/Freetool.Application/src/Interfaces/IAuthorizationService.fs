@@ -20,6 +20,8 @@ type AuthSubject =
 
 /// Represents a relation/permission in the authorization model
 type AuthRelation =
+    // Organization relations
+    | OrganizationAdmin
     // Team relations
     | TeamMember
     | TeamAdmin
@@ -64,6 +66,7 @@ module AuthTypes =
     /// Converts an AuthRelation to OpenFGA string format
     let relationToString (relation: AuthRelation) : string =
         match relation with
+        | OrganizationAdmin -> "admin"
         | TeamMember -> "member"
         | TeamAdmin -> "admin"
         | TeamOrganization -> "organization"
@@ -117,6 +120,9 @@ type IAuthorizationService =
 
     /// Writes the authorization model to the store
     abstract member WriteAuthorizationModelAsync: unit -> Task<AuthorizationModelResponse>
+
+    /// Initializes the organization with an admin user
+    abstract member InitializeOrganizationAsync: organizationId: string -> adminUserId: string -> Task<unit>
 
     /// Creates new relationship tuple(s)
     abstract member CreateRelationshipsAsync: RelationshipTuple list -> Task<unit>

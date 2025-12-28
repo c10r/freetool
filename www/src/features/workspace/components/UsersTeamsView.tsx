@@ -14,6 +14,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Users, User, Plus, Edit, X } from "lucide-react";
 import {
@@ -25,6 +31,7 @@ import {
   removeGroupMember,
   getGroupById,
 } from "@/api/api";
+import { useIsOrgAdmin, useIsTeamAdmin } from "@/hooks/usePermissions";
 
 interface User {
   id: string;
@@ -46,6 +53,9 @@ export default function UsersTeamsView() {
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [groupsError, setGroupsError] = useState<string | null>(null);
+
+  // Role checks
+  const isOrgAdmin = useIsOrgAdmin();
 
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [groupName, setGroupName] = useState("");
@@ -298,183 +308,206 @@ export default function UsersTeamsView() {
               <Badge variant="secondary">{groups.length}</Badge>
             )}
           </div>
-          <Dialog open={createGroupOpen} onOpenChange={setCreateGroupOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus size={16} className="mr-2" />
-                Create Team
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create New Team</DialogTitle>
-                <DialogDescription>
-                  Create a team by giving it a name and selecting users to
-                  include.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="group-name">Team Name</Label>
-                  <Input
-                    id="group-name"
-                    placeholder="Enter team name"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-3">
-                  <Label>Select Users</Label>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {users.map((user) => (
-                      <div
-                        key={user.id}
-                        className="flex items-center space-x-3"
-                      >
-                        <Checkbox
-                          id={`user-${user.id}`}
-                          checked={selectedUserIds.includes(user.id)}
-                          onCheckedChange={(checked) =>
-                            handleUserSelection(user.id, checked as boolean)
-                          }
-                        />
-                        <div className="flex items-center space-x-2 flex-1">
-                          {user.profilePicUrl ? (
-                            <img
-                              src={user.profilePicUrl}
-                              alt={`${user.name}'s profile`}
-                              className="w-6 h-6 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                              <User
-                                size={12}
-                                className="text-muted-foreground"
-                              />
-                            </div>
-                          )}
-                          <Label
-                            htmlFor={`user-${user.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                          >
-                            {user.name}
-                          </Label>
-                        </div>
-                      </div>
-                    ))}
+          {isOrgAdmin ? (
+            <Dialog open={createGroupOpen} onOpenChange={setCreateGroupOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus size={16} className="mr-2" />
+                  Create Team
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create New Team</DialogTitle>
+                  <DialogDescription>
+                    Create a team by giving it a name and selecting users to
+                    include.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="group-name">Team Name</Label>
+                    <Input
+                      id="group-name"
+                      placeholder="Enter team name"
+                      value={groupName}
+                      onChange={(e) => setGroupName(e.target.value)}
+                    />
                   </div>
-                  {selectedUserIds.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {selectedUserIds.length} user
-                      {selectedUserIds.length !== 1 ? "s" : ""} selected
-                    </p>
-                  )}
+                  <div className="space-y-3">
+                    <Label>Select Users</Label>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {users.map((user) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center space-x-3"
+                        >
+                          <Checkbox
+                            id={`user-${user.id}`}
+                            checked={selectedUserIds.includes(user.id)}
+                            onCheckedChange={(checked) =>
+                              handleUserSelection(user.id, checked as boolean)
+                            }
+                          />
+                          <div className="flex items-center space-x-2 flex-1">
+                            {user.profilePicUrl ? (
+                              <img
+                                src={user.profilePicUrl}
+                                alt={`${user.name}'s profile`}
+                                className="w-6 h-6 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                                <User
+                                  size={12}
+                                  className="text-muted-foreground"
+                                />
+                              </div>
+                            )}
+                            <Label
+                              htmlFor={`user-${user.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              {user.name}
+                            </Label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedUserIds.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {selectedUserIds.length} user
+                        {selectedUserIds.length !== 1 ? "s" : ""} selected
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setCreateGroupOpen(false)}
-                  disabled={isCreatingGroup}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCreateGroup}
-                  disabled={
-                    !groupName.trim() ||
-                    selectedUserIds.length === 0 ||
-                    isCreatingGroup
-                  }
-                >
-                  {isCreatingGroup ? "Creating..." : "Create Team"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setCreateGroupOpen(false)}
+                    disabled={isCreatingGroup}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleCreateGroup}
+                    disabled={
+                      !groupName.trim() ||
+                      selectedUserIds.length === 0 ||
+                      isCreatingGroup
+                    }
+                  >
+                    {isCreatingGroup ? "Creating..." : "Create Team"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button size="sm" disabled>
+                      <Plus size={16} className="mr-2" />
+                      Create Team
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Only organization administrators can create teams.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
 
           {/* Edit Group Dialog */}
-          <Dialog open={editGroupOpen} onOpenChange={setEditGroupOpen}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Edit Team</DialogTitle>
-                <DialogDescription>
-                  Update the team name and manage its members.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-group-name">Team Name</Label>
-                  <Input
-                    id="edit-group-name"
-                    placeholder="Enter team name"
-                    value={editGroupName}
-                    onChange={(e) => setEditGroupName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-3">
-                  <Label>Team Members</Label>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {users.map((user) => (
-                      <div
-                        key={user.id}
-                        className="flex items-center space-x-3"
-                      >
-                        <Checkbox
-                          id={`edit-user-${user.id}`}
-                          checked={editSelectedUserIds.includes(user.id)}
-                          onCheckedChange={(checked) =>
-                            handleEditUserSelection(user.id, checked as boolean)
-                          }
-                        />
-                        <div className="flex items-center space-x-2 flex-1">
-                          {user.profilePicUrl ? (
-                            <img
-                              src={user.profilePicUrl}
-                              alt={`${user.name}'s profile`}
-                              className="w-6 h-6 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                              <User
-                                size={12}
-                                className="text-muted-foreground"
-                              />
-                            </div>
-                          )}
-                          <Label
-                            htmlFor={`edit-user-${user.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                          >
-                            {user.name}
-                          </Label>
-                        </div>
-                      </div>
-                    ))}
+          {isOrgAdmin && (
+            <Dialog open={editGroupOpen} onOpenChange={setEditGroupOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Edit Team</DialogTitle>
+                  <DialogDescription>
+                    Update the team name and manage its members.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-group-name">Team Name</Label>
+                    <Input
+                      id="edit-group-name"
+                      placeholder="Enter team name"
+                      value={editGroupName}
+                      onChange={(e) => setEditGroupName(e.target.value)}
+                    />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {editSelectedUserIds.length} member
-                    {editSelectedUserIds.length !== 1 ? "s" : ""} selected
-                  </p>
+                  <div className="space-y-3">
+                    <Label>Team Members</Label>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {users.map((user) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center space-x-3"
+                        >
+                          <Checkbox
+                            id={`edit-user-${user.id}`}
+                            checked={editSelectedUserIds.includes(user.id)}
+                            onCheckedChange={(checked) =>
+                              handleEditUserSelection(
+                                user.id,
+                                checked as boolean,
+                              )
+                            }
+                          />
+                          <div className="flex items-center space-x-2 flex-1">
+                            {user.profilePicUrl ? (
+                              <img
+                                src={user.profilePicUrl}
+                                alt={`${user.name}'s profile`}
+                                className="w-6 h-6 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                                <User
+                                  size={12}
+                                  className="text-muted-foreground"
+                                />
+                              </div>
+                            )}
+                            <Label
+                              htmlFor={`edit-user-${user.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              {user.name}
+                            </Label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {editSelectedUserIds.length} member
+                      {editSelectedUserIds.length !== 1 ? "s" : ""} selected
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setEditGroupOpen(false)}
-                  disabled={isUpdatingGroup}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleUpdateGroup}
-                  disabled={!editGroupName.trim() || isUpdatingGroup}
-                >
-                  {isUpdatingGroup ? "Updating..." : "Update Team"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditGroupOpen(false)}
+                    disabled={isUpdatingGroup}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleUpdateGroup}
+                    disabled={!editGroupName.trim() || isUpdatingGroup}
+                  >
+                    {isUpdatingGroup ? "Updating..." : "Update Team"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {groupsLoading ? (
@@ -512,14 +545,16 @@ export default function UsersTeamsView() {
                     <CardTitle className="text-base font-medium">
                       {group.name}
                     </CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditGroup(group)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Edit size={14} />
-                    </Button>
+                    {isOrgAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditGroup(group)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit size={14} />
+                      </Button>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>

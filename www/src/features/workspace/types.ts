@@ -75,4 +75,5 @@ export interface WorkspaceMainProps {
   createEndpoint: () => void;
   updateEndpoint: (ep: Endpoint) => void;
   deleteEndpoint: (id: string) => void;
+  workspaceId: string;
 }

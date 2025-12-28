@@ -537,3 +537,111 @@ export const getUsers = (skip?: number, take?: number) => {
   }
   return client.GET("/user");
 };
+
+/**
+ * Authorization & Permissions
+ *
+ * NOTE: These endpoints are NOT yet implemented in the backend.
+ * They return placeholder data for frontend development.
+ * TODO: Once backend implements GET /user/me and GET /workspace/{id}/permissions,
+ * update these functions to use the real endpoints.
+ */
+
+import type {
+  CurrentUserResponse,
+  WorkspacePermissionsResponse,
+} from "@/types/permissions";
+
+/**
+ * Get the current authenticated user's profile and role information
+ *
+ * @returns Current user data including teams and admin status
+ *
+ * NOTE: This is a PLACEHOLDER implementation. The backend endpoint
+ * GET /user/me does not exist yet. This returns mock data.
+ */
+export const getCurrentUser = async (): Promise<{
+  data?: CurrentUserResponse;
+  error?: { message: string };
+}> => {
+  // TODO: Replace with actual API call once backend implements GET /user/me
+  // return client.GET("/user/me");
+
+  // PLACEHOLDER: Return mock data for development
+  console.warn(
+    "[PLACEHOLDER] getCurrentUser: Backend endpoint GET /user/me not implemented. Returning mock data.",
+  );
+
+  // Simulate API delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  return {
+    data: {
+      id: "user-1",
+      name: "Development User",
+      email: "dev@example.com",
+      profilePicUrl: undefined,
+      isOrgAdmin: true, // Mock as org admin for development
+      teams: [
+        {
+          id: "team-1",
+          name: "Engineering",
+          role: "admin",
+        },
+      ],
+    },
+  };
+};
+
+/**
+ * Get the current user's permissions for a specific workspace
+ *
+ * @param workspaceId - The ID of the workspace to check permissions for
+ * @returns Permissions object with all workspace-level permissions
+ *
+ * NOTE: This is a PLACEHOLDER implementation. The backend endpoint
+ * GET /workspace/{id}/permissions does not exist yet. This returns mock data.
+ */
+export const getWorkspacePermissions = async (
+  workspaceId: string,
+): Promise<{
+  data?: WorkspacePermissionsResponse;
+  error?: { message: string };
+}> => {
+  // TODO: Replace with actual API call once backend implements the endpoint
+  // return client.GET("/workspace/{id}/permissions", {
+  //   params: {
+  //     path: { id: workspaceId },
+  //   },
+  // });
+
+  // PLACEHOLDER: Return mock data for development
+  console.warn(
+    `[PLACEHOLDER] getWorkspacePermissions: Backend endpoint GET /workspace/${workspaceId}/permissions not implemented. Returning mock data.`,
+  );
+
+  // Simulate API delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  return {
+    data: {
+      workspaceId,
+      userId: "user-1",
+      permissions: {
+        create_resource: true,
+        edit_resource: true,
+        delete_resource: true,
+        create_app: true,
+        edit_app: true,
+        delete_app: true,
+        run_app: true,
+        create_folder: true,
+        edit_folder: true,
+        delete_folder: true,
+      },
+      isOrgAdmin: true,
+      isTeamAdmin: true,
+      teamId: "team-1",
+    },
+  };
+};

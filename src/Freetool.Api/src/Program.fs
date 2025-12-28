@@ -17,6 +17,7 @@ open Freetool.Application.Handlers
 open Freetool.Application.Commands
 open Freetool.Application.DTOs
 open Freetool.Application.Services
+open Freetool.Domain.ValueObjects
 open Freetool.Api.Tracing
 open Freetool.Api.Middleware
 open Freetool.Api.OpenApi
@@ -202,6 +203,13 @@ let main args =
             let modelTask = authService.WriteAuthorizationModelAsync()
             modelTask.Wait()
             eprintfn "OpenFGA authorization model initialized successfully"
+
+            // Note: Organization admin is now set automatically when the user first logs in
+            // via TailscaleAuthMiddleware if their email matches OpenFGA:OrgAdminEmail config
+            let orgAdminEmail = builder.Configuration["OpenFGA:OrgAdminEmail"]
+
+            if not (System.String.IsNullOrEmpty(orgAdminEmail)) then
+                eprintfn "Organization admin email configured: %s (will be set when user first logs in)" orgAdminEmail
         with ex ->
             eprintfn "Warning: Could not initialize OpenFGA authorization model: %s" ex.Message
             eprintfn "The application will continue, but authorization checks may fail."

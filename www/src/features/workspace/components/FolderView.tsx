@@ -34,6 +34,9 @@ import {
   runApp,
 } from "@/api/api";
 import AppConfigForm from "./AppConfigForm";
+import { PermissionButton } from "@/components/PermissionButton";
+import { PermissionGate } from "@/components/PermissionGate";
+import { useHasPermission } from "@/hooks/usePermissions";
 
 export default function FolderView({
   folder,
@@ -42,10 +45,18 @@ export default function FolderView({
   createApp,
   updateNode,
   deleteNode,
+  workspaceId,
 }: WorkspaceMainProps & { folder: FolderNode }) {
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(folder.name);
+
+  // Permission checks
+  const canCreateFolder = useHasPermission(workspaceId, "create_folder");
+  const canEditFolder = useHasPermission(workspaceId, "edit_folder");
+  const canDeleteFolder = useHasPermission(workspaceId, "delete_folder");
+  const canCreateApp = useHasPermission(workspaceId, "create_app");
+  const canDeleteApp = useHasPermission(workspaceId, "delete_app");
 
   // Update name when folder changes
   useEffect(() => {
@@ -353,27 +364,34 @@ export default function FolderView({
             <h2 className="text-2xl font-semibold">{folder.name}</h2>
           )}
           {folder.id !== "root" && (
-            <Button
+            <PermissionButton
+              workspaceId={workspaceId}
+              permission="edit_folder"
+              tooltipMessage="You don't have permission to rename folders. Contact your team admin."
               variant="secondary"
               size="icon"
               onClick={() => setEditing((v) => !v)}
               aria-label="Rename folder"
+              hideWhenDisabled
             >
               <Edit size={16} />
-            </Button>
+            </PermissionButton>
           )}
         </div>
         <div className="flex gap-2">
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
-              <Button
+              <PermissionButton
+                workspaceId={workspaceId}
+                permission="create_folder"
+                tooltipMessage="You don't have permission to create folders. Contact your team admin."
                 onClick={() => {
                   setNewFolderParentId(folder.id);
                   setPopoverOpen(true);
                 }}
               >
                 <FolderPlus className="mr-2 h-4 w-4" /> New Folder
-              </Button>
+              </PermissionButton>
             </PopoverTrigger>
             <PopoverContent className="w-80">
               <div className="space-y-4">
@@ -430,14 +448,17 @@ export default function FolderView({
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button
+                  <PermissionButton
+                    workspaceId={workspaceId}
+                    permission="create_app"
+                    tooltipMessage="You don't have permission to create apps. Contact your team admin."
                     variant="secondary"
                     onClick={handleShowCreateAppForm}
                     disabled={folder.id === "root"}
                   >
                     <FilePlus2 className="mr-2 h-4 w-4" />
                     {showCreateAppForm ? "Cancel" : "New App"}
-                  </Button>
+                  </PermissionButton>
                 </span>
               </TooltipTrigger>
               {folder.id === "root" && (
@@ -551,7 +572,10 @@ export default function FolderView({
                     }}
                   >
                     <PopoverTrigger asChild>
-                      <Button
+                      <PermissionButton
+                        workspaceId={workspaceId}
+                        permission="create_folder"
+                        tooltipMessage="You don't have permission to create folders. Contact your team admin."
                         variant="secondary"
                         size="icon"
                         onClick={(e) => {
@@ -561,7 +585,7 @@ export default function FolderView({
                         aria-label="New Folder"
                       >
                         <Plus size={16} />
-                      </Button>
+                      </PermissionButton>
                     </PopoverTrigger>
                     <PopoverContent className="w-80">
                       <div className="space-y-4">
@@ -629,7 +653,10 @@ export default function FolderView({
                     >
                       <Play size={16} />
                     </Button>
-                    <Button
+                    <PermissionButton
+                      workspaceId={workspaceId}
+                      permission="edit_app"
+                      tooltipMessage="You don't have permission to edit apps. Contact your team admin."
                       variant="secondary"
                       size="icon"
                       onClick={(e) => {
@@ -637,12 +664,22 @@ export default function FolderView({
                         onSelect(child.id);
                       }}
                       aria-label="Edit"
+                      hideWhenDisabled
                     >
                       <Edit size={16} />
-                    </Button>
+                    </PermissionButton>
                   </>
                 )}
-                <Button
+                <PermissionButton
+                  workspaceId={workspaceId}
+                  permission={
+                    child.type === "folder" ? "delete_folder" : "delete_app"
+                  }
+                  tooltipMessage={
+                    child.type === "folder"
+                      ? "You don't have permission to delete folders. Contact your team admin."
+                      : "You don't have permission to delete apps. Contact your team admin."
+                  }
                   variant="secondary"
                   size="icon"
                   onClick={async (e) => {
@@ -668,9 +705,10 @@ export default function FolderView({
                     }
                   }}
                   aria-label="Delete"
+                  hideWhenDisabled
                 >
                   <Trash2 size={16} />
-                </Button>
+                </PermissionButton>
               </div>
             </CardHeader>
             <CardContent>

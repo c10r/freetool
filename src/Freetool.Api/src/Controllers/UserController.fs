@@ -116,7 +116,7 @@ type UserController
             | Ok(UserResult userData) ->
                 // Check if user is org admin
                 let! isOrgAdmin =
-                    authService.CheckPermissionAsync (User userIdStr) TeamAdmin (OrganizationObject "acme")
+                    authService.CheckPermissionAsync (User userIdStr) OrganizationAdmin (OrganizationObject "default")
 
                 // Get user's groups/teams using the group repository directly
                 let! groups = groupRepository.GetByUserIdAsync userId

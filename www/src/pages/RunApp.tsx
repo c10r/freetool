@@ -13,8 +13,11 @@ import {
   Loader,
   ChevronDown,
   ChevronRight,
+  AlertCircle,
 } from "lucide-react";
 import { getAppById, runApp } from "@/api/api";
+import { PermissionButton } from "@/components/PermissionButton";
+import { useHasPermission } from "@/hooks/usePermissions";
 
 // Helper function to safely format response content
 const formatResponse = (
@@ -45,6 +48,10 @@ const RunApp = () => {
   const [error, setError] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [isRequestCollapsed, setIsRequestCollapsed] = useState(true);
+
+  // Hardcode workspace ID for now (TODO: get from app data or route)
+  const workspaceId = "workspace-main";
+  const canRunApp = useHasPermission(workspaceId, "run_app");
 
   // Load app details
   useEffect(() => {
@@ -152,7 +159,10 @@ const RunApp = () => {
                 </p>
               </div>
             </div>
-            <Button
+            <PermissionButton
+              workspaceId={workspaceId}
+              permission="run_app"
+              tooltipMessage="You don't have permission to run this app. Contact your team admin."
               onClick={handleRunApp}
               disabled={running}
               variant={running ? "secondary" : "default"}
@@ -168,12 +178,32 @@ const RunApp = () => {
                   Run Again
                 </>
               )}
-            </Button>
+            </PermissionButton>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto p-6 space-y-6">
+        {/* Permission Warning */}
+        {!canRunApp && (
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-yellow-900 mb-1">
+                    Permission Required
+                  </h4>
+                  <p className="text-sm text-yellow-800">
+                    You don't have permission to run this app. Contact your team
+                    admin to request run_app access.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* App Configuration Display */}
         <Card>
           <CardHeader>

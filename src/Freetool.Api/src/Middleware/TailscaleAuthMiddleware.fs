@@ -1,6 +1,7 @@
 namespace Freetool.Api.Middleware
 
 open Microsoft.AspNetCore.Http
+open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
 open System.Threading.Tasks
 open System.Diagnostics
@@ -87,6 +88,24 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                             Tracing.addAttribute currentActivity "tailscale.auth.user_created" "true"
                             Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
                             Tracing.addAttribute currentActivity "user.id" (user.State.Id.Value.ToString())
+
+                            // Check if this user should be made org admin
+                            let configuration = context.RequestServices.GetRequiredService<IConfiguration>()
+                            let orgAdminEmail = configuration["OpenFGA:OrgAdminEmail"]
+
+                            if
+                                not (System.String.IsNullOrEmpty(orgAdminEmail))
+                                && userEmail.Equals(orgAdminEmail, System.StringComparison.OrdinalIgnoreCase)
+                            then
+                                let authService =
+                                    context.RequestServices.GetRequiredService<IAuthorizationService>()
+
+                                let userId = user.State.Id.ToString()
+
+                                try
+                                    do! authService.InitializeOrganizationAsync "default" userId
+                                with ex ->
+                                    eprintfn "[WARNING] Failed to set user %s as org admin: %s" userEmail ex.Message
 
                             Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
                             Tracing.setSpanStatus currentActivity true None

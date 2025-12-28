@@ -227,8 +227,12 @@ type GroupController
 
     /// Checks if the current user is an organization administrator
     member private this.CheckIsOrgAdminAsync() : Task<bool> =
-        let userId = this.CurrentUserId
-        authService.CheckPermissionAsync (User(userId.Value.ToString())) TeamAdmin (OrganizationObject "acme")
+        task {
+            let userId = this.CurrentUserId
+            let userIdStr = userId.Value.ToString()
+
+            return authService.CheckPermissionAsync (User userIdStr) OrganizationAdmin (OrganizationObject "default")
+        }
 
     /// Checks if the current user is either an org admin OR a team admin for the specified group
     member private this.CheckIsOrgOrTeamAdminAsync(groupId: string) : Task<bool> =
@@ -236,7 +240,10 @@ type GroupController
             let userId = this.CurrentUserId
 
             let! isOrgAdmin =
-                authService.CheckPermissionAsync (User(userId.Value.ToString())) TeamAdmin (OrganizationObject "acme")
+                authService.CheckPermissionAsync
+                    (User(userId.Value.ToString()))
+                    OrganizationAdmin
+                    (OrganizationObject "default")
 
             let! isTeamAdmin =
                 authService.CheckPermissionAsync (User(userId.Value.ToString())) TeamAdmin (TeamObject groupId)

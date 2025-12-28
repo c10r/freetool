@@ -22,6 +22,8 @@ type MockAuthorizationService(checkPermissionFn: AuthSubject -> AuthRelation -> 
         member _.WriteAuthorizationModelAsync() =
             Task.FromResult({ AuthorizationModelId = "model-1" })
 
+        member _.InitializeOrganizationAsync _ _ = Task.FromResult(())
+
         member _.CreateRelationshipsAsync(_) = Task.FromResult(())
         member _.UpdateRelationshipsAsync(_) = Task.FromResult(())
         member _.DeleteRelationshipsAsync(_) = Task.FromResult(())
@@ -86,7 +88,7 @@ let ``CreateGroup succeeds when user is org admin`` () : Task =
         // Grant org admin permission
         let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
             match subject, relation, obj with
-            | User uid, TeamAdmin, OrganizationObject "acme" -> uid = userId.Value.ToString()
+            | User uid, OrganizationAdmin, OrganizationObject "default" -> uid = userId.Value.ToString()
             | _ -> false
 
         // Mock will return not found since we can't easily match the command
@@ -137,7 +139,7 @@ let ``UpdateGroupName succeeds when user is org admin`` () : Task =
         // Grant org admin permission
         let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
             match subject, relation, obj with
-            | User uid, TeamAdmin, OrganizationObject "acme" -> uid = userId.Value.ToString()
+            | User uid, OrganizationAdmin, OrganizationObject "default" -> uid = userId.Value.ToString()
             | _ -> false
 
         let handleCommand _ =
@@ -188,7 +190,7 @@ let ``AddUserToGroup succeeds when user is org admin`` () : Task =
         // Grant org admin permission only
         let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
             match subject, relation, obj with
-            | User uid, TeamAdmin, OrganizationObject "acme" -> uid = userId.Value.ToString()
+            | User uid, OrganizationAdmin, OrganizationObject "default" -> uid = userId.Value.ToString()
             | _ -> false
 
         let handleCommand _ =
@@ -270,7 +272,7 @@ let ``RemoveUserFromGroup succeeds when user is org admin`` () : Task =
         // Grant org admin permission only
         let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
             match subject, relation, obj with
-            | User uid, TeamAdmin, OrganizationObject "acme" -> uid = userId.Value.ToString()
+            | User uid, OrganizationAdmin, OrganizationObject "default" -> uid = userId.Value.ToString()
             | _ -> false
 
         let handleCommand _ =
@@ -352,7 +354,7 @@ let ``DeleteGroup succeeds when user is org admin`` () : Task =
         // Grant org admin permission
         let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
             match subject, relation, obj with
-            | User uid, TeamAdmin, OrganizationObject "acme" -> uid = userId.Value.ToString()
+            | User uid, OrganizationAdmin, OrganizationObject "default" -> uid = userId.Value.ToString()
             | _ -> false
 
         let handleCommand _ =

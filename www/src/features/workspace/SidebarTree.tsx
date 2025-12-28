@@ -17,6 +17,7 @@ interface SidebarTreeProps {
   rootId: string;
   selectedId: string;
   onSelect: (id: string) => void;
+  workspaceId: string;
 }
 
 export default function SidebarTree({
@@ -24,6 +25,7 @@ export default function SidebarTree({
   rootId,
   selectedId,
   onSelect,
+  workspaceId,
 }: SidebarTreeProps) {
   const tree = useMemo(() => buildTree(nodes, rootId), [nodes, rootId]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(

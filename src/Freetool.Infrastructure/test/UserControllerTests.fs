@@ -22,6 +22,8 @@ type MockAuthorizationService(permissions: Map<AuthSubject * AuthRelation * Auth
         member _.WriteAuthorizationModelAsync() =
             Task.FromResult({ AuthorizationModelId = "model-1" })
 
+        member _.InitializeOrganizationAsync _ _ = Task.FromResult(())
+
         member _.CreateRelationshipsAsync(_) = Task.FromResult(())
         member _.UpdateRelationshipsAsync(_) = Task.FromResult(())
         member _.DeleteRelationshipsAsync(_) = Task.FromResult(())

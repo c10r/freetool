@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Check, X } from "lucide-react";
+import { Plus, Edit, Trash2, Check, X, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,11 +24,14 @@ import ResourceSelector from "./ResourceSelector";
 import { Switch } from "@/components/ui/switch";
 import { updateAppName } from "@/api/api";
 import { useAppForm } from "../hooks/useAppForm";
+import { useHasPermission } from "@/hooks/usePermissions";
+import { Badge } from "@/components/ui/badge";
 
 export default function AppView({
   app,
   updateNode,
   endpoints,
+  workspaceId,
 }: WorkspaceMainProps & { app: AppNode }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(app.name);
@@ -36,6 +39,9 @@ export default function AppView({
   const [nameSaved, setNameSaved] = useState(false);
   const [nameError, setNameError] = useState(false);
   const [nameErrorMessage, setNameErrorMessage] = useState("");
+
+  // Permission checks
+  const canEditApp = useHasPermission(workspaceId, "edit_app");
 
   // App form hook for autosave functionality
   const {
@@ -55,14 +61,16 @@ export default function AppView({
     },
     app.id,
     (updatedData) => {
-      // Update the app node when autosave occurs
-      updateNode({
-        ...app,
-        urlPath: updatedData.urlPath,
-        urlParameters: updatedData.urlParameters,
-        headers: updatedData.headers,
-        body: updatedData.body,
-      });
+      // Update the app node when autosave occurs (only if user has edit permission)
+      if (canEditApp) {
+        updateNode({
+          ...app,
+          urlPath: updatedData.urlPath,
+          urlParameters: updatedData.urlParameters,
+          headers: updatedData.headers,
+          body: updatedData.body,
+        });
+      }
     },
   );
 
@@ -140,7 +148,7 @@ export default function AppView({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-64 pr-10"
-                  disabled={nameUpdating}
+                  disabled={nameUpdating || !canEditApp}
                 />
                 {nameUpdating && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -217,26 +225,39 @@ export default function AppView({
               </Button>
             </div>
           ) : (
-            <h2 className="text-2xl font-semibold">{app.name}</h2>
+            <>
+              <h2 className="text-2xl font-semibold">{app.name}</h2>
+              {!canEditApp && (
+                <Badge variant="secondary" className="ml-2">
+                  <Eye className="w-3 h-3 mr-1" />
+                  View Only
+                </Badge>
+              )}
+            </>
           )}
-          <Button
-            variant="secondary"
-            size="icon"
-            onClick={() => setEditing((v) => !v)}
-            aria-label="Rename app"
-          >
-            <Edit size={16} />
-          </Button>
+          {canEditApp && (
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={() => setEditing((v) => !v)}
+              aria-label="Rename app"
+            >
+              <Edit size={16} />
+            </Button>
+          )}
         </div>
         <div className="flex gap-2 items-center">
           <ResourceSelector
             value={app.resourceId}
             onValueChange={(resourceId) => updateNode({ ...app, resourceId })}
             className="w-64"
+            disabled={!canEditApp}
           />
-          <Button onClick={addField}>
-            <Plus className="mr-2 h-4 w-4" /> Add Field
-          </Button>
+          {canEditApp && (
+            <Button onClick={addField}>
+              <Plus className="mr-2 h-4 w-4" /> Add Field
+            </Button>
+          )}
         </div>
         {nameErrorMessage && (
           <div className="text-red-500 text-sm bg-red-50 p-2 rounded mt-2">
@@ -244,6 +265,17 @@ export default function AppView({
           </div>
         )}
       </header>
+
+      {!canEditApp && (
+        <div className="bg-muted/50 border border-muted rounded-lg p-4">
+          <p className="text-sm text-muted-foreground">
+            <Eye className="w-4 h-4 inline mr-2" />
+            You have view-only access to this app. To make changes, contact your
+            team admin to request edit_app permission.
+          </p>
+        </div>
+      )}
+
       <Separator />
       {app.fields.map((f) => (
         <Card key={f.id}>
@@ -253,12 +285,14 @@ export default function AppView({
                 value={f.label}
                 onChange={(e) => updateField(f.id, { label: e.target.value })}
                 aria-label="Field label"
+                disabled={!canEditApp}
               />
             </div>
             <div className="md:col-span-3">
               <Select
                 value={f.type}
                 onValueChange={(v: FieldType) => updateField(f.id, { type: v })}
+                disabled={!canEditApp}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Type" />
@@ -276,18 +310,21 @@ export default function AppView({
               <Switch
                 checked={!!f.required}
                 onCheckedChange={(v) => updateField(f.id, { required: v })}
+                disabled={!canEditApp}
               />
               <span className="text-sm text-muted-foreground">Required</span>
             </div>
             <div className="md:col-span-2 flex justify-end">
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => deleteField(f.id)}
-                aria-label="Delete field"
-              >
-                <Trash2 size={16} />
-              </Button>
+              {canEditApp && (
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  onClick={() => deleteField(f.id)}
+                  aria-label="Delete field"
+                >
+                  <Trash2 size={16} />
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -317,6 +354,7 @@ export default function AppView({
             onUrlPathFieldBlur={(value) => {
               updateUrlPathField(value);
             }}
+            disabled={!canEditApp}
           />
         </CardContent>
       </Card>

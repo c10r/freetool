@@ -6,12 +6,12 @@ import AuditLogView from "./components/AuditLogView";
 import UsersTeamsView from "./components/UsersTeamsView";
 
 export default function WorkspaceMain(props: WorkspaceMainProps) {
-  const { nodes, selectedId } = props;
+  const { nodes, selectedId, workspaceId } = props;
   const selected = nodes[selectedId];
 
   // Handle special sections from sidebar
   if (selectedId === "resources") {
-    return <ResourcesView />;
+    return <ResourcesView workspaceId={workspaceId} />;
   }
 
   if (selectedId === "audit-log") {

@@ -15,6 +15,13 @@ import {
   createApp as createAppAPI,
 } from "@/api/api";
 import NotFound from "@/pages/NotFound";
+import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
+import {
+  useWorkspacePermissions,
+  useHasAnyPermission,
+} from "@/hooks/usePermissions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 function createFolder(id: string, name: string, parentId?: string): FolderNode {
   return { id, name, type: "folder", parentId, childrenIds: [] };
@@ -112,10 +119,22 @@ function getSelectedIdFromPath(
   return rootId;
 }
 
-export default function Workspace() {
+// Inner component that uses workspace permissions
+function WorkspaceContent() {
   const { nodeId } = useParams<{ nodeId?: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Hardcode workspace ID for now (TODO: get from route/context)
+  const workspaceId = "workspace-main";
+
+  // Fetch workspace permissions
+  const {
+    permissions,
+    isLoading: permissionsLoading,
+    error: permissionsError,
+  } = useWorkspacePermissions(workspaceId);
+  const hasAnyPermission = useHasAnyPermission(workspaceId);
 
   const [nodes, setNodes] = useState<Record<string, WorkspaceNode>>({});
   const [loading, setLoading] = useState(true);
@@ -361,8 +380,8 @@ export default function Workspace() {
     [nodes, selectedId],
   );
 
-  // Show loading state
-  if (loading) {
+  // Show loading state (combined workspace data + permissions)
+  if (loading || permissionsLoading) {
     return (
       <div className="h-screen flex overflow-hidden">
         <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
@@ -377,6 +396,47 @@ export default function Workspace() {
             Loading...
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Show permissions error state
+  if (permissionsError) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-red-600">Permission Error</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Failed to load your permissions for this workspace.
+            </p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show no permissions state
+  if (!permissionsLoading && !hasAnyPermission) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>No Access</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              You don't have any permissions on this workspace.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              To gain access, ask your team admin to grant you permissions.
+            </p>
+            <Button onClick={() => navigate("/")}>Back to Home</Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -440,6 +500,7 @@ export default function Workspace() {
         rootId={rootId}
         selectedId={selectedId}
         onSelect={setSelectedId}
+        workspaceId={workspaceId}
       />
       <div className="flex-1 flex flex-col">
         <header className="flex items-center justify-between px-6 py-4 border-b bg-card/30">
@@ -473,9 +534,19 @@ export default function Workspace() {
           createEndpoint={createEndpoint}
           updateEndpoint={updateEndpoint}
           deleteEndpoint={deleteEndpoint}
+          workspaceId={workspaceId}
         />
       </div>
     </div>
+  );
+}
+
+// Export wrapped in AuthorizationProvider
+export default function Workspace() {
+  return (
+    <AuthorizationProvider>
+      <WorkspaceContent />
+    </AuthorizationProvider>
   );
 }
 

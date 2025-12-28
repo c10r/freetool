@@ -240,7 +240,7 @@ let ``Global admin has all workspace permissions`` () : Task =
             service.CreateRelationshipsAsync(
                 [ { Subject = User "grace"
                     Relation = TeamAdmin
-                    Object = OrganizationObject "acme" } ]
+                    Object = OrganizationObject "default" } ]
             )
 
         // Associate workspace with team
@@ -322,7 +322,7 @@ let ``Only organization admin can create workspaces`` () : Task =
             service.CreateRelationshipsAsync(
                 [ { Subject = User "alice"
                     Relation = TeamAdmin
-                    Object = OrganizationObject "acme" } ]
+                    Object = OrganizationObject "default" } ]
             )
 
         // Associate workspace with organization
@@ -384,7 +384,7 @@ let ``Only organization admin can rename teams`` () : Task =
             service.CreateRelationshipsAsync(
                 [ { Subject = User "carol"
                     Relation = TeamAdmin
-                    Object = OrganizationObject "acme" } ]
+                    Object = OrganizationObject "default" } ]
             )
 
         // Associate team with organization
@@ -446,7 +446,7 @@ let ``Only organization admin can delete teams`` () : Task =
             service.CreateRelationshipsAsync(
                 [ { Subject = User "eve"
                     Relation = TeamAdmin
-                    Object = OrganizationObject "acme" } ]
+                    Object = OrganizationObject "default" } ]
             )
 
         // Associate team with organization
@@ -545,7 +545,7 @@ let ``Global admin has all folder permissions`` () : Task =
             service.CreateRelationshipsAsync(
                 [ { Subject = User "hannah"
                     Relation = TeamAdmin
-                    Object = OrganizationObject "acme" } ]
+                    Object = OrganizationObject "default" } ]
             )
 
         // Associate workspace with team

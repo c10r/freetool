@@ -318,7 +318,7 @@ let ``Global admin has all resource permissions on any workspace`` () : Task =
             authService.CreateRelationshipsAsync(
                 [ { User = $"user:{userId}"
                     Relation = TeamAdmin
-                    Object = OrganizationObject "acme" } ]
+                    Object = OrganizationObject "default" } ]
             )
 
         // Grant global admins permissions on workspace

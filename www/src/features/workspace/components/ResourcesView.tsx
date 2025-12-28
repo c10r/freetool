@@ -23,8 +23,11 @@ import {
 import HttpMethodBadge from "./HttpMethodBadge";
 import ResourceForm, { ResourceFormData } from "./ResourceForm";
 import { useResourceForm } from "../hooks/useResourceForm";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Plus } from "lucide-react";
 import { KeyValuePair } from "../types";
+import { PermissionButton } from "@/components/PermissionButton";
+import { PermissionGate } from "@/components/PermissionGate";
+import { useHasPermission } from "@/hooks/usePermissions";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -49,7 +52,13 @@ const initialFormData: ResourceFormData = {
   body: [],
 };
 
-export default function ResourcesView() {
+interface ResourcesViewProps {
+  workspaceId?: string;
+}
+
+export default function ResourcesView({
+  workspaceId = "workspace-main",
+}: ResourcesViewProps = {}) {
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +72,9 @@ export default function ResourcesView() {
   const [deletingResourceId, setDeletingResourceId] = useState<string | null>(
     null,
   );
+
+  // Permission checks
+  const canEditResource = useHasPermission(workspaceId, "edit_resource");
 
   // Create form state
   const {
@@ -224,12 +236,16 @@ export default function ResourcesView() {
       <header className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Resources</h2>
         <div className="flex gap-2">
-          <Button
+          <PermissionButton
+            workspaceId={workspaceId}
+            permission="create_resource"
+            tooltipMessage="You don't have permission to create resources. Contact your team admin."
             onClick={() => setShowCreateForm(!showCreateForm)}
             variant={showCreateForm ? "secondary" : "default"}
           >
+            <Plus className="w-4 h-4 mr-2" />
             {showCreateForm ? "Cancel" : "Create Resource"}
-          </Button>
+          </PermissionButton>
           <Button onClick={fetchResources} variant="outline">
             Refresh
           </Button>
@@ -317,51 +333,67 @@ export default function ResourcesView() {
                   <span>{resource.name}</span>
                   <div className="flex items-center gap-2">
                     <HttpMethodBadge method={resource.httpMethod} />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleEditResource(resource)}
+                    <PermissionGate
+                      workspaceId={workspaceId}
+                      permission="edit_resource"
+                      showTooltip={true}
+                      tooltipMessage="You don't have permission to edit resources."
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleDeleteResource(resource.id)}
-                              disabled={
-                                !canDeleteResource(resource.id) ||
-                                deletingResourceId === resource.id
-                              }
-                            >
-                              <Trash2
-                                className={`h-4 w-4 text-red-500 ${
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleEditResource(resource)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </PermissionGate>
+                    <PermissionGate
+                      workspaceId={workspaceId}
+                      permission="delete_resource"
+                      showTooltip={true}
+                      tooltipMessage="You don't have permission to delete resources."
+                    >
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() =>
+                                  handleDeleteResource(resource.id)
+                                }
+                                disabled={
                                   !canDeleteResource(resource.id) ||
                                   deletingResourceId === resource.id
-                                    ? "opacity-50"
-                                    : ""
-                                }`}
-                              />
-                            </Button>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {!canDeleteResource(resource.id) ? (
-                            <p>
-                              There are still apps that use this resource.
-                              Please delete those first.
-                            </p>
-                          ) : (
-                            <p>Delete resource</p>
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                                }
+                              >
+                                <Trash2
+                                  className={`h-4 w-4 text-red-500 ${
+                                    !canDeleteResource(resource.id) ||
+                                    deletingResourceId === resource.id
+                                      ? "opacity-50"
+                                      : ""
+                                  }`}
+                                />
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {!canDeleteResource(resource.id) ? (
+                              <p>
+                                There are still apps that use this resource.
+                                Please delete those first.
+                              </p>
+                            ) : (
+                              <p>Delete resource</p>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </PermissionGate>
                   </div>
                 </CardTitle>
               </CardHeader>
@@ -381,7 +413,15 @@ export default function ResourcesView() {
       <Dialog open={!!editingResource} onOpenChange={() => handleCloseEdit()}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Edit Resource</DialogTitle>
+            <DialogTitle>
+              {canEditResource ? "Edit Resource" : "View Resource"}
+              {!canEditResource && (
+                <p className="text-sm font-normal text-muted-foreground mt-1">
+                  You don't have permission to edit this resource. Contact your
+                  team admin for access.
+                </p>
+              )}
+            </DialogTitle>
           </DialogHeader>
           {editingResource && (
             <div className="space-y-4 overflow-y-auto flex-1 pr-2">
@@ -392,6 +432,7 @@ export default function ResourcesView() {
                 fieldStates={editFieldStates}
                 onFieldBlur={updateTextField}
                 onKeyValueFieldBlur={updateKeyValueField}
+                disabled={!canEditResource}
               />
             </div>
           )}

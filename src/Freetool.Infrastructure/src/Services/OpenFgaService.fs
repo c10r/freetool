@@ -38,6 +38,31 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                       Name = response.Name }
             }
 
+        /// Initializes the organization with an admin user
+        member this.InitializeOrganizationAsync (organizationId: string) (adminUserId: string) : Task<unit> =
+            task {
+                eprintfn
+                    "[DEBUG OpenFGA] InitializeOrganizationAsync called with orgId=%s, userId=%s"
+                    organizationId
+                    adminUserId
+
+                // Create the organization admin relationship tuple
+                let tuple =
+                    { Subject = User adminUserId
+                      Relation = OrganizationAdmin
+                      Object = OrganizationObject organizationId }
+
+                let userStr = AuthTypes.subjectToString tuple.Subject
+                let relationStr = AuthTypes.relationToString tuple.Relation
+                let objectStr = AuthTypes.objectToString tuple.Object
+
+                eprintfn "[DEBUG OpenFGA] Creating relationship: %s#%s@%s" objectStr relationStr userStr
+
+                do! (this :> IAuthorizationService).CreateRelationshipsAsync([ tuple ])
+
+                eprintfn "[DEBUG OpenFGA] Relationship created successfully"
+            }
+
         /// Writes the authorization model to the store
         member _.WriteAuthorizationModelAsync() : Task<AuthorizationModelResponse> =
             task {
@@ -277,9 +302,14 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                 let relationStr = AuthTypes.relationToString relation
                 let objectStr = AuthTypes.objectToString object
 
+                eprintfn "[DEBUG OpenFGA] Checking permission: %s#%s@%s" objectStr relationStr user
+
                 let body =
                     ClientCheckRequest(User = user, Relation = relationStr, Object = objectStr)
 
                 let! response = client.Check(body)
-                return response.Allowed.GetValueOrDefault(false)
+                let allowed = response.Allowed.GetValueOrDefault(false)
+
+                eprintfn "[DEBUG OpenFGA] Permission check response: Allowed=%b" allowed
+                return allowed
             }
