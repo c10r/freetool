@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import type { WorkspaceWithGroup } from "@/types/workspace";
 import type { TreeNode, WorkspaceNode } from "./types";
 
 interface SidebarTreeProps {
@@ -18,21 +19,36 @@ interface SidebarTreeProps {
   selectedId: string;
   onSelect: (id: string) => void;
   workspaceId: string;
+  workspaces: WorkspaceWithGroup[];
 }
 
 export default function SidebarTree({
   nodes,
-  rootId,
   selectedId,
   onSelect,
   workspaceId,
+  workspaces,
 }: SidebarTreeProps) {
-  const tree = useMemo(() => buildTree(nodes, rootId), [nodes, rootId]);
+  const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(
+    () => new Set([workspaceId])
+  );
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set([rootId])
+    new Set()
   );
 
-  const toggleExpanded = (folderId: string) => {
+  const toggleWorkspace = (wsId: string) => {
+    setExpandedWorkspaces((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(wsId)) {
+        newSet.delete(wsId);
+      } else {
+        newSet.add(wsId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleFolder = (folderId: string) => {
     setExpandedFolders((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(folderId)) {
@@ -44,79 +60,151 @@ export default function SidebarTree({
     });
   };
 
+  // Group folders by workspace
+  const foldersByWorkspace = useMemo(() => {
+    const grouped: Record<string, WorkspaceNode[]> = {};
+    Object.values(nodes).forEach((node) => {
+      if (node.type === "folder") {
+        const wsId = node.workspaceId || "unknown";
+        if (!grouped[wsId]) {
+          grouped[wsId] = [];
+        }
+        // Only include root-level folders (no parentId or parentId is null)
+        if (!node.parentId) {
+          grouped[wsId].push(node);
+        }
+      }
+    });
+    return grouped;
+  }, [nodes]);
+
   return (
     <aside className="w-64 border-r bg-card/40">
-      <nav className="p-3 space-y-4">
-        <div>
-          {tree && (
-            <TreeNodeComponent
-              node={tree}
-              depth={0}
-              selectedId={selectedId}
-              onSelect={onSelect}
-              expandedFolders={expandedFolders}
-              toggleExpanded={toggleExpanded}
-            />
-          )}
+      <nav className="p-3 space-y-2">
+        {/* Workspaces header - always show */}
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
+          Workspaces
         </div>
 
+        {/* Workspace sections */}
+        {workspaces.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => onSelect("root")}
+            className={cn(
+              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent font-semibold",
+              selectedId === "root" && "bg-accent"
+            )}
+          >
+            <FolderOpen size={16} />
+            <span>Workspaces</span>
+          </button>
+        ) : (
+          workspaces.map((workspace) => {
+            const isExpanded = expandedWorkspaces.has(workspace.id);
+            const isCurrentWorkspace = workspace.id === workspaceId;
+            const rootFolders = foldersByWorkspace[workspace.id] || [];
+            const workspaceLabel = workspace.groupName || workspace.id;
+
+            return (
+              <div key={workspace.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleWorkspace(workspace.id)}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent font-semibold",
+                    isCurrentWorkspace && "bg-accent/50"
+                  )}
+                >
+                  {isExpanded ? (
+                    <ChevronDown size={16} />
+                  ) : (
+                    <ChevronRight size={16} />
+                  )}
+                  {isExpanded ? (
+                    <FolderOpen size={16} />
+                  ) : (
+                    <FolderClosed size={16} />
+                  )}
+                  <span>{workspaceLabel}</span>
+                </button>
+
+                {isExpanded && (
+                  <div className="ml-4 mt-1 space-y-1">
+                    {/* Resources (workspace-specific) */}
+                    <button
+                      type="button"
+                      onClick={() => onSelect("resources")}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent",
+                        selectedId === "resources" &&
+                          isCurrentWorkspace &&
+                          "bg-accent"
+                      )}
+                    >
+                      <Database size={16} />
+                      <span>Resources</span>
+                    </button>
+
+                    {/* Workspace folders and apps */}
+                    {rootFolders.map((folder) => {
+                      const node = buildTree(nodes, folder.id);
+                      if (!node) {
+                        return null;
+                      }
+                      return (
+                        <TreeNodeComponent
+                          key={folder.id}
+                          node={node}
+                          depth={1}
+                          selectedId={selectedId}
+                          onSelect={onSelect}
+                          expandedFolders={expandedFolders}
+                          toggleExpanded={toggleFolder}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+
+        {/* Global sections separator */}
+        <div className="border-t my-4 pt-4" />
+
+        {/* Users & Teams (global) */}
         <div>
-          <SidebarSection
-            title="Resources"
-            icon={<Database size={16} />}
-            selectedId={selectedId}
-            onSelect={onSelect}
-          />
+          <button
+            type="button"
+            onClick={() => onSelect("users-&-teams")}
+            className={cn(
+              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent font-semibold",
+              selectedId === "users-&-teams" && "bg-accent"
+            )}
+          >
+            <Users size={16} />
+            <span>Users & Teams</span>
+          </button>
         </div>
 
+        {/* Audit Log (global) */}
         <div>
-          <SidebarSection
-            title="Users & Teams"
-            icon={<Users size={16} />}
-            selectedId={selectedId}
-            onSelect={onSelect}
-          />
-        </div>
-
-        <div>
-          <SidebarSection
-            title="Audit Log"
-            icon={<Shield size={16} />}
-            selectedId={selectedId}
-            onSelect={onSelect}
-          />
+          <button
+            type="button"
+            onClick={() => onSelect("audit-log")}
+            className={cn(
+              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent font-semibold",
+              selectedId === "audit-log" && "bg-accent"
+            )}
+          >
+            <Shield size={16} />
+            <span>Audit Log</span>
+          </button>
         </div>
       </nav>
     </aside>
-  );
-}
-
-function SidebarSection({
-  title,
-  icon,
-  selectedId,
-  onSelect,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  selectedId: string;
-  onSelect: (id: string) => void;
-}) {
-  const sectionId = title.toLowerCase().replace(/ /g, "-");
-  const isSelected = selectedId === sectionId;
-
-  return (
-    <button
-      onClick={() => onSelect(sectionId)}
-      className={cn(
-        "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent font-semibold",
-        isSelected && "bg-accent"
-      )}
-      aria-current={isSelected ? "page" : undefined}
-    >
-      {icon}
-      <span>{title}</span>
-    </button>
   );
 }
 
@@ -152,6 +240,7 @@ function TreeNodeComponent({
   return (
     <div>
       <button
+        type="button"
         onClick={handleFolderClick}
         className={cn(
           "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent",
@@ -160,16 +249,18 @@ function TreeNodeComponent({
         aria-current={isSelected ? "page" : undefined}
       >
         {hasChildren && (
-          <span
+          <button
+            type="button"
             className="flex-shrink-0 cursor-pointer hover:bg-accent/50 rounded p-0.5"
             onClick={handleChevronClick}
+            aria-label={isExpanded ? "Collapse folder" : "Expand folder"}
           >
             {isExpanded ? (
               <ChevronDown size={16} />
             ) : (
               <ChevronRight size={16} />
             )}
-          </span>
+          </button>
         )}
         {isFolder ? (
           isExpanded ? (

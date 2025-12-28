@@ -54,7 +54,10 @@ export function AuthorizationProvider({
       if (result.error) {
         throw new Error(result.error.message);
       }
-      return result.data!;
+      if (!result.data) {
+        throw new Error("No user data returned");
+      }
+      return result.data;
     },
     staleTime: PERMISSION_CACHE_TTL,
     retry: 2,
@@ -74,7 +77,10 @@ export function AuthorizationProvider({
         if (result.error) {
           throw new Error(result.error.message);
         }
-        return result.data!;
+        if (!result.data) {
+          throw new Error("No workspace permissions data returned");
+        }
+        return result.data;
       },
       staleTime: PERMISSION_CACHE_TTL,
     });

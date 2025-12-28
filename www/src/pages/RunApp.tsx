@@ -287,7 +287,7 @@ const RunApp = () => {
                   {app.urlParameters.map(
                     (param: KeyValuePair, index: number) => (
                       <div
-                        key={index}
+                        key={`param-${param.key}-${index}`}
                         className="text-sm bg-muted p-2 rounded flex justify-between"
                       >
                         <span className="font-mono">{param.key}</span>
@@ -307,7 +307,7 @@ const RunApp = () => {
                 <div className="space-y-1">
                   {app.headers.map((header: KeyValuePair, index: number) => (
                     <div
-                      key={index}
+                      key={`header-${header.key}-${index}`}
                       className="text-sm bg-muted p-2 rounded flex justify-between"
                     >
                       <span className="font-mono">{header.key}</span>
@@ -326,7 +326,7 @@ const RunApp = () => {
                 <div className="space-y-1">
                   {app.body.map((bodyParam: KeyValuePair, index: number) => (
                     <div
-                      key={index}
+                      key={`body-${bodyParam.key}-${index}`}
                       className="text-sm bg-muted p-2 rounded flex justify-between"
                     >
                       <span className="font-mono">{bodyParam.key}</span>

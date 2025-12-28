@@ -44,14 +44,14 @@ export interface PermissionRequestProps {
  * @example
  * ```tsx
  * <PermissionRequest
- *   workspaceId="workspace-main"
+ *   workspaceId={workspaceId}
  *   permission="create_app"
  *   onRequestSent={() => console.log('Request sent')}
  * />
  * ```
  */
 export function PermissionRequest({
-  workspaceId,
+  workspaceId: _workspaceId,
   permission,
   onRequestSent,
   customMessage,

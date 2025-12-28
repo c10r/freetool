@@ -19,6 +19,8 @@ export interface BaseNode {
 export interface FolderNode extends BaseNode {
   type: "folder";
   childrenIds: string[];
+  workspaceId?: string; // ID of the workspace this folder belongs to
+  isWorkspace?: boolean; // true if this folder IS a workspace (parentId === null)
 }
 
 export type EndpointMethod =

@@ -1,4 +1,5 @@
-import { Edit, Plus, User, Users } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Edit, Plus, User as UserIcon, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   addGroupMember,
@@ -47,6 +48,7 @@ interface Group {
 }
 
 export default function UsersTeamsView() {
+  const queryClient = useQueryClient();
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -140,6 +142,9 @@ export default function UsersTeamsView() {
         }));
         setGroups(groupData);
       }
+
+      // Invalidate workspace list to refetch (team creation creates workspace)
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
     } finally {
       setIsCreatingGroup(false);
     }
@@ -238,24 +243,26 @@ export default function UsersTeamsView() {
       {/* Users Section */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
-          <User size={20} />
+          <UserIcon size={20} />
           <h2 className="text-xl font-semibold">Users</h2>
           {!usersLoading && <Badge variant="secondary">{users.length}</Badge>}
         </div>
 
         {usersLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-3 w-full" />
-                </CardContent>
-              </Card>
-            ))}
+            {Array.from({ length: 6 }, (_, i) => `skeleton-user-${i}`).map(
+              (key) => (
+                <Card key={key}>
+                  <CardHeader>
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-3 w-full" />
+                  </CardContent>
+                </Card>
+              )
+            )}
           </div>
         ) : usersError ? (
           <Card>
@@ -288,7 +295,7 @@ export default function UsersTeamsView() {
                     />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                      <User size={20} className="text-muted-foreground" />
+                      <UserIcon size={20} className="text-muted-foreground" />
                     </div>
                   )}
                 </CardContent>
@@ -358,7 +365,7 @@ export default function UsersTeamsView() {
                               />
                             ) : (
                               <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                                <User
+                                <UserIcon
                                   size={12}
                                   className="text-muted-foreground"
                                 />
@@ -468,7 +475,7 @@ export default function UsersTeamsView() {
                               />
                             ) : (
                               <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                                <User
+                                <UserIcon
                                   size={12}
                                   className="text-muted-foreground"
                                 />
@@ -512,17 +519,19 @@ export default function UsersTeamsView() {
 
         {groupsLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-3 w-full" />
-                </CardContent>
-              </Card>
-            ))}
+            {Array.from({ length: 6 }, (_, i) => `skeleton-group-${i}`).map(
+              (key) => (
+                <Card key={key}>
+                  <CardHeader>
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-3 w-full" />
+                  </CardContent>
+                </Card>
+              )
+            )}
           </div>
         ) : groupsError ? (
           <Card>

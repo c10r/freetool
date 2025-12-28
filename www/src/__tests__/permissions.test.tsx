@@ -190,7 +190,7 @@ describe("PermissionGate component", () => {
 
     renderWithProviders(
       <PermissionGate workspaceId="ws-1" permission="create_app">
-        <button>Create App</button>
+        <button type="button">Create App</button>
       </PermissionGate>
     );
 
@@ -235,7 +235,7 @@ describe("PermissionGate component", () => {
 
     renderWithProviders(
       <PermissionGate workspaceId="ws-1" permission="create_app">
-        <button>Create App</button>
+        <button type="button">Create App</button>
       </PermissionGate>
     );
 
@@ -284,7 +284,7 @@ describe("PermissionGate component", () => {
         permission="create_app"
         fallback={<div>No Permission</div>}
       >
-        <button>Create App</button>
+        <button type="button">Create App</button>
       </PermissionGate>
     );
 

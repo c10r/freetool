@@ -1,4 +1,5 @@
 import { CheckCircle, Shield, User, Users, XCircle } from "lucide-react";
+import { useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -6,19 +7,23 @@ import {
   useCurrentUser,
   useWorkspacePermissions,
 } from "@/hooks/usePermissions";
+import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { getPermissionLabel } from "@/lib/permissionMessages";
 import { cn } from "@/lib/utils";
 import type { Permission } from "@/types/permissions";
 
 export default function MyPermissions() {
   const { currentUser, isLoading: userLoading } = useCurrentUser();
+  const { workspaceId } = useParams<{ workspaceId?: string }>();
+  const { workspaces, isLoading: workspacesLoading } = useWorkspaces();
 
-  // Hardcode workspace ID for now (TODO: get from context or fetch all workspaces)
-  const workspaceId = "workspace-main";
+  // Use the first workspace if no workspaceId in URL
+  const activeWorkspaceId =
+    workspaceId || (workspaces.length > 0 ? workspaces[0].id : "");
   const { permissions, isLoading: permissionsLoading } =
-    useWorkspacePermissions(workspaceId);
+    useWorkspacePermissions(activeWorkspaceId);
 
-  const isLoading = userLoading || permissionsLoading;
+  const isLoading = userLoading || permissionsLoading || workspacesLoading;
 
   if (isLoading) {
     return (
@@ -158,7 +163,7 @@ export default function MyPermissions() {
         <CardHeader>
           <CardTitle>Workspace Permissions</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Workspace: {workspaceId}
+            Workspace: {activeWorkspaceId || "No workspace selected"}
           </p>
         </CardHeader>
         <CardContent>

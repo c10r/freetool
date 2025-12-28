@@ -62,9 +62,11 @@ export function PermissionSkeleton({
   if (type === "button") {
     return (
       <div className={cn("flex gap-2", className)}>
-        {Array.from({ length: count }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-24" />
-        ))}
+        {Array.from({ length: count }, (_, i) => `skeleton-button-${i}`).map(
+          (key) => (
+            <Skeleton key={key} className="h-10 w-24" />
+          )
+        )}
       </div>
     );
   }
@@ -72,9 +74,11 @@ export function PermissionSkeleton({
   if (type === "list") {
     return (
       <div className={cn("space-y-2", className)}>
-        {Array.from({ length: count }).map((_, i) => (
-          <Skeleton key={i} className="h-12 w-full" />
-        ))}
+        {Array.from({ length: count }, (_, i) => `skeleton-list-${i}`).map(
+          (key) => (
+            <Skeleton key={key} className="h-12 w-full" />
+          )
+        )}
       </div>
     );
   }
@@ -105,9 +109,11 @@ export function PermissionSkeleton({
         className
       )}
     >
-      {Array.from({ length: count }).map((_, i) => (
-        <Skeleton key={i} className="h-32 w-full" />
-      ))}
+      {Array.from({ length: count }, (_, i) => `skeleton-card-${i}`).map(
+        (key) => (
+          <Skeleton key={key} className="h-32 w-full" />
+        )
+      )}
     </div>
   );
 }

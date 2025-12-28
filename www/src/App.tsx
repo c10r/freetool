@@ -18,9 +18,16 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/workspaces" element={<Index />} />
-          <Route path="/workspaces/:nodeId" element={<Index />} />
-          <Route path="/workspaces/:nodeId/run" element={<RunApp />} />
-          <Route path="/resources" element={<Index />} />
+          <Route path="/workspaces/:workspaceId" element={<Index />} />
+          <Route path="/workspaces/:workspaceId/:nodeId" element={<Index />} />
+          <Route
+            path="/workspaces/:workspaceId/:nodeId/run"
+            element={<RunApp />}
+          />
+          <Route
+            path="/workspaces/:workspaceId/resources"
+            element={<Index />}
+          />
           <Route path="/users" element={<Index />} />
           <Route path="/audit" element={<Index />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

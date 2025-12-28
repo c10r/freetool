@@ -105,7 +105,11 @@ export function useResourceForm(
       setFieldState(field, { updating: true, saved: false, error: false });
 
       try {
-        let response;
+        let response:
+          | Awaited<ReturnType<typeof updateResourceName>>
+          | Awaited<ReturnType<typeof updateResourceDescription>>
+          | Awaited<ReturnType<typeof updateResourceBaseUrl>>
+          | undefined;
         if (field === "name") {
           response = await updateResourceName({
             id: resourceId,
@@ -204,7 +208,11 @@ export function useResourceForm(
       setFieldState(field, { updating: true, saved: false, error: false });
 
       try {
-        let response;
+        let response:
+          | Awaited<ReturnType<typeof updateResourceUrlParameters>>
+          | Awaited<ReturnType<typeof updateResourceHeaders>>
+          | Awaited<ReturnType<typeof updateResourceBody>>
+          | undefined;
         if (field === "urlParameters") {
           response = await updateResourceUrlParameters({
             id: resourceId,

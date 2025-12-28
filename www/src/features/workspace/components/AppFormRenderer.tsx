@@ -111,7 +111,7 @@ export default function AppFormRenderer({
     <form className="max-w-2xl space-y-4" onSubmit={handleSubmit(onSubmit)}>
       {app.fields.map((f) => (
         <div key={f.id} className="grid gap-2">
-          <label className="text-sm font-medium">
+          <label htmlFor={f.id} className="text-sm font-medium">
             {f.label}
             {f.required ? " *" : ""}
           </label>
@@ -138,11 +138,15 @@ function renderField(
   switch (type) {
     case "text":
       return (
-        <Input {...register(id, required ? { required: true } : undefined)} />
+        <Input
+          id={id}
+          {...register(id, required ? { required: true } : undefined)}
+        />
       );
     case "email":
       return (
         <Input
+          id={id}
           type="email"
           {...register(id, required ? { required: true } : undefined)}
         />
@@ -150,6 +154,7 @@ function renderField(
     case "date":
       return (
         <Input
+          id={id}
           type="date"
           {...register(id, required ? { required: true } : undefined)}
         />
@@ -157,6 +162,7 @@ function renderField(
     case "integer":
       return (
         <Input
+          id={id}
           type="number"
           step={1}
           {...register(id, {
@@ -173,6 +179,7 @@ function renderField(
           render={({ field }) => (
             <div className="flex items-center gap-2">
               <Switch
+                id={id}
                 checked={!!field.value}
                 onCheckedChange={field.onChange}
               />

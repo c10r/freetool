@@ -2,16 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   createApp as createAppAPI,
-  getAllFolders,
   getAppByFolder,
+  getFoldersByWorkspace,
 } from "@/api/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
+import { useCurrentWorkspace } from "@/hooks/useCurrentWorkspace";
 import {
   useHasAnyPermission,
+  useIsOrgAdmin,
   useWorkspacePermissions,
 } from "@/hooks/usePermissions";
+import { useWorkspaces } from "@/hooks/useWorkspaces";
 import NotFound from "@/pages/NotFound";
 import SidebarTree from "./SidebarTree";
 import type {
@@ -92,44 +95,50 @@ function transformFoldersToNodes(
 // Helper functions to convert between selectedId and URL paths
 function getPathFromSelectedId(
   selectedId: string,
-  nodes: Record<string, WorkspaceNode>
+  nodes: Record<string, WorkspaceNode>,
+  workspaceId?: string
 ): string {
-  if (selectedId === "resources") {
-    return "/resources";
-  }
   if (selectedId === "users-&-teams") {
     return "/users";
   }
   if (selectedId === "audit-log") {
     return "/audit";
   }
+  if (selectedId === "resources") {
+    // Resources are now workspace-specific
+    return workspaceId ? `/workspaces/${workspaceId}/resources` : "/workspaces";
+  }
   if (selectedId === "root") {
-    return "/workspaces";
+    return workspaceId ? `/workspaces/${workspaceId}` : "/workspaces";
   }
 
-  // For workspace nodes, use /workspaces/:nodeId
-  if (nodes[selectedId]) {
-    return `/workspaces/${selectedId}`;
+  // For workspace nodes, use /workspaces/:workspaceId/:nodeId
+  if (nodes[selectedId] && workspaceId) {
+    return `/workspaces/${workspaceId}/${selectedId}`;
   }
 
-  return "/workspaces";
+  return workspaceId ? `/workspaces/${workspaceId}` : "/workspaces";
 }
 
 function getSelectedIdFromPath(
   pathname: string,
+  workspaceId?: string,
   nodeId?: string,
   rootId = "root"
 ): string {
-  if (pathname === "/resources") {
-    return "resources";
-  }
   if (pathname === "/users") {
     return "users-&-teams";
   }
   if (pathname === "/audit") {
     return "audit-log";
   }
-  if (pathname === "/workspaces" && !nodeId) {
+  if (pathname === `/workspaces/${workspaceId}/resources`) {
+    return "resources";
+  }
+  if (pathname === "/workspaces" && !workspaceId) {
+    return rootId;
+  }
+  if (pathname === `/workspaces/${workspaceId}` && !nodeId) {
     return rootId;
   }
   if (pathname.startsWith("/workspaces/") && nodeId) {
@@ -144,20 +153,38 @@ function getSelectedIdFromPath(
 
 // Inner component that uses workspace permissions
 function WorkspaceContent() {
-  const { nodeId } = useParams<{ nodeId?: string }>();
+  const { workspaceId, nodeId } = useParams<{
+    workspaceId?: string;
+    nodeId?: string;
+  }>();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Hardcode workspace ID for now (TODO: get from route/context)
-  const workspaceId = "workspace-main";
+  // Fetch all workspaces
+  const { workspaces, isLoading: loadingWorkspaces } = useWorkspaces();
+
+  // Fetch current workspace
+  const { isLoading: loadingWorkspace } = useCurrentWorkspace(workspaceId);
+
+  // Redirect to first workspace if none selected
+  useEffect(() => {
+    const isStandaloneGlobalRoute =
+      location.pathname === "/users" || location.pathname === "/audit";
+
+    if (
+      !(loadingWorkspaces || workspaceId) &&
+      workspaces.length > 0 &&
+      !isStandaloneGlobalRoute
+    ) {
+      navigate(`/workspaces/${workspaces[0].id}`, { replace: true });
+    }
+  }, [workspaceId, workspaces, loadingWorkspaces, navigate, location.pathname]);
 
   // Fetch workspace permissions
-  const {
-    permissions,
-    isLoading: permissionsLoading,
-    error: permissionsError,
-  } = useWorkspacePermissions(workspaceId);
-  const hasAnyPermission = useHasAnyPermission(workspaceId);
+  const { isLoading: permissionsLoading, error: permissionsError } =
+    useWorkspacePermissions(workspaceId || "");
+  const hasAnyPermission = useHasAnyPermission(workspaceId || "");
+  const isOrgAdmin = useIsOrgAdmin();
 
   const [nodes, setNodes] = useState<Record<string, WorkspaceNode>>({});
   const [loading, setLoading] = useState(true);
@@ -168,10 +195,15 @@ function WorkspaceContent() {
   // Load workspace data
   useEffect(() => {
     const loadWorkspaceData = async () => {
+      if (!workspaceId) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
-        const response = await getAllFolders();
+        const response = await getFoldersByWorkspace(workspaceId);
 
         if (response.error) {
           setError("Failed to load workspace data");
@@ -191,10 +223,15 @@ function WorkspaceContent() {
     };
 
     loadWorkspaceData();
-  }, []);
+  }, [workspaceId]);
 
   // Get selectedId from current URL
-  const selectedId = getSelectedIdFromPath(location.pathname, nodeId, rootId);
+  const selectedId = getSelectedIdFromPath(
+    location.pathname,
+    workspaceId,
+    nodeId,
+    rootId
+  );
 
   // Load apps when navigating to a folder
   useEffect(() => {
@@ -268,7 +305,9 @@ function WorkspaceContent() {
           // Mark this folder as loaded
           setLoadedFolders((prev) => new Set([...prev, selectedId]));
         }
-      } catch (_error) {}
+      } catch (_error) {
+        // Silently ignore folder loading errors
+      }
     };
 
     loadAppsForFolder();
@@ -290,7 +329,7 @@ function WorkspaceContent() {
 
   // Function to update URL when selection changes
   const setSelectedId = (id: string) => {
-    const newPath = getPathFromSelectedId(id, nodes);
+    const newPath = getPathFromSelectedId(id, nodes, workspaceId);
     navigate(newPath);
   };
 
@@ -341,7 +380,10 @@ function WorkspaceContent() {
     }
 
     // Use the ID from the API response
-    const id = response.data?.id!;
+    const id = response.data?.id;
+    if (!id) {
+      throw new Error("Failed to get app ID from response");
+    }
 
     // Update local state only if API call succeeds
     setNodes((prev) => {
@@ -409,7 +451,7 @@ function WorkspaceContent() {
   );
 
   // Show loading state (combined workspace data + permissions)
-  if (loading || permissionsLoading) {
+  if (loading || permissionsLoading || loadingWorkspaces || loadingWorkspace) {
     return (
       <div className="h-screen flex overflow-hidden">
         <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
@@ -447,8 +489,26 @@ function WorkspaceContent() {
     );
   }
 
-  // Show no permissions state
-  if (!(permissionsLoading || hasAnyPermission)) {
+  // Check if we're on a global route that doesn't require workspaces
+  const isGlobalRoute = ["users-&-teams", "audit-log"].includes(selectedId);
+
+  const hasWorkspaces = workspaces.length > 0;
+
+  // Show empty state when no workspaces exist (before checking permissions)
+  // But only for workspace-specific routes, not global routes like /users or /audit
+  const showNoWorkspacesState = !(hasWorkspaces || isGlobalRoute);
+
+  // Only check for "No Access" when a workspace exists, we're on a workspace route,
+  // and the user isn't an org admin (org admins should always bypass this state).
+  const shouldCheckWorkspaceAccess =
+    hasWorkspaces && !!workspaceId && !isGlobalRoute;
+
+  const showNoAccessState =
+    shouldCheckWorkspaceAccess &&
+    !permissionsLoading &&
+    !hasAnyPermission &&
+    !isOrgAdmin;
+  if (showNoAccessState) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Card className="max-w-md">
@@ -484,6 +544,7 @@ function WorkspaceContent() {
             <div className="text-red-500 text-xl mb-2">⚠️</div>
             <p className="text-red-500 mb-4">{error}</p>
             <button
+              type="button"
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
             >
@@ -500,21 +561,30 @@ function WorkspaceContent() {
     return <NotFound />;
   }
 
-  // Show empty state
-  if (Object.keys(nodes).length === 0) {
+  // Show empty workspace state (workspace exists but has no folders/apps)
+  // Skip for global routes which don't need workspace content
+  if (
+    Object.keys(nodes).length === 0 &&
+    !isGlobalRoute &&
+    !showNoWorkspacesState
+  ) {
     return (
       <div className="h-screen flex overflow-hidden">
-        <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
-          <div className="text-center text-muted-foreground p-4">
-            <div className="text-2xl mb-2">📁</div>
-            No workspaces
-          </div>
-        </aside>
+        <SidebarTree
+          nodes={nodes}
+          rootId={rootId}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          workspaceId={workspaceId || ""}
+          workspaces={workspaces}
+        />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-muted-foreground">
             <div className="text-4xl mb-4">📁</div>
-            <h2 className="text-xl font-semibold mb-2">No workspaces found</h2>
-            <p>Create your first workspace to get started.</p>
+            <h2 className="text-xl font-semibold mb-2">
+              This workspace is empty
+            </h2>
+            <p>Create your first folder or app to get started.</p>
           </div>
         </div>
       </div>
@@ -528,7 +598,8 @@ function WorkspaceContent() {
         rootId={rootId}
         selectedId={selectedId}
         onSelect={setSelectedId}
-        workspaceId={workspaceId}
+        workspaceId={workspaceId || ""}
+        workspaces={workspaces}
       />
       <div className="flex-1 flex flex-col">
         <header className="flex items-center justify-between px-6 py-4 border-b bg-card/30">
@@ -541,6 +612,7 @@ function WorkspaceContent() {
               <span key={b.id} className="flex items-center gap-2">
                 {i > 0 && <span>/</span>}
                 <button
+                  type="button"
                   className="hover:text-foreground"
                   onClick={() => setSelectedId(b.id)}
                 >
@@ -550,20 +622,42 @@ function WorkspaceContent() {
             ))}
           </nav>
         </header>
-        <WorkspaceMain
-          nodes={nodes}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          updateNode={updateNode}
-          createFolder={addFolder}
-          createApp={addApp}
-          deleteNode={deleteNode}
-          endpoints={endpoints}
-          createEndpoint={createEndpoint}
-          updateEndpoint={updateEndpoint}
-          deleteEndpoint={deleteEndpoint}
-          workspaceId={workspaceId}
-        />
+        {showNoWorkspacesState ? (
+          <div className="flex-1 flex items-center justify-center">
+            <Card className="max-w-md">
+              <CardHeader>
+                <CardTitle>No Workspaces Available</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {isOrgAdmin
+                    ? "Get started by creating a team. Each team gets its own workspace."
+                    : "Contact your administrator to get access to a workspace."}
+                </p>
+                {isOrgAdmin ? (
+                  <Button onClick={() => setSelectedId("users-&-teams")}>
+                    Go to Users & Teams
+                  </Button>
+                ) : null}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <WorkspaceMain
+            nodes={nodes}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            updateNode={updateNode}
+            createFolder={addFolder}
+            createApp={addApp}
+            deleteNode={deleteNode}
+            endpoints={endpoints}
+            createEndpoint={createEndpoint}
+            updateEndpoint={updateEndpoint}
+            deleteEndpoint={deleteEndpoint}
+            workspaceId={workspaceId}
+          />
+        )}
       </div>
     </div>
   );

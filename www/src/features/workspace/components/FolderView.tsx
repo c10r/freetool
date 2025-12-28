@@ -139,7 +139,7 @@ export default function FolderView({
         // Add the new folder to the local state using the API response
         const newFolder = response.data;
         const folderNode = {
-          id: newFolder.id!,
+          id: newFolder.id ?? "",
           name: newFolder.name,
           type: "folder" as const,
           parentId: newFolderParentId,
@@ -152,7 +152,7 @@ export default function FolderView({
         if (parentNode && parentNode.type === "folder") {
           const updatedParent = {
             ...parentNode,
-            childrenIds: [...parentNode.childrenIds, newFolder.id!],
+            childrenIds: [...parentNode.childrenIds, newFolder.id ?? ""],
           };
           updateNode(updatedParent);
         }
@@ -708,12 +708,13 @@ export default function FolderView({
                       // Delete app using API
                       try {
                         const response = await deleteApp(child.id);
-                        if (response.error) {
-                        } else {
+                        if (!response.error) {
                           // Remove from local state on successful API call
                           deleteNode(child.id);
                         }
-                      } catch (_error) {}
+                      } catch {
+                        // Silently ignore delete errors
+                      }
                     }
                   }}
                   aria-label="Delete"

@@ -53,12 +53,10 @@ const initialFormData: ResourceFormData = {
 };
 
 interface ResourcesViewProps {
-  workspaceId?: string;
+  workspaceId: string;
 }
 
-export default function ResourcesView({
-  workspaceId = "workspace-main",
-}: ResourcesViewProps = {}) {
+export default function ResourcesView({ workspaceId }: ResourcesViewProps) {
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,17 +75,13 @@ export default function ResourcesView({
   const canEditResource = useHasPermission(workspaceId, "edit_resource");
 
   // Create form state
-  const {
-    formData: createFormData,
-    updateFormData: updateCreateFormData,
-    setFormData: setCreateFormData,
-  } = useResourceForm(initialFormData);
+  const { formData: createFormData, setFormData: setCreateFormData } =
+    useResourceForm(initialFormData);
 
   // Edit form state
   const {
     formData: editFormData,
     fieldStates: editFieldStates,
-    updateFormData: updateEditFormData,
     updateTextField,
     updateKeyValueField,
     resetFieldStates,
@@ -103,19 +97,21 @@ export default function ResourcesView({
     setEditingResource((prev) => (prev ? { ...prev, ...updatedData } : null));
   });
 
-  const fetchApps = async () => {
+  const fetchApps = useCallback(async () => {
     try {
       const response = await getApps();
       if (response.data?.items) {
         const mappedApps = response.data.items.map((item) => ({
-          id: item.id!,
+          id: item.id ?? "",
           name: item.name,
           resourceId: item.resourceId,
         }));
         setApps(mappedApps);
       }
-    } catch (_err) {}
-  };
+    } catch (_err) {
+      // Silently handle fetch errors - apps list is for validation purposes only
+    }
+  }, []);
 
   const fetchResources = useCallback(async () => {
     try {
@@ -125,7 +121,7 @@ export default function ResourcesView({
       if (response.data?.items) {
         const mappedItems = response.data?.items.map((item) => {
           return {
-            id: item.id!,
+            id: item.id ?? "",
             name: item.name,
             description: item.description,
             baseUrl: item.baseUrl,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getAuditEvents } from "@/api/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -108,7 +108,7 @@ export default function AuditLogView() {
   const [error, setError] = useState<string | null>(null);
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
 
-  const fetchAuditEvents = async () => {
+  const fetchAuditEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -137,7 +137,7 @@ export default function AuditLogView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAuditEvents();

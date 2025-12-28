@@ -49,10 +49,10 @@ export function useWorkspacePermissions(workspaceId: string) {
     queryKey: ["workspacePermissions", workspaceId],
     queryFn: async () => {
       const result = await getWorkspacePermissions(workspaceId);
-      if (result.error) {
-        throw new Error(result.error.message);
+      if (result.error || !result.data) {
+        throw new Error(result.error?.message || "Failed to fetch permissions");
       }
-      return result.data!;
+      return result.data;
     },
     staleTime: PERMISSION_CACHE_TTL,
     retry: 2,

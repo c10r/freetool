@@ -211,6 +211,31 @@ export const getAllFolders = (skip?: number, take?: number) => {
   return client.GET("/folder");
 };
 
+export const getFoldersByWorkspace = (
+  workspaceId: string,
+  skip?: number,
+  take?: number
+) => {
+  if (skip && take) {
+    return client.GET("/folder", {
+      params: {
+        query: {
+          workspaceId,
+          skip,
+          take,
+        },
+      },
+    });
+  }
+  return client.GET("/folder", {
+    params: {
+      query: {
+        workspaceId,
+      },
+    },
+  });
+};
+
 export const getFolderChildren = (id: string) => {
   return client.GET("/folder/{id}/children", {
     params: { path: { id } },
@@ -359,6 +384,37 @@ export const getGroupById = (groupId: string) => {
   return client.GET("/group/{id}", {
     params: {
       path: { id: groupId },
+    },
+  });
+};
+
+/**
+ * Workspaces
+ */
+
+export const getWorkspaces = (skip?: number, take?: number) => {
+  if (skip && take) {
+    return client.GET("/workspace", {
+      params: {
+        query: { skip, take },
+      },
+    });
+  }
+  return client.GET("/workspace");
+};
+
+export const getWorkspaceById = (id: string) => {
+  return client.GET("/workspace/{id}", {
+    params: {
+      path: { id },
+    },
+  });
+};
+
+export const getWorkspaceByGroupId = (groupId: string) => {
+  return client.GET("/workspace/group/{groupId}", {
+    params: {
+      path: { groupId },
     },
   });
 };

@@ -5,7 +5,7 @@ import type { KeyValuePair } from "../types";
 
 interface KeyValueListProps {
   items: KeyValuePair[] | undefined;
-  onChange: (items: KeyValuePair[]) => void;
+  onChange?: (items: KeyValuePair[]) => void;
   onBlur?: (items: KeyValuePair[]) => void;
   ariaLabel?: string;
   readOnly?: boolean;
@@ -22,15 +22,15 @@ export default function KeyValueList({
   readOnlyLabel,
   disabled = false,
 }: KeyValueListProps) {
-  const add = () => onChange([...(items || []), { key: "", value: "" }]);
-  const remove = (i: number) => onChange(items.filter((_, idx) => idx !== i));
+  const add = () => onChange?.([...(items || []), { key: "", value: "" }]);
+  const remove = (i: number) => onChange?.(items.filter((_, idx) => idx !== i));
   const update = (i: number, patch: Partial<KeyValuePair>) => {
     const next = items.map((kv, idx) => (idx === i ? { ...kv, ...patch } : kv));
-    onChange(next);
+    onChange?.(next);
   };
   if (readOnly) {
     return (
-      <div className="space-y-2" aria-label={ariaLabel}>
+      <section className="space-y-2" aria-label={ariaLabel}>
         {readOnlyLabel && (
           <div className="text-xs text-muted-foreground">{readOnlyLabel}</div>
         )}
@@ -40,7 +40,10 @@ export default function KeyValueList({
           </div>
         ) : (
           (items || []).map((kv, i) => (
-            <div key={i} className="grid grid-cols-12 gap-2 items-center">
+            <div
+              key={`${kv.key}-${i}`}
+              className="grid grid-cols-12 gap-2 items-center"
+            >
               <Input
                 value={kv.key}
                 className="col-span-5 bg-muted"
@@ -57,16 +60,16 @@ export default function KeyValueList({
             </div>
           ))
         )}
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="space-y-2" aria-label={ariaLabel}>
+    <section className="space-y-2" aria-label={ariaLabel}>
       {(items || []).map((kv, i) => (
-        <div
-          key={i}
-          className="grid grid-cols-12 gap-2 items-center"
+        <fieldset
+          key={`kv-${kv.key}-${i}`}
+          className="grid grid-cols-12 gap-2 items-center border-0 p-0 m-0 min-w-0"
           onBlur={(e) => {
             // Only trigger onBlur if focus is leaving this entire row
             // relatedTarget can be null when clicking outside the document
@@ -107,7 +110,7 @@ export default function KeyValueList({
           >
             <X size={16} />
           </Button>
-        </div>
+        </fieldset>
       ))}
       <Button
         type="button"
@@ -117,6 +120,6 @@ export default function KeyValueList({
       >
         <Plus className="mr-2 h-4 w-4" /> Add pair
       </Button>
-    </div>
+    </section>
   );
 }

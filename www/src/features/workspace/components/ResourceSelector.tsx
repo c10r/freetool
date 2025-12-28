@@ -46,7 +46,7 @@ export default function ResourceSelector({
           setResources([]);
         } else if (response.data?.items) {
           const resourceList = response.data.items.map((item) => ({
-            id: item.id!,
+            id: item.id ?? "",
             name: item.name,
             httpMethod: item.httpMethod,
           }));

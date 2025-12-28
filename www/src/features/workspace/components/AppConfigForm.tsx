@@ -124,7 +124,7 @@ export default function AppConfigForm({
           setResources([]);
         } else if (response.data?.items) {
           const resourceList = response.data.items.map((item) => ({
-            id: item.id!,
+            id: item.id ?? "",
             name: item.name,
             httpMethod: item.httpMethod,
             baseUrl: item.baseUrl,
@@ -260,7 +260,6 @@ export default function AppConfigForm({
           selectedResource.urlParameters.length > 0 && (
             <KeyValueList
               items={selectedResource.urlParameters}
-              onChange={() => {}} // No-op for read-only
               ariaLabel="Query parameters"
               readOnly
               readOnlyLabel="From selected resource (read-only):"
@@ -294,7 +293,6 @@ export default function AppConfigForm({
         {selectedResource?.headers && selectedResource.headers.length > 0 && (
           <KeyValueList
             items={selectedResource.headers}
-            onChange={() => {}} // No-op for read-only
             ariaLabel="Headers"
             readOnly
             readOnlyLabel="From selected resource (read-only):"
@@ -328,7 +326,6 @@ export default function AppConfigForm({
         {selectedResource?.body && selectedResource.body.length > 0 && (
           <KeyValueList
             items={selectedResource.body}
-            onChange={() => {}} // No-op for read-only
             ariaLabel="JSON body"
             readOnly
             readOnlyLabel="From selected resource (read-only):"

@@ -106,7 +106,11 @@ export function useAppForm(
         // Create the updated data with the new field value
         const updatedData = { ...formData, [field]: filteredValue };
 
-        let response;
+        let response:
+          | Awaited<ReturnType<typeof updateAppBody>>
+          | Awaited<ReturnType<typeof updateAppHeaders>>
+          | Awaited<ReturnType<typeof updateAppQueryParams>>
+          | undefined;
         if (field === "urlParameters") {
           response = await updateAppQueryParams(appId, filteredValue);
         } else if (field === "headers") {
