@@ -9,6 +9,7 @@
     <Compile Include="DbContextConfigurationTests.fs" />
     <Compile Include="OpenFgaServiceTests.fs" />
     <Compile Include="GroupControllerTests.fs" />
+    <Compile Include="GroupHandlerIntegrationTests.fs" />
     <Compile Include="UserControllerTests.fs" />
     <Compile Include="FolderControllerTests.fs" />
     <Compile Include="../../Freetool.Api/test/AppControllerAuthTests.fs" />

@@ -37,8 +37,7 @@ type WorkspaceController
             let userIdStr = $"user:{userId.Value}"
 
             // Only organization admins can create workspaces
-            // We use a default organization ID "acme" - in a real app this would come from config or user context
-            let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:acme")
+            let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:default")
 
             if not isOrgAdmin then
                 return
@@ -155,7 +154,7 @@ type WorkspaceController
                     let workspaceIdStr = workspaceData.Id.Value.ToString()
 
                     // Check if user is org admin
-                    let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:acme")
+                    let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:default")
 
                     // Get workspace's team/group
                     let groupId = workspaceData.GroupId
@@ -237,7 +236,7 @@ type WorkspaceController
             let userIdStr = $"user:{userId.Value}"
 
             // Only organization admins can delete workspaces
-            let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:acme")
+            let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:default")
 
             if not isOrgAdmin then
                 return
@@ -269,7 +268,7 @@ type WorkspaceController
             let userIdStr = $"user:{userId.Value}"
 
             // Only organization admins can change workspace group assignments
-            let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:acme")
+            let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:default")
 
             if not isOrgAdmin then
                 return

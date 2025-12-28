@@ -31,7 +31,7 @@ let ``CreateWorkspace - Organization admin can create workspaces`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let orgId = "acme"
+        let orgId = "default"
 
         // Make user an organization admin
         do!
@@ -62,7 +62,7 @@ let ``CreateWorkspace - Non-admin cannot create workspaces`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let orgId = "acme"
+        let orgId = "default"
 
         // User is NOT an organization admin
 
@@ -87,7 +87,7 @@ let ``CreateWorkspace - Team admin cannot create workspaces`` () : Task =
 
         let userId = Guid.NewGuid().ToString()
         let teamId = Guid.NewGuid().ToString()
-        let orgId = "acme"
+        let orgId = "default"
 
         // Make user a team admin (NOT an org admin)
         do!
@@ -118,7 +118,7 @@ let ``DeleteWorkspace - Organization admin can delete workspaces`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let orgId = "acme"
+        let orgId = "default"
         let workspaceId = Guid.NewGuid().ToString()
 
         // Make user an organization admin
@@ -150,7 +150,7 @@ let ``DeleteWorkspace - Non-admin cannot delete workspaces`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let orgId = "acme"
+        let orgId = "default"
 
         // User is NOT an organization admin
 
@@ -175,7 +175,7 @@ let ``DeleteWorkspace - Team admin cannot delete workspaces`` () : Task =
 
         let userId = Guid.NewGuid().ToString()
         let teamId = Guid.NewGuid().ToString()
-        let orgId = "acme"
+        let orgId = "default"
 
         // Make user a team admin (NOT an org admin)
         do!
@@ -205,7 +205,7 @@ let ``UpdateWorkspaceGroup - Organization admin can update workspace group`` () 
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let orgId = "acme"
+        let orgId = "default"
 
         // Make user an organization admin
         do!
@@ -235,7 +235,7 @@ let ``UpdateWorkspaceGroup - Non-admin cannot update workspace group`` () : Task
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let orgId = "acme"
+        let orgId = "default"
 
         // User is NOT an organization admin
 
@@ -260,7 +260,7 @@ let ``UpdateWorkspaceGroup - Team admin cannot update workspace group`` () : Tas
 
         let userId = Guid.NewGuid().ToString()
         let teamId = Guid.NewGuid().ToString()
-        let orgId = "acme"
+        let orgId = "default"
 
         // Make user a team admin (NOT an org admin)
         do!
@@ -291,7 +291,7 @@ let ``Workspace permissions hierarchy - Global admin has precedence over team ad
 
         let userId = Guid.NewGuid().ToString()
         let teamId = Guid.NewGuid().ToString()
-        let orgId = "acme"
+        let orgId = "default"
         let workspaceId = Guid.NewGuid().ToString()
 
         // Make user BOTH a team admin AND an org admin
@@ -345,7 +345,7 @@ let ``Team member without explicit permissions cannot perform workspace operatio
 
         let userId = Guid.NewGuid().ToString()
         let teamId = Guid.NewGuid().ToString()
-        let orgId = "acme"
+        let orgId = "default"
         let workspaceId = Guid.NewGuid().ToString()
 
         // Make user a team member (NOT admin)

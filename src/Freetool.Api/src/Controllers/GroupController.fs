@@ -231,7 +231,7 @@ type GroupController
             let userId = this.CurrentUserId
             let userIdStr = userId.Value.ToString()
 
-            return authService.CheckPermissionAsync (User userIdStr) OrganizationAdmin (OrganizationObject "default")
+            return! authService.CheckPermissionAsync (User userIdStr) OrganizationAdmin (OrganizationObject "default")
         }
 
     /// Checks if the current user is either an org admin OR a team admin for the specified group

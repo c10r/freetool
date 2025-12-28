@@ -254,10 +254,10 @@ let ``Global admin has all workspace permissions`` () : Task =
         // Grant global admins all permissions on the workspace
         do!
             service.CreateRelationshipsAsync(
-                [ { Subject = UserSetFromRelation("organization", "acme", "admin")
+                [ { Subject = UserSetFromRelation("organization", "default", "admin")
                     Relation = ResourceCreate
                     Object = WorkspaceObject "sales-dashboard" }
-                  { Subject = UserSetFromRelation("organization", "acme", "admin")
+                  { Subject = UserSetFromRelation("organization", "default", "admin")
                     Relation = AppRun
                     Object = WorkspaceObject "sales-dashboard" } ]
             )
@@ -328,7 +328,7 @@ let ``Only organization admin can create workspaces`` () : Task =
         // Associate workspace with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { Subject = Organization "acme"
+                [ { Subject = Organization "default"
                     Relation = TeamOrganization
                     Object = WorkspaceObject "new-workspace" } ]
             )
@@ -359,7 +359,7 @@ let ``Team admin cannot create workspaces`` () : Task =
         // Associate workspace with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { Subject = Organization "acme"
+                [ { Subject = Organization "default"
                     Relation = TeamOrganization
                     Object = WorkspaceObject "new-workspace" } ]
             )
@@ -390,7 +390,7 @@ let ``Only organization admin can rename teams`` () : Task =
         // Associate team with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { Subject = Organization "acme"
+                [ { Subject = Organization "default"
                     Relation = TeamOrganization
                     Object = TeamObject "engineering" } ]
             )
@@ -421,7 +421,7 @@ let ``Team admin cannot rename teams`` () : Task =
         // Associate team with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { Subject = Organization "acme"
+                [ { Subject = Organization "default"
                     Relation = TeamOrganization
                     Object = TeamObject "engineering" } ]
             )
@@ -452,7 +452,7 @@ let ``Only organization admin can delete teams`` () : Task =
         // Associate team with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { Subject = Organization "acme"
+                [ { Subject = Organization "default"
                     Relation = TeamOrganization
                     Object = TeamObject "engineering" } ]
             )
@@ -483,7 +483,7 @@ let ``Team admin cannot delete teams`` () : Task =
         // Associate team with organization
         do!
             service.CreateRelationshipsAsync(
-                [ { Subject = Organization "acme"
+                [ { Subject = Organization "default"
                     Relation = TeamOrganization
                     Object = TeamObject "engineering" } ]
             )
@@ -559,13 +559,13 @@ let ``Global admin has all folder permissions`` () : Task =
         // Grant global admins folder permissions on the workspace
         do!
             service.CreateRelationshipsAsync(
-                [ { Subject = UserSetFromRelation("organization", "acme", "admin")
+                [ { Subject = UserSetFromRelation("organization", "default", "admin")
                     Relation = FolderCreate
                     Object = WorkspaceObject "main" }
-                  { Subject = UserSetFromRelation("organization", "acme", "admin")
+                  { Subject = UserSetFromRelation("organization", "default", "admin")
                     Relation = FolderEdit
                     Object = WorkspaceObject "main" }
-                  { Subject = UserSetFromRelation("organization", "acme", "admin")
+                  { Subject = UserSetFromRelation("organization", "default", "admin")
                     Relation = FolderDelete
                     Object = WorkspaceObject "main" } ]
             )

@@ -14,6 +14,7 @@ module GroupHandler =
     let handleCommand
         (groupRepository: IGroupRepository)
         (userRepository: IUserRepository)
+        (workspaceRepository: IWorkspaceRepository)
         (command: GroupCommand)
         : Task<Result<GroupCommandResult, DomainError>> =
         task {
@@ -54,7 +55,17 @@ module GroupHandler =
                             // Save group and events atomically
                             match! groupRepository.AddAsync eventAwareGroup with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(GroupResult(eventAwareGroup.State))
+                            | Ok() ->
+                                // Create a workspace for the newly created group
+                                let groupId = Group.getId eventAwareGroup
+
+                                match Workspace.create actorUserId groupId with
+                                | Error error -> return Error error
+                                | Ok eventAwareWorkspace ->
+                                    // Save workspace and events atomically
+                                    match! workspaceRepository.AddAsync eventAwareWorkspace with
+                                    | Error error -> return Error error
+                                    | Ok() -> return Ok(GroupResult(eventAwareGroup.State))
                     | invalidIds ->
                         let invalidIdStrings = invalidIds |> List.map (fun id -> id.Value.ToString())
 
@@ -221,7 +232,8 @@ module GroupHandler =
                     return Ok(GroupsResult result)
         }
 
-type GroupHandler(groupRepository: IGroupRepository, userRepository: IUserRepository) =
+type GroupHandler
+    (groupRepository: IGroupRepository, userRepository: IUserRepository, workspaceRepository: IWorkspaceRepository) =
     interface IMultiRepositoryCommandHandler<GroupCommand, GroupCommandResult> with
         member this.HandleCommand command =
-            GroupHandler.handleCommand groupRepository userRepository command
+            GroupHandler.handleCommand groupRepository userRepository workspaceRepository command
