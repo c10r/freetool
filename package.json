@@ -1,0 +1,20 @@
+{
+  "name": "freetool-monorepo",
+  "private": true,
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "9.1.7",
+    "lint-staged": "16.2.7"
+  },
+  "lint-staged": {
+    "*.{fs,fsx,fsi}": [
+      "dotnet fantomas"
+    ],
+    "www/**/*.{ts,tsx}": [
+      "bash -c 'cd www && npx eslint --max-warnings 0 --fix \"${@#www/}\"' _",
+      "bash -c 'cd www && npx prettier --write \"${@#www/}\"' _"
+    ]
+  }
+}

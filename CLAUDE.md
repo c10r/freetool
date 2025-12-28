@@ -53,6 +53,15 @@ npm run lint
 
 # Format
 npm run format
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with UI
+npm run test:ui
 ```
 
 ### Docker
@@ -316,6 +325,7 @@ The `www/` directory contains a React/TypeScript SPA:
 
 ### Key Technologies
 - **Vite**: Build tool and dev server
+- **Vitest**: Fast, Vite-native test framework with React Testing Library
 - **React Router**: Client-side routing
 - **shadcn/ui**: UI component library (Radix UI + Tailwind)
 - **TanStack Query**: Server state management
@@ -340,7 +350,29 @@ The frontend enforces strict ESLint rules to maintain code quality and prevent b
 
 ### Pre-commit Hooks
 
-Pre-commit hooks automatically run `npm run lint` - commits will be rejected if linting fails. Fix all warnings before attempting to commit.
+**Automated Quality Checks**: Pre-commit hooks automatically run on staged files to ensure code quality:
+
+**For F# files** (*.fs, *.fsx, *.fsi):
+- `dotnet fantomas` - Format code with Fantomas
+- `dotnet test Freetool.sln` - Run all backend tests
+
+**For TypeScript files** (*.ts, *.tsx):
+- `eslint --fix` - Lint and auto-fix code
+- `prettier --write` - Format code
+- `npm test` - Run frontend tests (Vitest)
+
+**How it works:**
+- Hooks run conditionally based on which files are staged
+- Only relevant checks run (e.g., F# changes don't trigger frontend tests)
+- All checks must pass before commit succeeds
+- Commits will be rejected if linting, formatting, or tests fail
+
+**Bypass hooks** (use sparingly):
+```bash
+git commit --no-verify
+```
+
+**Note:** Fix all warnings before attempting to commit. The hooks enforce zero-warning policy.
 
 ### Core ESLint Rules
 
