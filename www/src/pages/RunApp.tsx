@@ -15,7 +15,7 @@ import {
   ChevronRight,
   AlertCircle,
 } from "lucide-react";
-import { getAppById, runApp } from "@/api/api";
+import { getAppById, getFolderById, runApp } from "@/api/api";
 import { PermissionButton } from "@/components/PermissionButton";
 import { useHasPermission } from "@/hooks/usePermissions";
 
@@ -48,9 +48,9 @@ const RunApp = () => {
   const [error, setError] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [isRequestCollapsed, setIsRequestCollapsed] = useState(true);
+  const [workspaceId, setWorkspaceId] = useState("");
+  const [workspaceLoading, setWorkspaceLoading] = useState(false);
 
-  // Hardcode workspace ID for now (TODO: get from app data or route)
-  const workspaceId = "workspace-main";
   const canRunApp = useHasPermission(workspaceId, "run_app");
 
   // Load app details
@@ -78,6 +78,46 @@ const RunApp = () => {
 
     loadApp();
   }, [nodeId]);
+
+  useEffect(() => {
+    const loadWorkspace = async () => {
+      if (!app?.folderId) {
+        setError("This app is not assigned to a folder");
+        return;
+      }
+
+      setWorkspaceLoading(true);
+      setWorkspaceId("");
+
+      try {
+        const folderResponse = await getFolderById(app.folderId);
+
+        if (folderResponse.error) {
+          setError("Failed to load workspace information");
+          return;
+        }
+
+        const folderWorkspaceId = (
+          folderResponse.data as { workspaceId?: string | null } | undefined
+        )?.workspaceId;
+
+        if (!folderWorkspaceId) {
+          setError("Workspace information missing for this folder");
+          return;
+        }
+
+        setWorkspaceId(folderWorkspaceId);
+      } catch (err) {
+        setError("Failed to load workspace information");
+      } finally {
+        setWorkspaceLoading(false);
+      }
+    };
+
+    if (app) {
+      loadWorkspace();
+    }
+  }, [app]);
 
   // Auto-run the app when component loads
   useEffect(() => {
@@ -140,6 +180,8 @@ const RunApp = () => {
     );
   }
 
+  const workspaceReady = !!workspaceId && !workspaceLoading;
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card/30">
@@ -159,33 +201,40 @@ const RunApp = () => {
                 </p>
               </div>
             </div>
-            <PermissionButton
-              workspaceId={workspaceId}
-              permission="run_app"
-              tooltipMessage="You don't have permission to run this app. Contact your team admin."
-              onClick={handleRunApp}
-              disabled={running}
-              variant={running ? "secondary" : "default"}
-            >
-              {running ? (
-                <>
-                  <Loader className="mr-2 h-4 w-4 animate-spin" />
-                  Running...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-4 w-4" />
-                  Run Again
-                </>
-              )}
-            </PermissionButton>
+            {workspaceReady ? (
+              <PermissionButton
+                workspaceId={workspaceId}
+                permission="run_app"
+                tooltipMessage="You don't have permission to run this app. Contact your team admin."
+                onClick={handleRunApp}
+                disabled={running}
+                variant={running ? "secondary" : "default"}
+              >
+                {running ? (
+                  <>
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Running...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-4 w-4" />
+                    Run Again
+                  </>
+                )}
+              </PermissionButton>
+            ) : (
+              <Button variant="outline" disabled>
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                Checking access...
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
       <main className="container mx-auto p-6 space-y-6">
         {/* Permission Warning */}
-        {!canRunApp && (
+        {workspaceReady && !canRunApp && (
           <Card className="border-yellow-200 bg-yellow-50">
             <CardContent className="py-4">
               <div className="flex items-start gap-3">

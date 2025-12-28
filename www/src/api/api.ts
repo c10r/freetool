@@ -217,6 +217,14 @@ export const getFolderChildren = (id: string) => {
   });
 };
 
+export const getFolderById = (id: string) => {
+  return client.GET("/folder/{id}", {
+    params: {
+      path: { id },
+    },
+  });
+};
+
 export const getRootFolder = (skip?: number, take?: number) => {
   if (skip && take) {
     return client.GET("/folder/root", {
