@@ -151,6 +151,7 @@ let ``ResourceData with complex JSON properties can be persisted and retrieved``
 
     let resourceData: ResourceData =
         { Id = ResourceId.NewId()
+          WorkspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
           Name = resourceName
           Description = resourceDescription
           HttpMethod = HttpMethod.Get

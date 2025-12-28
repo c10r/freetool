@@ -12,30 +12,54 @@ open Freetool.Application.Mappers
 
 [<ApiController>]
 [<Route("workspace")>]
-type WorkspaceController(commandHandler: IMultiRepositoryCommandHandler<WorkspaceCommand, WorkspaceCommandResult>) =
+type WorkspaceController
+    (
+        commandHandler: IMultiRepositoryCommandHandler<WorkspaceCommand, WorkspaceCommandResult>,
+        authService: IAuthorizationService
+    ) =
     inherit AuthenticatedControllerBase()
+
+    /// Helper to check if a user is an organization admin
+    member private _.IsOrganizationAdmin(userId: string, orgId: string) : Task<bool> =
+        authService.CheckPermissionAsync userId "admin" orgId
 
     [<HttpPost>]
     [<ProducesResponseType(typeof<WorkspaceData>, StatusCodes.Status201Created)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.CreateWorkspace([<FromBody>] createDto: CreateWorkspaceDto) : Task<IActionResult> =
         task {
             let userId = this.CurrentUserId
-            let unvalidatedWorkspace = WorkspaceMapper.fromCreateDto createDto
+            let userIdStr = $"user:{userId.Value}"
 
-            match Workspace.validate unvalidatedWorkspace with
-            | Error domainError -> return this.HandleDomainError(domainError)
-            | Ok validatedWorkspace ->
-                let! result = commandHandler.HandleCommand(CreateWorkspace(userId, validatedWorkspace))
+            // Only organization admins can create workspaces
+            // We use a default organization ID "acme" - in a real app this would come from config or user context
+            let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:acme")
 
+            if not isOrgAdmin then
                 return
-                    match result with
-                    | Ok(WorkspaceResult workspaceDto) ->
-                        this.CreatedAtAction(nameof this.GetWorkspaceById, {| id = workspaceDto.Id |}, workspaceDto)
-                        :> IActionResult
-                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                    | Error error -> this.HandleDomainError(error)
+                    this.StatusCode(
+                        403,
+                        {| error = "Forbidden"
+                           message = "Only organization administrators can create workspaces" |}
+                    )
+                    :> IActionResult
+            else
+                let unvalidatedWorkspace = WorkspaceMapper.fromCreateDto createDto
+
+                match Workspace.validate unvalidatedWorkspace with
+                | Error domainError -> return this.HandleDomainError(domainError)
+                | Ok validatedWorkspace ->
+                    let! result = commandHandler.HandleCommand(CreateWorkspace(userId, validatedWorkspace))
+
+                    return
+                        match result with
+                        | Ok(WorkspaceResult workspaceDto) ->
+                            this.CreatedAtAction(nameof this.GetWorkspaceById, {| id = workspaceDto.Id |}, workspaceDto)
+                            :> IActionResult
+                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                        | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpGet("{id}")>]
@@ -95,35 +119,65 @@ type WorkspaceController(commandHandler: IMultiRepositoryCommandHandler<Workspac
     [<HttpDelete("{id}")>]
     [<ProducesResponseType(StatusCodes.Status204NoContent)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.DeleteWorkspace(id: string) : Task<IActionResult> =
         task {
             let userId = this.CurrentUserId
-            let! result = commandHandler.HandleCommand(DeleteWorkspace(userId, id))
+            let userIdStr = $"user:{userId.Value}"
 
-            return
-                match result with
-                | Ok(WorkspaceCommandResult.UnitResult()) -> this.NoContent() :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+            // Only organization admins can delete workspaces
+            let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:acme")
+
+            if not isOrgAdmin then
+                return
+                    this.StatusCode(
+                        403,
+                        {| error = "Forbidden"
+                           message = "Only organization administrators can delete workspaces" |}
+                    )
+                    :> IActionResult
+            else
+                let! result = commandHandler.HandleCommand(DeleteWorkspace(userId, id))
+
+                return
+                    match result with
+                    | Ok(WorkspaceCommandResult.UnitResult()) -> this.NoContent() :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpPut("{id}/group")>]
     [<ProducesResponseType(typeof<WorkspaceData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.UpdateWorkspaceGroup(id: string, [<FromBody>] dto: UpdateWorkspaceGroupDto) : Task<IActionResult> =
         task {
             let userId = this.CurrentUserId
-            let! result = commandHandler.HandleCommand(UpdateWorkspaceGroup(userId, id, dto))
+            let userIdStr = $"user:{userId.Value}"
 
-            return
-                match result with
-                | Ok(WorkspaceResult workspaceDto) -> this.Ok(workspaceDto) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+            // Only organization admins can change workspace group assignments
+            let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:acme")
+
+            if not isOrgAdmin then
+                return
+                    this.StatusCode(
+                        403,
+                        {| error = "Forbidden"
+                           message = "Only organization administrators can change workspace group assignments" |}
+                    )
+                    :> IActionResult
+            else
+                let! result = commandHandler.HandleCommand(UpdateWorkspaceGroup(userId, id, dto))
+
+                return
+                    match result with
+                    | Ok(WorkspaceResult workspaceDto) -> this.Ok(workspaceDto) :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError(error)
         }
 
     member private this.HandleDomainError(error: DomainError) : IActionResult =

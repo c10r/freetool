@@ -18,6 +18,7 @@ let unwrapResult result =
 let createTestAppWithResource () =
     let folderId = FolderId.NewId()
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let inputs =
         [ { Title = "userId"
@@ -31,6 +32,7 @@ let createTestAppWithResource () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users/{userId}"
@@ -271,6 +273,7 @@ let ``Run executable request composition should substitute input values`` () =
 let ``Run creation should validate Email input type with valid email`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -281,6 +284,7 @@ let ``Run creation should validate Email input type with valid email`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -310,6 +314,7 @@ let ``Run creation should validate Email input type with valid email`` () =
 let ``Run creation should reject Email input type with invalid email`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -320,6 +325,7 @@ let ``Run creation should reject Email input type with invalid email`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -349,6 +355,7 @@ let ``Run creation should reject Email input type with invalid email`` () =
 let ``Run creation should validate Integer input type with valid integer`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -359,6 +366,7 @@ let ``Run creation should validate Integer input type with valid integer`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -386,6 +394,7 @@ let ``Run creation should validate Integer input type with valid integer`` () =
 let ``Run creation should reject Integer input type with invalid integer`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -396,6 +405,7 @@ let ``Run creation should reject Integer input type with invalid integer`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -427,6 +437,7 @@ let ``Run creation should reject Integer input type with invalid integer`` () =
 let ``Run creation should validate Boolean input type with valid boolean`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -437,6 +448,7 @@ let ``Run creation should validate Boolean input type with valid boolean`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -464,6 +476,7 @@ let ``Run creation should validate Boolean input type with valid boolean`` () =
 let ``Run creation should reject Boolean input type with invalid boolean`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -474,6 +487,7 @@ let ``Run creation should reject Boolean input type with invalid boolean`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -503,6 +517,7 @@ let ``Run creation should reject Boolean input type with invalid boolean`` () =
 let ``Run creation should validate Date input type with valid date`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -513,6 +528,7 @@ let ``Run creation should validate Date input type with valid date`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -542,6 +558,7 @@ let ``Run creation should validate Date input type with valid date`` () =
 let ``Run creation should reject Date input type with invalid date`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -552,6 +569,7 @@ let ``Run creation should reject Date input type with invalid date`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -583,6 +601,7 @@ let ``Run creation should reject Date input type with invalid date`` () =
 let ``Run creation should validate Text input type within length limit`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -593,6 +612,7 @@ let ``Run creation should validate Text input type within length limit`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -622,6 +642,7 @@ let ``Run creation should validate Text input type within length limit`` () =
 let ``Run creation should reject Text input type exceeding length limit`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -632,6 +653,7 @@ let ``Run creation should reject Text input type exceeding length limit`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -664,6 +686,7 @@ let ``Run creation should reject Text input type exceeding length limit`` () =
 let ``Run creation should validate MultiText input type with valid choice`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -674,6 +697,7 @@ let ``Run creation should validate MultiText input type with valid choice`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"
@@ -701,6 +725,7 @@ let ``Run creation should validate MultiText input type with valid choice`` () =
 let ``Run creation should reject MultiText input type with invalid choice`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
     let folderId = FolderId.NewId()
 
     let inputs =
@@ -711,6 +736,7 @@ let ``Run creation should reject MultiText input type with invalid choice`` () =
     let resource =
         Resource.create
             actorUserId
+            workspaceId
             "Test API"
             "Test endpoint"
             "https://api.test.com/users"

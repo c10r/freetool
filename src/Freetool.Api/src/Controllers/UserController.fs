@@ -11,8 +11,33 @@ open Freetool.Application.Interfaces
 
 [<ApiController>]
 [<Route("user")>]
-type UserController(userRepository: IUserRepository, commandHandler: ICommandHandler) =
+type UserController
+    (userRepository: IUserRepository, commandHandler: ICommandHandler, authService: IAuthorizationService) =
     inherit AuthenticatedControllerBase()
+
+    // Default organization for authorization checks
+    let defaultOrganization = "organization:default"
+
+    // Helper to check if current user is an organization admin
+    member private this.IsOrganizationAdmin() : Task<bool> =
+        task {
+            let userId = this.CurrentUserId
+            let userKey = $"user:{userId.Value}"
+            return! authService.CheckPermissionAsync userKey "admin" defaultOrganization
+        }
+
+    // Helper to check if current user can modify a target user
+    member private this.CanModifyUser(targetUserId: string) : Task<bool> =
+        task {
+            let currentUserId = this.CurrentUserId
+
+            // Users can always modify themselves
+            if currentUserId.Value.ToString() = targetUserId then
+                return true
+            else
+                // Otherwise, check if they're an org admin
+                return! this.IsOrganizationAdmin()
+        }
 
     [<HttpGet("{id}")>]
     [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
@@ -71,89 +96,154 @@ type UserController(userRepository: IUserRepository, commandHandler: ICommandHan
     [<HttpPut("{id}/name")>]
     [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.UpdateUserName(id: string, [<FromBody>] updateDto: UpdateUserNameDto) : Task<IActionResult> =
         task {
-            let userId = this.CurrentUserId
-            let! result = commandHandler.HandleCommand userRepository (UpdateUserName(userId, id, updateDto))
+            // Check authorization
+            let! canModify = this.CanModifyUser(id)
 
-            return
-                match result with
-                | Ok(UserResult userDto) -> this.Ok(userDto) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+            if not canModify then
+                return
+                    this.StatusCode(
+                        403,
+                        {| error = "Forbidden"
+                           message = "You do not have permission to modify this user" |}
+                    )
+                    :> IActionResult
+            else
+                let userId = this.CurrentUserId
+                let! result = commandHandler.HandleCommand userRepository (UpdateUserName(userId, id, updateDto))
+
+                return
+                    match result with
+                    | Ok(UserResult userDto) -> this.Ok(userDto) :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpPut("{id}/email")>]
     [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.UpdateUserEmail(id: string, [<FromBody>] updateDto: UpdateUserEmailDto) : Task<IActionResult> =
         task {
-            let userId = this.CurrentUserId
-            let! result = commandHandler.HandleCommand userRepository (UpdateUserEmail(userId, id, updateDto))
+            // Check authorization
+            let! canModify = this.CanModifyUser(id)
 
-            return
-                match result with
-                | Ok(UserResult userDto) -> this.Ok userDto :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError error
+            if not canModify then
+                return
+                    this.StatusCode(
+                        403,
+                        {| error = "Forbidden"
+                           message = "You do not have permission to modify this user" |}
+                    )
+                    :> IActionResult
+            else
+                let userId = this.CurrentUserId
+                let! result = commandHandler.HandleCommand userRepository (UpdateUserEmail(userId, id, updateDto))
+
+                return
+                    match result with
+                    | Ok(UserResult userDto) -> this.Ok userDto :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError error
         }
 
     [<HttpPut("{id}/profile-picture")>]
     [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.SetProfilePicture(id: string, [<FromBody>] setDto: SetProfilePictureDto) : Task<IActionResult> =
         task {
-            let userId = this.CurrentUserId
+            // Check authorization
+            let! canModify = this.CanModifyUser(id)
 
-            let! result = commandHandler.HandleCommand userRepository (SetProfilePicture(userId, id, setDto))
+            if not canModify then
+                return
+                    this.StatusCode(
+                        403,
+                        {| error = "Forbidden"
+                           message = "You do not have permission to modify this user" |}
+                    )
+                    :> IActionResult
+            else
+                let userId = this.CurrentUserId
 
-            return
-                match result with
-                | Ok(UserResult userDto) -> this.Ok userDto :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError error
+                let! result = commandHandler.HandleCommand userRepository (SetProfilePicture(userId, id, setDto))
+
+                return
+                    match result with
+                    | Ok(UserResult userDto) -> this.Ok userDto :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError error
         }
 
     [<HttpDelete("{id}/profile-picture")>]
     [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.RemoveProfilePicture(id: string) : Task<IActionResult> =
         task {
-            let userId = this.CurrentUserId
+            // Check authorization
+            let! canModify = this.CanModifyUser(id)
 
-            let! result = commandHandler.HandleCommand userRepository (RemoveProfilePicture(userId, id))
+            if not canModify then
+                return
+                    this.StatusCode(
+                        403,
+                        {| error = "Forbidden"
+                           message = "You do not have permission to modify this user" |}
+                    )
+                    :> IActionResult
+            else
+                let userId = this.CurrentUserId
 
-            return
-                match result with
-                | Ok(UserResult userDto) -> this.Ok userDto :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError error
+                let! result = commandHandler.HandleCommand userRepository (RemoveProfilePicture(userId, id))
+
+                return
+                    match result with
+                    | Ok(UserResult userDto) -> this.Ok userDto :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError error
         }
 
     [<HttpDelete("{id}")>]
     [<ProducesResponseType(StatusCodes.Status204NoContent)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.DeleteUser(id: string) : Task<IActionResult> =
         task {
-            let userId = this.CurrentUserId
+            // Only organization admins can delete users
+            let! isAdmin = this.IsOrganizationAdmin()
 
-            let! result = commandHandler.HandleCommand userRepository (DeleteUser(userId, id))
+            if not isAdmin then
+                return
+                    this.StatusCode(
+                        403,
+                        {| error = "Forbidden"
+                           message = "Only organization admins can delete users" |}
+                    )
+                    :> IActionResult
+            else
+                let userId = this.CurrentUserId
 
-            return
-                match result with
-                | Ok(UnitResult _) -> this.NoContent() :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+                let! result = commandHandler.HandleCommand userRepository (DeleteUser(userId, id))
+
+                return
+                    match result with
+                    | Ok(UnitResult _) -> this.NoContent() :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError(error)
         }
 
     member private this.HandleDomainError(error: DomainError) : IActionResult =

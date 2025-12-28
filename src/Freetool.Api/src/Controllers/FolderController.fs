@@ -1,10 +1,12 @@
 namespace Freetool.Api.Controllers
 
+open System
 open System.Threading.Tasks
 open Microsoft.AspNetCore.Mvc
 open Microsoft.AspNetCore.Http
 open Freetool.Domain
 open Freetool.Domain.Entities
+open Freetool.Domain.ValueObjects
 open Freetool.Application.DTOs
 open Freetool.Application.Commands
 open Freetool.Application.Interfaces
@@ -15,30 +17,55 @@ open Freetool.Application.Mappers
 type FolderController
     (
         folderRepository: IFolderRepository,
-        commandHandler: IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>
+        commandHandler: IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>,
+        authorizationService: IAuthorizationService
     ) =
     inherit AuthenticatedControllerBase()
 
     [<HttpPost>]
     [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status201Created)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.CreateFolder([<FromBody>] createDto: CreateFolderDto) : Task<IActionResult> =
         task {
             let userId = this.CurrentUserId
 
-            match FolderMapper.fromCreateDto userId createDto with
-            | Error domainError -> return this.HandleDomainError(domainError)
-            | Ok validatedFolder ->
-                let! result = commandHandler.HandleCommand folderRepository (CreateFolder(userId, validatedFolder))
+            // Parse and validate workspace ID
+            match Guid.TryParse(createDto.WorkspaceId) with
+            | false, _ -> return this.HandleDomainError(ValidationError "Invalid workspace ID format")
+            | true, workspaceGuid ->
+                let workspaceId = WorkspaceId.FromGuid(workspaceGuid)
 
-                return
-                    match result with
-                    | Ok(FolderResult folderDto) ->
-                        this.CreatedAtAction(nameof this.GetFolderById, {| id = folderDto.Id |}, folderDto)
+                // Check authorization: user must have create_folder permission on workspace
+                let! hasPermission =
+                    authorizationService.CheckPermissionAsync
+                        $"user:{userId}"
+                        "create_folder"
+                        $"workspace:{workspaceId}"
+
+                if not hasPermission then
+                    return
+                        this.StatusCode(
+                            403,
+                            {| error = "Forbidden"
+                               message = "You do not have permission to create folders in this workspace" |}
+                        )
                         :> IActionResult
-                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                    | Error error -> this.HandleDomainError(error)
+                else
+                    match FolderMapper.fromCreateDto userId createDto with
+                    | Error domainError -> return this.HandleDomainError(domainError)
+                    | Ok validatedFolder ->
+                        let! result =
+                            commandHandler.HandleCommand folderRepository (CreateFolder(userId, validatedFolder))
+
+                        return
+                            match result with
+                            | Ok(FolderResult folderDto) ->
+                                this.CreatedAtAction(nameof this.GetFolderById, {| id = folderDto.Id |}, folderDto)
+                                :> IActionResult
+                            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                            | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpGet("{id}")>]
@@ -120,52 +147,149 @@ type FolderController
     [<HttpPut("{id}/name")>]
     [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.UpdateFolderName(id: string, [<FromBody>] updateDto: UpdateFolderNameDto) : Task<IActionResult> =
         task {
             let userId = this.CurrentUserId
-            let! result = commandHandler.HandleCommand folderRepository (UpdateFolderName(userId, id, updateDto))
 
-            return
-                match result with
-                | Ok(FolderResult folderDto) -> this.Ok(folderDto) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+            // Parse folder ID
+            match Guid.TryParse(id) with
+            | false, _ -> return this.HandleDomainError(ValidationError "Invalid folder ID format")
+            | true, folderGuid ->
+                let folderId = FolderId.FromGuid(folderGuid)
+
+                // Get folder to extract workspace ID
+                let! folderOption = folderRepository.GetByIdAsync folderId
+
+                match folderOption with
+                | None -> return this.HandleDomainError(NotFound "Folder not found")
+                | Some folder ->
+                    let workspaceId = Folder.getWorkspaceId folder
+
+                    // Check authorization: user must have edit_folder permission on workspace
+                    let! hasPermission =
+                        authorizationService.CheckPermissionAsync
+                            $"user:{userId}"
+                            "edit_folder"
+                            $"workspace:{workspaceId}"
+
+                    if not hasPermission then
+                        return
+                            this.StatusCode(
+                                403,
+                                {| error = "Forbidden"
+                                   message = "You do not have permission to edit folders in this workspace" |}
+                            )
+                            :> IActionResult
+                    else
+                        let! result =
+                            commandHandler.HandleCommand folderRepository (UpdateFolderName(userId, id, updateDto))
+
+                        return
+                            match result with
+                            | Ok(FolderResult folderDto) -> this.Ok(folderDto) :> IActionResult
+                            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                            | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpPut("{id}/move")>]
     [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.MoveFolder(id: string, [<FromBody>] moveDto: MoveFolderDto) : Task<IActionResult> =
         task {
             let userId = this.CurrentUserId
-            let! result = commandHandler.HandleCommand folderRepository (MoveFolder(userId, id, moveDto))
 
-            return
-                match result with
-                | Ok(FolderResult folderDto) -> this.Ok(folderDto) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+            // Parse folder ID
+            match Guid.TryParse(id) with
+            | false, _ -> return this.HandleDomainError(ValidationError "Invalid folder ID format")
+            | true, folderGuid ->
+                let folderId = FolderId.FromGuid(folderGuid)
+
+                // Get folder to extract workspace ID
+                let! folderOption = folderRepository.GetByIdAsync folderId
+
+                match folderOption with
+                | None -> return this.HandleDomainError(NotFound "Folder not found")
+                | Some folder ->
+                    let workspaceId = Folder.getWorkspaceId folder
+
+                    // Check authorization: user must have edit_folder permission on workspace
+                    let! hasPermission =
+                        authorizationService.CheckPermissionAsync
+                            $"user:{userId}"
+                            "edit_folder"
+                            $"workspace:{workspaceId}"
+
+                    if not hasPermission then
+                        return
+                            this.StatusCode(
+                                403,
+                                {| error = "Forbidden"
+                                   message = "You do not have permission to edit folders in this workspace" |}
+                            )
+                            :> IActionResult
+                    else
+                        let! result = commandHandler.HandleCommand folderRepository (MoveFolder(userId, id, moveDto))
+
+                        return
+                            match result with
+                            | Ok(FolderResult folderDto) -> this.Ok(folderDto) :> IActionResult
+                            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                            | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpDelete("{id}")>]
     [<ProducesResponseType(StatusCodes.Status204NoContent)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.DeleteFolder(id: string) : Task<IActionResult> =
         task {
             let userId = this.CurrentUserId
-            let! result = commandHandler.HandleCommand folderRepository (DeleteFolder(userId, id))
 
-            return
-                match result with
-                | Ok(FolderUnitResult _) -> this.NoContent() :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+            // Parse folder ID
+            match Guid.TryParse(id) with
+            | false, _ -> return this.HandleDomainError(ValidationError "Invalid folder ID format")
+            | true, folderGuid ->
+                let folderId = FolderId.FromGuid(folderGuid)
+
+                // Get folder to extract workspace ID
+                let! folderOption = folderRepository.GetByIdAsync folderId
+
+                match folderOption with
+                | None -> return this.HandleDomainError(NotFound "Folder not found")
+                | Some folder ->
+                    let workspaceId = Folder.getWorkspaceId folder
+
+                    // Check authorization: user must have delete_folder permission on workspace
+                    let! hasPermission =
+                        authorizationService.CheckPermissionAsync
+                            $"user:{userId}"
+                            "delete_folder"
+                            $"workspace:{workspaceId}"
+
+                    if not hasPermission then
+                        return
+                            this.StatusCode(
+                                403,
+                                {| error = "Forbidden"
+                                   message = "You do not have permission to delete folders in this workspace" |}
+                            )
+                            :> IActionResult
+                    else
+                        let! result = commandHandler.HandleCommand folderRepository (DeleteFolder(userId, id))
+
+                        return
+                            match result with
+                            | Ok(FolderUnitResult _) -> this.NoContent() :> IActionResult
+                            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                            | Error error -> this.HandleDomainError(error)
         }
 
     member private this.HandleDomainError(error: DomainError) : IActionResult =

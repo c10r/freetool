@@ -27,6 +27,9 @@ type CreateResourceDto =
       Description: string
 
       [<Required>]
+      WorkspaceId: string
+
+      [<Required>]
       [<StringLength(ValidationConstants.InputValueMaxLength,
                      MinimumLength = ValidationConstants.InputValueMinLength,
                      ErrorMessage = ValidationConstants.InputValueErrorMessage)>]

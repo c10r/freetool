@@ -16,8 +16,10 @@ let unwrapResult result =
 // Helper function to create apps for testing (uses empty resource to avoid conflicts)
 let createAppForTesting actorUserId name folderId inputs urlPath urlParameters headers body =
     // Create a dummy resource with no parameters to avoid conflicts
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+
     let emptyResource =
-        Resource.create actorUserId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
+        Resource.create actorUserId workspaceId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
         |> unwrapResult
 
     App.createWithResource actorUserId name folderId emptyResource inputs urlPath urlParameters headers body
@@ -307,8 +309,10 @@ let ``App update URL parameters should generate correct event`` () =
     let newUrlParams = [ "filter", "active"; "sort", "name" ]
 
     // Act
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+
     let emptyResource =
-        Resource.create actorUserId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
+        Resource.create actorUserId workspaceId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
         |> unwrapResult
 
     let resourceConflictData = Resource.toConflictData emptyResource
@@ -347,8 +351,10 @@ let ``App update headers should generate correct event`` () =
     let newHeaders = [ ("X-API-Key", "secret123") ]
 
     // Act
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+
     let emptyResource =
-        Resource.create actorUserId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
+        Resource.create actorUserId workspaceId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
         |> unwrapResult
 
     let resourceConflictData = Resource.toConflictData emptyResource
@@ -386,8 +392,10 @@ let ``App update body should generate correct event`` () =
     let newBody = [ ("data", "test") ]
 
     // Act
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+
     let emptyResource =
-        Resource.create actorUserId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
+        Resource.create actorUserId workspaceId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
         |> unwrapResult
 
     let resourceConflictData = Resource.toConflictData emptyResource
@@ -449,10 +457,12 @@ let ``App update URL path should generate correct event`` () =
 let ``App createWithResource should reject URL parameter conflicts`` () =
     // Arrange - Resource with URL parameters
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
         Resource.create
             actorUserId
+            workspaceId
             "API"
             "Test API"
             "https://api.test.com"
@@ -489,10 +499,12 @@ let ``App createWithResource should reject URL parameter conflicts`` () =
 let ``App createWithResource should reject header conflicts`` () =
     // Arrange - Resource with headers
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
         Resource.create
             actorUserId
+            workspaceId
             "API"
             "Test API"
             "https://api.test.com"
@@ -529,10 +541,12 @@ let ``App createWithResource should reject header conflicts`` () =
 let ``App createWithResource should reject body parameter conflicts`` () =
     // Arrange - Resource with body parameters
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
         Resource.create
             actorUserId
+            workspaceId
             "API"
             "Test API"
             "https://api.test.com"
@@ -569,10 +583,12 @@ let ``App createWithResource should reject body parameter conflicts`` () =
 let ``App createWithResource should reject multiple conflicts`` () =
     // Arrange - Resource with parameters in all categories
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
         Resource.create
             actorUserId
+            workspaceId
             "API"
             "Test API"
             "https://api.test.com"
@@ -611,10 +627,12 @@ let ``App createWithResource should reject multiple conflicts`` () =
 let ``App createWithResource should allow extending with no conflicts`` () =
     // Arrange - Resource with some parameters
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
         Resource.create
             actorUserId
+            workspaceId
             "API"
             "Test API"
             "https://api.test.com"
@@ -667,10 +685,12 @@ let ``App createWithResource should allow extending with no conflicts`` () =
 let ``App createWithResource should allow empty app parameters`` () =
     // Arrange - Resource with some parameters
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
         Resource.create
             actorUserId
+            workspaceId
             "API"
             "Test API"
             "https://api.test.com"
@@ -704,10 +724,12 @@ let ``App createWithResource should allow empty app parameters`` () =
 let ``App updateUrlParameters should reject resource parameter conflicts`` () =
     // Arrange - Resource with URL parameters
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
         Resource.create
             actorUserId
+            workspaceId
             "API"
             "Test API"
             "https://api.test.com"
@@ -742,10 +764,12 @@ let ``App updateUrlParameters should reject resource parameter conflicts`` () =
 let ``App updateHeaders should reject resource header conflicts`` () =
     // Arrange - Resource with headers
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
         Resource.create
             actorUserId
+            workspaceId
             "API"
             "Test API"
             "https://api.test.com"
@@ -784,10 +808,12 @@ let ``App updateHeaders should reject resource header conflicts`` () =
 let ``App updateBody should reject resource body parameter conflicts`` () =
     // Arrange - Resource with body parameters
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
         Resource.create
             actorUserId
+            workspaceId
             "API"
             "Test API"
             "https://api.test.com"
@@ -822,9 +848,10 @@ let ``App updateBody should reject resource body parameter conflicts`` () =
 let ``App updateUrlParameters should allow new parameters with no conflicts`` () =
     // Arrange - Resource with some URL parameters
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
-        Resource.create actorUserId "API" "Test API" "https://api.test.com" [ "version", "v1" ] [] [] "GET"
+        Resource.create actorUserId workspaceId "API" "Test API" "https://api.test.com" [ "version", "v1" ] [] [] "GET"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
@@ -853,10 +880,12 @@ let ``App updateUrlParameters should allow new parameters with no conflicts`` ()
 let ``App updateHeaders should allow new headers with no conflicts`` () =
     // Arrange - Resource with some headers
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
         Resource.create
             actorUserId
+            workspaceId
             "API"
             "Test API"
             "https://api.test.com"
@@ -896,9 +925,19 @@ let ``App updateHeaders should allow new headers with no conflicts`` () =
 let ``App updateBody should allow new body parameters with no conflicts`` () =
     // Arrange - Resource with some body parameters
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
-        Resource.create actorUserId "API" "Test API" "https://api.test.com" [] [] [ "client_id", "12345" ] "PUT"
+        Resource.create
+            actorUserId
+            workspaceId
+            "API"
+            "Test API"
+            "https://api.test.com"
+            []
+            []
+            [ "client_id", "12345" ]
+            "PUT"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()

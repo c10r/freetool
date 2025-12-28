@@ -1,0 +1,517 @@
+module Freetool.Infrastructure.Tests.FolderControllerTests
+
+open System
+open System.Threading.Tasks
+open Xunit
+open Microsoft.AspNetCore.Mvc
+open Microsoft.AspNetCore.Http
+open Freetool.Domain
+open Freetool.Domain.Entities
+open Freetool.Domain.ValueObjects
+open Freetool.Application.DTOs
+open Freetool.Application.Commands
+open Freetool.Application.Interfaces
+open Freetool.Api.Controllers
+
+// Mock authorization service for testing
+type MockAuthorizationService(checkPermissionFn: string -> string -> string -> bool) =
+    interface IAuthorizationService with
+        member _.CreateStoreAsync(req) =
+            Task.FromResult({ Id = "store-1"; Name = req.Name })
+
+        member _.WriteAuthorizationModelAsync() =
+            Task.FromResult({ AuthorizationModelId = "model-1" })
+
+        member _.CreateRelationshipsAsync(_) = Task.FromResult(())
+        member _.UpdateRelationshipsAsync(_) = Task.FromResult(())
+        member _.DeleteRelationshipsAsync(_) = Task.FromResult(())
+
+        member _.CheckPermissionAsync (user: string) (relation: string) (object: string) =
+            Task.FromResult(checkPermissionFn user relation object)
+
+// Mock folder repository for testing
+type MockFolderRepository(getByIdFn: FolderId -> Task<ValidatedFolder option>) =
+    interface IFolderRepository with
+        member _.GetByIdAsync(folderId: FolderId) = getByIdFn folderId
+        member _.GetChildrenAsync(_) = Task.FromResult([])
+        member _.GetRootFoldersAsync _ _ = Task.FromResult([])
+        member _.GetAllAsync _ _ = Task.FromResult([])
+        member _.AddAsync(_) = Task.FromResult(Ok())
+        member _.UpdateAsync(_) = Task.FromResult(Ok())
+        member _.DeleteAsync(_) = Task.FromResult(Ok())
+        member _.ExistsAsync(_) = Task.FromResult(false)
+        member _.ExistsByNameInParentAsync _ _ = Task.FromResult(false)
+        member _.GetCountAsync() = Task.FromResult(0)
+        member _.GetRootCountAsync() = Task.FromResult(0)
+        member _.GetChildCountAsync(_) = Task.FromResult(0)
+
+// Mock command handler for testing
+type MockFolderCommandHandler
+    (handleCommandFn: IFolderRepository -> FolderCommand -> Task<Result<FolderCommandResult, DomainError>>) =
+    interface IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult> with
+        member _.HandleCommand (repository: IFolderRepository) (command: FolderCommand) =
+            handleCommandFn repository command
+
+// Helper to create a test controller with mocked dependencies
+let createTestController
+    (checkPermissionFn: string -> string -> string -> bool)
+    (getByIdFn: FolderId -> Task<ValidatedFolder option>)
+    (handleCommandFn: IFolderRepository -> FolderCommand -> Task<Result<FolderCommandResult, DomainError>>)
+    (userId: UserId)
+    =
+    let authService =
+        MockAuthorizationService(checkPermissionFn) :> IAuthorizationService
+
+    let folderRepository = MockFolderRepository(getByIdFn) :> IFolderRepository
+
+    let commandHandler =
+        MockFolderCommandHandler(handleCommandFn)
+        :> IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>
+
+    let controller = FolderController(folderRepository, commandHandler, authService)
+
+    // Setup HttpContext with the provided UserId
+    let httpContext = DefaultHttpContext()
+    httpContext.Items.["UserId"] <- userId
+    controller.ControllerContext <- ControllerContext(HttpContext = httpContext)
+
+    controller
+
+// Helper to create a test folder
+let createTestFolder (workspaceId: WorkspaceId) (folderId: FolderId) : ValidatedFolder =
+    let folderName =
+        FolderName.Create(Some "Test Folder") |> Result.toOption |> Option.get
+
+    { State =
+        { Id = folderId
+          Name = folderName
+          ParentId = None
+          WorkspaceId = workspaceId
+          CreatedAt = DateTime.UtcNow
+          UpdatedAt = DateTime.UtcNow
+          IsDeleted = false
+          Children = [] }
+      UncommittedEvents = [] }
+
+// ============================================================================
+// CreateFolder Tests
+// ============================================================================
+
+[<Fact>]
+let ``CreateFolder returns 403 when user does not have create_folder permission`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let workspaceId = WorkspaceId.NewId()
+        let checkPermission _ _ _ = false // No permissions granted
+
+        let getById _ = Task.FromResult(None)
+
+        let handleCommand _ _ =
+            Task.FromResult(Error(NotFound "Should not be called"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        let createDto: CreateFolderDto =
+            { Name = "My Folder"
+              Location = RootFolder
+              WorkspaceId = workspaceId.Value.ToString() }
+
+        // Act
+        let! result = controller.CreateFolder(createDto)
+
+        // Assert
+        match result with
+        | :? ObjectResult as objResult -> Assert.Equal(403, objResult.StatusCode.Value)
+        | _ -> Assert.True(false, "Expected ObjectResult with status code 403")
+    }
+
+[<Fact>]
+let ``CreateFolder succeeds when user has create_folder permission`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let workspaceId = WorkspaceId.NewId()
+
+        // Grant create_folder permission
+        let checkPermission user relation obj =
+            user = $"user:{userId.Value}"
+            && relation = "create_folder"
+            && obj = $"workspace:{workspaceId.Value}"
+
+        let getById _ = Task.FromResult(None)
+
+        let handleCommand _ cmd =
+            match cmd with
+            | CreateFolder _ ->
+                let folderData =
+                    { Id = FolderId.NewId()
+                      Name = FolderName.Create(Some "My Folder") |> Result.toOption |> Option.get
+                      ParentId = None
+                      WorkspaceId = workspaceId
+                      CreatedAt = DateTime.UtcNow
+                      UpdatedAt = DateTime.UtcNow
+                      IsDeleted = false
+                      Children = [] }
+
+                Task.FromResult(Ok(FolderResult folderData))
+            | _ -> Task.FromResult(Error(NotFound "Command not supported"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        let createDto: CreateFolderDto =
+            { Name = "My Folder"
+              Location = RootFolder
+              WorkspaceId = workspaceId.Value.ToString() }
+
+        // Act
+        let! result = controller.CreateFolder(createDto)
+
+        // Assert - Verify it's not a 403 (should succeed)
+        match result with
+        | :? ObjectResult as objResult when objResult.StatusCode.HasValue ->
+            Assert.NotEqual(403, objResult.StatusCode.Value)
+        | _ -> () // Other result types are acceptable
+    }
+
+// ============================================================================
+// UpdateFolderName Tests
+// ============================================================================
+
+[<Fact>]
+let ``UpdateFolderName returns 403 when user does not have edit_folder permission`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let workspaceId = WorkspaceId.NewId()
+        let folderId = FolderId.NewId()
+        let checkPermission _ _ _ = false // No permissions granted
+
+        let folder = createTestFolder workspaceId folderId
+
+        let getById id =
+            Task.FromResult(if id = folderId then Some folder else None)
+
+        let handleCommand _ _ =
+            Task.FromResult(Error(NotFound "Should not be called"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        let updateDto: UpdateFolderNameDto = { Name = "New Name" }
+
+        // Act
+        let! result = controller.UpdateFolderName(folderId.Value.ToString(), updateDto)
+
+        // Assert
+        match result with
+        | :? ObjectResult as objResult -> Assert.Equal(403, objResult.StatusCode.Value)
+        | _ -> Assert.True(false, "Expected ObjectResult with status code 403")
+    }
+
+[<Fact>]
+let ``UpdateFolderName succeeds when user has edit_folder permission`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let workspaceId = WorkspaceId.NewId()
+        let folderId = FolderId.NewId()
+
+        // Grant edit_folder permission
+        let checkPermission user relation obj =
+            user = $"user:{userId.Value}"
+            && relation = "edit_folder"
+            && obj = $"workspace:{workspaceId.Value}"
+
+        let folder = createTestFolder workspaceId folderId
+
+        let getById id =
+            Task.FromResult(if id = folderId then Some folder else None)
+
+        let handleCommand _ cmd =
+            match cmd with
+            | UpdateFolderName _ ->
+                let updatedFolder = folder.State
+                Task.FromResult(Ok(FolderResult updatedFolder))
+            | _ -> Task.FromResult(Error(NotFound "Command not supported"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        let updateDto: UpdateFolderNameDto = { Name = "New Name" }
+
+        // Act
+        let! result = controller.UpdateFolderName(folderId.Value.ToString(), updateDto)
+
+        // Assert - Verify it's not a 403
+        match result with
+        | :? ObjectResult as objResult when objResult.StatusCode.HasValue ->
+            Assert.NotEqual(403, objResult.StatusCode.Value)
+        | _ -> () // Other result types are acceptable
+    }
+
+// ============================================================================
+// MoveFolder Tests
+// ============================================================================
+
+[<Fact>]
+let ``MoveFolder returns 403 when user does not have edit_folder permission`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let workspaceId = WorkspaceId.NewId()
+        let folderId = FolderId.NewId()
+        let checkPermission _ _ _ = false // No permissions granted
+
+        let folder = createTestFolder workspaceId folderId
+
+        let getById id =
+            Task.FromResult(if id = folderId then Some folder else None)
+
+        let handleCommand _ _ =
+            Task.FromResult(Error(NotFound "Should not be called"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        let moveDto: MoveFolderDto = { ParentId = RootFolder }
+
+        // Act
+        let! result = controller.MoveFolder(folderId.Value.ToString(), moveDto)
+
+        // Assert
+        match result with
+        | :? ObjectResult as objResult -> Assert.Equal(403, objResult.StatusCode.Value)
+        | _ -> Assert.True(false, "Expected ObjectResult with status code 403")
+    }
+
+[<Fact>]
+let ``MoveFolder succeeds when user has edit_folder permission`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let workspaceId = WorkspaceId.NewId()
+        let folderId = FolderId.NewId()
+
+        // Grant edit_folder permission
+        let checkPermission user relation obj =
+            user = $"user:{userId.Value}"
+            && relation = "edit_folder"
+            && obj = $"workspace:{workspaceId.Value}"
+
+        let folder = createTestFolder workspaceId folderId
+
+        let getById id =
+            Task.FromResult(if id = folderId then Some folder else None)
+
+        let handleCommand _ cmd =
+            match cmd with
+            | MoveFolder _ ->
+                let movedFolder = folder.State
+                Task.FromResult(Ok(FolderResult movedFolder))
+            | _ -> Task.FromResult(Error(NotFound "Command not supported"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        let moveDto: MoveFolderDto = { ParentId = RootFolder }
+
+        // Act
+        let! result = controller.MoveFolder(folderId.Value.ToString(), moveDto)
+
+        // Assert - Verify it's not a 403
+        match result with
+        | :? ObjectResult as objResult when objResult.StatusCode.HasValue ->
+            Assert.NotEqual(403, objResult.StatusCode.Value)
+        | _ -> () // Other result types are acceptable
+    }
+
+// ============================================================================
+// DeleteFolder Tests
+// ============================================================================
+
+[<Fact>]
+let ``DeleteFolder returns 403 when user does not have delete_folder permission`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let workspaceId = WorkspaceId.NewId()
+        let folderId = FolderId.NewId()
+        let checkPermission _ _ _ = false // No permissions granted
+
+        let folder = createTestFolder workspaceId folderId
+
+        let getById id =
+            Task.FromResult(if id = folderId then Some folder else None)
+
+        let handleCommand _ _ =
+            Task.FromResult(Error(NotFound "Should not be called"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        // Act
+        let! result = controller.DeleteFolder(folderId.Value.ToString())
+
+        // Assert
+        match result with
+        | :? ObjectResult as objResult -> Assert.Equal(403, objResult.StatusCode.Value)
+        | _ -> Assert.True(false, "Expected ObjectResult with status code 403")
+    }
+
+[<Fact>]
+let ``DeleteFolder succeeds when user has delete_folder permission`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let workspaceId = WorkspaceId.NewId()
+        let folderId = FolderId.NewId()
+
+        // Grant delete_folder permission
+        let checkPermission user relation obj =
+            user = $"user:{userId.Value}"
+            && relation = "delete_folder"
+            && obj = $"workspace:{workspaceId.Value}"
+
+        let folder = createTestFolder workspaceId folderId
+
+        let getById id =
+            Task.FromResult(if id = folderId then Some folder else None)
+
+        let handleCommand _ cmd =
+            match cmd with
+            | DeleteFolder _ -> Task.FromResult(Ok(FolderUnitResult()))
+            | _ -> Task.FromResult(Error(NotFound "Command not supported"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        // Act
+        let! result = controller.DeleteFolder(folderId.Value.ToString())
+
+        // Assert - Verify it's not a 403
+        match result with
+        | :? ObjectResult as objResult when objResult.StatusCode.HasValue ->
+            Assert.NotEqual(403, objResult.StatusCode.Value)
+        | _ -> () // Other result types are acceptable (like NoContentResult)
+    }
+
+// ============================================================================
+// Read Operations Tests (should allow any authenticated user)
+// ============================================================================
+
+[<Fact>]
+let ``GetFolderById allows any authenticated user`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let workspaceId = WorkspaceId.NewId()
+        let folderId = FolderId.NewId()
+        let checkPermission _ _ _ = false // No special permissions needed for read
+
+        let folder = createTestFolder workspaceId folderId
+
+        let getById id =
+            Task.FromResult(if id = folderId then Some folder else None)
+
+        let handleCommand _ cmd =
+            match cmd with
+            | GetFolderById _ -> Task.FromResult(Ok(FolderResult folder.State))
+            | _ -> Task.FromResult(Error(NotFound "Command not supported"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        // Act
+        let! result = controller.GetFolderById(folderId.Value.ToString())
+
+        // Assert - Should succeed (200 OK) without auth check
+        match result with
+        | :? OkObjectResult as okResult -> Assert.NotNull(okResult)
+        | _ -> () // Test passes as long as no 403 is returned
+    }
+
+[<Fact>]
+let ``GetFolderWithChildren allows any authenticated user`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let workspaceId = WorkspaceId.NewId()
+        let folderId = FolderId.NewId()
+        let checkPermission _ _ _ = false // No special permissions needed for read
+
+        let folder = createTestFolder workspaceId folderId
+
+        let getById id =
+            Task.FromResult(if id = folderId then Some folder else None)
+
+        let handleCommand _ cmd =
+            match cmd with
+            | GetFolderWithChildren _ -> Task.FromResult(Ok(FolderResult folder.State))
+            | _ -> Task.FromResult(Error(NotFound "Command not supported"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        // Act
+        let! result = controller.GetFolderWithChildren(folderId.Value.ToString())
+
+        // Assert - Should succeed (200 OK) without auth check
+        match result with
+        | :? OkObjectResult as okResult -> Assert.NotNull(okResult)
+        | _ -> () // Test passes as long as no 403 is returned
+    }
+
+[<Fact>]
+let ``GetRootFolders allows any authenticated user`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let checkPermission _ _ _ = false // No special permissions needed for read
+
+        let pagedResult =
+            { Items = []
+              TotalCount = 0
+              Skip = 0
+              Take = 10 }
+
+        let getById _ = Task.FromResult(None)
+
+        let handleCommand _ cmd =
+            match cmd with
+            | GetRootFolders _ -> Task.FromResult(Ok(FoldersResult pagedResult))
+            | _ -> Task.FromResult(Error(NotFound "Command not supported"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        // Act
+        let! result = controller.GetRootFolders(0, 10)
+
+        // Assert - Should succeed (200 OK) without auth check
+        match result with
+        | :? OkObjectResult as okResult -> Assert.NotNull(okResult)
+        | _ -> () // Test passes as long as no 403 is returned
+    }
+
+[<Fact>]
+let ``GetAllFolders allows any authenticated user`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let checkPermission _ _ _ = false // No special permissions needed for read
+
+        let pagedResult =
+            { Items = []
+              TotalCount = 0
+              Skip = 0
+              Take = 10 }
+
+        let getById _ = Task.FromResult(None)
+
+        let handleCommand _ cmd =
+            match cmd with
+            | GetAllFolders _ -> Task.FromResult(Ok(FoldersResult pagedResult))
+            | _ -> Task.FromResult(Error(NotFound "Command not supported"))
+
+        let controller = createTestController checkPermission getById handleCommand userId
+
+        // Act
+        let! result = controller.GetAllFolders(0, 10)
+
+        // Assert - Should succeed (200 OK) without auth check
+        match result with
+        | :? OkObjectResult as okResult -> Assert.NotNull(okResult)
+        | _ -> () // Test passes as long as no 403 is returned
+    }

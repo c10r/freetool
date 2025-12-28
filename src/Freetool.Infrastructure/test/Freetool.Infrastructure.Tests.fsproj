@@ -8,6 +8,11 @@
   <ItemGroup>
     <Compile Include="DbContextConfigurationTests.fs" />
     <Compile Include="OpenFgaServiceTests.fs" />
+    <Compile Include="GroupControllerTests.fs" />
+    <Compile Include="UserControllerTests.fs" />
+    <Compile Include="FolderControllerTests.fs" />
+    <Compile Include="../../Freetool.Api/test/AppControllerAuthTests.fs" />
+    <Compile Include="../../Freetool.Api/test/WorkspaceControllerAuthTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
@@ -17,10 +22,15 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.8" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Freetool.Infrastructure.fsproj" />
     <ProjectReference Include="../../Freetool.Domain/Freetool.Domain.fsproj" />
     <ProjectReference Include="../../Freetool.Application/Freetool.Application.fsproj" />
+    <ProjectReference Include="../../Freetool.Api/Freetool.Api.fsproj" />
   </ItemGroup>
 </Project>

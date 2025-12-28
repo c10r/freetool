@@ -26,6 +26,9 @@ type ResourceData =
       Description: ResourceDescription
 
       [<Required>]
+      WorkspaceId: WorkspaceId
+
+      [<Required>]
       [<MaxLength(10)>]
       HttpMethod: HttpMethod
 
@@ -76,6 +79,7 @@ module Resource =
 
     let create
         (actorUserId: UserId)
+        (workspaceId: WorkspaceId)
         (name: string)
         (description: string)
         (baseUrl: string)
@@ -127,6 +131,7 @@ module Resource =
                                         { Id = ResourceId.NewId()
                                           Name = validName
                                           Description = validDescription
+                                          WorkspaceId = workspaceId
                                           HttpMethod = validHttpMethod
                                           BaseUrl = validBaseUrl
                                           UrlParameters = validUrlParams
@@ -142,6 +147,7 @@ module Resource =
                                             resourceData.Id
                                             validName
                                             validDescription
+                                            workspaceId
                                             validBaseUrl
                                             validUrlParams
                                             validHeaders
@@ -378,6 +384,8 @@ module Resource =
     let getName (resource: Resource) : string = resource.State.Name.Value
 
     let getDescription (resource: Resource) : string = resource.State.Description.Value
+
+    let getWorkspaceId (resource: Resource) : WorkspaceId = resource.State.WorkspaceId
 
     let getBaseUrl (resource: Resource) : string = resource.State.BaseUrl.Value
 

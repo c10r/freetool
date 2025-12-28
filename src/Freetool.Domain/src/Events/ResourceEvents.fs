@@ -17,6 +17,7 @@ type ResourceCreatedEvent =
     { ResourceId: ResourceId
       Name: ResourceName
       Description: ResourceDescription
+      WorkspaceId: WorkspaceId
       HttpMethod: HttpMethod
       BaseUrl: BaseUrl
       UrlParameters: KeyValuePair list
@@ -60,6 +61,7 @@ module ResourceEvents =
         (resourceId: ResourceId)
         (name: ResourceName)
         (description: ResourceDescription)
+        (workspaceId: WorkspaceId)
         (baseUrl: BaseUrl)
         (urlParameters: KeyValuePair list)
         (headers: KeyValuePair list)
@@ -69,6 +71,7 @@ module ResourceEvents =
         { ResourceId = resourceId
           Name = name
           Description = description
+          WorkspaceId = workspaceId
           HttpMethod = httpMethod
           BaseUrl = baseUrl
           UrlParameters = urlParameters
