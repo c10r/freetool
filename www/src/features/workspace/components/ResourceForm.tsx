@@ -45,7 +45,7 @@ interface ResourceFormProps {
     headers: FieldState;
     body: FieldState;
   };
-  onFieldBlur?: (field: keyof ResourceFormData, value: any) => void;
+  onFieldBlur?: (field: keyof ResourceFormData, value: string | KeyValuePair[]) => void;
   onKeyValueFieldBlur?: (
     field: "urlParameters" | "headers" | "body",
     value: KeyValuePair[],
@@ -76,7 +76,7 @@ export default function ResourceForm({
   onFieldBlur,
   onKeyValueFieldBlur,
 }: ResourceFormProps) {
-  const updateData = (field: keyof ResourceFormData, value: any) => {
+  const updateData = (field: keyof ResourceFormData, value: string | HttpMethod | KeyValuePair[]) => {
     onChange({ ...data, [field]: value });
   };
 

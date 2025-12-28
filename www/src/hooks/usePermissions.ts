@@ -7,7 +7,7 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useAuthorization } from "@/contexts/AuthorizationContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 import type { Permission, WorkspacePermissions } from "@/types/permissions";
 import { getWorkspacePermissions } from "@/api/api";
 

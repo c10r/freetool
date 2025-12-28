@@ -39,8 +39,9 @@ export {
 // Context
 export {
   AuthorizationProvider,
-  useAuthorization,
+  type AuthorizationContextValue,
 } from "@/contexts/AuthorizationContext";
+export { useAuthorization } from "@/hooks/useAuthorization";
 
 // Components
 export { PermissionGate } from "@/components/PermissionGate";

@@ -1,38 +1,21 @@
 /**
- * Authorization Context
+ * Authorization Provider
  *
  * Provides centralized permission management for the application.
  * Fetches and caches user permissions using TanStack Query.
  */
 
-import React, { createContext, useContext, ReactNode } from "react";
+import React, { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
-  CurrentUser,
   WorkspacePermissions,
   Permission,
 } from "@/types/permissions";
 import { getCurrentUser, getWorkspacePermissions } from "@/api/api";
-
-/**
- * Shape of the authorization context value
- */
-interface AuthorizationContextValue {
-  currentUser: CurrentUser | null;
-  isLoadingUser: boolean;
-  userError: Error | null;
-  fetchWorkspacePermissions: (workspaceId: string) => void;
-  getWorkspacePermissions: (workspaceId: string) => WorkspacePermissions | null;
-  hasPermission: (workspaceId: string, permission: Permission) => boolean;
-  isOrgAdmin: () => boolean;
-  isTeamAdmin: (teamId: string) => boolean;
-  refetchUser: () => void;
-  refetchWorkspacePermissions: (workspaceId: string) => void;
-}
-
-const AuthorizationContext = createContext<
-  AuthorizationContextValue | undefined
->(undefined);
+import {
+  AuthorizationContext,
+  type AuthorizationContextValue,
+} from "./authorization.context";
 
 /**
  * Props for the AuthorizationProvider
@@ -174,28 +157,3 @@ export function AuthorizationProvider({
   );
 }
 
-/**
- * Hook to access the authorization context
- *
- * @throws Error if used outside of AuthorizationProvider
- *
- * @example
- * ```tsx
- * function MyComponent() {
- *   const { currentUser, hasPermission } = useAuthorization();
- *
- *   if (hasPermission('workspace-1', 'create_app')) {
- *     // Show create button
- *   }
- * }
- * ```
- */
-export function useAuthorization(): AuthorizationContextValue {
-  const context = useContext(AuthorizationContext);
-  if (!context) {
-    throw new Error(
-      "useAuthorization must be used within an AuthorizationProvider",
-    );
-  }
-  return context;
-}

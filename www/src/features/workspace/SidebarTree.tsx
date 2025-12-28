@@ -10,7 +10,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { WorkspaceNode } from "./types";
+import { WorkspaceNode, TreeNode } from "./types";
 
 interface SidebarTreeProps {
   nodes: Record<string, WorkspaceNode>;
@@ -48,14 +48,16 @@ export default function SidebarTree({
     <aside className="w-64 border-r bg-card/40">
       <nav className="p-3 space-y-4">
         <div>
-          <TreeNode
-            node={tree}
-            depth={0}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            expandedFolders={expandedFolders}
-            toggleExpanded={toggleExpanded}
-          />
+          {tree && (
+            <TreeNodeComponent
+              node={tree}
+              depth={0}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              expandedFolders={expandedFolders}
+              toggleExpanded={toggleExpanded}
+            />
+          )}
         </div>
 
         <div>
@@ -118,7 +120,7 @@ function SidebarSection({
   );
 }
 
-function TreeNode({
+function TreeNodeComponent({
   node,
   depth,
   selectedId,
@@ -126,7 +128,7 @@ function TreeNode({
   expandedFolders,
   toggleExpanded,
 }: {
-  node: any;
+  node: TreeNode;
   depth: number;
   selectedId: string;
   onSelect: (id: string) => void;
@@ -184,8 +186,8 @@ function TreeNode({
       </button>
       {hasChildren && isExpanded && (
         <div className="ml-4 mt-1 space-y-1">
-          {node.children.map((child: any) => (
-            <TreeNode
+          {node.children.map((child: TreeNode) => (
+            <TreeNodeComponent
               key={child.id}
               node={child}
               depth={depth + 1}
@@ -201,15 +203,15 @@ function TreeNode({
   );
 }
 
-function buildTree(nodes: Record<string, WorkspaceNode>, id: string): any {
+function buildTree(nodes: Record<string, WorkspaceNode>, id: string): TreeNode | null {
   const n = nodes[id];
-  if (!n) return null as any;
+  if (!n) return null;
   if (n.type === "folder") {
     return {
       ...n,
       children: n.childrenIds
         .map((cid) => buildTree(nodes, cid))
-        .filter(Boolean),
+        .filter((node): node is TreeNode => node !== null),
     };
   }
   return n;

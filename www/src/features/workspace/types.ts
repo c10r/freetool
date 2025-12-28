@@ -58,6 +58,12 @@ export interface AppNode extends BaseNode {
 
 export type WorkspaceNode = FolderNode | AppNode;
 
+// Tree node type used for rendering (includes expanded children)
+export interface TreeNode extends BaseNode {
+  type: NodeType;
+  children?: TreeNode[];
+}
+
 export interface WorkspaceMainProps {
   nodes: Record<string, WorkspaceNode>;
   selectedId: string;

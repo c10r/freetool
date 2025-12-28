@@ -20,9 +20,13 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": [
-        "warn",
+        "error",
         { allowConstantExport: true },
       ],
+      "react-hooks/exhaustive-deps": "error",
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-empty-object-type": "error",
+      "@typescript-eslint/no-require-imports": "error",
       "@typescript-eslint/no-unused-vars": "off",
     },
   },

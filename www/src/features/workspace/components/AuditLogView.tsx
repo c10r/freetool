@@ -6,9 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { getAuditEvents } from "@/api/api";
 
 // Safe JSON parsing helper
-const safeJsonParse = (jsonString: string): any => {
+const safeJsonParse = (jsonString: string): Record<string, unknown> | { error: string; raw: string } => {
   try {
-    return JSON.parse(jsonString);
+    return JSON.parse(jsonString) as Record<string, unknown>;
   } catch (error) {
     console.warn("Failed to parse JSON:", error);
     return { error: "Invalid JSON data", raw: jsonString };

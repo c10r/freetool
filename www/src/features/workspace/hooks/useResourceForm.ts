@@ -82,7 +82,7 @@ export function useResourceForm(
   );
 
   const updateFormData = useCallback(
-    (field: keyof ResourceFormData, value: any) => {
+    (field: keyof ResourceFormData, value: string | HttpMethod | KeyValuePair[]) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
     },
     [],
@@ -173,7 +173,7 @@ export function useResourceForm(
         }, 2000);
       }
     },
-    [resourceId, onUpdate, setFieldState],
+    [resourceId, onUpdate, setFieldState, formData],
   );
 
   const updateKeyValueField = useCallback(
@@ -270,7 +270,7 @@ export function useResourceForm(
         }, 2000);
       }
     },
-    [resourceId, onUpdate, setFieldState],
+    [resourceId, onUpdate, setFieldState, formData],
   );
 
   return {

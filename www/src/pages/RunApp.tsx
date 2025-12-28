@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,11 @@ import {
 import { getAppById, getFolderById, runApp } from "@/api/api";
 import { PermissionButton } from "@/components/PermissionButton";
 import { useHasPermission } from "@/hooks/usePermissions";
+import type { components } from "@/schema";
+
+type AppData = components["schemas"]["AppData"];
+type RunData = components["schemas"]["RunData"];
+type KeyValuePair = components["schemas"]["KeyValuePair"];
 
 // Helper function to safely format response content
 const formatResponse = (
@@ -41,10 +46,10 @@ const RunApp = () => {
   const { nodeId } = useParams<{ nodeId: string }>();
   const navigate = useNavigate();
 
-  const [app, setApp] = useState<any>(null);
+  const [app, setApp] = useState<AppData | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<RunData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [isRequestCollapsed, setIsRequestCollapsed] = useState(true);
@@ -119,14 +124,7 @@ const RunApp = () => {
     }
   }, [app]);
 
-  // Auto-run the app when component loads
-  useEffect(() => {
-    if (app && !running && !result && !runError) {
-      handleRunApp();
-    }
-  }, [app]);
-
-  const handleRunApp = async () => {
+  const handleRunApp = useCallback(async () => {
     if (!nodeId) return;
 
     setRunning(true);
@@ -145,7 +143,14 @@ const RunApp = () => {
     } finally {
       setRunning(false);
     }
-  };
+  }, [nodeId]);
+
+  // Auto-run the app when component loads
+  useEffect(() => {
+    if (app && !running && !result && !runError) {
+      handleRunApp();
+    }
+  }, [app, running, result, runError, handleRunApp]);
 
   const handleGoBack = () => {
     if (app?.parentId) {
@@ -277,7 +282,7 @@ const RunApp = () => {
               <div>
                 <h4 className="font-medium mb-2">URL Parameters</h4>
                 <div className="space-y-1">
-                  {app.urlParameters.map((param: any, index: number) => (
+                  {app.urlParameters.map((param: KeyValuePair, index: number) => (
                     <div
                       key={index}
                       className="text-sm bg-muted p-2 rounded flex justify-between"
@@ -296,7 +301,7 @@ const RunApp = () => {
               <div>
                 <h4 className="font-medium mb-2">Headers</h4>
                 <div className="space-y-1">
-                  {app.headers.map((header: any, index: number) => (
+                  {app.headers.map((header: KeyValuePair, index: number) => (
                     <div
                       key={index}
                       className="text-sm bg-muted p-2 rounded flex justify-between"
@@ -315,7 +320,7 @@ const RunApp = () => {
               <div>
                 <h4 className="font-medium mb-2">Body</h4>
                 <div className="space-y-1">
-                  {app.body.map((bodyParam: any, index: number) => (
+                  {app.body.map((bodyParam: KeyValuePair, index: number) => (
                     <div
                       key={index}
                       className="text-sm bg-muted p-2 rounded flex justify-between"
@@ -384,47 +389,62 @@ const RunApp = () => {
                         <div>
                           <h4 className="font-medium mb-2">Method & URL</h4>
                           <p className="text-sm bg-muted p-2 rounded font-mono">
-                            {result.executableRequest.httpMethod}{" "}
-                            {result.executableRequest.baseUrl}
-                            {result.executableRequest.urlParameters?.length >
-                              0 &&
-                              `?${result.executableRequest.urlParameters.map(([key, value]: [string, string]) => `${key}=${value}`).join("&")}`}
+                            {result.executableRequest?.value?.httpMethod}{" "}
+                            {result.executableRequest?.value?.baseUrl}
+                            {result.executableRequest?.value?.urlParameters &&
+                              result.executableRequest.value.urlParameters.length >
+                                0 &&
+                              `?${result.executableRequest.value.urlParameters
+                                .map((tuple) => `${tuple.item1 ?? ""}=${tuple.item2 ?? ""}`)
+                                .join("&")}`}
                           </p>
                         </div>
 
-                        {result.executableRequest.headers?.length > 0 && (
-                          <div>
-                            <h4 className="font-medium mb-2">Headers</h4>
-                            <div className="bg-muted p-3 rounded">
-                              <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
-                                {JSON.stringify(
-                                  Object.fromEntries(
-                                    result.executableRequest.headers,
-                                  ),
-                                  null,
-                                  2,
-                                )}
-                              </pre>
+                        {result.executableRequest?.value?.headers &&
+                          result.executableRequest.value.headers.length > 0 && (
+                            <div>
+                              <h4 className="font-medium mb-2">Headers</h4>
+                              <div className="bg-muted p-3 rounded">
+                                <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
+                                  {JSON.stringify(
+                                    Object.fromEntries(
+                                      result.executableRequest.value.headers.map(
+                                        (tuple) => [
+                                          tuple.item1 ?? "",
+                                          tuple.item2 ?? "",
+                                        ]
+                                      )
+                                    ),
+                                    null,
+                                    2,
+                                  )}
+                                </pre>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {result.executableRequest.body?.length > 0 && (
-                          <div>
-                            <h4 className="font-medium mb-2">Body</h4>
-                            <div className="bg-muted p-3 rounded">
-                              <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
-                                {JSON.stringify(
-                                  Object.fromEntries(
-                                    result.executableRequest.body,
-                                  ),
-                                  null,
-                                  2,
-                                )}
-                              </pre>
+                        {result.executableRequest?.value?.body &&
+                          result.executableRequest.value.body.length > 0 && (
+                            <div>
+                              <h4 className="font-medium mb-2">Body</h4>
+                              <div className="bg-muted p-3 rounded">
+                                <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
+                                  {JSON.stringify(
+                                    Object.fromEntries(
+                                      result.executableRequest.value.body.map(
+                                        (tuple) => [
+                                          tuple.item1 ?? "",
+                                          tuple.item2 ?? "",
+                                        ]
+                                      )
+                                    ),
+                                    null,
+                                    2,
+                                  )}
+                                </pre>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
                         <div>
                           <h4 className="font-medium mb-2">Timing</h4>

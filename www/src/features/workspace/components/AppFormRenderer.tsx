@@ -1,10 +1,16 @@
 import { useMemo } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, UseFormRegister, Control } from "react-hook-form";
 import { AppNode, FieldType, Endpoint } from "../types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
+
+// Type for form field values - supports all possible field types
+type FormFieldValue = string | number | boolean;
+
+// Type for the complete form data structure
+type FormData = Record<string, FormFieldValue>;
 
 export default function AppFormRenderer({
   app,
@@ -14,7 +20,7 @@ export default function AppFormRenderer({
   endpoint?: Endpoint;
 }) {
   const defaultValues = useMemo(() => {
-    const dv: Record<string, any> = {};
+    const dv: FormData = {};
     app.fields.forEach((f) => {
       dv[f.id] = f.type === "boolean" ? false : "";
     });
@@ -25,7 +31,7 @@ export default function AppFormRenderer({
     defaultValues,
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormData) => {
     if (!endpoint) {
       toast({
         title: "No endpoint selected",
@@ -57,7 +63,7 @@ export default function AppFormRenderer({
 
       let body: BodyInit | undefined = undefined;
       if (!isGetLike) {
-        const staticBody: Record<string, any> = {};
+        const staticBody: Record<string, string> = {};
         (endpoint.body || []).forEach(({ key, value }) => {
           if (key) staticBody[key] = value;
         });
@@ -112,8 +118,8 @@ export default function AppFormRenderer({
 function renderField(
   type: FieldType,
   id: string,
-  register: any,
-  control: any,
+  register: UseFormRegister<FormData>,
+  control: Control<FormData>,
   required: boolean,
 ) {
   switch (type) {

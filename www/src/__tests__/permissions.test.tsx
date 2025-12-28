@@ -10,10 +10,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  AuthorizationProvider,
-  useAuthorization,
-} from "@/contexts/AuthorizationContext";
+import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 import { PermissionGate } from "@/components/PermissionGate";
 import { PermissionButton } from "@/components/PermissionButton";
 import { useHasPermission, useIsOrgAdmin } from "@/hooks/usePermissions";

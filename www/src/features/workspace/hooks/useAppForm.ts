@@ -70,7 +70,7 @@ export function useAppForm(
     [],
   );
 
-  const updateFormData = useCallback((field: keyof AppFormData, value: any) => {
+  const updateFormData = useCallback((field: keyof AppFormData, value: string | KeyValuePair[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
 

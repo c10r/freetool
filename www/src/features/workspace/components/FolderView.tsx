@@ -25,7 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FolderNode, WorkspaceMainProps, KeyValuePair } from "../types";
+import { FolderNode, WorkspaceMainProps, KeyValuePair, WorkspaceNode } from "../types";
 import {
   createFolder as createFolderAPI,
   deleteFolder as deleteFolderAPI,
@@ -37,6 +37,7 @@ import AppConfigForm from "./AppConfigForm";
 import { PermissionButton } from "@/components/PermissionButton";
 import { PermissionGate } from "@/components/PermissionGate";
 import { useHasPermission } from "@/hooks/usePermissions";
+import type { components } from "@/schema";
 
 export default function FolderView({
   folder,
@@ -108,7 +109,7 @@ export default function FolderView({
 
   // App running state
   const [runningAppId, setRunningAppId] = useState<string | null>(null);
-  const [runResult, setRunResult] = useState<any>(null);
+  const [runResult, setRunResult] = useState<components["schemas"]["RunData"] | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
 
   const children = useMemo(
@@ -308,7 +309,7 @@ export default function FolderView({
     navigate(`/workspaces/${appId}/run`);
   };
 
-  const handleCardClick = (child: any) => {
+  const handleCardClick = (child: WorkspaceNode) => {
     if (child.type === "app") {
       handleRunApp(child.id);
     } else {

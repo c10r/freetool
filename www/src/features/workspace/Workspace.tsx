@@ -38,14 +38,17 @@ function createApp(id: string, name: string, parentId?: string): AppNode {
   };
 }
 
+// API folder response interface
+interface ApiFolderResponse {
+  id?: string;
+  name: string;
+  parentId?: string | null;
+  children?: ApiFolderResponse[] | null;
+}
+
 // Transform API folder data to workspace nodes structure
 function transformFoldersToNodes(
-  folders: Array<{
-    id?: string;
-    name: string;
-    parentId?: string | null;
-    children?: any[] | null;
-  }>,
+  folders: Array<ApiFolderResponse>,
   rootId: string,
 ): Record<string, WorkspaceNode> {
   const nodes: Record<string, WorkspaceNode> = {};
@@ -251,7 +254,7 @@ function WorkspaceContent() {
     };
 
     loadAppsForFolder();
-  }, [selectedId, loading, rootId, loadedFolders]);
+  }, [selectedId, loading, rootId, loadedFolders, nodes]);
 
   // Check if the nodeId from URL is valid (only after data is loaded)
   const isValidNodeId = useMemo(() => {

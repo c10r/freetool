@@ -92,7 +92,7 @@ export default function AppView({
       body: app.body || [],
     });
     resetFieldStates();
-  }, [app.id, app.name, setAppFormData, resetFieldStates]);
+  }, [app.id, app.name, app.urlPath, app.urlParameters, app.headers, app.body, setAppFormData, resetFieldStates]);
 
   const updateField = (id: string, patch: Partial<AppField>) => {
     updateNode({

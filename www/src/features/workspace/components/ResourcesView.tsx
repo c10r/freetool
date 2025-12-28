@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -119,7 +119,7 @@ export default function ResourcesView({
     }
   };
 
-  const fetchResources = async () => {
+  const fetchResources = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -146,7 +146,7 @@ export default function ResourcesView({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const getAppsUsingResource = (resourceId: string) => {
     return apps.filter((app) => app.resourceId === resourceId);
@@ -174,7 +174,7 @@ export default function ResourcesView({
 
   useEffect(() => {
     fetchResources();
-  }, []);
+  }, [fetchResources]);
 
   const handleCreateResource = async () => {
     if (!createFormData.name.trim() || !createFormData.baseUrl.trim()) {
