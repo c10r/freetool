@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import {
-  createApp as createAppAPI,
-  getAppByFolder,
-  getFoldersBySpace,
-} from "@/api/api";
+import { createApp as createAppAPI } from "@/api/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
@@ -13,87 +9,13 @@ import {
   useIsOrgAdmin,
   useSpacePermissions,
 } from "@/hooks/usePermissions";
-import { useSpace, useSpaces } from "@/hooks/useSpaces";
+import { useSidebarTree } from "@/hooks/useSidebarTree";
+import { useSpace } from "@/hooks/useSpaces";
 import NotFound from "@/pages/NotFound";
 import type { SpaceWithDetails } from "@/types/space";
 import SidebarTree from "./SidebarTree";
 import SpaceMain from "./SpaceMain";
-import type {
-  AppNode,
-  Endpoint,
-  FolderNode,
-  KeyValuePair,
-  SpaceNode,
-} from "./types";
-
-function createFolder(id: string, name: string, parentId?: string): FolderNode {
-  return { id, name, type: "folder", parentId, childrenIds: [] };
-}
-function createApp(id: string, name: string, parentId?: string): AppNode {
-  return {
-    id,
-    name,
-    type: "app",
-    parentId,
-    fields: [],
-    endpointId: undefined,
-    resourceId: undefined,
-  };
-}
-
-// API folder response interface
-interface ApiFolderResponse {
-  id?: string;
-  name: string;
-  parentId?: string | null;
-  children?: ApiFolderResponse[] | null;
-}
-
-// Transform API folder data to space nodes structure
-function transformFoldersToNodes(
-  folders: ApiFolderResponse[],
-  rootId: string,
-  spaceId?: string
-): Record<string, SpaceNode> {
-  const nodes: Record<string, SpaceNode> = {};
-
-  // Create virtual root node
-  const root: FolderNode = {
-    id: rootId,
-    name: "Spaces",
-    type: "folder",
-    childrenIds: [],
-    spaceId,
-  };
-  nodes[rootId] = root;
-
-  // First pass: create all folder nodes
-  folders.forEach((folder) => {
-    if (folder.id) {
-      const folderNode: FolderNode = {
-        id: folder.id,
-        name: folder.name || "Unnamed Folder",
-        type: "folder",
-        parentId: folder.parentId ?? rootId, // Use nullish coalescing to handle null parentId
-        childrenIds: [],
-        spaceId,
-      };
-      nodes[folder.id] = folderNode;
-    }
-  });
-
-  // Second pass: build parent-child relationships
-  Object.values(nodes).forEach((node) => {
-    if (node.type === "folder" && node.parentId && nodes[node.parentId]) {
-      const parent = nodes[node.parentId] as FolderNode;
-      if (!parent.childrenIds.includes(node.id)) {
-        parent.childrenIds.push(node.id);
-      }
-    }
-  });
-
-  return nodes;
-}
+import type { Endpoint, FolderNode, KeyValuePair, SpaceNode } from "./types";
 
 // Helper functions to convert between selectedId and URL paths
 function getPathFromSelectedId(
@@ -163,71 +85,38 @@ function WorkspaceContent() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Fetch all spaces
-  const { spaces, isLoading: loadingSpaces } = useSpaces();
+  // Fetch all spaces, folders, and apps upfront using the sidebar tree hook
+  const {
+    nodes,
+    spaces,
+    rootId,
+    isLoading: loadingTree,
+    error: treeError,
+    invalidateTree,
+  } = useSidebarTree();
 
-  // Fetch current space
+  // Fetch current space (for permission checks)
   const { isLoading: loadingSpace } = useSpace(spaceId);
 
   // Redirect to first space if none selected
-  useEffect(() => {
-    const isStandaloneGlobalRoute =
-      location.pathname === "/users" || location.pathname === "/audit";
+  const isStandaloneGlobalRoute =
+    location.pathname === "/users" || location.pathname === "/audit";
 
+  useEffect(() => {
     if (
-      !(loadingSpaces || spaceId) &&
+      !(loadingTree || spaceId) &&
       spaces.length > 0 &&
       !isStandaloneGlobalRoute
     ) {
       navigate(`/spaces/${spaces[0].id}`, { replace: true });
     }
-  }, [spaceId, spaces, loadingSpaces, navigate, location.pathname]);
+  }, [loadingTree, spaceId, spaces, isStandaloneGlobalRoute, navigate]);
 
   // Fetch space permissions
   const { isLoading: permissionsLoading, error: permissionsError } =
     useSpacePermissions(spaceId || "");
   const hasAnyPermission = useHasAnyPermission(spaceId || "");
   const isOrgAdmin = useIsOrgAdmin();
-
-  const [nodes, setNodes] = useState<Record<string, SpaceNode>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [loadedFolders, setLoadedFolders] = useState<Set<string>>(new Set());
-  const rootId = "root";
-
-  // Load space data
-  useEffect(() => {
-    const loadSpaceData = async () => {
-      if (!spaceId) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await getFoldersBySpace(spaceId);
-
-        if (response.error) {
-          setError("Failed to load space data");
-        } else if (response.data) {
-          // Transform API response to nodes structure
-          const transformedNodes = transformFoldersToNodes(
-            response.data.items || [],
-            rootId,
-            spaceId
-          );
-          setNodes(transformedNodes);
-        }
-      } catch (_err) {
-        setError("Failed to load space data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSpaceData();
-  }, [spaceId]);
 
   // Get selectedId from current URL
   const selectedId = getSelectedIdFromPath(
@@ -237,89 +126,9 @@ function WorkspaceContent() {
     rootId
   );
 
-  // Load apps when navigating to a folder
-  useEffect(() => {
-    const loadAppsForFolder = async () => {
-      // Only load apps if we have a valid folder selected, nodes are loaded, and we haven't loaded this folder yet
-      // Skip loading apps for root folder since apps cannot live in the root
-      if (
-        loading ||
-        !nodes[selectedId] ||
-        nodes[selectedId].type !== "folder" ||
-        loadedFolders.has(selectedId) ||
-        selectedId === rootId
-      ) {
-        return;
-      }
-
-      try {
-        const response = await getAppByFolder(selectedId);
-
-        if (!response.error && response.data?.items) {
-          // Transform API apps to AppNode format and add them to nodes
-          const appsToAdd: Record<string, SpaceNode> = {};
-          const appIds: string[] = [];
-
-          response.data.items.forEach((apiApp) => {
-            if (apiApp.id) {
-              const appNode: AppNode = {
-                id: apiApp.id,
-                name: apiApp.name || "Unnamed App",
-                type: "app",
-                parentId: selectedId,
-                fields: [], // TODO: Transform apiApp inputs to fields if needed
-                endpointId: undefined, // TODO: Map from apiApp if available
-                resourceId: apiApp.resourceId || undefined,
-                urlPath: apiApp.urlPath || "",
-                urlParameters: (apiApp.urlParameters || []).map((kvp) => ({
-                  key: kvp.key || "",
-                  value: kvp.value || "",
-                })),
-                headers: (apiApp.headers || []).map((kvp) => ({
-                  key: kvp.key || "",
-                  value: kvp.value || "",
-                })),
-                body: (apiApp.body || []).map((kvp) => ({
-                  key: kvp.key || "",
-                  value: kvp.value || "",
-                })),
-              };
-              appsToAdd[apiApp.id] = appNode;
-              appIds.push(apiApp.id);
-            }
-          });
-
-          // Update nodes state with new apps and update folder's childrenIds
-          setNodes((prev) => {
-            const folder = prev[selectedId] as FolderNode;
-            // Merge existing childrenIds with new app IDs, avoiding duplicates
-            const existingChildIds = folder.childrenIds || [];
-            const newChildIds = [...new Set([...existingChildIds, ...appIds])];
-
-            return {
-              ...prev,
-              ...appsToAdd,
-              [selectedId]: {
-                ...folder,
-                childrenIds: newChildIds,
-              },
-            };
-          });
-
-          // Mark this folder as loaded
-          setLoadedFolders((prev) => new Set([...prev, selectedId]));
-        }
-      } catch (_error) {
-        // Silently ignore folder loading errors
-      }
-    };
-
-    loadAppsForFolder();
-  }, [selectedId, loading, loadedFolders, nodes]);
-
   // Check if the nodeId from URL is valid (only after data is loaded)
   const isValidNodeId = useMemo(() => {
-    if (loading) {
+    if (loadingTree) {
       return true; // Don't validate while loading
     }
     if (!nodeId) {
@@ -329,7 +138,7 @@ function WorkspaceContent() {
       return true; // Special sections are valid
     }
     return nodes[selectedId] !== undefined; // Check if node exists
-  }, [loading, nodeId, selectedId, nodes]);
+  }, [loadingTree, nodeId, selectedId, nodes]);
 
   // Function to update URL when selection changes
   const setSelectedId = (id: string, targetSpaceId?: string) => {
@@ -342,47 +151,23 @@ function WorkspaceContent() {
     return {};
   });
 
-  const updateNode = (node: SpaceNode) =>
-    setNodes((prev) => ({ ...prev, [node.id]: node }));
+  // Mutation callbacks that invalidate the cached tree data
+  // The actual API calls are made by child components, then they call these to refresh the tree
 
-  const insertFolderNode = (folder: FolderNode) =>
-    setNodes((prev) => {
-      const parentId = folder.parentId || rootId;
-      const parentNode = prev[parentId];
+  const updateNode = (_node: SpaceNode) => {
+    // After a node is updated via API, invalidate the tree cache to refetch
+    invalidateTree();
+  };
 
-      if (!parentNode || parentNode.type !== "folder") {
-        return {
-          ...prev,
-          [folder.id]: folder,
-        };
-      }
+  const insertFolderNode = (_folder: FolderNode) => {
+    // After a folder is created via API, invalidate the tree cache to refetch
+    invalidateTree();
+  };
 
-      const hasChild = parentNode.childrenIds.includes(folder.id);
-      const updatedParent: FolderNode = {
-        ...parentNode,
-        childrenIds: hasChild
-          ? parentNode.childrenIds
-          : [...parentNode.childrenIds, folder.id],
-      };
-
-      return {
-        ...prev,
-        [folder.id]: folder,
-        [parentId]: updatedParent,
-      };
-    });
-
-  const addFolder = (parentId: string) =>
-    setNodes((prev) => {
-      const id = crypto.randomUUID();
-      const folder = createFolder(id, "New Folder", parentId);
-      const parent = prev[parentId] as FolderNode;
-      return {
-        ...prev,
-        [id]: folder,
-        [parentId]: { ...parent, childrenIds: [...parent.childrenIds, id] },
-      };
-    });
+  const addFolder = (_parentId: string) => {
+    // This is called after folder creation - invalidate to refresh
+    invalidateTree();
+  };
 
   const addApp = async (
     parentId: string,
@@ -417,41 +202,14 @@ function WorkspaceContent() {
       throw new Error("Failed to get app ID from response");
     }
 
-    // Update local state only if API call succeeds
-    setNodes((prev) => {
-      const app = createApp(id, name.trim(), parentId);
-      const parent = prev[parentId] as FolderNode;
-      return {
-        ...prev,
-        [id]: app,
-        [parentId]: { ...parent, childrenIds: [...parent.childrenIds, id] },
-      };
-    });
-
-    // Mark the parent folder as loaded (since we're adding an app to it)
-    setLoadedFolders((prev) => new Set([...prev, parentId]));
+    // Invalidate tree cache to refetch with the new app
+    invalidateTree();
   };
 
-  const deleteNode = (id: string) =>
-    setNodes((prev) => {
-      const toDelete = collectSubtreeIds(prev, id);
-      const newNodes: Record<string, SpaceNode> = {};
-      for (const key in prev) {
-        if (!toDelete.has(key)) {
-          newNodes[key] = prev[key];
-        }
-      }
-      // remove from parent's children
-      const parentId = prev[id]?.parentId;
-      if (parentId && newNodes[parentId]?.type === "folder") {
-        const parent = newNodes[parentId] as FolderNode;
-        newNodes[parentId] = {
-          ...parent,
-          childrenIds: parent.childrenIds.filter((cid) => cid !== id),
-        };
-      }
-      return newNodes;
-    });
+  const deleteNode = (_id: string) => {
+    // After a node is deleted via API, invalidate the tree cache to refetch
+    invalidateTree();
+  };
 
   const createEndpoint = () => {
     const id = crypto.randomUUID();
@@ -487,7 +245,7 @@ function WorkspaceContent() {
   const spaceName = currentSpace?.name || "Space";
 
   // Show loading state (combined space data + permissions)
-  if (loading || permissionsLoading || loadingSpaces || loadingSpace) {
+  if (loadingTree || permissionsLoading || loadingSpace) {
     return (
       <div className="h-screen flex overflow-hidden">
         <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
@@ -565,7 +323,7 @@ function WorkspaceContent() {
   }
 
   // Show error state
-  if (error) {
+  if (treeError) {
     return (
       <div className="h-screen flex overflow-hidden">
         <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
@@ -577,7 +335,11 @@ function WorkspaceContent() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="text-red-500 text-xl mb-2">⚠️</div>
-            <p className="text-red-500 mb-4">{error}</p>
+            <p className="text-red-500 mb-4">
+              {treeError instanceof Error
+                ? treeError.message
+                : "Failed to load space data"}
+            </p>
             <button
               type="button"
               onClick={() => window.location.reload()}
@@ -738,17 +500,4 @@ function buildBreadcrumb(
     cur = nodes[cur.parentId];
   }
   return list;
-}
-
-function collectSubtreeIds(nodes: Record<string, SpaceNode>, id: string) {
-  const set = new Set<string>();
-  const walk = (nid: string) => {
-    set.add(nid);
-    const n = nodes[nid];
-    if (n?.type === "folder") {
-      n.childrenIds.forEach(walk);
-    }
-  };
-  walk(id);
-  return set;
 }
