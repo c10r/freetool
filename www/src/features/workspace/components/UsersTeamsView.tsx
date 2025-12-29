@@ -7,6 +7,7 @@ import {
   getGroupById,
   getGroups,
   getUsers,
+  inviteUser,
   removeGroupMember,
   updateGroupName,
 } from "@/api/api";
@@ -39,6 +40,7 @@ interface User {
   name: string;
   email: string;
   profilePicUrl?: string;
+  invitedAt?: string; // ISO date string, present if user is invited placeholder
 }
 
 interface Group {
@@ -46,6 +48,9 @@ interface Group {
   name: string;
   memberCount?: number;
 }
+
+const isInvitedPlaceholder = (user: User): boolean =>
+  !!user.invitedAt && (!user.name || user.name === "");
 
 export default function UsersTeamsView() {
   const queryClient = useQueryClient();
@@ -70,6 +75,12 @@ export default function UsersTeamsView() {
   const [editSelectedUserIds, setEditSelectedUserIds] = useState<string[]>([]);
   const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
 
+  // Invite by email state
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
+  const [editInviteEmail, setEditInviteEmail] = useState("");
+  const [isEditInviting, setIsEditInviting] = useState(false);
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -83,6 +94,7 @@ export default function UsersTeamsView() {
               name: user.name,
               email: user.email,
               profilePicUrl: user.profilePicUrl,
+              invitedAt: user.invitedAt,
             };
           });
           setUsers(userData);
@@ -163,6 +175,66 @@ export default function UsersTeamsView() {
       setEditSelectedUserIds([...editSelectedUserIds, userId]);
     } else {
       setEditSelectedUserIds(editSelectedUserIds.filter((id) => id !== userId));
+    }
+  };
+
+  const handleInviteUser = async () => {
+    if (!inviteEmail.trim()) {
+      return;
+    }
+
+    try {
+      setIsInviting(true);
+      const response = await inviteUser({ email: inviteEmail.trim() });
+
+      if (response.data) {
+        const newUser: User = {
+          id: response.data.id,
+          name: response.data.name,
+          email: response.data.email,
+          profilePicUrl: response.data.profilePicUrl,
+          invitedAt: response.data.invitedAt,
+        };
+
+        setUsers((prev) => [...prev, newUser]);
+        // Auto-select the invited user
+        setSelectedUserIds((prev) => [...prev, newUser.id]);
+        setInviteEmail("");
+      }
+    } catch (_error) {
+      // Could show toast notification in the future
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleEditInviteUser = async () => {
+    if (!editInviteEmail.trim()) {
+      return;
+    }
+
+    try {
+      setIsEditInviting(true);
+      const response = await inviteUser({ email: editInviteEmail.trim() });
+
+      if (response.data) {
+        const newUser: User = {
+          id: response.data.id,
+          name: response.data.name,
+          email: response.data.email,
+          profilePicUrl: response.data.profilePicUrl,
+          invitedAt: response.data.invitedAt,
+        };
+
+        setUsers((prev) => [...prev, newUser]);
+        // Auto-select the invited user for the edit dialog
+        setEditSelectedUserIds((prev) => [...prev, newUser.id]);
+        setEditInviteEmail("");
+      }
+    } catch (_error) {
+      // Could show toast notification in the future
+    } finally {
+      setIsEditInviting(false);
     }
   };
 
@@ -279,12 +351,26 @@ export default function UsersTeamsView() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {users.map((user) => (
-              <Card key={user.id}>
+              <Card
+                key={user.id}
+                className={isInvitedPlaceholder(user) ? "opacity-70" : ""}
+              >
                 <CardHeader>
-                  <CardTitle className="text-base font-medium">
-                    {user.name}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base font-medium">
+                      {isInvitedPlaceholder(user) ? user.email : user.name}
+                    </CardTitle>
+                    {isInvitedPlaceholder(user) && (
+                      <Badge variant="secondary" className="text-xs">
+                        Pending
+                      </Badge>
+                    )}
+                  </div>
+                  {!isInvitedPlaceholder(user) && (
+                    <p className="text-sm text-muted-foreground">
+                      {user.email}
+                    </p>
+                  )}
                 </CardHeader>
                 <CardContent>
                   {user.profilePicUrl ? (
@@ -375,7 +461,21 @@ export default function UsersTeamsView() {
                               htmlFor={`user-${user.id}`}
                               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                             >
-                              {user.name}
+                              {isInvitedPlaceholder(user) ? (
+                                <span className="flex items-center gap-2">
+                                  <span className="text-muted-foreground">
+                                    {user.email}
+                                  </span>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    Pending
+                                  </Badge>
+                                </span>
+                              ) : (
+                                user.name
+                              )}
                             </Label>
                           </div>
                         </div>
@@ -387,6 +487,34 @@ export default function UsersTeamsView() {
                         {selectedUserIds.length !== 1 ? "s" : ""} selected
                       </p>
                     )}
+                  </div>
+                  <div className="space-y-2 pt-4 border-t">
+                    <Label>Or invite by email</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="email"
+                        placeholder="Enter email address"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleInviteUser();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleInviteUser}
+                        disabled={!inviteEmail.trim() || isInviting}
+                      >
+                        {isInviting ? "Inviting..." : "Invite"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Invited users will be added once they log in
+                    </p>
                   </div>
                 </div>
                 <DialogFooter>
@@ -485,7 +613,21 @@ export default function UsersTeamsView() {
                               htmlFor={`edit-user-${user.id}`}
                               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                             >
-                              {user.name}
+                              {isInvitedPlaceholder(user) ? (
+                                <span className="flex items-center gap-2">
+                                  <span className="text-muted-foreground">
+                                    {user.email}
+                                  </span>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    Pending
+                                  </Badge>
+                                </span>
+                              ) : (
+                                user.name
+                              )}
                             </Label>
                           </div>
                         </div>
@@ -494,6 +636,34 @@ export default function UsersTeamsView() {
                     <p className="text-xs text-muted-foreground">
                       {editSelectedUserIds.length} member
                       {editSelectedUserIds.length !== 1 ? "s" : ""} selected
+                    </p>
+                  </div>
+                  <div className="space-y-2 pt-4 border-t">
+                    <Label>Or invite by email</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="email"
+                        placeholder="Enter email address"
+                        value={editInviteEmail}
+                        onChange={(e) => setEditInviteEmail(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleEditInviteUser();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleEditInviteUser}
+                        disabled={!editInviteEmail.trim() || isEditInviting}
+                      >
+                        {isEditInviting ? "Inviting..." : "Invite"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Invited users will be added once they log in
                     </p>
                   </div>
                 </div>

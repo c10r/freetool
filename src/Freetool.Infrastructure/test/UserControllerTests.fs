@@ -140,7 +140,7 @@ let ``UpdateUserEmail returns 403 when user is not self and not org admin`` () :
 
         let controller, _ = createTestController permissions (Some userId)
 
-        let updateDto = { Email = "new@example.com" }
+        let updateDto: UpdateUserEmailDto = { Email = "new@example.com" }
 
         // Act
         let! result = controller.UpdateUserEmail(targetUserId.Value.ToString(), updateDto)
@@ -160,7 +160,7 @@ let ``UpdateUserEmail succeeds when user updates their own email`` () : Task =
 
         let controller, _ = createTestController permissions (Some userId)
 
-        let updateDto = { Email = "new@example.com" }
+        let updateDto: UpdateUserEmailDto = { Email = "new@example.com" }
 
         // Act
         let! result = controller.UpdateUserEmail(userId.Value.ToString(), updateDto)

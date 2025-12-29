@@ -14,7 +14,8 @@ module UserMapper =
               ProfilePicUrl = dto.ProfilePicUrl
               CreatedAt = DateTime.UtcNow
               UpdatedAt = DateTime.UtcNow
-              IsDeleted = false }
+              IsDeleted = false
+              InvitedAt = None }
           UncommittedEvents = [] }
 
     let fromUpdateNameDto (dto: UpdateUserNameDto) (user: ValidatedUser) : UnvalidatedUser =

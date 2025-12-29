@@ -10,6 +10,8 @@ type UserEvents =
     | UserCreatedEvent
     | UserUpdatedEvent
     | UserDeletedEvent
+    | UserInvitedEvent
+    | UserActivatedEvent
 
 type AppEvents =
     | AppCreatedEvent
@@ -66,6 +68,8 @@ module EventTypeConverter =
             | UserCreatedEvent -> "UserCreatedEvent"
             | UserUpdatedEvent -> "UserUpdatedEvent"
             | UserDeletedEvent -> "UserDeletedEvent"
+            | UserInvitedEvent -> "UserInvitedEvent"
+            | UserActivatedEvent -> "UserActivatedEvent"
         | AppEvents appEvent ->
             match appEvent with
             | AppCreatedEvent -> "AppCreatedEvent"
@@ -101,6 +105,8 @@ module EventTypeConverter =
         | "UserCreatedEvent" -> Some(UserEvents UserCreatedEvent)
         | "UserUpdatedEvent" -> Some(UserEvents UserUpdatedEvent)
         | "UserDeletedEvent" -> Some(UserEvents UserDeletedEvent)
+        | "UserInvitedEvent" -> Some(UserEvents UserInvitedEvent)
+        | "UserActivatedEvent" -> Some(UserEvents UserActivatedEvent)
         | "AppCreatedEvent" -> Some(AppEvents AppCreatedEvent)
         | "AppUpdatedEvent" -> Some(AppEvents AppUpdatedEvent)
         | "AppDeletedEvent" -> Some(AppEvents AppDeletedEvent)

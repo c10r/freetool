@@ -123,14 +123,29 @@ export default function FolderView({
   );
 
   const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) {
+    const trimmedName = newFolderName.trim();
+    if (!trimmedName) {
       return;
     }
+
+    if (!workspaceId) {
+      setCreateFolderError("Select a workspace before creating folders.");
+      return;
+    }
+
+    const parentIdForApi =
+      !newFolderParentId || newFolderParentId === "root"
+        ? null
+        : newFolderParentId;
 
     setIsCreatingFolder(true);
     setCreateFolderError(null);
     try {
-      const response = await createFolderAPI(newFolderName, newFolderParentId);
+      const response = await createFolderAPI(
+        trimmedName,
+        parentIdForApi,
+        workspaceId
+      );
       if (response.error) {
         setCreateFolderError(
           (response.error?.message as string) || "Failed to create folder"

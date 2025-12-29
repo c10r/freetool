@@ -41,6 +41,12 @@ type SetProfilePictureDto =
       [<Url(ErrorMessage = "Profile picture URL must be a valid URL")>]
       ProfilePicUrl: string }
 
+type InviteUserDto =
+    { [<Required>]
+      [<StringLength(ValidationConstants.EmailMaxLength, ErrorMessage = ValidationConstants.EmailErrorMessage)>]
+      [<EmailAddress(ErrorMessage = "Invalid email format")>]
+      Email: string }
+
 /// Represents a user's membership in a team/group
 type TeamMembershipDto =
     { Id: string

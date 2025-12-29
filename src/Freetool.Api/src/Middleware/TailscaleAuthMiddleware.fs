@@ -56,7 +56,8 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                     let userRepository = context.RequestServices.GetRequiredService<IUserRepository>()
                     let! user = userRepository.GetByEmailAsync validEmail
 
-                    if Option.isNone user then
+                    match user with
+                    | None ->
                         // Auto-create new user on first login
                         let userNameOption = extractHeader TAILSCALE_USER_NAME context
                         let profilePicOption = extractHeader TAILSCALE_USER_PROFILE context
@@ -110,10 +111,89 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                             Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
                             Tracing.setSpanStatus currentActivity true None
                             do! next.Invoke context
-                    else
-                        context.Items.["UserId"] <- user.Value.State.Id
+
+                    | Some existingUser when User.isInvitedPlaceholder existingUser ->
+                        // Activate the invited placeholder user
+                        let userNameOption = extractHeader TAILSCALE_USER_NAME context
+                        let profilePicOption = extractHeader TAILSCALE_USER_PROFILE context
+                        let userName = userNameOption |> Option.defaultValue userEmail
+
+                        match User.activate userName profilePicOption existingUser with
+                        | Error err ->
+                            Tracing.addAttribute currentActivity "tailscale.auth.error" "user_activation_failed"
+                            Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
+                            Tracing.setSpanStatus currentActivity false (Some "Failed to activate user")
+                            context.Response.StatusCode <- 500
+
+                            let errorMessage =
+                                match err with
+                                | ValidationError msg -> $"Validation error: {msg}"
+                                | NotFound msg -> $"Not found: {msg}"
+                                | Conflict msg -> $"Conflict: {msg}"
+                                | InvalidOperation msg -> $"Invalid operation: {msg}"
+
+                            do!
+                                context.Response.WriteAsync
+                                    $"Internal Server Error: Failed to activate user - {errorMessage}"
+
+                            return ()
+                        | Ok activatedUser ->
+                            match! userRepository.UpdateAsync activatedUser with
+                            | Error err ->
+                                Tracing.addAttribute
+                                    currentActivity
+                                    "tailscale.auth.error"
+                                    "user_activation_save_failed"
+
+                                Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
+                                Tracing.setSpanStatus currentActivity false (Some "Failed to save activated user")
+                                context.Response.StatusCode <- 500
+
+                                let errorMessage =
+                                    match err with
+                                    | ValidationError msg -> $"Validation error: {msg}"
+                                    | NotFound msg -> $"Not found: {msg}"
+                                    | Conflict msg -> $"Conflict: {msg}"
+                                    | InvalidOperation msg -> $"Invalid operation: {msg}"
+
+                                do!
+                                    context.Response.WriteAsync
+                                        $"Internal Server Error: Failed to save activated user - {errorMessage}"
+
+                                return ()
+                            | Ok savedUser ->
+                                context.Items.["UserId"] <- savedUser.State.Id
+                                Tracing.addAttribute currentActivity "tailscale.auth.user_activated" "true"
+                                Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
+                                Tracing.addAttribute currentActivity "user.id" (savedUser.State.Id.Value.ToString())
+
+                                // Check if this user should be made org admin (same as new user flow)
+                                let configuration = context.RequestServices.GetRequiredService<IConfiguration>()
+                                let orgAdminEmail = configuration["OpenFGA:OrgAdminEmail"]
+
+                                if
+                                    not (System.String.IsNullOrEmpty(orgAdminEmail))
+                                    && userEmail.Equals(orgAdminEmail, System.StringComparison.OrdinalIgnoreCase)
+                                then
+                                    let authService =
+                                        context.RequestServices.GetRequiredService<IAuthorizationService>()
+
+                                    let userId = savedUser.State.Id.ToString()
+
+                                    try
+                                        do! authService.InitializeOrganizationAsync "default" userId
+                                    with ex ->
+                                        eprintfn "[WARNING] Failed to set user %s as org admin: %s" userEmail ex.Message
+
+                                Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
+                                Tracing.setSpanStatus currentActivity true None
+                                do! next.Invoke context
+
+                    | Some existingUser ->
+                        // Regular existing user - proceed normally
+                        context.Items.["UserId"] <- existingUser.State.Id
                         Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
-                        Tracing.addAttribute currentActivity "user.id" (user.Value.State.Id.Value.ToString())
+                        Tracing.addAttribute currentActivity "user.id" (existingUser.State.Id.Value.ToString())
 
                         Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
                         Tracing.setSpanStatus currentActivity true None

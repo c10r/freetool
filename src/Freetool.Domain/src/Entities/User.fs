@@ -37,7 +37,9 @@ type UserData =
       UpdatedAt: DateTime
 
       [<JsonIgnore>]
-      IsDeleted: bool }
+      IsDeleted: bool
+
+      InvitedAt: DateTime option }
 
 type User = EventSourcingAggregate<UserData>
 
@@ -61,7 +63,8 @@ module User =
               ProfilePicUrl = profilePicUrl
               CreatedAt = DateTime.UtcNow
               UpdatedAt = DateTime.UtcNow
-              IsDeleted = false }
+              IsDeleted = false
+              InvitedAt = None }
 
         let userCreatedEvent =
             let profilePicUrlOption =
@@ -80,8 +83,11 @@ module User =
     let validate (user: UnvalidatedUser) : Result<ValidatedUser, DomainError> =
         let userData = user.State
 
+        // Allow empty name for invited (placeholder) users
+        let isInvitedUser = userData.InvitedAt.IsSome
+
         match userData.Name with
-        | "" -> Error(ValidationError "User name cannot be empty")
+        | "" when not isInvitedUser -> Error(ValidationError "User name cannot be empty")
         | name when name.Length > 100 -> Error(ValidationError "User name cannot exceed 100 characters")
         | name ->
             // Validate email format
@@ -240,3 +246,58 @@ module User =
 
         { State = updatedUserData
           UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ] }
+
+    /// Creates an invited (placeholder) user with just an email address.
+    /// The user will be activated when they log in via Tailscale.
+    let invite (actorUserId: UserId) (email: Email) : ValidatedUser =
+        let now = DateTime.UtcNow
+
+        let userData =
+            { Id = UserId.NewId()
+              Name = "" // Placeholder name - will be set on activation
+              Email = email.Value
+              ProfilePicUrl = None
+              CreatedAt = now
+              UpdatedAt = now
+              IsDeleted = false
+              InvitedAt = Some now }
+
+        let userInvitedEvent = UserEvents.userInvited actorUserId userData.Id email
+
+        { State = userData
+          UncommittedEvents = [ userInvitedEvent :> IDomainEvent ] }
+
+    /// Activates an invited placeholder user with name and optional profile picture.
+    /// Returns Error if the user is not an invited placeholder.
+    let activate
+        (name: string)
+        (profilePicUrl: string option)
+        (user: ValidatedUser)
+        : Result<ValidatedUser, DomainError> =
+        match user.State.InvitedAt with
+        | None -> Error(InvalidOperation "Cannot activate a user that was not invited")
+        | Some _ ->
+            // Validate name
+            match name with
+            | ""
+            | null -> Error(ValidationError "User name cannot be empty")
+            | n when n.Trim().Length > 100 -> Error(ValidationError "User name cannot exceed 100 characters")
+            | n ->
+                let trimmedName = n.Trim()
+
+                let updatedUserData =
+                    { user.State with
+                        Name = trimmedName
+                        ProfilePicUrl = profilePicUrl
+                        UpdatedAt = DateTime.UtcNow
+                        InvitedAt = None } // Clear InvitedAt to mark as activated
+
+                let userActivatedEvent = UserEvents.userActivated user.State.Id trimmedName
+
+                Ok
+                    { State = updatedUserData
+                      UncommittedEvents = user.UncommittedEvents @ [ userActivatedEvent :> IDomainEvent ] }
+
+    /// Returns true if the user is an invited placeholder that hasn't been activated yet.
+    let isInvitedPlaceholder (user: User) : bool =
+        user.State.InvitedAt.IsSome && String.IsNullOrEmpty(user.State.Name)

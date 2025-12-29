@@ -39,6 +39,7 @@ type TracingUserCommandHandlerDecorator(inner: ICommandHandler, activitySource: 
         | SetProfilePicture _ -> "user.set_profile_picture"
         | RemoveProfilePicture _ -> "user.remove_profile_picture"
         | DeleteUser _ -> "user.delete"
+        | InviteUser _ -> "user.invite"
 
     member private this.AddCommandAttributes activity command =
         match command with
@@ -74,6 +75,9 @@ type TracingUserCommandHandlerDecorator(inner: ICommandHandler, activitySource: 
         | DeleteUser(id, event) ->
             Tracing.addUserAttributes activity (Some(id.Value.ToString())) None
             Tracing.addAttribute activity "operation.type" "delete"
+        | InviteUser(actorId, dto) ->
+            Tracing.addUserAttributes activity None (Some dto.Email)
+            Tracing.addAttribute activity "operation.type" "invite"
 
     member private this.AddSuccessAttributes activity command result =
         match result with

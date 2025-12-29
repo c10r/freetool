@@ -41,6 +41,9 @@ type EventRepository(context: FreetoolDbContext) =
                     | :? Events.UserCreatedEvent as e -> (e.UserId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.UserUpdatedEvent as e -> (e.UserId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.UserDeletedEvent as e -> (e.UserId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.UserInvitedEvent as e -> (e.UserId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.UserActivatedEvent as e ->
+                        (e.UserId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.AppCreatedEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.AppUpdatedEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.AppDeletedEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))

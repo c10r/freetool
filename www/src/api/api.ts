@@ -188,11 +188,16 @@ export const getAuditEvents = (skip?: number, take?: number) => {
  * Folders
  */
 
-export const createFolder = (name: string, parentId: string | null) => {
+export const createFolder = (
+  name: string,
+  parentId: string | null,
+  workspaceId: string
+) => {
   return client.POST("/folder", {
     body: {
       name,
       location: parentId,
+      workspaceId,
     },
   });
 };
@@ -601,6 +606,9 @@ export const getUsers = (skip?: number, take?: number) => {
   }
   return client.GET("/user");
 };
+
+export const inviteUser = ({ email }: { email: string }) =>
+  client.POST("/user/invite", { body: { email } });
 
 /**
  * Authorization & Permissions

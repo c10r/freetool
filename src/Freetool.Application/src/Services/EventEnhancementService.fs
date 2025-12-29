@@ -13,7 +13,8 @@ open Freetool.Application.DTOs
 type IEventEnhancementService =
     abstract member EnhanceEventAsync: EventData -> Task<EnhancedEventData>
 
-type EventEnhancementService(userRepository: IUserRepository, appRepository: IAppRepository) =
+type EventEnhancementService
+    (userRepository: IUserRepository, appRepository: IAppRepository, groupRepository: IGroupRepository) =
 
     // Shared JSON options for deserializing F# event types
     let jsonOptions =
@@ -29,11 +30,37 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
         task {
             try
                 match eventType with
-                | UserEvents _ ->
-                    let userEventData =
-                        JsonSerializer.Deserialize<Freetool.Domain.Events.UserCreatedEvent>(eventData, jsonOptions)
+                | UserEvents userEvent ->
+                    match userEvent with
+                    | UserCreatedEvent ->
+                        let userEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.UserCreatedEvent>(eventData, jsonOptions)
 
-                    return userEventData.Name
+                        return userEventData.Name
+                    | UserInvitedEvent ->
+                        let userEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.UserInvitedEvent>(eventData, jsonOptions)
+
+                        // Use email as entity name since invited users don't have a name yet
+                        return userEventData.Email.Value
+                    | UserActivatedEvent ->
+                        let userEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.UserActivatedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        return userEventData.Name
+                    | _ ->
+                        // For update/delete events, try to get name from data or fallback
+                        let jsonDocument = JsonDocument.Parse(eventData)
+                        let root = jsonDocument.RootElement
+                        let mutable nameElement = Unchecked.defaultof<JsonElement>
+
+                        if root.TryGetProperty("Name", &nameElement) then
+                            return nameElement.GetString()
+                        else
+                            return "User (Unknown)"
                 | AppEvents appEvent ->
                     match appEvent with
                     | AppCreatedEvent ->
@@ -98,16 +125,26 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
                             JsonSerializer.Deserialize<Freetool.Domain.Events.GroupCreatedEvent>(eventData, jsonOptions)
 
                         return groupEventData.Name
-                    | _ ->
-                        // For update/delete events, try to get name from changes or fallback
-                        let jsonDocument = JsonDocument.Parse(eventData)
-                        let root = jsonDocument.RootElement
-                        let mutable nameElement = Unchecked.defaultof<JsonElement>
+                    | GroupUpdatedEvent ->
+                        // GroupUpdatedEvent doesn't have Name directly, look up from repository
+                        let groupEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.GroupUpdatedEvent>(eventData, jsonOptions)
 
-                        if root.TryGetProperty("Name", &nameElement) then
-                            return nameElement.GetString()
-                        else
-                            return "Group (Unknown)"
+                        let! group = groupRepository.GetByIdAsync groupEventData.GroupId
+
+                        match group with
+                        | Some g -> return Group.getName g
+                        | None -> return $"Group {groupEventData.GroupId.Value}"
+                    | GroupDeletedEvent ->
+                        // GroupDeletedEvent doesn't have Name, look up from repository
+                        let groupEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.GroupDeletedEvent>(eventData, jsonOptions)
+
+                        let! group = groupRepository.GetByIdAsync groupEventData.GroupId
+
+                        match group with
+                        | Some g -> return Group.getName g
+                        | None -> return $"Group {groupEventData.GroupId.Value}"
                 | RunEvents runEvent ->
                     match runEvent with
                     | RunCreatedEvent ->
@@ -183,6 +220,8 @@ type EventEnhancementService(userRepository: IUserRepository, appRepository: IAp
             | UserCreatedEvent -> $"{userName} created user \"{entityName}\""
             | UserUpdatedEvent -> $"{userName} updated user \"{entityName}\""
             | UserDeletedEvent -> $"{userName} deleted user \"{entityName}\""
+            | UserInvitedEvent -> $"{userName} invited user \"{entityName}\""
+            | UserActivatedEvent -> $"User \"{entityName}\" activated their account"
         | AppEvents appEvent ->
             match appEvent with
             | AppCreatedEvent -> $"{userName} created app \"{entityName}\""

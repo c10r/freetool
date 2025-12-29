@@ -19,3 +19,4 @@ type UserCommand =
     | UpdateUserEmail of actorUserId: UserId * userId: string * UpdateUserEmailDto
     | SetProfilePicture of actorUserId: UserId * userId: string * SetProfilePictureDto
     | RemoveProfilePicture of actorUserId: UserId * userId: string
+    | InviteUser of actorUserId: UserId * InviteUserDto

@@ -100,9 +100,21 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                     (fun guid -> Freetool.Domain.ValueObjects.UserId(guid))
                 )
 
+            let optionDateTimeConverter =
+                ValueConverter<DateTime option, System.Nullable<DateTime>>(
+                    (fun opt ->
+                        match opt with
+                        | Some dt -> System.Nullable(dt)
+                        | None -> System.Nullable()),
+                    (fun nullable -> if nullable.HasValue then Some(nullable.Value) else None)
+                )
+
             entity.Property(fun u -> u.Id).HasConversion(userIdConverter) |> ignore
 
             entity.Property(fun u -> u.ProfilePicUrl).HasConversion(optionStringConverter)
+            |> ignore
+
+            entity.Property(fun u -> u.InvitedAt).HasConversion(optionDateTimeConverter)
             |> ignore
 
             // Global query filter for soft delete

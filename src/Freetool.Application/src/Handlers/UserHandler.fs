@@ -169,6 +169,29 @@ module UserHandler =
                           Take = take }
 
                     return Ok(UserCommandResult.UsersResult result)
+
+            | InviteUser(actorUserId, dto) ->
+                // Validate email
+                match Email.Create(Some dto.Email) with
+                | Error err -> return Error err
+                | Ok validEmail ->
+                    // Check if email already exists
+                    let! existingUser = userRepository.GetByEmailAsync validEmail
+
+                    match existingUser with
+                    | Some user when User.isInvitedPlaceholder user ->
+                        // Idempotent: return existing placeholder
+                        return Ok(UserResult(user.State))
+                    | Some _ ->
+                        // Real user exists - conflict
+                        return Error(Conflict "A user with this email already exists")
+                    | None ->
+                        // Create new placeholder user
+                        let invitedUser = User.invite actorUserId validEmail
+
+                        match! userRepository.AddAsync invitedUser with
+                        | Error error -> return Error error
+                        | Ok(user) -> return Ok(UserResult(user.State))
         }
 
 type UserHandler() =

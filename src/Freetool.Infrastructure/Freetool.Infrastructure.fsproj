@@ -35,6 +35,7 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.011_UpdateAppUniqueIndexForSoftDelete.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.012_CreateWorkspacesTableAndUpdateFolders.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.013_AddWorkspaceIdToResourcesTable.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.014_AddInvitedAtToUsersTable.sql" />
   </ItemGroup>
 
   <ItemGroup>

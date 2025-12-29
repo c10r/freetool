@@ -99,7 +99,8 @@ let main args =
     builder.Services.AddScoped<IEventEnhancementService>(fun serviceProvider ->
         let userRepository = serviceProvider.GetRequiredService<IUserRepository>()
         let appRepository = serviceProvider.GetRequiredService<IAppRepository>()
-        EventEnhancementService(userRepository, appRepository) :> IEventEnhancementService)
+        let groupRepository = serviceProvider.GetRequiredService<IGroupRepository>()
+        EventEnhancementService(userRepository, appRepository, groupRepository) :> IEventEnhancementService)
     |> ignore
 
     builder.Services.AddScoped<UserHandler>() |> ignore

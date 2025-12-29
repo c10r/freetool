@@ -157,6 +157,36 @@ type UserController
             | Ok _ -> return this.StatusCode(500, "Unexpected result type") :> IActionResult
         }
 
+    [<HttpPost("invite")>]
+    [<ProducesResponseType(typeof<UserData>, StatusCodes.Status201Created)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status409Conflict)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.InviteUser([<FromBody>] inviteDto: InviteUserDto) : Task<IActionResult> =
+        task {
+            // Only organization admins can invite users
+            let! isAdmin = this.IsOrganizationAdmin()
+
+            if not isAdmin then
+                return
+                    this.StatusCode(
+                        403,
+                        {| error = "Forbidden"
+                           message = "Only organization admins can invite users" |}
+                    )
+                    :> IActionResult
+            else
+                let userId = this.CurrentUserId
+                let! result = commandHandler.HandleCommand userRepository (InviteUser(userId, inviteDto))
+
+                return
+                    match result with
+                    | Ok(UserResult userData) -> this.StatusCode(201, userData) :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError(error)
+        }
+
     [<HttpPut("{id}/name")>]
     [<ProducesResponseType(typeof<UserData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
