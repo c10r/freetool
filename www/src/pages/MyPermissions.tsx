@@ -1,29 +1,32 @@
-import { CheckCircle, Shield, User, Users, XCircle } from "lucide-react";
+import {
+  Building2,
+  CheckCircle,
+  Crown,
+  Shield,
+  User,
+  XCircle,
+} from "lucide-react";
 import { useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  useCurrentUser,
-  useWorkspacePermissions,
-} from "@/hooks/usePermissions";
-import { useWorkspaces } from "@/hooks/useWorkspaces";
+import { useCurrentUser, useSpacePermissions } from "@/hooks/usePermissions";
+import { useSpaces } from "@/hooks/useSpaces";
 import { getPermissionLabel } from "@/lib/permissionMessages";
 import { cn } from "@/lib/utils";
 import type { Permission } from "@/types/permissions";
 
 export default function MyPermissions() {
   const { currentUser, isLoading: userLoading } = useCurrentUser();
-  const { workspaceId } = useParams<{ workspaceId?: string }>();
-  const { workspaces, isLoading: workspacesLoading } = useWorkspaces();
+  const { spaceId } = useParams<{ spaceId?: string }>();
+  const { spaces, isLoading: spacesLoading } = useSpaces();
 
-  // Use the first workspace if no workspaceId in URL
-  const activeWorkspaceId =
-    workspaceId || (workspaces.length > 0 ? workspaces[0].id : "");
+  // Use the first space if no spaceId in URL
+  const activeSpaceId = spaceId || (spaces.length > 0 ? spaces[0].id : "");
   const { permissions, isLoading: permissionsLoading } =
-    useWorkspacePermissions(activeWorkspaceId);
+    useSpacePermissions(activeSpaceId);
 
-  const isLoading = userLoading || permissionsLoading || workspacesLoading;
+  const isLoading = userLoading || permissionsLoading || spacesLoading;
 
   if (isLoading) {
     return (
@@ -110,60 +113,71 @@ export default function MyPermissions() {
         <CardContent>
           {currentUser?.isOrgAdmin ? (
             <Badge variant="default" className="text-sm">
+              <Shield className="w-3 h-3 mr-1" />
               Organization Administrator
             </Badge>
           ) : (
             <Badge variant="secondary" className="text-sm">
-              Team Member
+              <User className="w-3 h-3 mr-1" />
+              Member
             </Badge>
           )}
           <p className="text-sm text-muted-foreground mt-2">
             {currentUser?.isOrgAdmin
-              ? "You have full administrative access to all workspaces and teams."
-              : "You have access based on your team membership and granted permissions."}
+              ? "You have full administrative access to all spaces."
+              : "You have access based on your space membership and granted permissions."}
           </p>
         </CardContent>
       </Card>
 
-      {/* Teams */}
+      {/* Spaces */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Teams
+            <Building2 className="w-5 h-5" />
+            Spaces
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {currentUser && currentUser.teams.length > 0 ? (
+          {currentUser && currentUser.spaces.length > 0 ? (
             <div className="space-y-2">
-              {currentUser.teams.map((team) => (
+              {currentUser.spaces.map((space) => (
                 <div
-                  key={team.id}
+                  key={space.id}
                   className="flex items-center justify-between p-3 border rounded-lg"
                 >
-                  <span className="font-medium">{team.name}</span>
-                  <Badge
-                    variant={team.role === "admin" ? "default" : "secondary"}
-                  >
-                    {team.role === "admin" ? "Team Admin" : "Member"}
-                  </Badge>
+                  <span className="font-medium">{space.name}</span>
+                  {space.role === "moderator" ? (
+                    <Badge
+                      variant="outline"
+                      className="border-amber-500 text-amber-600"
+                    >
+                      <Crown className="w-3 h-3 mr-1" />
+                      Moderator
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">
+                      <User className="w-3 h-3 mr-1" />
+                      Member
+                    </Badge>
+                  )}
                 </div>
               ))}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              You are not a member of any teams yet.
+              You are not a member of any spaces yet.
             </p>
           )}
         </CardContent>
       </Card>
 
-      {/* Workspace Permissions */}
+      {/* Space Permissions */}
       <Card>
         <CardHeader>
-          <CardTitle>Workspace Permissions</CardTitle>
+          <CardTitle>Space Permissions</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Workspace: {activeWorkspaceId || "No workspace selected"}
+            Space: {activeSpaceId || "No space selected"}
           </p>
         </CardHeader>
         <CardContent>
@@ -201,7 +215,7 @@ export default function MyPermissions() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No permissions information available for this workspace.
+              No permissions information available for this space.
             </p>
           )}
         </CardContent>
@@ -211,8 +225,8 @@ export default function MyPermissions() {
       <Card className="border-blue-200 bg-blue-50">
         <CardContent className="py-4">
           <p className="text-sm text-blue-900">
-            <strong>Need additional permissions?</strong> Contact your team
-            administrator or organization administrator to request access to
+            <strong>Need additional permissions?</strong> Contact your space
+            moderator or organization administrator to request access to
             specific features.
           </p>
         </CardContent>

@@ -7,8 +7,8 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { getCurrentUser, getWorkspacePermissions } from "@/api/api";
-import type { Permission, WorkspacePermissions } from "@/types/permissions";
+import { getCurrentUser, getSpacePermissions } from "@/api/api";
+import type { Permission, SpacePermissions } from "@/types/permissions";
 import {
   AuthorizationContext,
   type AuthorizationContextValue,
@@ -66,19 +66,19 @@ export function AuthorizationProvider({
   const currentUser = currentUserData || null;
 
   /**
-   * Trigger fetching of workspace permissions
+   * Trigger fetching of space permissions
    * Uses TanStack Query's prefetch to populate the cache
    */
-  const fetchWorkspacePermissions = (workspaceId: string) => {
+  const fetchSpacePermissions = (spaceId: string) => {
     queryClient.prefetchQuery({
-      queryKey: ["workspacePermissions", workspaceId],
+      queryKey: ["spacePermissions", spaceId],
       queryFn: async () => {
-        const result = await getWorkspacePermissions(workspaceId);
+        const result = await getSpacePermissions(spaceId);
         if (result.error) {
           throw new Error(result.error.message);
         }
         if (!result.data) {
-          throw new Error("No workspace permissions data returned");
+          throw new Error("No space permissions data returned");
         }
         return result.data;
       },
@@ -87,25 +87,22 @@ export function AuthorizationProvider({
   };
 
   /**
-   * Get cached workspace permissions
+   * Get cached space permissions
    */
-  const getWorkspacePermissionsData = (
-    workspaceId: string
-  ): WorkspacePermissions | null => {
+  const getSpacePermissionsData = (
+    spaceId: string
+  ): SpacePermissions | null => {
     const data = queryClient.getQueryData<{
-      permissions: WorkspacePermissions;
-    }>(["workspacePermissions", workspaceId]);
+      permissions: SpacePermissions;
+    }>(["spacePermissions", spaceId]);
     return data?.permissions || null;
   };
 
   /**
-   * Check if user has a specific permission on a workspace
+   * Check if user has a specific permission on a space
    */
-  const hasPermission = (
-    workspaceId: string,
-    permission: Permission
-  ): boolean => {
-    const permissions = getWorkspacePermissionsData(workspaceId);
+  const hasPermission = (spaceId: string, permission: Permission): boolean => {
+    const permissions = getSpacePermissionsData(spaceId);
     if (!permissions) {
       return false;
     }
@@ -120,25 +117,25 @@ export function AuthorizationProvider({
   };
 
   /**
-   * Check if current user is an admin of a specific team
+   * Check if current user is a moderator of a specific space
    */
-  const isTeamAdmin = (teamId: string): boolean => {
+  const isSpaceModerator = (spaceId: string): boolean => {
     if (!currentUser) {
       return false;
     }
     return (
-      currentUser.teams.some(
-        (team) => team.id === teamId && team.role === "admin"
+      currentUser.spaces.some(
+        (space) => space.id === spaceId && space.role === "moderator"
       ) ?? false
     );
   };
 
   /**
-   * Refetch workspace permissions (invalidate cache and refetch)
+   * Refetch space permissions (invalidate cache and refetch)
    */
-  const refetchWorkspacePermissions = (workspaceId: string) => {
+  const refetchSpacePermissions = (spaceId: string) => {
     queryClient.invalidateQueries({
-      queryKey: ["workspacePermissions", workspaceId],
+      queryKey: ["spacePermissions", spaceId],
     });
   };
 
@@ -146,13 +143,13 @@ export function AuthorizationProvider({
     currentUser,
     isLoadingUser,
     userError: userError as Error | null,
-    fetchWorkspacePermissions,
-    getWorkspacePermissions: getWorkspacePermissionsData,
+    fetchSpacePermissions,
+    getSpacePermissions: getSpacePermissionsData,
     hasPermission,
     isOrgAdmin,
-    isTeamAdmin,
+    isSpaceModerator,
     refetchUser,
-    refetchWorkspacePermissions,
+    refetchSpacePermissions,
   };
 
   return (

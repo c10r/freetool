@@ -18,9 +18,9 @@ import type { Permission } from "@/types/permissions";
  */
 export interface PermissionRequestProps {
   /**
-   * The workspace ID the permission is needed for
+   * The space ID the permission is needed for
    */
-  workspaceId: string;
+  spaceId: string;
 
   /**
    * The specific permission being requested
@@ -44,14 +44,14 @@ export interface PermissionRequestProps {
  * @example
  * ```tsx
  * <PermissionRequest
- *   workspaceId={workspaceId}
+ *   spaceId={spaceId}
  *   permission="create_app"
  *   onRequestSent={() => console.log('Request sent')}
  * />
  * ```
  */
 export function PermissionRequest({
-  workspaceId: _workspaceId,
+  spaceId: _spaceId,
   permission,
   onRequestSent,
   customMessage,
@@ -125,8 +125,8 @@ export function PermissionRequest({
         </div>
 
         <div className="text-xs text-blue-700 bg-blue-100 p-3 rounded">
-          <strong>Tip:</strong> Team administrators and organization
-          administrators can manage permissions from the Users & Teams section.
+          <strong>Tip:</strong> Space moderators and organization administrators
+          can manage permissions from the Users & Spaces section.
         </div>
       </CardContent>
     </Card>

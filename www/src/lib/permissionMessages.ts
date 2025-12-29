@@ -13,25 +13,25 @@ import type { Permission } from "@/types/permissions";
  */
 export const permissionMessages: Record<Permission, string> = {
   create_resource:
-    "You don't have permission to create API resources. Contact your team admin to request access.",
+    "You don't have permission to create API resources. Contact your space moderator to request access.",
   edit_resource:
-    "You don't have permission to modify this resource. Contact your team admin to request access.",
+    "You don't have permission to modify this resource. Contact your space moderator to request access.",
   delete_resource:
-    "You don't have permission to delete this resource. Contact your team admin to request access.",
+    "You don't have permission to delete this resource. Contact your space moderator to request access.",
   create_app:
-    "You don't have permission to create applications. Contact your team admin to request access.",
+    "You don't have permission to create applications. Contact your space moderator to request access.",
   edit_app:
-    "You don't have permission to modify this application. Contact your team admin to request access.",
+    "You don't have permission to modify this application. Contact your space moderator to request access.",
   delete_app:
-    "You don't have permission to delete this application. Contact your team admin to request access.",
+    "You don't have permission to delete this application. Contact your space moderator to request access.",
   run_app:
-    "You don't have permission to execute this application. Contact your team admin to request access.",
+    "You don't have permission to execute this application. Contact your space moderator to request access.",
   create_folder:
-    "You don't have permission to create folders. Contact your team admin to request access.",
+    "You don't have permission to create folders. Contact your space moderator to request access.",
   edit_folder:
-    "You don't have permission to rename or move folders. Contact your team admin to request access.",
+    "You don't have permission to rename or move folders. Contact your space moderator to request access.",
   delete_folder:
-    "You don't have permission to delete folders. Contact your team admin to request access.",
+    "You don't have permission to delete folders. Contact your space moderator to request access.",
 };
 
 /**
@@ -39,9 +39,9 @@ export const permissionMessages: Record<Permission, string> = {
  */
 export const roleMessages = {
   org_admin: "Only organization administrators can perform this action.",
-  team_admin: "Only team administrators can perform this action.",
+  moderator: "Only space moderators can perform this action.",
   member:
-    "This action is restricted to team members with specific permissions.",
+    "This action is restricted to space members with specific permissions.",
 };
 
 /**
@@ -58,7 +58,7 @@ export function getPermissionMessage(
   return (
     customMessage ||
     permissionMessages[permission] ||
-    "You don't have permission to perform this action. Contact your team admin for access."
+    "You don't have permission to perform this action. Contact your space moderator for access."
   );
 }
 

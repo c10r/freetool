@@ -6,9 +6,9 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspacePermissions } from "@/api/api";
+import { getSpacePermissions } from "@/api/api";
 import { useAuthorization } from "@/hooks/useAuthorization";
-import type { Permission } from "@/types/permissions";
+import type { Permission, SpacePermissions } from "@/types/permissions";
 
 /**
  * Cache time-to-live for permissions (5 minutes)
@@ -16,18 +16,18 @@ import type { Permission } from "@/types/permissions";
 const PERMISSION_CACHE_TTL = 5 * 60 * 1000;
 
 /**
- * Hook to fetch and access workspace permissions
+ * Hook to fetch and access space permissions
  *
- * Automatically fetches permissions for the specified workspace
+ * Automatically fetches permissions for the specified space
  * and returns the permissions object along with loading/error states.
  *
- * @param workspaceId - The ID of the workspace to fetch permissions for
+ * @param spaceId - The ID of the space to fetch permissions for
  * @returns Object containing permissions, loading state, and helper function
  *
  * @example
  * ```tsx
- * function WorkspaceComponent({ workspaceId }) {
- *   const { permissions, isLoading, can } = useWorkspacePermissions(workspaceId);
+ * function SpaceComponent({ spaceId }) {
+ *   const { permissions, isLoading, can } = useSpacePermissions(spaceId);
  *
  *   if (isLoading) return <Skeleton />;
  *
@@ -39,16 +39,16 @@ const PERMISSION_CACHE_TTL = 5 * 60 * 1000;
  * }
  * ```
  */
-export function useWorkspacePermissions(workspaceId: string) {
+export function useSpacePermissions(spaceId: string) {
   const {
-    data: workspaceData,
+    data: spaceData,
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: ["workspacePermissions", workspaceId],
+    queryKey: ["spacePermissions", spaceId],
     queryFn: async () => {
-      const result = await getWorkspacePermissions(workspaceId);
+      const result = await getSpacePermissions(spaceId);
       if (result.error || !result.data) {
         throw new Error(result.error?.message || "Failed to fetch permissions");
       }
@@ -56,10 +56,10 @@ export function useWorkspacePermissions(workspaceId: string) {
     },
     staleTime: PERMISSION_CACHE_TTL,
     retry: 2,
-    enabled: !!workspaceId,
+    enabled: !!spaceId,
   });
 
-  const permissions = workspaceData?.permissions || null;
+  const permissions: SpacePermissions | null = spaceData?.permissions || null;
 
   /**
    * Helper function to check if user has a specific permission
@@ -81,19 +81,19 @@ export function useWorkspacePermissions(workspaceId: string) {
 }
 
 /**
- * Hook to check if user has a specific permission on a workspace
+ * Hook to check if user has a specific permission on a space
  *
  * Returns a boolean indicating whether the user has the permission.
  * Automatically fetches permissions if not already cached.
  *
- * @param workspaceId - The ID of the workspace to check
+ * @param spaceId - The ID of the space to check
  * @param permission - The permission to check for
  * @returns Boolean indicating if user has the permission
  *
  * @example
  * ```tsx
- * function DeleteButton({ workspaceId, appId }) {
- *   const canDelete = useHasPermission(workspaceId, 'delete_app');
+ * function DeleteButton({ spaceId, appId }) {
+ *   const canDelete = useHasPermission(spaceId, 'delete_app');
  *
  *   return (
  *     <Button disabled={!canDelete} onClick={handleDelete}>
@@ -104,10 +104,10 @@ export function useWorkspacePermissions(workspaceId: string) {
  * ```
  */
 export function useHasPermission(
-  workspaceId: string,
+  spaceId: string,
   permission: Permission
 ): boolean {
-  const { can } = useWorkspacePermissions(workspaceId);
+  const { can } = useSpacePermissions(spaceId);
   return can(permission);
 }
 
@@ -161,52 +161,57 @@ export function useIsOrgAdmin(): boolean {
 }
 
 /**
- * Hook to check if current user is an admin of a specific team
+ * Hook to check if current user is a moderator of a specific space
  *
- * @param teamId - The ID of the team to check admin status for
- * @returns Boolean indicating if user is an admin of the specified team
+ * @param spaceId - The ID of the space to check moderator status for
+ * @returns Boolean indicating if user is a moderator of the specified space
  *
  * @example
  * ```tsx
- * function TeamSettings({ teamId }) {
- *   const isAdmin = useIsTeamAdmin(teamId);
+ * function SpaceSettings({ spaceId }) {
+ *   const isModerator = useIsSpaceModerator(spaceId);
  *
  *   return (
  *     <div>
- *       {isAdmin && <ManageTeamButton />}
+ *       {isModerator && <ManageSpaceButton />}
  *     </div>
  *   );
  * }
  * ```
  */
+export function useIsSpaceModerator(spaceId: string): boolean {
+  const { isSpaceModerator } = useAuthorization();
+  return isSpaceModerator(spaceId);
+}
+
+// Alias for backwards compatibility
 export function useIsTeamAdmin(teamId: string): boolean {
-  const { isTeamAdmin } = useAuthorization();
-  return isTeamAdmin(teamId);
+  return useIsSpaceModerator(teamId);
 }
 
 /**
- * Hook to check if user has any permission on a workspace
+ * Hook to check if user has any permission on a space
  *
- * Useful for determining if a user should have any access to a workspace at all.
+ * Useful for determining if a user should have any access to a space at all.
  *
- * @param workspaceId - The ID of the workspace to check
+ * @param spaceId - The ID of the space to check
  * @returns Boolean indicating if user has at least one permission
  *
  * @example
  * ```tsx
- * function WorkspaceAccess({ workspaceId }) {
- *   const hasAccess = useHasAnyPermission(workspaceId);
+ * function SpaceAccess({ spaceId }) {
+ *   const hasAccess = useHasAnyPermission(spaceId);
  *
  *   if (!hasAccess) {
  *     return <NoAccessMessage />;
  *   }
  *
- *   return <WorkspaceContent />;
+ *   return <SpaceContent />;
  * }
  * ```
  */
-export function useHasAnyPermission(workspaceId: string): boolean {
-  const { permissions, isLoading } = useWorkspacePermissions(workspaceId);
+export function useHasAnyPermission(spaceId: string): boolean {
+  const { permissions, isLoading } = useSpacePermissions(spaceId);
 
   if (isLoading || !permissions) {
     return false;
@@ -216,17 +221,17 @@ export function useHasAnyPermission(workspaceId: string): boolean {
 }
 
 /**
- * Hook to get all permissions the user has on a workspace
+ * Hook to get all permissions the user has on a space
  *
  * Returns an array of permission names that the user has.
  *
- * @param workspaceId - The ID of the workspace to check
+ * @param spaceId - The ID of the space to check
  * @returns Array of permission names the user has
  *
  * @example
  * ```tsx
- * function PermissionsList({ workspaceId }) {
- *   const permissions = useUserPermissions(workspaceId);
+ * function PermissionsList({ spaceId }) {
+ *   const permissions = useUserPermissions(spaceId);
  *
  *   return (
  *     <ul>
@@ -236,8 +241,8 @@ export function useHasAnyPermission(workspaceId: string): boolean {
  * }
  * ```
  */
-export function useUserPermissions(workspaceId: string): Permission[] {
-  const { permissions } = useWorkspacePermissions(workspaceId);
+export function useUserPermissions(spaceId: string): Permission[] {
+  const { permissions } = useSpacePermissions(spaceId);
 
   if (!permissions) {
     return [];

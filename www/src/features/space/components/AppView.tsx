@@ -21,7 +21,7 @@ import type {
   AppNode,
   FieldType,
   KeyValuePair,
-  WorkspaceMainProps,
+  SpaceMainProps,
 } from "../types";
 import AppConfigForm from "./AppConfigForm";
 import ResourceSelector from "./ResourceSelector";
@@ -30,8 +30,8 @@ export default function AppView({
   app,
   updateNode,
   endpoints,
-  workspaceId,
-}: WorkspaceMainProps & { app: AppNode }) {
+  spaceId,
+}: SpaceMainProps & { app: AppNode }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(app.name);
   const [nameUpdating, setNameUpdating] = useState(false);
@@ -40,7 +40,7 @@ export default function AppView({
   const [nameErrorMessage, setNameErrorMessage] = useState("");
 
   // Permission checks
-  const canEditApp = useHasPermission(workspaceId, "edit_app");
+  const canEditApp = useHasPermission(spaceId, "edit_app");
 
   // App form hook for autosave functionality
   const {

@@ -16,7 +16,7 @@
  */
 
 // API
-export { getCurrentUser, getWorkspacePermissions } from "@/api/api";
+export { getCurrentUser, getSpacePermissions } from "@/api/api";
 export type { PermissionButtonProps } from "@/components/PermissionButton";
 export { PermissionButton } from "@/components/PermissionButton";
 export type { PermissionGateProps } from "@/components/PermissionGate";
@@ -41,8 +41,8 @@ export {
   useHasPermission,
   useIsOrgAdmin,
   useIsTeamAdmin,
+  useSpacePermissions,
   useUserPermissions,
-  useWorkspacePermissions,
 } from "@/hooks/usePermissions";
 
 // Utilities
@@ -57,7 +57,7 @@ export type {
   CurrentUser,
   CurrentUserResponse,
   Permission,
-  TeamMembership,
-  WorkspacePermissions,
-  WorkspacePermissionsResponse,
+  SpaceMembership,
+  SpacePermissions,
+  SpacePermissionsResponse,
 } from "@/types/permissions";

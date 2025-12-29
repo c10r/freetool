@@ -9,7 +9,7 @@ import { createContext } from "react";
 import type {
   CurrentUser,
   Permission,
-  WorkspacePermissions,
+  SpacePermissions,
 } from "@/types/permissions";
 
 /**
@@ -19,13 +19,13 @@ export interface AuthorizationContextValue {
   currentUser: CurrentUser | null;
   isLoadingUser: boolean;
   userError: Error | null;
-  fetchWorkspacePermissions: (workspaceId: string) => void;
-  getWorkspacePermissions: (workspaceId: string) => WorkspacePermissions | null;
-  hasPermission: (workspaceId: string, permission: Permission) => boolean;
+  fetchSpacePermissions: (spaceId: string) => void;
+  getSpacePermissions: (spaceId: string) => SpacePermissions | null;
+  hasPermission: (spaceId: string, permission: Permission) => boolean;
   isOrgAdmin: () => boolean;
-  isTeamAdmin: (teamId: string) => boolean;
+  isSpaceModerator: (spaceId: string) => boolean;
   refetchUser: () => void;
-  refetchWorkspacePermissions: (workspaceId: string) => void;
+  refetchSpacePermissions: (spaceId: string) => void;
 }
 
 /**

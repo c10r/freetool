@@ -23,9 +23,9 @@ import type { Permission } from "@/types/permissions";
  */
 export interface PermissionButtonProps extends ButtonProps {
   /**
-   * The workspace ID to check permissions for
+   * The space ID to check permissions for
    */
-  workspaceId: string;
+  spaceId: string;
 
   /**
    * The permission required to enable the button
@@ -51,7 +51,7 @@ export interface PermissionButtonProps extends ButtonProps {
  * @example
  * ```tsx
  * <PermissionButton
- *   workspaceId={workspaceId}
+ *   spaceId={spaceId}
  *   permission="delete_app"
  *   variant="destructive"
  *   onClick={handleDelete}
@@ -61,7 +61,7 @@ export interface PermissionButtonProps extends ButtonProps {
  *
  * // With custom tooltip
  * <PermissionButton
- *   workspaceId={workspaceId}
+ *   spaceId={spaceId}
  *   permission="create_folder"
  *   tooltipMessage="Premium feature - upgrade to create folders"
  *   onClick={handleCreate}
@@ -71,7 +71,7 @@ export interface PermissionButtonProps extends ButtonProps {
  *
  * // Hide instead of disable
  * <PermissionButton
- *   workspaceId={workspaceId}
+ *   spaceId={spaceId}
  *   permission="edit_app"
  *   hideWhenDisabled
  *   onClick={handleEdit}
@@ -85,7 +85,7 @@ export const PermissionButton = forwardRef<
   PermissionButtonProps
 >(function PermissionButton(
   {
-    workspaceId,
+    spaceId,
     permission,
     tooltipMessage,
     hideWhenDisabled = false,
@@ -96,7 +96,7 @@ export const PermissionButton = forwardRef<
   },
   ref
 ) {
-  const hasPermission = useHasPermission(workspaceId, permission);
+  const hasPermission = useHasPermission(spaceId, permission);
   const isDisabled = !hasPermission || disabled;
 
   // Hide button if requested and no permission

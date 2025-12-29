@@ -2,7 +2,7 @@
  * Permission types for the authorization system
  *
  * These types define the fine-grained permissions that can be granted to users
- * on a per-workspace basis via OpenFGA.
+ * on a per-space basis via OpenFGA.
  */
 
 /**
@@ -21,9 +21,9 @@ export type Permission =
   | "delete_folder";
 
 /**
- * Map of all workspace permissions with their granted/denied status
+ * Map of all space permissions with their granted/denied status
  */
-export interface WorkspacePermissions {
+export interface SpacePermissions {
   create_resource: boolean;
   edit_resource: boolean;
   delete_resource: boolean;
@@ -37,12 +37,12 @@ export interface WorkspacePermissions {
 }
 
 /**
- * Team membership information for a user
+ * Space membership information for a user
  */
-export interface TeamMembership {
+export interface SpaceMembership {
   id: string;
   name: string;
-  role: "admin" | "member";
+  role: "moderator" | "member";
 }
 
 /**
@@ -54,25 +54,22 @@ export interface CurrentUser {
   email: string;
   profilePicUrl?: string;
   isOrgAdmin: boolean;
-  teams: TeamMembership[];
+  spaces: SpaceMembership[];
 }
 
 /**
- * Response from the workspace permissions endpoint
- * Note: This endpoint is not yet implemented in the backend
+ * Response from the space permissions endpoint
  */
-export interface WorkspacePermissionsResponse {
-  workspaceId: string;
+export interface SpacePermissionsResponse {
+  spaceId: string;
   userId: string;
-  permissions: WorkspacePermissions;
+  permissions: SpacePermissions;
   isOrgAdmin: boolean;
-  isTeamAdmin: boolean;
-  teamId?: string;
+  isSpaceModerator: boolean;
 }
 
 /**
  * Response from the current user endpoint
- * Note: This endpoint is not yet implemented in the backend
  */
 export interface CurrentUserResponse {
   id: string;
@@ -80,5 +77,5 @@ export interface CurrentUserResponse {
   email: string;
   profilePicUrl?: string;
   isOrgAdmin: boolean;
-  teams: TeamMembership[];
+  spaces: SpaceMembership[];
 }

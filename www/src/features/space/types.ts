@@ -19,8 +19,8 @@ export interface BaseNode {
 export interface FolderNode extends BaseNode {
   type: "folder";
   childrenIds: string[];
-  workspaceId?: string; // ID of the workspace this folder belongs to
-  isWorkspace?: boolean; // true if this folder IS a workspace (parentId === null)
+  spaceId?: string; // ID of the space this folder belongs to
+  isSpace?: boolean; // true if this folder IS a space (parentId === null)
 }
 
 export type EndpointMethod =
@@ -58,7 +58,7 @@ export interface AppNode extends BaseNode {
   body?: KeyValuePair[]; // JSON body for the app
 }
 
-export type WorkspaceNode = FolderNode | AppNode;
+export type SpaceNode = FolderNode | AppNode;
 
 // Tree node type used for rendering (includes expanded children)
 export interface TreeNode extends BaseNode {
@@ -66,11 +66,11 @@ export interface TreeNode extends BaseNode {
   children?: TreeNode[];
 }
 
-export interface WorkspaceMainProps {
-  nodes: Record<string, WorkspaceNode>;
+export interface SpaceMainProps {
+  nodes: Record<string, SpaceNode>;
   selectedId: string;
-  onSelect: (id: string, targetWorkspaceId?: string) => void;
-  updateNode: (node: WorkspaceNode) => void;
+  onSelect: (id: string, targetSpaceId?: string) => void;
+  updateNode: (node: SpaceNode) => void;
   insertFolderNode: (folder: FolderNode) => void;
   createFolder: (parentId: string) => void;
   createApp: (
@@ -84,6 +84,6 @@ export interface WorkspaceMainProps {
   createEndpoint: () => void;
   updateEndpoint: (ep: Endpoint) => void;
   deleteEndpoint: (id: string) => void;
-  workspaceId: string;
-  workspaceName?: string;
+  spaceId: string;
+  spaceName?: string;
 }

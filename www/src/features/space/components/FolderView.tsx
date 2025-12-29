@@ -38,8 +38,8 @@ import type { components } from "@/schema";
 import type {
   FolderNode,
   KeyValuePair,
-  WorkspaceMainProps,
-  WorkspaceNode,
+  SpaceMainProps,
+  SpaceNode,
 } from "../types";
 import AppConfigForm from "./AppConfigForm";
 
@@ -51,25 +51,19 @@ export default function FolderView({
   updateNode,
   insertFolderNode,
   deleteNode,
-  workspaceId,
-}: WorkspaceMainProps & { folder: FolderNode }) {
+  spaceId,
+}: SpaceMainProps & { folder: FolderNode }) {
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(folder.name);
-  const effectiveWorkspaceId = folder.workspaceId || workspaceId || "";
+  const effectiveSpaceId = folder.spaceId || spaceId || "";
 
   // Permission checks
-  const _canCreateFolder = useHasPermission(
-    effectiveWorkspaceId,
-    "create_folder"
-  );
-  const _canEditFolder = useHasPermission(effectiveWorkspaceId, "edit_folder");
-  const _canDeleteFolder = useHasPermission(
-    effectiveWorkspaceId,
-    "delete_folder"
-  );
-  const _canCreateApp = useHasPermission(effectiveWorkspaceId, "create_app");
-  const _canDeleteApp = useHasPermission(effectiveWorkspaceId, "delete_app");
+  const _canCreateFolder = useHasPermission(effectiveSpaceId, "create_folder");
+  const _canEditFolder = useHasPermission(effectiveSpaceId, "edit_folder");
+  const _canDeleteFolder = useHasPermission(effectiveSpaceId, "delete_folder");
+  const _canCreateApp = useHasPermission(effectiveSpaceId, "create_app");
+  const _canDeleteApp = useHasPermission(effectiveSpaceId, "delete_app");
 
   // Check if resources exist (needed to enable/disable New App button)
   const { hasResources, isLoading: loadingResources } = useResources();
@@ -140,8 +134,8 @@ export default function FolderView({
       return;
     }
 
-    if (!effectiveWorkspaceId) {
-      setCreateFolderError("Select a workspace before creating folders.");
+    if (!effectiveSpaceId) {
+      setCreateFolderError("Select a space before creating folders.");
       return;
     }
 
@@ -156,7 +150,7 @@ export default function FolderView({
       const response = await createFolderAPI(
         trimmedName,
         parentIdForApi,
-        effectiveWorkspaceId
+        effectiveSpaceId
       );
       if (response.error) {
         setCreateFolderError(
@@ -171,7 +165,7 @@ export default function FolderView({
           type: "folder" as const,
           parentId: newFolderParentId,
           childrenIds: [],
-          workspaceId: effectiveWorkspaceId,
+          spaceId: effectiveSpaceId,
         };
 
         insertFolderNode(folderNode);
@@ -334,10 +328,10 @@ export default function FolderView({
   };
 
   const handleRunApp = (appId: string) => {
-    navigate(`/workspaces/${effectiveWorkspaceId}/${appId}/run`);
+    navigate(`/spaces/${effectiveSpaceId}/${appId}/run`);
   };
 
-  const handleCardClick = (child: WorkspaceNode) => {
+  const handleCardClick = (child: SpaceNode) => {
     if (child.type === "app") {
       handleRunApp(child.id);
     } else {
@@ -396,9 +390,9 @@ export default function FolderView({
           )}
           {folder.id !== "root" && (
             <PermissionButton
-              workspaceId={effectiveWorkspaceId}
+              spaceId={effectiveSpaceId}
               permission="edit_folder"
-              tooltipMessage="You don't have permission to rename folders. Contact your team admin."
+              tooltipMessage="You don't have permission to rename folders. Contact your space moderator."
               variant="secondary"
               size="icon"
               onClick={() => setEditing((v) => !v)}
@@ -413,9 +407,9 @@ export default function FolderView({
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
               <PermissionButton
-                workspaceId={effectiveWorkspaceId}
+                spaceId={effectiveSpaceId}
                 permission="create_folder"
-                tooltipMessage="You don't have permission to create folders. Contact your team admin."
+                tooltipMessage="You don't have permission to create folders. Contact your space moderator."
                 onClick={() => {
                   setNewFolderParentId(folder.id);
                   setPopoverOpen(true);
@@ -484,9 +478,9 @@ export default function FolderView({
               <TooltipTrigger asChild>
                 <span>
                   <PermissionButton
-                    workspaceId={effectiveWorkspaceId}
+                    spaceId={effectiveSpaceId}
                     permission="create_app"
-                    tooltipMessage="You don't have permission to create apps. Contact your team admin."
+                    tooltipMessage="You don't have permission to create apps. Contact your space moderator."
                     variant="secondary"
                     onClick={handleShowCreateAppForm}
                     disabled={
@@ -615,9 +609,9 @@ export default function FolderView({
                   >
                     <PopoverTrigger asChild>
                       <PermissionButton
-                        workspaceId={effectiveWorkspaceId}
+                        spaceId={effectiveSpaceId}
                         permission="create_folder"
-                        tooltipMessage="You don't have permission to create folders. Contact your team admin."
+                        tooltipMessage="You don't have permission to create folders. Contact your space moderator."
                         variant="secondary"
                         size="icon"
                         onClick={(e) => {
@@ -700,9 +694,9 @@ export default function FolderView({
                       <Play size={16} />
                     </Button>
                     <PermissionButton
-                      workspaceId={effectiveWorkspaceId}
+                      spaceId={effectiveSpaceId}
                       permission="edit_app"
-                      tooltipMessage="You don't have permission to edit apps. Contact your team admin."
+                      tooltipMessage="You don't have permission to edit apps. Contact your space moderator."
                       variant="secondary"
                       size="icon"
                       onClick={(e) => {
@@ -717,14 +711,14 @@ export default function FolderView({
                   </>
                 )}
                 <PermissionButton
-                  workspaceId={effectiveWorkspaceId}
+                  spaceId={effectiveSpaceId}
                   permission={
                     child.type === "folder" ? "delete_folder" : "delete_app"
                   }
                   tooltipMessage={
                     child.type === "folder"
-                      ? "You don't have permission to delete folders. Contact your team admin."
-                      : "You don't have permission to delete apps. Contact your team admin."
+                      ? "You don't have permission to delete folders. Contact your space moderator."
+                      : "You don't have permission to delete apps. Contact your space moderator."
                   }
                   variant="secondary"
                   size="icon"

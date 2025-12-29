@@ -53,14 +53,14 @@ const initialFormData: ResourceFormData = {
 };
 
 interface ResourcesViewProps {
-  workspaceId: string;
-  workspaceName?: string;
+  spaceId: string;
+  spaceName?: string;
   onBackClick?: () => void;
 }
 
 export default function ResourcesView({
-  workspaceId,
-  workspaceName,
+  spaceId,
+  spaceName,
   onBackClick,
 }: ResourcesViewProps) {
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
@@ -78,7 +78,7 @@ export default function ResourcesView({
   );
 
   // Permission checks
-  const canEditResource = useHasPermission(workspaceId, "edit_resource");
+  const canEditResource = useHasPermission(spaceId, "edit_resource");
 
   // Create form state
   const { formData: createFormData, setFormData: setCreateFormData } =
@@ -187,7 +187,7 @@ export default function ResourcesView({
       setCreateError(null);
 
       await createResource({
-        workspaceId,
+        spaceId,
         name: createFormData.name.trim(),
         description: createFormData.description.trim(),
         baseUrl: createFormData.baseUrl.trim(),
@@ -239,16 +239,16 @@ export default function ResourcesView({
           {onBackClick && (
             <Button variant="ghost" size="sm" onClick={onBackClick}>
               <ChevronLeft className="h-4 w-4 mr-1" />
-              {workspaceName || "Workspace"}
+              {spaceName || "Space"}
             </Button>
           )}
           <h2 className="text-2xl font-semibold">Resources</h2>
         </div>
         <div className="flex gap-2">
           <PermissionButton
-            workspaceId={workspaceId}
+            spaceId={spaceId}
             permission="create_resource"
-            tooltipMessage="You don't have permission to create resources. Contact your team admin."
+            tooltipMessage="You don't have permission to create resources. Contact your space moderator."
             onClick={() => setShowCreateForm(!showCreateForm)}
             variant={showCreateForm ? "secondary" : "default"}
           >
@@ -343,7 +343,7 @@ export default function ResourcesView({
                   <div className="flex items-center gap-2">
                     <HttpMethodBadge method={resource.httpMethod} />
                     <PermissionGate
-                      workspaceId={workspaceId}
+                      spaceId={spaceId}
                       permission="edit_resource"
                       showTooltip={true}
                       tooltipMessage="You don't have permission to edit resources."
@@ -358,7 +358,7 @@ export default function ResourcesView({
                       </Button>
                     </PermissionGate>
                     <PermissionGate
-                      workspaceId={workspaceId}
+                      spaceId={spaceId}
                       permission="delete_resource"
                       showTooltip={true}
                       tooltipMessage="You don't have permission to delete resources."

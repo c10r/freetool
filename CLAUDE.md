@@ -90,7 +90,7 @@ docker-compose logs -f freetool-api
 The F# backend follows strict dependency inversion - all dependencies point inward toward the domain:
 
 **1. Domain Layer** (`src/Freetool.Domain/`) - Innermost layer, zero dependencies
-- **Entities/**: Aggregates with business rules (User, App, Resource, Folder, Workspace, Group, Run)
+- **Entities/**: Aggregates with business rules (User, App, Resource, Folder, Space, Run)
   - Each entity is an F# record with a `State` field (business data) and `UncommittedEvents` list
   - Domain methods are pure functions that validate, update state, and collect events
   - Example: `App.updateName` validates the name, updates the aggregate, and adds an `AppUpdatedEvent`
@@ -207,7 +207,7 @@ When adding a new entity or event type, you **MUST** update these locations to e
 **5. Program.fs DI Registration** (`src/Freetool.Api/src/Program.fs`)
 - If EventEnhancementService needs a new repository, add it to the constructor call
 
-**6. Frontend Types** (`www/src/features/workspace/components/AuditLogView.tsx`)
+**6. Frontend Types** (`www/src/features/space/components/AuditLogView.tsx`)
 - Update `EventType` and `EntityType` type unions
 
 **Testing Checklist:**
@@ -250,10 +250,9 @@ builder.Services.AddScoped<IGenericCommandHandler<IAppRepository, AppCommand, Ap
 Fine-grained, relationship-based authorization via OpenFGA (Google Zanzibar):
 
 ### Model Hierarchy
-- **Organization**: Global admins with all permissions on all workspaces
-- **Team**: Team admins + members, scoped to specific workspaces
-- **Workspace**: Top-level container with 10 permissions (create/edit/delete for resource/app/folder, plus run_app)
-- **Permissions**: Relationship tuples like `(user:alice, create_app, workspace:main)`
+- **Organization**: Global admins with all permissions on all spaces
+- **Space**: Top-level container with 10 permissions (create/edit/delete for resource/app/folder, plus run_app). Spaces have moderators (full permissions) and members (specific permissions)
+- **Permissions**: Relationship tuples like `(user:alice, create_app, space:main)`
 
 ### Authorization Checks
 
@@ -264,7 +263,7 @@ Controllers use `AuthzMiddleware` which:
 
 **Manual Check Example:**
 ```fsharp
-let! canCreate = authService.CheckPermissionAsync("user:alice", "create_resource", "workspace:main")
+let! canCreate = authService.CheckPermissionAsync("user:alice", "create_resource", "space:main")
 if not canCreate then
     return Error(PermissionDenied "Insufficient permissions")
 ```
@@ -274,18 +273,18 @@ if not canCreate then
 ```fsharp
 // Create relationship (grant permission)
 authService.CreateRelationshipsAsync([
-    { User = "user:bob"; Relation = "create_app"; Object = "workspace:eng" }
+    { User = "user:bob"; Relation = "create_app"; Object = "space:eng" }
 ])
 
-// Update relationships atomically (e.g., promote member to admin)
+// Update relationships atomically (e.g., promote member to moderator)
 authService.UpdateRelationshipsAsync({
-    TuplesToAdd = [{ User = "user:carol"; Relation = "admin"; Object = "team:eng" }]
-    TuplesToRemove = [{ User = "user:carol"; Relation = "member"; Object = "team:eng" }]
+    TuplesToAdd = [{ User = "user:carol"; Relation = "moderator"; Object = "space:eng" }]
+    TuplesToRemove = [{ User = "user:carol"; Relation = "member"; Object = "space:eng" }]
 })
 
 // Delete relationship (revoke permission)
 authService.DeleteRelationshipsAsync([
-    { User = "user:dave"; Relation = "run_app"; Object = "workspace:eng" }
+    { User = "user:dave"; Relation = "run_app"; Object = "space:eng" }
 ])
 ```
 

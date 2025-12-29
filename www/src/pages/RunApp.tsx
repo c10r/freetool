@@ -53,10 +53,10 @@ const RunApp = () => {
   const [error, setError] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [isRequestCollapsed, setIsRequestCollapsed] = useState(true);
-  const [workspaceId, setWorkspaceId] = useState("");
-  const [workspaceLoading, setWorkspaceLoading] = useState(false);
+  const [spaceId, setSpaceId] = useState("");
+  const [spaceLoading, setSpaceLoading] = useState(false);
 
-  const canRunApp = useHasPermission(workspaceId, "run_app");
+  const canRunApp = useHasPermission(spaceId, "run_app");
 
   // Load app details
   useEffect(() => {
@@ -85,42 +85,42 @@ const RunApp = () => {
   }, [nodeId]);
 
   useEffect(() => {
-    const loadWorkspace = async () => {
+    const loadSpace = async () => {
       if (!app?.folderId) {
         setError("This app is not assigned to a folder");
         return;
       }
 
-      setWorkspaceLoading(true);
-      setWorkspaceId("");
+      setSpaceLoading(true);
+      setSpaceId("");
 
       try {
         const folderResponse = await getFolderById(app.folderId);
 
         if (folderResponse.error) {
-          setError("Failed to load workspace information");
+          setError("Failed to load space information");
           return;
         }
 
-        const folderWorkspaceId = (
-          folderResponse.data as { workspaceId?: string | null } | undefined
-        )?.workspaceId;
+        const folderSpaceId = (
+          folderResponse.data as { spaceId?: string | null } | undefined
+        )?.spaceId;
 
-        if (!folderWorkspaceId) {
-          setError("Workspace information missing for this folder");
+        if (!folderSpaceId) {
+          setError("Space information missing for this folder");
           return;
         }
 
-        setWorkspaceId(folderWorkspaceId);
+        setSpaceId(folderSpaceId);
       } catch (_err) {
-        setError("Failed to load workspace information");
+        setError("Failed to load space information");
       } finally {
-        setWorkspaceLoading(false);
+        setSpaceLoading(false);
       }
     };
 
     if (app) {
-      loadWorkspace();
+      loadSpace();
     }
   }, [app]);
 
@@ -156,9 +156,9 @@ const RunApp = () => {
 
   const handleGoBack = () => {
     if (app?.parentId) {
-      navigate(`/workspaces/${app.parentId}`);
+      navigate(`/spaces/${app.parentId}`);
     } else {
-      navigate("/workspaces");
+      navigate("/spaces");
     }
   };
 
@@ -187,7 +187,7 @@ const RunApp = () => {
     );
   }
 
-  const workspaceReady = !!workspaceId && !workspaceLoading;
+  const spaceReady = !!spaceId && !spaceLoading;
 
   return (
     <div className="min-h-screen bg-background">
@@ -208,11 +208,11 @@ const RunApp = () => {
                 </p>
               </div>
             </div>
-            {workspaceReady ? (
+            {spaceReady ? (
               <PermissionButton
-                workspaceId={workspaceId}
+                spaceId={spaceId}
                 permission="run_app"
-                tooltipMessage="You don't have permission to run this app. Contact your team admin."
+                tooltipMessage="You don't have permission to run this app. Contact your space moderator."
                 onClick={handleRunApp}
                 disabled={running}
                 variant={running ? "secondary" : "default"}
@@ -241,7 +241,7 @@ const RunApp = () => {
 
       <main className="container mx-auto p-6 space-y-6">
         {/* Permission Warning */}
-        {workspaceReady && !canRunApp && (
+        {spaceReady && !canRunApp && (
           <Card className="border-yellow-200 bg-yellow-50">
             <CardContent className="py-4">
               <div className="flex items-start gap-3">
@@ -251,8 +251,8 @@ const RunApp = () => {
                     Permission Required
                   </h4>
                   <p className="text-sm text-yellow-800">
-                    You don't have permission to run this app. Contact your team
-                    admin to request run_app access.
+                    You don't have permission to run this app. Contact your
+                    space moderator to request run_app access.
                   </p>
                 </div>
               </div>

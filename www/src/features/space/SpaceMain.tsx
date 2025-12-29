@@ -2,19 +2,19 @@ import AppView from "./components/AppView";
 import AuditLogView from "./components/AuditLogView";
 import FolderView from "./components/FolderView";
 import ResourcesView from "./components/ResourcesView";
-import UsersTeamsView from "./components/UsersTeamsView";
-import type { WorkspaceMainProps } from "./types";
+import UsersSpacesView from "./components/UsersSpacesView";
+import type { SpaceMainProps } from "./types";
 
-export default function WorkspaceMain(props: WorkspaceMainProps) {
-  const { nodes, selectedId, workspaceId, workspaceName, onSelect } = props;
+export default function WorkspaceMain(props: SpaceMainProps) {
+  const { nodes, selectedId, spaceId, spaceName, onSelect } = props;
   const selected = nodes[selectedId];
 
   // Handle special sections from sidebar
   if (selectedId === "resources") {
     return (
       <ResourcesView
-        workspaceId={workspaceId}
-        workspaceName={workspaceName}
+        spaceId={spaceId}
+        spaceName={spaceName}
         onBackClick={() => onSelect("root")}
       />
     );
@@ -24,8 +24,8 @@ export default function WorkspaceMain(props: WorkspaceMainProps) {
     return <AuditLogView />;
   }
 
-  if (selectedId === "users-&-teams") {
-    return <UsersTeamsView />;
+  if (selectedId === "users-&-spaces") {
+    return <UsersSpacesView />;
   }
 
   if (!selected) {

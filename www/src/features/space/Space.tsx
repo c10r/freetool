@@ -3,28 +3,28 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   createApp as createAppAPI,
   getAppByFolder,
-  getFoldersByWorkspace,
+  getFoldersBySpace,
 } from "@/api/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
-import { useCurrentWorkspace } from "@/hooks/useCurrentWorkspace";
 import {
   useHasAnyPermission,
   useIsOrgAdmin,
-  useWorkspacePermissions,
+  useSpacePermissions,
 } from "@/hooks/usePermissions";
-import { useWorkspaces } from "@/hooks/useWorkspaces";
+import { useSpace, useSpaces } from "@/hooks/useSpaces";
 import NotFound from "@/pages/NotFound";
+import type { SpaceWithDetails } from "@/types/space";
 import SidebarTree from "./SidebarTree";
+import SpaceMain from "./SpaceMain";
 import type {
   AppNode,
   Endpoint,
   FolderNode,
   KeyValuePair,
-  WorkspaceNode,
+  SpaceNode,
 } from "./types";
-import WorkspaceMain from "./WorkspaceMain";
 
 function createFolder(id: string, name: string, parentId?: string): FolderNode {
   return { id, name, type: "folder", parentId, childrenIds: [] };
@@ -49,21 +49,21 @@ interface ApiFolderResponse {
   children?: ApiFolderResponse[] | null;
 }
 
-// Transform API folder data to workspace nodes structure
+// Transform API folder data to space nodes structure
 function transformFoldersToNodes(
   folders: ApiFolderResponse[],
   rootId: string,
-  workspaceId?: string
-): Record<string, WorkspaceNode> {
-  const nodes: Record<string, WorkspaceNode> = {};
+  spaceId?: string
+): Record<string, SpaceNode> {
+  const nodes: Record<string, SpaceNode> = {};
 
   // Create virtual root node
   const root: FolderNode = {
     id: rootId,
-    name: "Workspaces",
+    name: "Spaces",
     type: "folder",
     childrenIds: [],
-    workspaceId,
+    spaceId,
   };
   nodes[rootId] = root;
 
@@ -76,7 +76,7 @@ function transformFoldersToNodes(
         type: "folder",
         parentId: folder.parentId ?? rootId, // Use nullish coalescing to handle null parentId
         childrenIds: [],
-        workspaceId,
+        spaceId,
       };
       nodes[folder.id] = folderNode;
     }
@@ -98,53 +98,53 @@ function transformFoldersToNodes(
 // Helper functions to convert between selectedId and URL paths
 function getPathFromSelectedId(
   selectedId: string,
-  nodes: Record<string, WorkspaceNode>,
-  workspaceId?: string
+  nodes: Record<string, SpaceNode>,
+  spaceId?: string
 ): string {
-  if (selectedId === "users-&-teams") {
+  if (selectedId === "users-&-spaces") {
     return "/users";
   }
   if (selectedId === "audit-log") {
     return "/audit";
   }
   if (selectedId === "resources") {
-    // Resources are now workspace-specific
-    return workspaceId ? `/workspaces/${workspaceId}/resources` : "/workspaces";
+    // Resources are now space-specific
+    return spaceId ? `/spaces/${spaceId}/resources` : "/spaces";
   }
   if (selectedId === "root") {
-    return workspaceId ? `/workspaces/${workspaceId}` : "/workspaces";
+    return spaceId ? `/spaces/${spaceId}` : "/spaces";
   }
 
-  // For workspace nodes, use /workspaces/:workspaceId/:nodeId
-  if (nodes[selectedId] && workspaceId) {
-    return `/workspaces/${workspaceId}/${selectedId}`;
+  // For space nodes, use /spaces/:spaceId/:nodeId
+  if (nodes[selectedId] && spaceId) {
+    return `/spaces/${spaceId}/${selectedId}`;
   }
 
-  return workspaceId ? `/workspaces/${workspaceId}` : "/workspaces";
+  return spaceId ? `/spaces/${spaceId}` : "/spaces";
 }
 
 function getSelectedIdFromPath(
   pathname: string,
-  workspaceId?: string,
+  spaceId?: string,
   nodeId?: string,
   rootId = "root"
 ): string {
   if (pathname === "/users") {
-    return "users-&-teams";
+    return "users-&-spaces";
   }
   if (pathname === "/audit") {
     return "audit-log";
   }
-  if (pathname === `/workspaces/${workspaceId}/resources`) {
+  if (pathname === `/spaces/${spaceId}/resources`) {
     return "resources";
   }
-  if (pathname === "/workspaces" && !workspaceId) {
+  if (pathname === "/spaces" && !spaceId) {
     return rootId;
   }
-  if (pathname === `/workspaces/${workspaceId}` && !nodeId) {
+  if (pathname === `/spaces/${spaceId}` && !nodeId) {
     return rootId;
   }
-  if (pathname.startsWith("/workspaces/") && nodeId) {
+  if (pathname.startsWith("/spaces/") && nodeId) {
     return nodeId;
   }
   if (pathname === "/") {
@@ -154,51 +154,51 @@ function getSelectedIdFromPath(
   return rootId;
 }
 
-// Inner component that uses workspace permissions
+// Inner component that uses space permissions
 function WorkspaceContent() {
-  const { workspaceId, nodeId } = useParams<{
-    workspaceId?: string;
+  const { spaceId, nodeId } = useParams<{
+    spaceId?: string;
     nodeId?: string;
   }>();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Fetch all workspaces
-  const { workspaces, isLoading: loadingWorkspaces } = useWorkspaces();
+  // Fetch all spaces
+  const { spaces, isLoading: loadingSpaces } = useSpaces();
 
-  // Fetch current workspace
-  const { isLoading: loadingWorkspace } = useCurrentWorkspace(workspaceId);
+  // Fetch current space
+  const { isLoading: loadingSpace } = useSpace(spaceId);
 
-  // Redirect to first workspace if none selected
+  // Redirect to first space if none selected
   useEffect(() => {
     const isStandaloneGlobalRoute =
       location.pathname === "/users" || location.pathname === "/audit";
 
     if (
-      !(loadingWorkspaces || workspaceId) &&
-      workspaces.length > 0 &&
+      !(loadingSpaces || spaceId) &&
+      spaces.length > 0 &&
       !isStandaloneGlobalRoute
     ) {
-      navigate(`/workspaces/${workspaces[0].id}`, { replace: true });
+      navigate(`/spaces/${spaces[0].id}`, { replace: true });
     }
-  }, [workspaceId, workspaces, loadingWorkspaces, navigate, location.pathname]);
+  }, [spaceId, spaces, loadingSpaces, navigate, location.pathname]);
 
-  // Fetch workspace permissions
+  // Fetch space permissions
   const { isLoading: permissionsLoading, error: permissionsError } =
-    useWorkspacePermissions(workspaceId || "");
-  const hasAnyPermission = useHasAnyPermission(workspaceId || "");
+    useSpacePermissions(spaceId || "");
+  const hasAnyPermission = useHasAnyPermission(spaceId || "");
   const isOrgAdmin = useIsOrgAdmin();
 
-  const [nodes, setNodes] = useState<Record<string, WorkspaceNode>>({});
+  const [nodes, setNodes] = useState<Record<string, SpaceNode>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadedFolders, setLoadedFolders] = useState<Set<string>>(new Set());
   const rootId = "root";
 
-  // Load workspace data
+  // Load space data
   useEffect(() => {
-    const loadWorkspaceData = async () => {
-      if (!workspaceId) {
+    const loadSpaceData = async () => {
+      if (!spaceId) {
         setLoading(false);
         return;
       }
@@ -206,33 +206,33 @@ function WorkspaceContent() {
       try {
         setLoading(true);
         setError(null);
-        const response = await getFoldersByWorkspace(workspaceId);
+        const response = await getFoldersBySpace(spaceId);
 
         if (response.error) {
-          setError("Failed to load workspace data");
+          setError("Failed to load space data");
         } else if (response.data) {
           // Transform API response to nodes structure
           const transformedNodes = transformFoldersToNodes(
             response.data.items || [],
             rootId,
-            workspaceId
+            spaceId
           );
           setNodes(transformedNodes);
         }
       } catch (_err) {
-        setError("Failed to load workspace data");
+        setError("Failed to load space data");
       } finally {
         setLoading(false);
       }
     };
 
-    loadWorkspaceData();
-  }, [workspaceId]);
+    loadSpaceData();
+  }, [spaceId]);
 
   // Get selectedId from current URL
   const selectedId = getSelectedIdFromPath(
     location.pathname,
-    workspaceId,
+    spaceId,
     nodeId,
     rootId
   );
@@ -257,7 +257,7 @@ function WorkspaceContent() {
 
         if (!response.error && response.data?.items) {
           // Transform API apps to AppNode format and add them to nodes
-          const appsToAdd: Record<string, WorkspaceNode> = {};
+          const appsToAdd: Record<string, SpaceNode> = {};
           const appIds: string[] = [];
 
           response.data.items.forEach((apiApp) => {
@@ -332,9 +332,9 @@ function WorkspaceContent() {
   }, [loading, nodeId, selectedId, nodes]);
 
   // Function to update URL when selection changes
-  const setSelectedId = (id: string, targetWorkspaceId?: string) => {
-    const effectiveWorkspaceId = targetWorkspaceId || workspaceId;
-    const newPath = getPathFromSelectedId(id, nodes, effectiveWorkspaceId);
+  const setSelectedId = (id: string, targetSpaceId?: string) => {
+    const effectiveSpaceId = targetSpaceId || spaceId;
+    const newPath = getPathFromSelectedId(id, nodes, effectiveSpaceId);
     navigate(newPath);
   };
 
@@ -342,7 +342,7 @@ function WorkspaceContent() {
     return {};
   });
 
-  const updateNode = (node: WorkspaceNode) =>
+  const updateNode = (node: SpaceNode) =>
     setNodes((prev) => ({ ...prev, [node.id]: node }));
 
   const insertFolderNode = (folder: FolderNode) =>
@@ -435,7 +435,7 @@ function WorkspaceContent() {
   const deleteNode = (id: string) =>
     setNodes((prev) => {
       const toDelete = collectSubtreeIds(prev, id);
-      const newNodes: Record<string, WorkspaceNode> = {};
+      const newNodes: Record<string, SpaceNode> = {};
       for (const key in prev) {
         if (!toDelete.has(key)) {
           newNodes[key] = prev[key];
@@ -478,22 +478,22 @@ function WorkspaceContent() {
     });
 
   const breadcrumbs = useMemo(
-    () => buildBreadcrumb(nodes, selectedId, workspaces, workspaceId),
-    [nodes, selectedId, workspaces, workspaceId]
+    () => buildBreadcrumb(nodes, selectedId, spaces, spaceId),
+    [nodes, selectedId, spaces, spaceId]
   );
 
-  // Get current workspace name for display
-  const currentWorkspace = workspaces.find((w) => w.id === workspaceId);
-  const workspaceName = currentWorkspace?.groupName || "Workspace";
+  // Get current space name for display
+  const currentSpace = spaces.find((s) => s.id === spaceId);
+  const spaceName = currentSpace?.name || "Space";
 
-  // Show loading state (combined workspace data + permissions)
-  if (loading || permissionsLoading || loadingWorkspaces || loadingWorkspace) {
+  // Show loading state (combined space data + permissions)
+  if (loading || permissionsLoading || loadingSpaces || loadingSpace) {
     return (
       <div className="h-screen flex overflow-hidden">
         <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
           <div className="text-center text-muted-foreground">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto mb-2" />
-            Loading workspace...
+            Loading space...
           </div>
         </aside>
         <div className="flex-1 flex items-center justify-center">
@@ -516,7 +516,7 @@ function WorkspaceContent() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Failed to load your permissions for this workspace.
+              Failed to load your permissions for this space.
             </p>
             <Button onClick={() => window.location.reload()}>Retry</Button>
           </CardContent>
@@ -525,22 +525,21 @@ function WorkspaceContent() {
     );
   }
 
-  // Check if we're on a global route that doesn't require workspaces
-  const isGlobalRoute = ["users-&-teams", "audit-log"].includes(selectedId);
+  // Check if we're on a global route that doesn't require spaces
+  const isGlobalRoute = ["users-&-spaces", "audit-log"].includes(selectedId);
 
-  const hasWorkspaces = workspaces.length > 0;
+  const hasSpaces = spaces.length > 0;
 
-  // Show empty state when no workspaces exist (before checking permissions)
-  // But only for workspace-specific routes, not global routes like /users or /audit
-  const showNoWorkspacesState = !(hasWorkspaces || isGlobalRoute);
+  // Show empty state when no spaces exist (before checking permissions)
+  // But only for space-specific routes, not global routes like /users or /audit
+  const showNoSpacesState = !(hasSpaces || isGlobalRoute);
 
-  // Only check for "No Access" when a workspace exists, we're on a workspace route,
+  // Only check for "No Access" when a space exists, we're on a space route,
   // and the user isn't an org admin (org admins should always bypass this state).
-  const shouldCheckWorkspaceAccess =
-    hasWorkspaces && !!workspaceId && !isGlobalRoute;
+  const shouldCheckSpaceAccess = hasSpaces && !!spaceId && !isGlobalRoute;
 
   const showNoAccessState =
-    shouldCheckWorkspaceAccess &&
+    shouldCheckSpaceAccess &&
     !permissionsLoading &&
     !hasAnyPermission &&
     !isOrgAdmin;
@@ -553,10 +552,10 @@ function WorkspaceContent() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              You don't have any permissions on this workspace.
+              You don't have any permissions on this space.
             </p>
             <p className="text-sm text-muted-foreground">
-              To gain access, ask your team admin to grant you permissions.
+              To gain access, ask your space moderator to grant you permissions.
             </p>
             <Button onClick={() => navigate("/")}>Back to Home</Button>
           </CardContent>
@@ -572,7 +571,7 @@ function WorkspaceContent() {
         <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
           <div className="text-center text-red-500 p-4">
             <div className="text-2xl mb-2">⚠️</div>
-            Error loading workspace
+            Error loading space
           </div>
         </aside>
         <div className="flex-1 flex items-center justify-center">
@@ -597,13 +596,9 @@ function WorkspaceContent() {
     return <NotFound />;
   }
 
-  // Show empty workspace state (workspace exists but has no folders/apps)
-  // Skip for global routes which don't need workspace content
-  if (
-    Object.keys(nodes).length === 0 &&
-    !isGlobalRoute &&
-    !showNoWorkspacesState
-  ) {
+  // Show empty space state (space exists but has no folders/apps)
+  // Skip for global routes which don't need space content
+  if (Object.keys(nodes).length === 0 && !isGlobalRoute && !showNoSpacesState) {
     return (
       <div className="h-screen flex overflow-hidden">
         <SidebarTree
@@ -611,15 +606,13 @@ function WorkspaceContent() {
           rootId={rootId}
           selectedId={selectedId}
           onSelect={setSelectedId}
-          workspaceId={workspaceId || ""}
-          workspaces={workspaces}
+          spaceId={spaceId || ""}
+          spaces={spaces}
         />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-muted-foreground">
             <div className="text-4xl mb-4">📁</div>
-            <h2 className="text-xl font-semibold mb-2">
-              This workspace is empty
-            </h2>
+            <h2 className="text-xl font-semibold mb-2">This space is empty</h2>
             <p>Create your first folder or app to get started.</p>
           </div>
         </div>
@@ -634,8 +627,8 @@ function WorkspaceContent() {
         rootId={rootId}
         selectedId={selectedId}
         onSelect={setSelectedId}
-        workspaceId={workspaceId || ""}
-        workspaces={workspaces}
+        spaceId={spaceId || ""}
+        spaces={spaces}
       />
       <div className="flex-1 flex flex-col">
         <header className="flex items-center justify-between px-6 py-4 border-b bg-card/30">
@@ -658,28 +651,28 @@ function WorkspaceContent() {
             ))}
           </nav>
         </header>
-        {showNoWorkspacesState ? (
+        {showNoSpacesState ? (
           <div className="flex-1 flex items-center justify-center">
             <Card className="max-w-md">
               <CardHeader>
-                <CardTitle>No Workspaces Available</CardTitle>
+                <CardTitle>No Spaces Available</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   {isOrgAdmin
-                    ? "Get started by creating a team. Each team gets its own workspace."
-                    : "Contact your administrator to get access to a workspace."}
+                    ? "Get started by creating a space."
+                    : "Contact your administrator to get access to a space."}
                 </p>
                 {isOrgAdmin ? (
-                  <Button onClick={() => setSelectedId("users-&-teams")}>
-                    Go to Users & Teams
+                  <Button onClick={() => setSelectedId("users-&-spaces")}>
+                    Go to Users & Spaces
                   </Button>
                 ) : null}
               </CardContent>
             </Card>
           </div>
         ) : (
-          <WorkspaceMain
+          <SpaceMain
             nodes={nodes}
             selectedId={selectedId}
             onSelect={setSelectedId}
@@ -692,8 +685,8 @@ function WorkspaceContent() {
             createEndpoint={createEndpoint}
             updateEndpoint={updateEndpoint}
             deleteEndpoint={deleteEndpoint}
-            workspaceId={workspaceId || ""}
-            workspaceName={workspaceName}
+            spaceId={spaceId || ""}
+            spaceName={spaceName}
           />
         )}
       </div>
@@ -711,25 +704,25 @@ export default function Workspace() {
 }
 
 function buildBreadcrumb(
-  nodes: Record<string, WorkspaceNode>,
+  nodes: Record<string, SpaceNode>,
   id: string,
-  workspaces: WorkspaceWithGroup[],
-  currentWorkspaceId?: string
+  spaces: SpaceWithDetails[],
+  currentSpaceId?: string
 ) {
   // Handle special sections
-  if (id === "resources" && currentWorkspaceId) {
-    const workspace = workspaces.find((w) => w.id === currentWorkspaceId);
-    const workspaceName = workspace?.groupName || "Workspace";
+  if (id === "resources" && currentSpaceId) {
+    const space = spaces.find((s) => s.id === currentSpaceId);
+    const spaceName = space?.name || "Space";
     return [
-      { id: "root", name: workspaceName },
+      { id: "root", name: spaceName },
       { id: "resources", name: "Resources" },
     ];
   }
   if (id === "resources") {
     return [{ id: "resources", name: "Resources" }];
   }
-  if (id === "users-&-teams") {
-    return [{ id: "users-&-teams", name: "Users & Teams" }];
+  if (id === "users-&-spaces") {
+    return [{ id: "users-&-spaces", name: "Users & Spaces" }];
   }
   if (id === "audit-log") {
     return [{ id: "audit-log", name: "Audit Log" }];
@@ -747,7 +740,7 @@ function buildBreadcrumb(
   return list;
 }
 
-function collectSubtreeIds(nodes: Record<string, WorkspaceNode>, id: string) {
+function collectSubtreeIds(nodes: Record<string, SpaceNode>, id: string) {
   const set = new Set<string>();
   const walk = (nid: string) => {
     set.add(nid);

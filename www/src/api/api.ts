@@ -1,5 +1,5 @@
 import createClient, { type Middleware } from "openapi-fetch";
-import type { KeyValuePair } from "@/features/workspace/types";
+import type { KeyValuePair } from "@/features/space/types";
 import type { paths } from "../schema";
 import { handleApiError } from "./errorHandler";
 
@@ -45,7 +45,7 @@ type AppInput = {
 
 type AppCreateInput = {
   name: string;
-  folderId: string;
+  folderId: string | null;
   resourceId: string;
   inputs: AppInput[];
   urlPath?: string;
@@ -216,13 +216,13 @@ export const getAuditEvents = (skip?: number, take?: number) => {
 export const createFolder = (
   name: string,
   parentId: string | null,
-  workspaceId: string
+  spaceId: string
 ) => {
   return client.POST("/folder", {
     body: {
       name,
       location: parentId,
-      workspaceId,
+      spaceId,
     },
   });
 };
@@ -241,8 +241,8 @@ export const getAllFolders = (skip?: number, take?: number) => {
   return client.GET("/folder");
 };
 
-export const getFoldersByWorkspace = (
-  workspaceId: string,
+export const getFoldersBySpace = (
+  spaceId: string,
   skip?: number,
   take?: number
 ) => {
@@ -250,7 +250,7 @@ export const getFoldersByWorkspace = (
     return client.GET("/folder", {
       params: {
         query: {
-          workspaceId,
+          spaceId,
           skip,
           take,
         },
@@ -260,7 +260,7 @@ export const getFoldersByWorkspace = (
   return client.GET("/folder", {
     params: {
       query: {
-        workspaceId,
+        spaceId,
       },
     },
   });
@@ -322,129 +322,115 @@ export const updateFolderName = (id: string, newName: string) => {
 };
 
 /**
- * Groups
+ * Spaces
+ *
+ * Spaces are unified containers that replace the previous Group/Workspace split.
+ * Each space has exactly 1 moderator and 0+ members.
  */
 
-export const getGroups = (skip?: number, take?: number) => {
+export const getSpaces = (skip?: number, take?: number) => {
   if (skip && take) {
-    return client.GET("/group", {
+    return client.GET("/space", {
       params: {
         query: { skip, take },
       },
     });
   }
-  return client.GET("/group");
+  return client.GET("/space");
 };
 
-export const createGroup = ({
+export const getSpaceById = (spaceId: string) => {
+  return client.GET("/space/{id}", {
+    params: {
+      path: { id: spaceId },
+    },
+  });
+};
+
+export const createSpace = ({
   name,
-  userIds,
+  moderatorUserId,
+  memberIds,
 }: {
   name: string;
-  userIds: string[];
+  moderatorUserId: string;
+  memberIds?: string[];
 }) => {
-  return client.POST("/group", {
+  return client.POST("/space", {
     body: {
       name,
-      userIds,
+      moderatorUserId,
+      memberIds: memberIds || [],
     },
   });
 };
 
-export const deleteGroup = (groupId: string) => {
-  return client.DELETE("/group/{id}", {
+export const deleteSpace = (spaceId: string) => {
+  return client.DELETE("/space/{id}", {
     params: {
-      path: { id: groupId },
+      path: { id: spaceId },
     },
   });
 };
 
-export const updateGroupName = ({ id, name }: { id: string; name: string }) => {
-  return client.PUT("/group/{id}/name", {
-    params: {
-      path: {
-        id,
-      },
-    },
-    body: {
-      name,
-    },
-  });
-};
-
-export const addGroupMember = ({
-  groupId,
-  userId,
-}: {
-  groupId: string;
-  userId: string;
-}) => {
-  return client.POST("/group/{id}/users", {
-    params: {
-      path: {
-        id: groupId,
-      },
-    },
-    body: {
-      userId,
-    },
-  });
-};
-
-export const removeGroupMember = ({
-  groupId,
-  userId,
-}: {
-  groupId: string;
-  userId: string;
-}) => {
-  return client.DELETE("/group/{id}/users", {
-    params: {
-      path: {
-        id: groupId,
-      },
-    },
-    body: {
-      userId,
-    },
-  });
-};
-
-export const getGroupById = (groupId: string) => {
-  return client.GET("/group/{id}", {
-    params: {
-      path: { id: groupId },
-    },
-  });
-};
-
-/**
- * Workspaces
- */
-
-export const getWorkspaces = (skip?: number, take?: number) => {
-  if (skip && take) {
-    return client.GET("/workspace", {
-      params: {
-        query: { skip, take },
-      },
-    });
-  }
-  return client.GET("/workspace");
-};
-
-export const getWorkspaceById = (id: string) => {
-  return client.GET("/workspace/{id}", {
+export const updateSpaceName = ({ id, name }: { id: string; name: string }) => {
+  return client.PUT("/space/{id}/name", {
     params: {
       path: { id },
     },
+    body: {
+      name,
+    },
   });
 };
 
-export const getWorkspaceByGroupId = (groupId: string) => {
-  return client.GET("/workspace/group/{groupId}", {
+export const changeSpaceModerator = ({
+  spaceId,
+  newModeratorUserId,
+}: {
+  spaceId: string;
+  newModeratorUserId: string;
+}) => {
+  return client.PUT("/space/{id}/moderator", {
     params: {
-      path: { groupId },
+      path: { id: spaceId },
+    },
+    body: {
+      newModeratorUserId,
+    },
+  });
+};
+
+export const addSpaceMember = ({
+  spaceId,
+  userId,
+}: {
+  spaceId: string;
+  userId: string;
+}) => {
+  return client.POST("/space/{id}/members", {
+    params: {
+      path: { id: spaceId },
+    },
+    body: {
+      userId,
+    },
+  });
+};
+
+export const removeSpaceMember = ({
+  spaceId,
+  userId,
+}: {
+  spaceId: string;
+  userId: string;
+}) => {
+  return client.DELETE("/space/{id}/members", {
+    params: {
+      path: { id: spaceId },
+    },
+    body: {
+      userId,
     },
   });
 };
@@ -466,7 +452,7 @@ export const getResources = (skip?: number, take?: number) => {
 };
 
 export const createResource = ({
-  workspaceId,
+  spaceId,
   name,
   description,
   baseUrl,
@@ -475,7 +461,7 @@ export const createResource = ({
   headers,
   body,
 }: {
-  workspaceId: string;
+  spaceId: string;
   name: string;
   description: string;
   baseUrl: string;
@@ -486,7 +472,7 @@ export const createResource = ({
 }) => {
   return client.POST("/resource", {
     body: {
-      workspaceId,
+      spaceId,
       name,
       description,
       baseUrl,
@@ -643,19 +629,19 @@ export const inviteUser = ({ email }: { email: string }) =>
  *
  * NOTE: These endpoints are NOT yet implemented in the backend.
  * They return placeholder data for frontend development.
- * TODO: Once backend implements GET /user/me and GET /workspace/{id}/permissions,
+ * TODO: Once backend implements GET /user/me and GET /space/{id}/permissions,
  * update these functions to use the real endpoints.
  */
 
 import type {
   CurrentUserResponse,
-  WorkspacePermissionsResponse,
+  SpacePermissionsResponse,
 } from "@/types/permissions";
 
 /**
  * Get the current authenticated user's profile and role information
  *
- * @returns Current user data including teams and admin status
+ * @returns Current user data including spaces and admin status
  *
  * NOTE: This is a PLACEHOLDER implementation. The backend endpoint
  * GET /user/me does not exist yet. This returns mock data.
@@ -674,11 +660,11 @@ export const getCurrentUser = async (): Promise<{
       email: "dev@example.com",
       profilePicUrl: undefined,
       isOrgAdmin: true, // Mock as org admin for development
-      teams: [
+      spaces: [
         {
-          id: "team-1",
+          id: "space-1",
           name: "Engineering",
-          role: "admin",
+          role: "moderator",
         },
       ],
     },
@@ -686,18 +672,18 @@ export const getCurrentUser = async (): Promise<{
 };
 
 /**
- * Get the current user's permissions for a specific workspace
+ * Get the current user's permissions for a specific space
  *
- * @param workspaceId - The ID of the workspace to check permissions for
- * @returns Permissions object with all workspace-level permissions
+ * @param spaceId - The ID of the space to check permissions for
+ * @returns Permissions object with all space-level permissions
  *
  * NOTE: This is a PLACEHOLDER implementation. The backend endpoint
- * GET /workspace/{id}/permissions does not exist yet. This returns mock data.
+ * GET /space/{id}/permissions does not exist yet. This returns mock data.
  */
-export const getWorkspacePermissions = async (
-  workspaceId: string
+export const getSpacePermissions = async (
+  spaceId: string
 ): Promise<{
-  data?: WorkspacePermissionsResponse;
+  data?: SpacePermissionsResponse;
   error?: { message: string };
 }> => {
   // Simulate API delay
@@ -705,7 +691,7 @@ export const getWorkspacePermissions = async (
 
   return {
     data: {
-      workspaceId,
+      spaceId,
       userId: "user-1",
       permissions: {
         create_resource: true,
@@ -720,8 +706,7 @@ export const getWorkspacePermissions = async (
         delete_folder: true,
       },
       isOrgAdmin: true,
-      isTeamAdmin: true,
-      teamId: "team-1",
+      isSpaceModerator: true,
     },
   };
 };

@@ -96,7 +96,7 @@ describe("useHasPermission hook", () => {
 
   it("should return true when user has permission", async () => {
     const mockPermissions = {
-      workspaceId: "ws-1",
+      spaceId: "ws-1",
       userId: "user-1",
       permissions: {
         create_app: true,
@@ -111,7 +111,7 @@ describe("useHasPermission hook", () => {
         delete_folder: false,
       },
       isOrgAdmin: false,
-      isTeamAdmin: false,
+      isSpaceModerator: false,
     };
 
     vi.mocked(api.getCurrentUser).mockResolvedValue({
@@ -124,7 +124,7 @@ describe("useHasPermission hook", () => {
       },
     });
 
-    vi.mocked(api.getWorkspacePermissions).mockResolvedValue({
+    vi.mocked(api.getSpacePermissions).mockResolvedValue({
       data: mockPermissions,
     });
 
@@ -156,7 +156,7 @@ describe("PermissionGate component", () => {
 
   it("should render children when user has permission", async () => {
     const mockPermissions = {
-      workspaceId: "ws-1",
+      spaceId: "ws-1",
       userId: "user-1",
       permissions: {
         create_app: true,
@@ -171,7 +171,7 @@ describe("PermissionGate component", () => {
         delete_folder: true,
       },
       isOrgAdmin: true,
-      isTeamAdmin: true,
+      isSpaceModerator: true,
     };
 
     vi.mocked(api.getCurrentUser).mockResolvedValue({
@@ -184,12 +184,12 @@ describe("PermissionGate component", () => {
       },
     });
 
-    vi.mocked(api.getWorkspacePermissions).mockResolvedValue({
+    vi.mocked(api.getSpacePermissions).mockResolvedValue({
       data: mockPermissions,
     });
 
     renderWithProviders(
-      <PermissionGate workspaceId="ws-1" permission="create_app">
+      <PermissionGate spaceId="ws-1" permission="create_app">
         <button type="button">Create App</button>
       </PermissionGate>
     );
@@ -201,7 +201,7 @@ describe("PermissionGate component", () => {
 
   it("should hide children when user lacks permission", async () => {
     const mockPermissions = {
-      workspaceId: "ws-1",
+      spaceId: "ws-1",
       userId: "user-1",
       permissions: {
         create_app: false,
@@ -216,7 +216,7 @@ describe("PermissionGate component", () => {
         delete_folder: false,
       },
       isOrgAdmin: false,
-      isTeamAdmin: false,
+      isSpaceModerator: false,
     };
 
     vi.mocked(api.getCurrentUser).mockResolvedValue({
@@ -229,12 +229,12 @@ describe("PermissionGate component", () => {
       },
     });
 
-    vi.mocked(api.getWorkspacePermissions).mockResolvedValue({
+    vi.mocked(api.getSpacePermissions).mockResolvedValue({
       data: mockPermissions,
     });
 
     renderWithProviders(
-      <PermissionGate workspaceId="ws-1" permission="create_app">
+      <PermissionGate spaceId="ws-1" permission="create_app">
         <button type="button">Create App</button>
       </PermissionGate>
     );
@@ -246,7 +246,7 @@ describe("PermissionGate component", () => {
 
   it("should render fallback when user lacks permission", async () => {
     const mockPermissions = {
-      workspaceId: "ws-1",
+      spaceId: "ws-1",
       userId: "user-1",
       permissions: {
         create_app: false,
@@ -261,7 +261,7 @@ describe("PermissionGate component", () => {
         delete_folder: false,
       },
       isOrgAdmin: false,
-      isTeamAdmin: false,
+      isSpaceModerator: false,
     };
 
     vi.mocked(api.getCurrentUser).mockResolvedValue({
@@ -274,13 +274,13 @@ describe("PermissionGate component", () => {
       },
     });
 
-    vi.mocked(api.getWorkspacePermissions).mockResolvedValue({
+    vi.mocked(api.getSpacePermissions).mockResolvedValue({
       data: mockPermissions,
     });
 
     renderWithProviders(
       <PermissionGate
-        workspaceId="ws-1"
+        spaceId="ws-1"
         permission="create_app"
         fallback={<div>No Permission</div>}
       >
@@ -302,7 +302,7 @@ describe("PermissionButton component", () => {
 
   it("should be enabled when user has permission", async () => {
     const mockPermissions = {
-      workspaceId: "ws-1",
+      spaceId: "ws-1",
       userId: "user-1",
       permissions: {
         create_app: true,
@@ -317,7 +317,7 @@ describe("PermissionButton component", () => {
         delete_folder: true,
       },
       isOrgAdmin: true,
-      isTeamAdmin: true,
+      isSpaceModerator: true,
     };
 
     vi.mocked(api.getCurrentUser).mockResolvedValue({
@@ -330,12 +330,12 @@ describe("PermissionButton component", () => {
       },
     });
 
-    vi.mocked(api.getWorkspacePermissions).mockResolvedValue({
+    vi.mocked(api.getSpacePermissions).mockResolvedValue({
       data: mockPermissions,
     });
 
     renderWithProviders(
-      <PermissionButton workspaceId="ws-1" permission="delete_app">
+      <PermissionButton spaceId="ws-1" permission="delete_app">
         Delete
       </PermissionButton>
     );
@@ -348,7 +348,7 @@ describe("PermissionButton component", () => {
 
   it("should be disabled when user lacks permission", async () => {
     const mockPermissions = {
-      workspaceId: "ws-1",
+      spaceId: "ws-1",
       userId: "user-1",
       permissions: {
         create_app: false,
@@ -363,7 +363,7 @@ describe("PermissionButton component", () => {
         delete_folder: false,
       },
       isOrgAdmin: false,
-      isTeamAdmin: false,
+      isSpaceModerator: false,
     };
 
     vi.mocked(api.getCurrentUser).mockResolvedValue({
@@ -376,12 +376,12 @@ describe("PermissionButton component", () => {
       },
     });
 
-    vi.mocked(api.getWorkspacePermissions).mockResolvedValue({
+    vi.mocked(api.getSpacePermissions).mockResolvedValue({
       data: mockPermissions,
     });
 
     renderWithProviders(
-      <PermissionButton workspaceId="ws-1" permission="delete_app">
+      <PermissionButton spaceId="ws-1" permission="delete_app">
         Delete
       </PermissionButton>
     );

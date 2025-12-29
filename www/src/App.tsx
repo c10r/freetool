@@ -17,17 +17,11 @@ const App = () => (
       <BrowserRouter basename="/freetool">
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/workspaces" element={<Index />} />
-          <Route path="/workspaces/:workspaceId" element={<Index />} />
-          <Route path="/workspaces/:workspaceId/:nodeId" element={<Index />} />
-          <Route
-            path="/workspaces/:workspaceId/:nodeId/run"
-            element={<RunApp />}
-          />
-          <Route
-            path="/workspaces/:workspaceId/resources"
-            element={<Index />}
-          />
+          <Route path="/spaces" element={<Index />} />
+          <Route path="/spaces/:spaceId" element={<Index />} />
+          <Route path="/spaces/:spaceId/:nodeId" element={<Index />} />
+          <Route path="/spaces/:spaceId/:nodeId/run" element={<RunApp />} />
+          <Route path="/spaces/:spaceId/resources" element={<Index />} />
           <Route path="/users" element={<Index />} />
           <Route path="/audit" element={<Index />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

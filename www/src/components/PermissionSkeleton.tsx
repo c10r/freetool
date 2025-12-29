@@ -37,14 +37,14 @@ export interface PermissionSkeletonProps {
  *
  * @example
  * ```tsx
- * function WorkspaceView({ workspaceId }) {
- *   const { permissions, isLoading } = useWorkspacePermissions(workspaceId);
+ * function SpaceView({ spaceId }) {
+ *   const { permissions, isLoading } = useSpacePermissions(spaceId);
  *
  *   if (isLoading) {
  *     return <PermissionSkeleton type="page" />;
  *   }
  *
- *   return <WorkspaceContent />;
+ *   return <SpaceContent />;
  * }
  *
  * // Button skeleton

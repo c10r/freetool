@@ -21,9 +21,9 @@ import type { Permission } from "@/types/permissions";
  */
 export interface PermissionGateProps {
   /**
-   * The workspace ID to check permissions for
+   * The space ID to check permissions for
    */
-  workspaceId: string;
+  spaceId: string;
 
   /**
    * The permission required to view the content
@@ -57,13 +57,13 @@ export interface PermissionGateProps {
  * @example
  * ```tsx
  * // Hide content when no permission
- * <PermissionGate workspaceId={wsId} permission="delete_app">
+ * <PermissionGate spaceId={spaceId} permission="delete_app">
  *   <DeleteButton />
  * </PermissionGate>
  *
  * // Show disabled with tooltip
  * <PermissionGate
- *   workspaceId={wsId}
+ *   spaceId={spaceId}
  *   permission="delete_app"
  *   showTooltip
  *   tooltipMessage="You cannot delete this app"
@@ -73,7 +73,7 @@ export interface PermissionGateProps {
  *
  * // Show fallback content
  * <PermissionGate
- *   workspaceId={wsId}
+ *   spaceId={spaceId}
  *   permission="create_app"
  *   fallback={<div>Contact admin to create apps</div>}
  * >
@@ -82,14 +82,14 @@ export interface PermissionGateProps {
  * ```
  */
 export function PermissionGate({
-  workspaceId,
+  spaceId,
   permission,
   children,
   fallback = null,
   showTooltip = false,
   tooltipMessage,
 }: PermissionGateProps) {
-  const hasPermission = useHasPermission(workspaceId, permission);
+  const hasPermission = useHasPermission(spaceId, permission);
 
   // User has permission - render children normally
   if (hasPermission) {

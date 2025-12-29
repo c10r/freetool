@@ -331,9 +331,8 @@ The authorization system enforces a hierarchical permission model:
 
 **Entities:**
 - **Users** - Individual users in the system
-- **Teams** - Groups of users with shared access
 - **Organization** - Global scope with organization-wide admins
-- **Workspaces** - Top-level folders scoped to specific teams
+- **Spaces** - Top-level containers for organizing resources, apps, and folders
 
 **Permissions (10 total):**
 1. `create_resource` - Create new API resources
@@ -348,10 +347,10 @@ The authorization system enforces a hierarchical permission model:
 10. `delete_folder` - Remove folders
 
 **Authorization Rules:**
-- **Global Admins** → All 10 permissions on ALL workspaces
-- **Team Admins** → All 10 permissions on their team's workspaces + manage team membership
-- **Team Members** → Specific permissions granted by team admin
-- **Global Admins** → Can assign team admins
+- **Global Admins** → All 10 permissions on ALL spaces
+- **Space Moderators** → All 10 permissions on their space + manage space membership
+- **Space Members** → Specific permissions granted by space moderator
+- **Global Admins** → Can assign space moderators
 
 ### 🏗️ Architecture Implementation
 
@@ -417,51 +416,47 @@ type organization
   relations
     define admin: [user]
 
-type team
+type space
   relations
     define member: [user]
-    define admin: [user, organization#admin]
-
-type workspace
-  relations
-    define team: [team]
-    define create_resource: [user, organization#admin] or admin from team
-    define edit_resource: [user, organization#admin] or admin from team
-    define delete_resource: [user, organization#admin] or admin from team
-    define create_app: [user, organization#admin] or admin from team
-    define edit_app: [user, organization#admin] or admin from team
-    define delete_app: [user, organization#admin] or admin from team
-    define run_app: [user, organization#admin] or admin from team
-    define create_folder: [user, organization#admin] or admin from team
-    define edit_folder: [user, organization#admin] or admin from team
-    define delete_folder: [user, organization#admin] or admin from team
+    define moderator: [user, organization#admin]
+    define create_resource: [user, organization#admin] or moderator
+    define edit_resource: [user, organization#admin] or moderator
+    define delete_resource: [user, organization#admin] or moderator
+    define create_app: [user, organization#admin] or moderator
+    define edit_app: [user, organization#admin] or moderator
+    define delete_app: [user, organization#admin] or moderator
+    define run_app: [user, organization#admin] or moderator
+    define create_folder: [user, organization#admin] or moderator
+    define edit_folder: [user, organization#admin] or moderator
+    define delete_folder: [user, organization#admin] or moderator
 ```
 
 ### 🔧 Managing Relationships
 
 **Creating Relationships:**
 ```fsharp
-// Make Alice a member of the engineering team
+// Make Alice a member of the engineering space
 authService.CreateRelationshipsAsync([
     { User = "user:alice"
       Relation = "member"
-      Object = "team:engineering" }
+      Object = "space:engineering" }
 ])
 
-// Grant Bob create_resource permission on main workspace
+// Grant Bob create_resource permission on main space
 authService.CreateRelationshipsAsync([
     { User = "user:bob"
       Relation = "create_resource"
-      Object = "workspace:main" }
+      Object = "space:main" }
 ])
 ```
 
 **Updating Relationships (Atomic):**
 ```fsharp
-// Promote Carol from member to admin
+// Promote Carol from member to moderator
 authService.UpdateRelationshipsAsync({
-    TuplesToAdd = [{ User = "user:carol"; Relation = "admin"; Object = "team:engineering" }]
-    TuplesToRemove = [{ User = "user:carol"; Relation = "member"; Object = "team:engineering" }]
+    TuplesToAdd = [{ User = "user:carol"; Relation = "moderator"; Object = "space:engineering" }]
+    TuplesToRemove = [{ User = "user:carol"; Relation = "member"; Object = "space:engineering" }]
 })
 ```
 
@@ -471,18 +466,18 @@ authService.UpdateRelationshipsAsync({
 authService.DeleteRelationshipsAsync([
     { User = "user:dave"
       Relation = "run_app"
-      Object = "workspace:main" }
+      Object = "space:main" }
 ])
 ```
 
 ### 🔍 Permission Checks
 
 ```fsharp
-// Check if Alice can create resources in main workspace
-let! canCreate = authService.CheckPermissionAsync("user:alice", "create_resource", "workspace:main")
+// Check if Alice can create resources in main space
+let! canCreate = authService.CheckPermissionAsync("user:alice", "create_resource", "space:main")
 
-// Check if Bob is a team admin
-let! isAdmin = authService.CheckPermissionAsync("user:bob", "admin", "team:engineering")
+// Check if Bob is a space moderator
+let! isModerator = authService.CheckPermissionAsync("user:bob", "moderator", "space:engineering")
 ```
 
 ### ⚙️ Configuration

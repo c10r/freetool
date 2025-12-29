@@ -10,16 +10,16 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import type { WorkspaceWithGroup } from "@/types/workspace";
-import type { TreeNode, WorkspaceNode } from "./types";
+import type { SpaceWithDetails } from "@/types/space";
+import type { SpaceNode, TreeNode } from "./types";
 
 interface SidebarTreeProps {
-  nodes: Record<string, WorkspaceNode>;
+  nodes: Record<string, SpaceNode>;
   rootId: string;
   selectedId: string;
-  onSelect: (id: string, targetWorkspaceId?: string) => void;
-  workspaceId: string;
-  workspaces: WorkspaceWithGroup[];
+  onSelect: (id: string, targetSpaceId?: string) => void;
+  spaceId: string;
+  spaces: SpaceWithDetails[];
 }
 
 export default function SidebarTree({
@@ -27,23 +27,23 @@ export default function SidebarTree({
   rootId,
   selectedId,
   onSelect,
-  workspaceId,
-  workspaces,
+  spaceId,
+  spaces,
 }: SidebarTreeProps) {
-  const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(
-    () => new Set([workspaceId])
+  const [expandedSpaces, setExpandedSpaces] = useState<Set<string>>(
+    () => new Set([spaceId])
   );
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set()
   );
 
-  const toggleWorkspace = (wsId: string) => {
-    setExpandedWorkspaces((prev) => {
+  const toggleSpace = (spId: string) => {
+    setExpandedSpaces((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(wsId)) {
-        newSet.delete(wsId);
+      if (newSet.has(spId)) {
+        newSet.delete(spId);
       } else {
-        newSet.add(wsId);
+        newSet.add(spId);
       }
       return newSet;
     });
@@ -61,19 +61,19 @@ export default function SidebarTree({
     });
   };
 
-  // Group folders by workspace
-  const foldersByWorkspace = useMemo(() => {
-    const grouped: Record<string, WorkspaceNode[]> = {};
+  // Group folders by space
+  const foldersBySpace = useMemo(() => {
+    const grouped: Record<string, SpaceNode[]> = {};
     Object.values(nodes).forEach((node) => {
       if (node.type === "folder") {
-        const wsId = node.workspaceId || "unknown";
-        if (!grouped[wsId]) {
-          grouped[wsId] = [];
+        const spId = node.spaceId || "unknown";
+        if (!grouped[spId]) {
+          grouped[spId] = [];
         }
-        // Only include top-level workspace folders (those whose parent is the virtual root)
+        // Only include top-level space folders (those whose parent is the virtual root)
         // This excludes the virtual root node itself (which has no parentId)
         if (node.parentId === rootId) {
-          grouped[wsId].push(node);
+          grouped[spId].push(node);
         }
       }
     });
@@ -83,13 +83,13 @@ export default function SidebarTree({
   return (
     <aside className="w-64 border-r bg-card/40">
       <nav className="p-3 space-y-2">
-        {/* Workspaces header - always show */}
+        {/* Spaces header - always show */}
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
-          Workspaces
+          Spaces
         </div>
 
-        {/* Workspace sections */}
-        {workspaces.length === 0 ? (
+        {/* Space sections */}
+        {spaces.length === 0 ? (
           <button
             type="button"
             onClick={() => onSelect("root")}
@@ -99,33 +99,31 @@ export default function SidebarTree({
             )}
           >
             <FolderOpen size={16} />
-            <span>Workspaces</span>
+            <span>Spaces</span>
           </button>
         ) : (
-          workspaces.map((workspace) => {
-            const isExpanded = expandedWorkspaces.has(workspace.id);
-            const isCurrentWorkspace = workspace.id === workspaceId;
-            const rootFolders = foldersByWorkspace[workspace.id] || [];
-            const workspaceLabel = workspace.groupName || workspace.id;
+          spaces.map((space) => {
+            const isExpanded = expandedSpaces.has(space.id);
+            const isCurrentSpace = space.id === spaceId;
+            const rootFolders = foldersBySpace[space.id] || [];
+            const spaceLabel = space.name || space.id;
 
             return (
-              <div key={workspace.id}>
+              <div key={space.id}>
                 <div
                   className={cn(
                     "flex items-center rounded-md hover:bg-accent",
-                    isCurrentWorkspace && "bg-accent/50"
+                    isCurrentSpace && "bg-accent/50"
                   )}
                 >
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleWorkspace(workspace.id);
+                      toggleSpace(space.id);
                     }}
                     className="flex-shrink-0 p-1.5 hover:bg-accent/50 rounded"
-                    aria-label={
-                      isExpanded ? "Collapse workspace" : "Expand workspace"
-                    }
+                    aria-label={isExpanded ? "Collapse space" : "Expand space"}
                   >
                     {isExpanded ? (
                       <ChevronDown size={16} />
@@ -136,11 +134,11 @@ export default function SidebarTree({
                   <button
                     type="button"
                     onClick={() => {
-                      // Auto-expand when navigating to workspace
-                      if (!expandedWorkspaces.has(workspace.id)) {
-                        toggleWorkspace(workspace.id);
+                      // Auto-expand when navigating to space
+                      if (!expandedSpaces.has(space.id)) {
+                        toggleSpace(space.id);
                       }
-                      onSelect("root", workspace.id);
+                      onSelect("root", space.id);
                     }}
                     className="flex items-center gap-2 px-2 py-1.5 text-left font-semibold flex-1"
                   >
@@ -149,20 +147,20 @@ export default function SidebarTree({
                     ) : (
                       <FolderClosed size={16} />
                     )}
-                    <span>{workspaceLabel}</span>
+                    <span>{spaceLabel}</span>
                   </button>
                 </div>
 
                 {isExpanded && (
                   <div className="ml-4 mt-1 space-y-1">
-                    {/* Resources (workspace-specific) */}
+                    {/* Resources (space-specific) */}
                     <button
                       type="button"
-                      onClick={() => onSelect("resources", workspace.id)}
+                      onClick={() => onSelect("resources", space.id)}
                       className={cn(
                         "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent",
                         selectedId === "resources" &&
-                          isCurrentWorkspace &&
+                          isCurrentSpace &&
                           "bg-accent"
                       )}
                     >
@@ -170,7 +168,7 @@ export default function SidebarTree({
                       <span>Resources</span>
                     </button>
 
-                    {/* Workspace folders and apps */}
+                    {/* Space folders and apps */}
                     {rootFolders.map((folder) => {
                       const node = buildTree(nodes, folder.id);
                       if (!node) {
@@ -198,18 +196,18 @@ export default function SidebarTree({
         {/* Global sections separator */}
         <div className="border-t my-4 pt-4" />
 
-        {/* Users & Teams (global) */}
+        {/* Users & Spaces (global) */}
         <div>
           <button
             type="button"
-            onClick={() => onSelect("users-&-teams")}
+            onClick={() => onSelect("users-&-spaces")}
             className={cn(
               "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent font-semibold",
-              selectedId === "users-&-teams" && "bg-accent"
+              selectedId === "users-&-spaces" && "bg-accent"
             )}
           >
             <Users size={16} />
-            <span>Users & Teams</span>
+            <span>Users & Spaces</span>
           </button>
         </div>
 
@@ -319,7 +317,7 @@ function TreeNodeComponent({
 }
 
 function buildTree(
-  nodes: Record<string, WorkspaceNode>,
+  nodes: Record<string, SpaceNode>,
   id: string
 ): TreeNode | null {
   const n = nodes[id];
