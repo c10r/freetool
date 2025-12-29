@@ -33,7 +33,9 @@ type EventRepository(context: FreetoolDbContext) =
                     | WorkspaceEvents _ -> EntityType.Workspace
 
                 let jsonOptions = JsonSerializerOptions()
-                jsonOptions.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull
+                // Note: Do NOT use JsonIgnoreCondition.WhenWritingNull here
+                // F# option types serialize as null when None, and if omitted,
+                // deserialization will fail with "missing field" errors
                 jsonOptions.Converters.Add(JsonFSharpConverter())
 
                 let (entityId, eventData) =

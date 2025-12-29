@@ -176,6 +176,46 @@ match command with
 - `Events` table stores all domain events with metadata (EntityId, EventType, EventData JSON, OccurredAt)
 - Events are immutable - never updated or deleted
 
+### Adding Events for New Entities - Audit Log Checklist
+
+When adding a new entity or event type, you **MUST** update these locations to ensure proper audit log display. Missing any step causes "Unknown" entity names or parse errors in audit logs.
+
+**1. Domain Events** (`src/Freetool.Domain/src/Events/NewEntityEvents.fs`)
+- Define event types: `NewEntityCreatedEvent`, `NewEntityUpdatedEvent`, `NewEntityDeletedEvent`
+- **CRITICAL**: Always include entity `Name` in `CreatedEvent` AND `DeletedEvent` for audit display
+- Include `EventId`, `OccurredAt`, `ActorUserId` in all events
+- For `UpdatedEvent`, the name is looked up from repository at display time
+
+**2. EventType Registry** (`src/Freetool.Domain/src/Entities/Event.fs`)
+- Add to `EventType` discriminated union
+- Add to `EventTypeConverter.toString` and `.fromString`
+- Add to `EntityType` discriminated union
+- Add to `EntityTypeConverter.toString` and `.fromString`
+
+**3. EventRepository** (`src/Freetool.Infrastructure/src/Database/Repositories/EventRepository.fs`)
+- Add pattern match case for each event type in `SaveEventAsync`
+- Map to correct `EntityType`
+- Extract `entityId` correctly
+
+**4. EventEnhancementService** (`src/Freetool.Application/src/Services/EventEnhancementService.fs`)
+- Add name extraction logic for each event type in `extractEntityNameFromEventDataAsync`
+- **CRITICAL**: For `UpdatedEvent`, use repository lookup to get current entity name
+- For `DeletedEvent`, extract name from event data (since entity is already deleted)
+- Add summary generation in `generateEventSummary`
+- Inject required repository in constructor if not already present
+
+**5. Program.fs DI Registration** (`src/Freetool.Api/src/Program.fs`)
+- If EventEnhancementService needs a new repository, add it to the constructor call
+
+**6. Frontend Types** (`www/src/features/workspace/components/AuditLogView.tsx`)
+- Update `EventType` and `EntityType` type unions
+
+**Testing Checklist:**
+- [ ] CreatedEvent displays entity name correctly
+- [ ] UpdatedEvent displays entity name (not "Unknown")
+- [ ] DeletedEvent displays entity name (not "Unknown")
+- [ ] No parse errors in audit log for new events
+
 ## OpenTelemetry AutoTracing System
 
 The codebase has a **zero-configuration tracing system** that automatically instruments all command handlers:
@@ -682,12 +722,16 @@ tailscale serve --bg --set-path=/freetool 5001
 4. **Authorization Failing**: Verify OpenFGA store has correct relationships (`CreateRelationshipsAsync`)
 5. **Migration Not Running**: Ensure SQL file is marked as `<EmbeddedResource>` in `.fsproj`
 
+### Audit Log Issues
+6. **Entity Name Shows "Unknown"**: Update/Delete events need proper name extraction in EventEnhancementService - use repository lookups for updates, include Name in deleted events
+7. **Parse Error in Audit Log**: Event schema changed but old events in DB have different structure - wipe DB during development or add fallback deserialization
+
 ### Frontend
-6. **Frontend Type Errors**: Regenerate types from OpenAPI spec after backend changes
-7. **Linting Fails on Commit**: Pre-commit hooks enforce zero warnings - run `npm run lint -- --fix` to auto-fix
-8. **Fast Refresh Not Working**: Component files must only export components - see [Frontend Code Quality Standards](#frontend-code-quality-standards)
-9. **Stale State in useEffect**: Fix React Hook dependency warnings immediately - they are real bugs
-10. **TypeScript Errors with `any`**: Never use `any` type - use proper interfaces or `unknown` with type guards
+8. **Frontend Type Errors**: Regenerate types from OpenAPI spec after backend changes
+9. **Linting Fails on Commit**: Pre-commit hooks enforce zero warnings - run `npm run lint -- --fix` to auto-fix
+10. **Fast Refresh Not Working**: Component files must only export components - see [Frontend Code Quality Standards](#frontend-code-quality-standards)
+11. **Stale State in useEffect**: Fix React Hook dependency warnings immediately - they are real bugs
+12. **TypeScript Errors with `any`**: Never use `any` type - use proper interfaces or `unknown` with type guards
 
 ## Code Style
 

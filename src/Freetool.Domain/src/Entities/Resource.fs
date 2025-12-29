@@ -369,7 +369,7 @@ module Resource =
 
     let markForDeletion (actorUserId: UserId) (resource: ValidatedResource) : ValidatedResource =
         let resourceDeletedEvent =
-            ResourceEvents.resourceDeleted actorUserId resource.State.Id
+            ResourceEvents.resourceDeleted actorUserId resource.State.Id resource.State.Name
 
         { resource with
             UncommittedEvents = resource.UncommittedEvents @ [ resourceDeletedEvent :> IDomainEvent ] }

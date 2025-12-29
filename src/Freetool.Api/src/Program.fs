@@ -102,7 +102,11 @@ let main args =
         let userRepository = serviceProvider.GetRequiredService<IUserRepository>()
         let appRepository = serviceProvider.GetRequiredService<IAppRepository>()
         let groupRepository = serviceProvider.GetRequiredService<IGroupRepository>()
-        EventEnhancementService(userRepository, appRepository, groupRepository) :> IEventEnhancementService)
+        let folderRepository = serviceProvider.GetRequiredService<IFolderRepository>()
+        let resourceRepository = serviceProvider.GetRequiredService<IResourceRepository>()
+
+        EventEnhancementService(userRepository, appRepository, groupRepository, folderRepository, resourceRepository)
+        :> IEventEnhancementService)
     |> ignore
 
     builder.Services.AddScoped<UserHandler>() |> ignore
@@ -211,17 +215,22 @@ let main args =
             // This ensures org admins inherit permissions on all workspaces
             try
                 eprintfn "Setting up organization relations for existing workspaces..."
-                let workspaceRepository = scope.ServiceProvider.GetRequiredService<IWorkspaceRepository>()
+
+                let workspaceRepository =
+                    scope.ServiceProvider.GetRequiredService<IWorkspaceRepository>()
+
                 let workspacesTask = workspaceRepository.GetAllAsync 0 1000
                 workspacesTask.Wait()
                 let workspaces = workspacesTask.Result
 
                 for workspace in workspaces do
                     let workspaceId = workspace.State.Id.Value.ToString()
+
                     let tuple =
                         { Subject = Organization "default"
                           Relation = WorkspaceOrganization
                           Object = WorkspaceObject workspaceId }
+
                     let relationTask = authService.CreateRelationshipsAsync([ tuple ])
                     relationTask.Wait()
 

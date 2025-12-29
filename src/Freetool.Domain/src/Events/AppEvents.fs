@@ -49,6 +49,7 @@ type AppUpdatedEvent =
 
 type AppDeletedEvent =
     { AppId: AppId
+      Name: AppName
       OccurredAt: DateTime
       EventId: Guid
       ActorUserId: UserId }
@@ -85,8 +86,9 @@ module AppEvents =
           ActorUserId = actorUserId }
         : AppUpdatedEvent
 
-    let appDeleted (actorUserId: UserId) (appId: AppId) =
+    let appDeleted (actorUserId: UserId) (appId: AppId) (name: AppName) =
         { AppId = appId
+          Name = name
           OccurredAt = DateTime.UtcNow
           EventId = Guid.NewGuid()
           ActorUserId = actorUserId }

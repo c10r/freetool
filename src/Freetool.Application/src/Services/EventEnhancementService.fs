@@ -14,7 +14,13 @@ type IEventEnhancementService =
     abstract member EnhanceEventAsync: EventData -> Task<EnhancedEventData>
 
 type EventEnhancementService
-    (userRepository: IUserRepository, appRepository: IAppRepository, groupRepository: IGroupRepository) =
+    (
+        userRepository: IUserRepository,
+        appRepository: IAppRepository,
+        groupRepository: IGroupRepository,
+        folderRepository: IFolderRepository,
+        resourceRepository: IResourceRepository
+    ) =
 
     // Shared JSON options for deserializing F# event types
     let jsonOptions =
@@ -68,16 +74,20 @@ type EventEnhancementService
                             JsonSerializer.Deserialize<Freetool.Domain.Events.AppCreatedEvent>(eventData, jsonOptions)
 
                         return appEventData.Name.Value
-                    | _ ->
-                        // For update/delete events, try to get name from changes or fallback
-                        let jsonDocument = JsonDocument.Parse(eventData)
-                        let root = jsonDocument.RootElement
-                        let mutable nameElement = Unchecked.defaultof<JsonElement>
+                    | AppUpdatedEvent ->
+                        let appEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.AppUpdatedEvent>(eventData, jsonOptions)
 
-                        if root.TryGetProperty("Name", &nameElement) then
-                            return nameElement.GetString()
-                        else
-                            return "App (Unknown)"
+                        let! app = appRepository.GetByIdAsync appEventData.AppId
+
+                        match app with
+                        | Some a -> return App.getName a
+                        | None -> return $"App {appEventData.AppId.Value}"
+                    | AppDeletedEvent ->
+                        let appEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.AppDeletedEvent>(eventData, jsonOptions)
+
+                        return appEventData.Name.Value
                 | FolderEvents folderEvent ->
                     match folderEvent with
                     | FolderCreatedEvent ->
@@ -88,16 +98,26 @@ type EventEnhancementService
                             )
 
                         return folderEventData.Name.Value
-                    | _ ->
-                        // For update/delete events, try to get name from changes or fallback
-                        let jsonDocument = JsonDocument.Parse(eventData)
-                        let root = jsonDocument.RootElement
-                        let mutable nameElement = Unchecked.defaultof<JsonElement>
+                    | FolderUpdatedEvent ->
+                        let folderEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.FolderUpdatedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
 
-                        if root.TryGetProperty("Name", &nameElement) then
-                            return nameElement.GetString()
-                        else
-                            return "Folder (Unknown)"
+                        let! folder = folderRepository.GetByIdAsync folderEventData.FolderId
+
+                        match folder with
+                        | Some f -> return Folder.getName f
+                        | None -> return $"Folder {folderEventData.FolderId.Value}"
+                    | FolderDeletedEvent ->
+                        let folderEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.FolderDeletedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        return folderEventData.Name.Value
                 | ResourceEvents resourceEvent ->
                     match resourceEvent with
                     | ResourceCreatedEvent ->
@@ -108,16 +128,26 @@ type EventEnhancementService
                             )
 
                         return resourceEventData.Name.Value
-                    | _ ->
-                        // For update/delete events, try to get name from changes or fallback
-                        let jsonDocument = JsonDocument.Parse(eventData)
-                        let root = jsonDocument.RootElement
-                        let mutable nameElement = Unchecked.defaultof<JsonElement>
+                    | ResourceUpdatedEvent ->
+                        let resourceEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.ResourceUpdatedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
 
-                        if root.TryGetProperty("Name", &nameElement) then
-                            return nameElement.GetString()
-                        else
-                            return "Resource (Unknown)"
+                        let! resource = resourceRepository.GetByIdAsync resourceEventData.ResourceId
+
+                        match resource with
+                        | Some r -> return Resource.getName r
+                        | None -> return $"Resource {resourceEventData.ResourceId.Value}"
+                    | ResourceDeletedEvent ->
+                        let resourceEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.ResourceDeletedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        return resourceEventData.Name.Value
                 | GroupEvents groupEvent ->
                     match groupEvent with
                     | GroupCreatedEvent ->

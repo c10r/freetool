@@ -46,6 +46,7 @@ type ResourceUpdatedEvent =
 
 type ResourceDeletedEvent =
     { ResourceId: ResourceId
+      Name: ResourceName
       OccurredAt: DateTime
       EventId: Guid
       ActorUserId: UserId }
@@ -90,8 +91,9 @@ module ResourceEvents =
           ActorUserId = actorUserId }
         : ResourceUpdatedEvent
 
-    let resourceDeleted (actorUserId: UserId) (resourceId: ResourceId) =
+    let resourceDeleted (actorUserId: UserId) (resourceId: ResourceId) (name: ResourceName) =
         { ResourceId = resourceId
+          Name = name
           OccurredAt = DateTime.UtcNow
           EventId = Guid.NewGuid()
           ActorUserId = actorUserId }

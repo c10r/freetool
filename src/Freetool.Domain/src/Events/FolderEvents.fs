@@ -35,6 +35,7 @@ type FolderUpdatedEvent =
 
 type FolderDeletedEvent =
     { FolderId: FolderId
+      Name: FolderName
       OccurredAt: DateTime
       EventId: Guid
       ActorUserId: UserId }
@@ -62,8 +63,9 @@ module FolderEvents =
           ActorUserId = actorUserId }
         : FolderUpdatedEvent
 
-    let folderDeleted (actorUserId: UserId) (folderId: FolderId) =
+    let folderDeleted (actorUserId: UserId) (folderId: FolderId) (name: FolderName) =
         { FolderId = folderId
+          Name = name
           OccurredAt = DateTime.UtcNow
           EventId = Guid.NewGuid()
           ActorUserId = actorUserId }

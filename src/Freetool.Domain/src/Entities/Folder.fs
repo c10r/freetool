@@ -132,7 +132,8 @@ module Folder =
           UncommittedEvents = folder.UncommittedEvents @ [ parentChangedEvent :> IDomainEvent ] }
 
     let markForDeletion (actorUserId: UserId) (folder: ValidatedFolder) : ValidatedFolder =
-        let folderDeletedEvent = FolderEvents.folderDeleted actorUserId folder.State.Id
+        let folderDeletedEvent =
+            FolderEvents.folderDeleted actorUserId folder.State.Id folder.State.Name
 
         { folder with
             UncommittedEvents = folder.UncommittedEvents @ [ folderDeletedEvent :> IDomainEvent ] }

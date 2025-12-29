@@ -254,7 +254,10 @@ module App =
             create actorUserId name folderId resourceId inputs urlPath urlParameters headers body
 
     let markForDeletion (actorUserId: UserId) (app: ValidatedApp) : ValidatedApp =
-        let appDeletedEvent = AppEvents.appDeleted actorUserId app.State.Id
+        let appName =
+            AppName.Create(Some app.State.Name) |> Result.defaultValue (AppName(""))
+
+        let appDeletedEvent = AppEvents.appDeleted actorUserId app.State.Id appName
 
         { app with
             UncommittedEvents = app.UncommittedEvents @ [ appDeletedEvent :> IDomainEvent ] }
