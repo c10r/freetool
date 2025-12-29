@@ -33,6 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useHasPermission } from "@/hooks/usePermissions";
+import { useResources } from "@/hooks/useResources";
 import type { components } from "@/schema";
 import type {
   FolderNode,
@@ -69,6 +70,9 @@ export default function FolderView({
   );
   const _canCreateApp = useHasPermission(effectiveWorkspaceId, "create_app");
   const _canDeleteApp = useHasPermission(effectiveWorkspaceId, "delete_app");
+
+  // Check if resources exist (needed to enable/disable New App button)
+  const { hasResources, isLoading: loadingResources } = useResources();
 
   // Update name when folder changes
   useEffect(() => {
@@ -485,18 +489,23 @@ export default function FolderView({
                     tooltipMessage="You don't have permission to create apps. Contact your team admin."
                     variant="secondary"
                     onClick={handleShowCreateAppForm}
-                    disabled={folder.id === "root"}
+                    disabled={
+                      folder.id === "root" ||
+                      !(hasResources || loadingResources)
+                    }
                   >
                     <FilePlus2 className="mr-2 h-4 w-4" />
                     {showCreateAppForm ? "Cancel" : "New App"}
                   </PermissionButton>
                 </span>
               </TooltipTrigger>
-              {folder.id === "root" && (
+              {(folder.id === "root" ||
+                !(hasResources || loadingResources)) && (
                 <TooltipContent>
                   <p>
-                    Apps must be created inside a folder. Please create or
-                    select a folder first.
+                    {folder.id === "root"
+                      ? "Apps must be created inside a folder. Please create or select a folder first."
+                      : "Create a resource first before creating an app."}
                   </p>
                 </TooltipContent>
               )}

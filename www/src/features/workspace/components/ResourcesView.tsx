@@ -187,6 +187,7 @@ export default function ResourcesView({
       setCreateError(null);
 
       await createResource({
+        workspaceId,
         name: createFormData.name.trim(),
         description: createFormData.description.trim(),
         baseUrl: createFormData.baseUrl.trim(),
