@@ -218,7 +218,7 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                 return { AuthorizationModelId = response.AuthorizationModelId }
             }
 
-        /// Creates new relationship tuple(s)
+        /// Creates new relationship tuple(s). Idempotent - succeeds if tuples already exist.
         member _.CreateRelationshipsAsync(tuples: RelationshipTuple list) : Task<unit> =
             task {
                 use client = createClient ()
@@ -231,8 +231,14 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                     |> ResizeArray
 
                 let body = ClientWriteRequest(Writes = writes)
-                let! _ = client.Write(body)
-                return ()
+
+                try
+                    let! _ = client.Write(body)
+                    return ()
+                with :? OpenFga.Sdk.Exceptions.FgaApiValidationError as ex when
+                    ex.Message.Contains("cannot write a tuple which already exists") ->
+                    // Tuple already exists - idempotent success
+                    return ()
             }
 
         /// Updates relationships by adding and/or removing tuples in a single transaction

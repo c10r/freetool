@@ -691,7 +691,8 @@ export default function UsersSpacesView() {
                         onValueChange={(value) => {
                           const oldModeratorId = editModeratorId;
                           setEditModeratorId(value);
-                          // Add old moderator back to members, remove new moderator from members
+                          // Add old moderator back to members list (for UI), remove new moderator
+                          // Backend is idempotent so duplicate member adds are safe
                           setEditSelectedMemberIds((prev) => {
                             const withOldModerator =
                               oldModeratorId && !prev.includes(oldModeratorId)
