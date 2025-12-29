@@ -30,19 +30,19 @@ type ResourceController
         task {
             let userId = this.CurrentUserId
 
-            // Check authorization: user must have create_resource permission on the workspace
+            // Check authorization: user must have create_resource permission on the space
             let! canCreate =
                 authorizationService.CheckPermissionAsync
                     (User(userId.ToString()))
                     ResourceCreate
-                    (WorkspaceObject createDto.WorkspaceId)
+                    (SpaceObject createDto.SpaceId)
 
             if not canCreate then
                 return
                     this.StatusCode(
                         403,
                         {| error = "Forbidden"
-                           message = "You do not have permission to create resources in this workspace" |}
+                           message = "You do not have permission to create resources in this space" |}
                     )
                     :> IActionResult
             else
@@ -108,7 +108,7 @@ type ResourceController
         task {
             let userId = this.CurrentUserId
 
-            // Check authorization: fetch resource to get workspace ID
+            // Check authorization: fetch resource to get space ID
             match System.Guid.TryParse id with
             | false, _ -> return this.HandleDomainError(ValidationError "Invalid resource ID format")
             | true, guid ->
@@ -118,20 +118,20 @@ type ResourceController
                 match resourceOption with
                 | None -> return this.HandleDomainError(NotFound "Resource not found")
                 | Some resource ->
-                    let workspaceId = Resource.getWorkspaceId resource
+                    let spaceId = Resource.getSpaceId resource
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
                             ResourceEdit
-                            (WorkspaceObject(workspaceId.ToString()))
+                            (SpaceObject(spaceId.ToString()))
 
                     if not canEdit then
                         return
                             this.StatusCode(
                                 403,
                                 {| error = "Forbidden"
-                                   message = "You do not have permission to edit resources in this workspace" |}
+                                   message = "You do not have permission to edit resources in this space" |}
                             )
                             :> IActionResult
                     else
@@ -166,20 +166,20 @@ type ResourceController
                 match resourceOption with
                 | None -> return this.HandleDomainError(NotFound "Resource not found")
                 | Some resource ->
-                    let workspaceId = Resource.getWorkspaceId resource
+                    let spaceId = Resource.getSpaceId resource
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
                             ResourceEdit
-                            (WorkspaceObject(workspaceId.ToString()))
+                            (SpaceObject(spaceId.ToString()))
 
                     if not canEdit then
                         return
                             this.StatusCode(
                                 403,
                                 {| error = "Forbidden"
-                                   message = "You do not have permission to edit resources in this workspace" |}
+                                   message = "You do not have permission to edit resources in this space" |}
                             )
                             :> IActionResult
                     else
@@ -213,20 +213,20 @@ type ResourceController
                 match resourceOption with
                 | None -> return this.HandleDomainError(NotFound "Resource not found")
                 | Some resource ->
-                    let workspaceId = Resource.getWorkspaceId resource
+                    let spaceId = Resource.getSpaceId resource
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
                             ResourceEdit
-                            (WorkspaceObject(workspaceId.ToString()))
+                            (SpaceObject(spaceId.ToString()))
 
                     if not canEdit then
                         return
                             this.StatusCode(
                                 403,
                                 {| error = "Forbidden"
-                                   message = "You do not have permission to edit resources in this workspace" |}
+                                   message = "You do not have permission to edit resources in this space" |}
                             )
                             :> IActionResult
                     else
@@ -260,20 +260,20 @@ type ResourceController
                 match resourceOption with
                 | None -> return this.HandleDomainError(NotFound "Resource not found")
                 | Some resource ->
-                    let workspaceId = Resource.getWorkspaceId resource
+                    let spaceId = Resource.getSpaceId resource
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
                             ResourceEdit
-                            (WorkspaceObject(workspaceId.ToString()))
+                            (SpaceObject(spaceId.ToString()))
 
                     if not canEdit then
                         return
                             this.StatusCode(
                                 403,
                                 {| error = "Forbidden"
-                                   message = "You do not have permission to edit resources in this workspace" |}
+                                   message = "You do not have permission to edit resources in this space" |}
                             )
                             :> IActionResult
                     else
@@ -307,20 +307,20 @@ type ResourceController
                 match resourceOption with
                 | None -> return this.HandleDomainError(NotFound "Resource not found")
                 | Some resource ->
-                    let workspaceId = Resource.getWorkspaceId resource
+                    let spaceId = Resource.getSpaceId resource
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
                             ResourceEdit
-                            (WorkspaceObject(workspaceId.ToString()))
+                            (SpaceObject(spaceId.ToString()))
 
                     if not canEdit then
                         return
                             this.StatusCode(
                                 403,
                                 {| error = "Forbidden"
-                                   message = "You do not have permission to edit resources in this workspace" |}
+                                   message = "You do not have permission to edit resources in this space" |}
                             )
                             :> IActionResult
                     else
@@ -352,20 +352,20 @@ type ResourceController
                 match resourceOption with
                 | None -> return this.HandleDomainError(NotFound "Resource not found")
                 | Some resource ->
-                    let workspaceId = Resource.getWorkspaceId resource
+                    let spaceId = Resource.getSpaceId resource
 
                     let! canEdit =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
                             ResourceEdit
-                            (WorkspaceObject(workspaceId.ToString()))
+                            (SpaceObject(spaceId.ToString()))
 
                     if not canEdit then
                         return
                             this.StatusCode(
                                 403,
                                 {| error = "Forbidden"
-                                   message = "You do not have permission to edit resources in this workspace" |}
+                                   message = "You do not have permission to edit resources in this space" |}
                             )
                             :> IActionResult
                     else
@@ -388,7 +388,7 @@ type ResourceController
         task {
             let userId = this.CurrentUserId
 
-            // Check authorization: user must have delete_resource permission on the workspace
+            // Check authorization: user must have delete_resource permission on the space
             match System.Guid.TryParse id with
             | false, _ -> return this.HandleDomainError(ValidationError "Invalid resource ID format")
             | true, guid ->
@@ -398,20 +398,20 @@ type ResourceController
                 match resourceOption with
                 | None -> return this.HandleDomainError(NotFound "Resource not found")
                 | Some resource ->
-                    let workspaceId = Resource.getWorkspaceId resource
+                    let spaceId = Resource.getSpaceId resource
 
                     let! canDelete =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
                             ResourceDelete
-                            (WorkspaceObject(workspaceId.ToString()))
+                            (SpaceObject(spaceId.ToString()))
 
                     if not canDelete then
                         return
                             this.StatusCode(
                                 403,
                                 {| error = "Forbidden"
-                                   message = "You do not have permission to delete resources in this workspace" |}
+                                   message = "You do not have permission to delete resources in this space" |}
                             )
                             :> IActionResult
                     else

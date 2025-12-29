@@ -110,11 +110,11 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
                 return List.rev folderList
             }
 
-        member _.GetByWorkspaceAsync (workspaceId: WorkspaceId) (skip: int) (take: int) : Task<ValidatedFolder list> =
+        member _.GetBySpaceAsync (spaceId: SpaceId) (skip: int) (take: int) : Task<ValidatedFolder list> =
             task {
                 let! folderDatas =
                     context.Folders
-                        .Where(fun f -> f.WorkspaceId = workspaceId)
+                        .Where(fun f -> f.SpaceId = spaceId)
                         .OrderBy(fun f -> f.Name)
                         .Skip(skip)
                         .Take(take)
@@ -254,8 +254,8 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
         member _.GetCountAsync() : Task<int> =
             task { return! context.Folders.CountAsync() }
 
-        member _.GetCountByWorkspaceAsync(workspaceId: WorkspaceId) : Task<int> =
-            task { return! context.Folders.CountAsync(fun f -> f.WorkspaceId = workspaceId) }
+        member _.GetCountBySpaceAsync(spaceId: SpaceId) : Task<int> =
+            task { return! context.Folders.CountAsync(fun f -> f.SpaceId = spaceId) }
 
         member _.GetRootCountAsync() : Task<int> =
             task { return! context.Folders.CountAsync(fun f -> f.ParentId = None) }

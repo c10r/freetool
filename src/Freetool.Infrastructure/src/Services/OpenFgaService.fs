@@ -39,6 +39,7 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
             }
 
         /// Initializes the organization with an admin user
+        /// This method is idempotent - if the tuple already exists, it succeeds silently
         member this.InitializeOrganizationAsync (organizationId: string) (adminUserId: string) : Task<unit> =
             task {
                 eprintfn
@@ -58,9 +59,13 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
 
                 eprintfn "[DEBUG OpenFGA] Creating relationship: %s#%s@%s" objectStr relationStr userStr
 
-                do! (this :> IAuthorizationService).CreateRelationshipsAsync([ tuple ])
-
-                eprintfn "[DEBUG OpenFGA] Relationship created successfully"
+                try
+                    do! (this :> IAuthorizationService).CreateRelationshipsAsync([ tuple ])
+                    eprintfn "[DEBUG OpenFGA] Relationship created successfully"
+                with :? OpenFga.Sdk.Exceptions.FgaApiValidationError as ex when
+                    ex.Message.Contains("cannot write a tuple which already exists") ->
+                    // Tuple already exists, that's fine - we're idempotent
+                    eprintfn "[DEBUG OpenFGA] Relationship already exists (idempotent success)"
             }
 
         /// Writes the authorization model to the store
@@ -91,119 +96,89 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                     )
                 )
 
-                // Type: team (with members and admins, rename/delete restricted to org admins)
-                let teamRelations = System.Collections.Generic.Dictionary<string, Userset>()
-                teamRelations.["member"] <- Userset(varThis = obj ())
-                teamRelations.["admin"] <- Userset(varThis = obj ())
-                teamRelations.["organization"] <- Userset(varThis = obj ())
+                // Type: space (replaces both team and workspace - unified entity)
+                let spaceRelations = System.Collections.Generic.Dictionary<string, Userset>()
 
-                // Only organization admins can rename or delete teams
-                let orgAdminComputedUserset = ObjectRelation()
-                orgAdminComputedUserset.Relation <- "admin"
+                // Core relations
+                spaceRelations.["member"] <- Userset(varThis = obj ()) // Members of the space
+                spaceRelations.["moderator"] <- Userset(varThis = obj ()) // Exactly 1 moderator per space
+                spaceRelations.["organization"] <- Userset(varThis = obj ()) // Org reference for derived permissions
 
-                let orgTupleToUserset = TupleToUserset()
-                orgTupleToUserset.Tupleset <- ObjectRelation(Object = "", Relation = "organization")
-                orgTupleToUserset.ComputedUserset <- orgAdminComputedUserset
-
-                teamRelations.["rename"] <- Userset(tupleToUserset = orgTupleToUserset)
-                teamRelations.["delete"] <- Userset(tupleToUserset = orgTupleToUserset)
-
-                let teamMetadata = System.Collections.Generic.Dictionary<string, RelationMetadata>()
-
-                teamMetadata.["member"] <-
-                    RelationMetadata(DirectlyRelatedUserTypes = ResizeArray([ RelationReference(Type = "user") ]))
-
-                teamMetadata.["admin"] <-
-                    RelationMetadata(
-                        DirectlyRelatedUserTypes =
-                            ResizeArray(
-                                [ RelationReference(Type = "user")
-                                  RelationReference(Type = "organization", Relation = "admin") ]
-                            )
-                    )
-
-                teamMetadata.["organization"] <-
-                    RelationMetadata(
-                        DirectlyRelatedUserTypes = ResizeArray([ RelationReference(Type = "organization") ])
-                    )
-
-                typeDefinitions.Add(
-                    TypeDefinition(
-                        Type = "team",
-                        Relations = teamRelations,
-                        Metadata = Metadata(relations = teamMetadata)
-                    )
-                )
-
-                // Type: workspace (with team ownership and 7 permissions)
-                let workspaceRelations = System.Collections.Generic.Dictionary<string, Userset>()
-                workspaceRelations.["team"] <- Userset(varThis = obj ())
-                workspaceRelations.["organization"] <- Userset(varThis = obj ())
-
-                // Only organization admins can create workspaces
-                let orgAdminCreateUserset = ObjectRelation()
-                orgAdminCreateUserset.Relation <- "admin"
-
-                let orgCreateTupleToUserset = TupleToUserset()
-                orgCreateTupleToUserset.Tupleset <- ObjectRelation(Object = "", Relation = "organization")
-                orgCreateTupleToUserset.ComputedUserset <- orgAdminCreateUserset
-
-                workspaceRelations.["create_workspace"] <- Userset(tupleToUserset = orgCreateTupleToUserset)
-
-                // Helper to create permission definition: [user, admin from team, admin from organization]
-                let createPermissionUserset () =
-                    // Team admin check: admin from team relation
-                    let teamAdminComputedUserset = ObjectRelation()
-                    teamAdminComputedUserset.Relation <- "admin"
-
-                    let teamTupleToUserset = TupleToUserset()
-                    teamTupleToUserset.Tupleset <- ObjectRelation(Object = "", Relation = "team")
-                    teamTupleToUserset.ComputedUserset <- teamAdminComputedUserset
-
-                    // Organization admin check: admin from organization relation
+                // Helper to create TupleToUserset for organization admin check
+                let createOrgAdminTupleToUserset () =
                     let orgAdminComputedUserset = ObjectRelation()
                     orgAdminComputedUserset.Relation <- "admin"
 
                     let orgTupleToUserset = TupleToUserset()
                     orgTupleToUserset.Tupleset <- ObjectRelation(Object = "", Relation = "organization")
                     orgTupleToUserset.ComputedUserset <- orgAdminComputedUserset
+                    orgTupleToUserset
+
+                // Helper to create permission userset: union of (direct, moderator, org admin)
+                let createModeratorOrOrgAdminUserset () =
+                    // Moderator check via computedUserset
+                    let moderatorUserset =
+                        Userset(computedUserset = ObjectRelation(Relation = "moderator"))
+
+                    // Organization admin check: admin from organization relation
+                    let orgTupleToUserset = createOrgAdminTupleToUserset ()
 
                     let unionUsersets = Usersets()
 
                     unionUsersets.Child <-
                         ResizeArray(
                             [ Userset(varThis = obj ()) // Direct assignment
-                              Userset(tupleToUserset = teamTupleToUserset) // admin from team
-                              Userset(tupleToUserset = orgTupleToUserset) ] // admin from organization
+                              moderatorUserset // Space moderator
+                              Userset(tupleToUserset = orgTupleToUserset) ] // Organization admin
                         )
 
                     Userset(union = unionUsersets)
 
-                // Add all 10 permissions with the same pattern
-                for permission in
-                    [ "create_resource"
-                      "edit_resource"
-                      "delete_resource"
-                      "create_app"
-                      "edit_app"
-                      "delete_app"
-                      "run_app"
-                      "create_folder"
-                      "edit_folder"
-                      "delete_folder" ] do
-                    workspaceRelations.[permission] <- createPermissionUserset ()
+                // Permissions derived from moderator OR org admin
+                // Resource permissions
+                spaceRelations.["create_resource"] <- createModeratorOrOrgAdminUserset ()
+                spaceRelations.["edit_resource"] <- createModeratorOrOrgAdminUserset ()
+                spaceRelations.["delete_resource"] <- createModeratorOrOrgAdminUserset ()
 
-                let workspaceMetadata =
+                // App permissions
+                spaceRelations.["create_app"] <- createModeratorOrOrgAdminUserset ()
+                spaceRelations.["edit_app"] <- createModeratorOrOrgAdminUserset ()
+                spaceRelations.["delete_app"] <- createModeratorOrOrgAdminUserset ()
+                spaceRelations.["run_app"] <- createModeratorOrOrgAdminUserset ()
+
+                // Folder permissions
+                spaceRelations.["create_folder"] <- createModeratorOrOrgAdminUserset ()
+                spaceRelations.["edit_folder"] <- createModeratorOrOrgAdminUserset ()
+                spaceRelations.["delete_folder"] <- createModeratorOrOrgAdminUserset ()
+
+                // Space management permissions
+                spaceRelations.["rename"] <- createModeratorOrOrgAdminUserset () // Moderator or org admin can rename space
+                spaceRelations.["add_member"] <- createModeratorOrOrgAdminUserset () // Moderator or org admin can add members
+                spaceRelations.["remove_member"] <- createModeratorOrOrgAdminUserset () // Moderator or org admin can remove members
+
+                // Only org admin can create/delete spaces
+                let orgAdminOnlyTupleToUserset = createOrgAdminTupleToUserset ()
+                spaceRelations.["create"] <- Userset(tupleToUserset = orgAdminOnlyTupleToUserset)
+                spaceRelations.["delete"] <- Userset(tupleToUserset = orgAdminOnlyTupleToUserset)
+
+                // Define metadata for space relations
+                let spaceMetadata =
                     System.Collections.Generic.Dictionary<string, RelationMetadata>()
 
-                workspaceMetadata.["team"] <-
-                    RelationMetadata(DirectlyRelatedUserTypes = ResizeArray([ RelationReference(Type = "team") ]))
+                spaceMetadata.["member"] <-
+                    RelationMetadata(DirectlyRelatedUserTypes = ResizeArray([ RelationReference(Type = "user") ]))
 
-                workspaceMetadata.["organization"] <-
+                spaceMetadata.["moderator"] <-
+                    RelationMetadata(DirectlyRelatedUserTypes = ResizeArray([ RelationReference(Type = "user") ]))
+
+                spaceMetadata.["organization"] <-
                     RelationMetadata(
                         DirectlyRelatedUserTypes = ResizeArray([ RelationReference(Type = "organization") ])
                     )
 
+                // Add metadata for permissions that can be directly assigned or inherited
+                // Note: "create" and "delete" are purely computed (org admin via tuple lookup only)
+                // and should NOT have DirectlyRelatedUserTypes metadata
                 for permission in
                     [ "create_resource"
                       "edit_resource"
@@ -214,8 +189,11 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                       "run_app"
                       "create_folder"
                       "edit_folder"
-                      "delete_folder" ] do
-                    workspaceMetadata.[permission] <-
+                      "delete_folder"
+                      "rename"
+                      "add_member"
+                      "remove_member" ] do
+                    spaceMetadata.[permission] <-
                         RelationMetadata(
                             DirectlyRelatedUserTypes =
                                 ResizeArray(
@@ -226,9 +204,9 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
 
                 typeDefinitions.Add(
                     TypeDefinition(
-                        Type = "workspace",
-                        Relations = workspaceRelations,
-                        Metadata = Metadata(relations = workspaceMetadata)
+                        Type = "space",
+                        Relations = spaceRelations,
+                        Metadata = Metadata(relations = spaceMetadata)
                     )
                 )
 

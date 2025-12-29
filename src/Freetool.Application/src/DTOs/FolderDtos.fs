@@ -15,7 +15,7 @@ type CreateFolderDto =
       Location: FolderLocation option
 
       [<Required>]
-      WorkspaceId: string }
+      SpaceId: string }
 
 type UpdateFolderNameDto =
     { [<Required>]

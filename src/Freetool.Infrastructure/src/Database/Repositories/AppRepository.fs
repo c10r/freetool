@@ -50,22 +50,18 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                 return appDatas |> Seq.map (fun data -> App.fromData data) |> Seq.toList
             }
 
-        member _.GetByWorkspaceIdsAsync
-            (workspaceIds: WorkspaceId list)
-            (skip: int)
-            (take: int)
-            : Task<ValidatedApp list> =
+        member _.GetBySpaceIdsAsync (spaceIds: SpaceId list) (skip: int) (take: int) : Task<ValidatedApp list> =
             task {
-                if List.isEmpty workspaceIds then
+                if List.isEmpty spaceIds then
                     return []
                 else
-                    let workspaceIdArray = workspaceIds |> List.toArray
+                    let spaceIdArray = spaceIds |> List.toArray
 
-                    // Get folder IDs that belong to the workspaces first
-                    // Note: Compare WorkspaceId directly (not .Value) - EF Core's ValueConverter handles translation
+                    // Get folder IDs that belong to the spaces first
+                    // Note: Compare SpaceId directly (not .Value) - EF Core's ValueConverter handles translation
                     let! folderIds =
                         context.Folders
-                            .Where(fun f -> workspaceIdArray.Contains(f.WorkspaceId))
+                            .Where(fun f -> spaceIdArray.Contains(f.SpaceId))
                             .Select(fun f -> f.Id)
                             .ToListAsync()
 
@@ -173,18 +169,18 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
         member _.GetCountByFolderIdAsync(folderId: FolderId) : Task<int> =
             task { return! context.Apps.CountAsync(fun a -> a.FolderId = folderId) }
 
-        member _.GetCountByWorkspaceIdsAsync(workspaceIds: WorkspaceId list) : Task<int> =
+        member _.GetCountBySpaceIdsAsync(spaceIds: SpaceId list) : Task<int> =
             task {
-                if List.isEmpty workspaceIds then
+                if List.isEmpty spaceIds then
                     return 0
                 else
-                    let workspaceIdArray = workspaceIds |> List.toArray
+                    let spaceIdArray = spaceIds |> List.toArray
 
-                    // Get folder IDs that belong to the workspaces first
-                    // Note: Compare WorkspaceId directly (not .Value) - EF Core's ValueConverter handles translation
+                    // Get folder IDs that belong to the spaces first
+                    // Note: Compare SpaceId directly (not .Value) - EF Core's ValueConverter handles translation
                     let! folderIds =
                         context.Folders
-                            .Where(fun f -> workspaceIdArray.Contains(f.WorkspaceId))
+                            .Where(fun f -> spaceIdArray.Contains(f.SpaceId))
                             .Select(fun f -> f.Id)
                             .ToListAsync()
 

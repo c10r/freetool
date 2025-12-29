@@ -37,12 +37,12 @@ let ``CreateWorkspace - Organization admin can create workspaces`` () : Task =
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = User userId
-                    Relation = TeamAdmin
+                    Relation = OrganizationAdmin
                     Object = OrganizationObject orgId } ]
             )
 
         // Act - Check if user can create workspaces
-        let! isAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (OrganizationObject orgId)
+        let! isAdmin = authService.CheckPermissionAsync (User userId) (OrganizationAdmin) (OrganizationObject orgId)
 
         // Assert
         Assert.True(isAdmin, "Organization admin should be able to create workspaces")
@@ -67,7 +67,7 @@ let ``CreateWorkspace - Non-admin cannot create workspaces`` () : Task =
         // User is NOT an organization admin
 
         // Act - Check if user can create workspaces
-        let! isAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (OrganizationObject orgId)
+        let! isAdmin = authService.CheckPermissionAsync (User userId) (OrganizationAdmin) (OrganizationObject orgId)
 
         // Assert
         Assert.False(isAdmin, "Non-admin should NOT be able to create workspaces")
@@ -89,19 +89,19 @@ let ``CreateWorkspace - Team admin cannot create workspaces`` () : Task =
         let teamId = Guid.NewGuid().ToString()
         let orgId = "default"
 
-        // Make user a team admin (NOT an org admin)
+        // Make user a space moderator (NOT an org admin)
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = User userId
-                    Relation = TeamAdmin
-                    Object = TeamObject teamId } ]
+                    Relation = SpaceModerator
+                    Object = SpaceObject teamId } ]
             )
 
-        // Act - Check if team admin can create workspaces
-        let! isOrgAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (OrganizationObject orgId)
+        // Act - Check if space moderator can create workspaces (they should not be org admin)
+        let! isOrgAdmin = authService.CheckPermissionAsync (User userId) (OrganizationAdmin) (OrganizationObject orgId)
 
         // Assert
-        Assert.False(isOrgAdmin, "Team admin should NOT be able to create workspaces (only org admin can)")
+        Assert.False(isOrgAdmin, "Space moderator should NOT be able to create workspaces (only org admin can)")
     }
 
 [<Fact>]
@@ -125,12 +125,12 @@ let ``DeleteWorkspace - Organization admin can delete workspaces`` () : Task =
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = User userId
-                    Relation = TeamAdmin
+                    Relation = OrganizationAdmin
                     Object = OrganizationObject orgId } ]
             )
 
         // Act - Check if user can delete workspaces
-        let! isAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (OrganizationObject orgId)
+        let! isAdmin = authService.CheckPermissionAsync (User userId) (OrganizationAdmin) (OrganizationObject orgId)
 
         // Assert
         Assert.True(isAdmin, "Organization admin should be able to delete workspaces")
@@ -155,7 +155,7 @@ let ``DeleteWorkspace - Non-admin cannot delete workspaces`` () : Task =
         // User is NOT an organization admin
 
         // Act - Check if user can delete workspaces
-        let! isAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (OrganizationObject orgId)
+        let! isAdmin = authService.CheckPermissionAsync (User userId) (OrganizationAdmin) (OrganizationObject orgId)
 
         // Assert
         Assert.False(isAdmin, "Non-admin should NOT be able to delete workspaces")
@@ -177,19 +177,19 @@ let ``DeleteWorkspace - Team admin cannot delete workspaces`` () : Task =
         let teamId = Guid.NewGuid().ToString()
         let orgId = "default"
 
-        // Make user a team admin (NOT an org admin)
+        // Make user a space moderator (NOT an org admin)
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = User userId
-                    Relation = TeamAdmin
-                    Object = TeamObject teamId } ]
+                    Relation = SpaceModerator
+                    Object = SpaceObject teamId } ]
             )
 
-        // Act - Check if team admin can delete workspaces
-        let! isOrgAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (OrganizationObject orgId)
+        // Act - Check if space moderator can delete workspaces
+        let! isOrgAdmin = authService.CheckPermissionAsync (User userId) (OrganizationAdmin) (OrganizationObject orgId)
 
         // Assert
-        Assert.False(isOrgAdmin, "Team admin should NOT be able to delete workspaces (only org admin can)")
+        Assert.False(isOrgAdmin, "Space moderator should NOT be able to delete workspaces (only org admin can)")
     }
 
 [<Fact>]
@@ -211,12 +211,12 @@ let ``UpdateWorkspaceGroup - Organization admin can update workspace group`` () 
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = User userId
-                    Relation = TeamAdmin
+                    Relation = OrganizationAdmin
                     Object = OrganizationObject orgId } ]
             )
 
         // Act - Check if user can update workspace groups
-        let! isAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (OrganizationObject orgId)
+        let! isAdmin = authService.CheckPermissionAsync (User userId) (OrganizationAdmin) (OrganizationObject orgId)
 
         // Assert
         Assert.True(isAdmin, "Organization admin should be able to update workspace groups")
@@ -240,7 +240,7 @@ let ``UpdateWorkspaceGroup - Non-admin cannot update workspace group`` () : Task
         // User is NOT an organization admin
 
         // Act - Check if user can update workspace groups
-        let! isAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (OrganizationObject orgId)
+        let! isAdmin = authService.CheckPermissionAsync (User userId) (OrganizationAdmin) (OrganizationObject orgId)
 
         // Assert
         Assert.False(isAdmin, "Non-admin should NOT be able to update workspace groups")
@@ -262,19 +262,19 @@ let ``UpdateWorkspaceGroup - Team admin cannot update workspace group`` () : Tas
         let teamId = Guid.NewGuid().ToString()
         let orgId = "default"
 
-        // Make user a team admin (NOT an org admin)
+        // Make user a space moderator (NOT an org admin)
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = User userId
-                    Relation = TeamAdmin
-                    Object = TeamObject teamId } ]
+                    Relation = SpaceModerator
+                    Object = SpaceObject teamId } ]
             )
 
-        // Act - Check if team admin can update workspace groups
-        let! isOrgAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (OrganizationObject orgId)
+        // Act - Check if space moderator can update workspace groups
+        let! isOrgAdmin = authService.CheckPermissionAsync (User userId) (OrganizationAdmin) (OrganizationObject orgId)
 
         // Assert
-        Assert.False(isOrgAdmin, "Team admin should NOT be able to update workspace groups (only org admin can)")
+        Assert.False(isOrgAdmin, "Space moderator should NOT be able to update workspace groups (only org admin can)")
     }
 
 [<Fact>]
@@ -294,41 +294,41 @@ let ``Workspace permissions hierarchy - Global admin has precedence over team ad
         let orgId = "default"
         let workspaceId = Guid.NewGuid().ToString()
 
-        // Make user BOTH a team admin AND an org admin
+        // Make user BOTH a space moderator AND an org admin
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = User userId
-                    Relation = TeamAdmin
-                    Object = TeamObject teamId }
+                    Relation = SpaceModerator
+                    Object = SpaceObject teamId }
                   { Subject = User userId
-                    Relation = TeamAdmin
+                    Relation = OrganizationAdmin
                     Object = OrganizationObject orgId } ]
             )
 
-        // Associate workspace with team
+        // Associate workspace with organization
         do!
             authService.CreateRelationshipsAsync(
-                [ { Subject = Team teamId
-                    Relation = WorkspaceTeam
-                    Object = WorkspaceObject workspaceId } ]
+                [ { Subject = Organization "default"
+                    Relation = SpaceOrganization
+                    Object = SpaceObject workspaceId } ]
             )
 
         // Act - Verify user has all permissions
-        let! isOrgAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (OrganizationObject orgId)
-        let! isTeamAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (TeamObject teamId)
+        let! isOrgAdmin = authService.CheckPermissionAsync (User userId) (OrganizationAdmin) (OrganizationObject orgId)
+
+        let! isSpaceModerator = authService.CheckPermissionAsync (User userId) (SpaceModerator) (SpaceObject teamId)
 
         // Verify workspace permissions
         let! canCreateResource =
-            authService.CheckPermissionAsync (User userId) (ResourceCreate) (WorkspaceObject workspaceId)
+            authService.CheckPermissionAsync (User userId) (ResourceCreate) (SpaceObject workspaceId)
 
-        let! canDeleteFolder =
-            authService.CheckPermissionAsync (User userId) (FolderDelete) (WorkspaceObject workspaceId)
+        let! canDeleteFolder = authService.CheckPermissionAsync (User userId) (FolderDelete) (SpaceObject workspaceId)
 
         // Assert
         Assert.True(isOrgAdmin, "User should be an organization admin")
-        Assert.True(isTeamAdmin, "User should be a team admin")
-        Assert.True(canCreateResource, "User should have create_resource permission via team admin")
-        Assert.True(canDeleteFolder, "User should have delete_folder permission via team admin")
+        Assert.True(isSpaceModerator, "User should be a space moderator")
+        Assert.True(canCreateResource, "User should have create_resource permission via org admin")
+        Assert.True(canDeleteFolder, "User should have delete_folder permission via org admin")
     }
 
 [<Fact>]
@@ -352,35 +352,36 @@ let ``Team member without explicit permissions cannot perform workspace operatio
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = User userId
-                    Relation = TeamMember
-                    Object = TeamObject teamId } ]
+                    Relation = SpaceMember
+                    Object = SpaceObject teamId } ]
             )
 
         // Associate workspace with team
         do!
             authService.CreateRelationshipsAsync(
-                [ { Subject = Team teamId
-                    Relation = WorkspaceTeam
-                    Object = WorkspaceObject workspaceId } ]
+                [ { Subject = Organization "default"
+                    Relation = SpaceOrganization
+                    Object = SpaceObject workspaceId } ]
             )
 
         // Act - Check various permissions
-        let! isOrgAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (OrganizationObject orgId)
-        let! isTeamAdmin = authService.CheckPermissionAsync (User userId) (TeamAdmin) (TeamObject teamId)
+        let! isOrgAdmin = authService.CheckPermissionAsync (User userId) (OrganizationAdmin) (OrganizationObject orgId)
+
+        let! isSpaceModerator = authService.CheckPermissionAsync (User userId) (SpaceModerator) (SpaceObject teamId)
 
         let! canCreateResource =
-            authService.CheckPermissionAsync (User userId) (ResourceCreate) (WorkspaceObject workspaceId)
+            authService.CheckPermissionAsync (User userId) (ResourceCreate) (SpaceObject workspaceId)
 
-        let! canDeleteApp = authService.CheckPermissionAsync (User userId) (AppDelete) (WorkspaceObject workspaceId)
+        let! canDeleteApp = authService.CheckPermissionAsync (User userId) (AppDelete) (SpaceObject workspaceId)
 
         // Assert
-        Assert.False(isOrgAdmin, "Team member should NOT be an organization admin")
-        Assert.False(isTeamAdmin, "Team member should NOT be a team admin")
+        Assert.False(isOrgAdmin, "Space member should NOT be an organization admin")
+        Assert.False(isSpaceModerator, "Space member should NOT be a space moderator")
 
         Assert.False(
             canCreateResource,
-            "Team member without explicit permission should NOT have create_resource permission"
+            "Space member without explicit permission should NOT have create_resource permission"
         )
 
-        Assert.False(canDeleteApp, "Team member without explicit permission should NOT have delete_app permission")
+        Assert.False(canDeleteApp, "Space member without explicit permission should NOT have delete_app permission")
     }

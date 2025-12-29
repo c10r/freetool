@@ -18,12 +18,12 @@ module FolderMapper =
                 | true, guid -> Some(FolderId.FromGuid(guid))
                 | false, _ -> None // Will be validated in handler
 
-        let workspaceId =
-            match Guid.TryParse(dto.WorkspaceId) with
-            | true, guid -> WorkspaceId.FromGuid(guid)
-            | false, _ -> WorkspaceId.NewId() // This will fail validation later if invalid
+        let spaceId =
+            match Guid.TryParse(dto.SpaceId) with
+            | true, guid -> SpaceId.FromGuid(guid)
+            | false, _ -> SpaceId.NewId() // This will fail validation later if invalid
 
-        Folder.create actorUserId dto.Name parentId workspaceId
+        Folder.create actorUserId dto.Name parentId spaceId
 
     let fromUpdateNameDto
         (actorUserId: UserId)

@@ -22,6 +22,7 @@
     <Compile Include="src/DTOs/UserDtos.fs" />
     <Compile Include="src/DTOs/GroupDtos.fs" />
     <Compile Include="src/DTOs/WorkspaceDtos.fs" />
+    <Compile Include="src/DTOs/SpaceDtos.fs" />
     <Compile Include="src/DTOs/ResourceDtos.fs" />
     <Compile Include="src/DTOs/FolderDtos.fs" />
     <Compile Include="src/DTOs/AppDtos.fs" />
@@ -29,6 +30,7 @@
     <Compile Include="src/Interfaces/IUserRepository.fs" />
     <Compile Include="src/Interfaces/IGroupRepository.fs" />
     <Compile Include="src/Interfaces/IWorkspaceRepository.fs" />
+    <Compile Include="src/Interfaces/ISpaceRepository.fs" />
     <Compile Include="src/Interfaces/IResourceRepository.fs" />
     <Compile Include="src/Interfaces/IFolderRepository.fs" />
     <Compile Include="src/Interfaces/IAppRepository.fs" />
@@ -40,6 +42,7 @@
     <Compile Include="src/Commands/UserCommands.fs" />
     <Compile Include="src/Commands/GroupCommands.fs" />
     <Compile Include="src/Commands/WorkspaceCommands.fs" />
+    <Compile Include="src/Commands/SpaceCommands.fs" />
     <Compile Include="src/Commands/ResourceCommands.fs" />
     <Compile Include="src/Commands/FolderCommands.fs" />
     <Compile Include="src/Commands/AppCommands.fs" />
@@ -48,6 +51,7 @@
     <Compile Include="src/Mappers/UserMapper.fs" />
     <Compile Include="src/Mappers/GroupMapper.fs" />
     <Compile Include="src/Mappers/WorkspaceMapper.fs" />
+    <Compile Include="src/Mappers/SpaceMapper.fs" />
     <Compile Include="src/Mappers/ResourceMapper.fs" />
     <Compile Include="src/Mappers/FolderMapper.fs" />
     <Compile Include="src/Mappers/AppMapper.fs" />
@@ -59,6 +63,7 @@
     <Compile Include="src/Handlers/AppHandler.fs" />
     <Compile Include="src/Handlers/RunHandler.fs" />
     <Compile Include="src/Handlers/WorkspaceHandler.fs" />
+    <Compile Include="src/Handlers/SpaceHandler.fs" />
     <Compile Include="src/Services/EventEnhancementService.fs" />
   </ItemGroup>
 

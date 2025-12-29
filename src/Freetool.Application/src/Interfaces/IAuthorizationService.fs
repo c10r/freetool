@@ -14,7 +14,7 @@ type AuthorizationModelResponse = { AuthorizationModelId: string }
 /// Represents the subject (user field) in a relationship tuple
 type AuthSubject =
     | User of userId: string
-    | Team of teamId: string
+    | Space of spaceId: string
     | Organization of organizationId: string
     | UserSetFromRelation of objectType: string * objectId: string * relation: string
 
@@ -22,26 +22,25 @@ type AuthSubject =
 type AuthRelation =
     // Organization relations
     | OrganizationAdmin
-    // Team relations
-    | TeamMember
-    | TeamAdmin
-    | TeamOrganization
-    | TeamRename
-    | TeamDelete
-    // Workspace relations
-    | WorkspaceTeam
-    | WorkspaceOrganization
-    | WorkspaceCreate
-    // Resource permissions
+    // Space relations (replaces Team + Workspace)
+    | SpaceMember // Regular member of a space
+    | SpaceModerator // The single moderator of a space (replaces team admin)
+    | SpaceOrganization // Organization reference for derived permissions
+    | SpaceCreate // Permission to create a space (org admin only)
+    | SpaceRename // Permission to rename the space (moderator or org admin)
+    | SpaceDelete // Permission to delete the space (org admin only)
+    | SpaceAddMember // Permission to add members to a space (moderator or org admin)
+    | SpaceRemoveMember // Permission to remove members from a space (moderator or org admin)
+    // Resource permissions (apply to Space)
     | ResourceCreate
     | ResourceEdit
     | ResourceDelete
-    // App permissions
+    // App permissions (apply to Space)
     | AppCreate
     | AppEdit
     | AppDelete
     | AppRun
-    // Folder permissions
+    // Folder permissions (apply to Space)
     | FolderCreate
     | FolderEdit
     | FolderDelete
@@ -49,9 +48,8 @@ type AuthRelation =
 /// Represents the object (resource) in a relationship tuple
 type AuthObject =
     | UserObject of userId: string
-    | TeamObject of teamId: string
+    | SpaceObject of spaceId: string
     | OrganizationObject of organizationId: string
-    | WorkspaceObject of workspaceId: string
 
 /// Helper module for converting between strongly-typed and string representations
 module AuthTypes =
@@ -59,7 +57,7 @@ module AuthTypes =
     let subjectToString (subject: AuthSubject) : string =
         match subject with
         | User userId -> $"user:{userId}"
-        | Team teamId -> $"team:{teamId}"
+        | Space spaceId -> $"space:{spaceId}"
         | Organization orgId -> $"organization:{orgId}"
         | UserSetFromRelation(objectType, objectId, relation) -> $"{objectType}:{objectId}#{relation}"
 
@@ -67,14 +65,14 @@ module AuthTypes =
     let relationToString (relation: AuthRelation) : string =
         match relation with
         | OrganizationAdmin -> "admin"
-        | TeamMember -> "member"
-        | TeamAdmin -> "admin"
-        | TeamOrganization -> "organization"
-        | TeamRename -> "rename"
-        | TeamDelete -> "delete"
-        | WorkspaceTeam -> "team"
-        | WorkspaceOrganization -> "organization"
-        | WorkspaceCreate -> "create_workspace"
+        | SpaceMember -> "member"
+        | SpaceModerator -> "moderator"
+        | SpaceOrganization -> "organization"
+        | SpaceCreate -> "create"
+        | SpaceRename -> "rename"
+        | SpaceDelete -> "delete"
+        | SpaceAddMember -> "add_member"
+        | SpaceRemoveMember -> "remove_member"
         | ResourceCreate -> "create_resource"
         | ResourceEdit -> "edit_resource"
         | ResourceDelete -> "delete_resource"
@@ -90,9 +88,8 @@ module AuthTypes =
     let objectToString (obj: AuthObject) : string =
         match obj with
         | UserObject userId -> $"user:{userId}"
-        | TeamObject teamId -> $"team:{teamId}"
+        | SpaceObject spaceId -> $"space:{spaceId}"
         | OrganizationObject orgId -> $"organization:{orgId}"
-        | WorkspaceObject workspaceId -> $"workspace:{workspaceId}"
 
 /// Represents a strongly-typed relationship tuple
 type RelationshipTuple =

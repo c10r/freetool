@@ -13,12 +13,16 @@ let unwrapResult result =
     | Ok value -> value
     | Error error -> failwith $"Expected Ok but got Error: {error}"
 
+// ============================================================================
+// Folder Creation Tests (with SpaceId)
+// ============================================================================
+
 [<Fact>]
 let ``Folder creation should generate FolderCreatedEvent`` () =
     // Arrange & Act
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.NewId()
-    let result = Folder.create actorUserId "My Documents" None workspaceId
+    let spaceId = SpaceId.NewId()
+    let result = Folder.create actorUserId "My Documents" None spaceId
 
     // Assert
     match result with
@@ -30,6 +34,7 @@ let ``Folder creation should generate FolderCreatedEvent`` () =
         | :? FolderCreatedEvent as event ->
             Assert.Equal("My Documents", event.Name.Value)
             Assert.Equal(None, event.ParentId)
+            Assert.Equal(spaceId, event.SpaceId)
         | _ -> Assert.True(false, "Expected FolderCreatedEvent")
     | Error error -> Assert.True(false, $"Expected success but got error: {error}")
 
@@ -38,10 +43,10 @@ let ``Folder creation with parent should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let parentId = FolderId.NewId()
-    let workspaceId = WorkspaceId.NewId()
+    let spaceId = SpaceId.NewId()
 
     // Act
-    let result = Folder.create actorUserId "Sub Folder" (Some parentId) workspaceId
+    let result = Folder.create actorUserId "Sub Folder" (Some parentId) spaceId
 
     // Assert
     match result with
@@ -53,6 +58,7 @@ let ``Folder creation with parent should generate correct event`` () =
         | :? FolderCreatedEvent as event ->
             Assert.Equal("Sub Folder", event.Name.Value)
             Assert.Equal(Some parentId, event.ParentId)
+            Assert.Equal(spaceId, event.SpaceId)
         | _ -> Assert.True(false, "Expected FolderCreatedEvent")
     | Error error -> Assert.True(false, $"Expected success but got error: {error}")
 
@@ -60,10 +66,10 @@ let ``Folder creation with parent should generate correct event`` () =
 let ``Folder name update should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.NewId()
+    let spaceId = SpaceId.NewId()
 
     let folder =
-        Folder.create actorUserId "Old Folder Name" None workspaceId |> unwrapResult
+        Folder.create actorUserId "Old Folder Name" None spaceId |> unwrapResult
 
     // Act
     let result = Folder.updateName actorUserId "New Folder Name" folder
@@ -90,10 +96,9 @@ let ``Folder name update should generate correct event`` () =
 let ``Folder move to parent should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.NewId()
+    let spaceId = SpaceId.NewId()
 
-    let folder =
-        Folder.create actorUserId "Mobile Folder" None workspaceId |> unwrapResult
+    let folder = Folder.create actorUserId "Mobile Folder" None spaceId |> unwrapResult
 
     let newParentId = FolderId.NewId()
 
@@ -120,11 +125,10 @@ let ``Folder move to root should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let parentId = FolderId.NewId()
-    let workspaceId = WorkspaceId.NewId()
+    let spaceId = SpaceId.NewId()
 
     let folder =
-        Folder.create actorUserId "Child Folder" (Some parentId) workspaceId
-        |> unwrapResult
+        Folder.create actorUserId "Child Folder" (Some parentId) spaceId |> unwrapResult
 
     // Act
     let movedFolder = Folder.moveToParent actorUserId None folder
@@ -148,8 +152,8 @@ let ``Folder move to root should generate correct event`` () =
 let ``Folder creation should reject empty name`` () =
     // Act
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.NewId()
-    let result = Folder.create actorUserId "" None workspaceId
+    let spaceId = SpaceId.NewId()
+    let result = Folder.create actorUserId "" None spaceId
 
     // Assert
     match result with
@@ -161,10 +165,10 @@ let ``Folder creation should reject name longer than 100 characters`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
     let longName = String.replicate 101 "a"
-    let workspaceId = WorkspaceId.NewId()
+    let spaceId = SpaceId.NewId()
 
     // Act
-    let result = Folder.create actorUserId longName None workspaceId
+    let result = Folder.create actorUserId longName None spaceId
 
     // Assert
     match result with
@@ -175,10 +179,9 @@ let ``Folder creation should reject name longer than 100 characters`` () =
 let ``Folder deletion should generate FolderDeletedEvent`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.NewId()
+    let spaceId = SpaceId.NewId()
 
-    let folder =
-        Folder.create actorUserId "Test Folder" None workspaceId |> unwrapResult
+    let folder = Folder.create actorUserId "Test Folder" None spaceId |> unwrapResult
 
     // Act
     let deletedFolder = Folder.markForDeletion actorUserId folder
@@ -195,17 +198,47 @@ let ``Folder deletion should generate FolderDeletedEvent`` () =
 let ``Root folder should be identified correctly`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.NewId()
+    let spaceId = SpaceId.NewId()
 
     let rootFolder =
-        Folder.create actorUserId "Root Folder" None workspaceId |> unwrapResult
+        Folder.create actorUserId "Root Folder" None spaceId |> unwrapResult
 
     let parentId = FolderId.NewId()
 
     let childFolder =
-        Folder.create actorUserId "Child Folder" (Some parentId) workspaceId
-        |> unwrapResult
+        Folder.create actorUserId "Child Folder" (Some parentId) spaceId |> unwrapResult
 
     // Act & Assert
     Assert.True(Folder.isRoot rootFolder)
     Assert.False(Folder.isRoot childFolder)
+
+// ============================================================================
+// Folder SpaceId Tests
+// ============================================================================
+
+[<Fact>]
+let ``Folder should store SpaceId correctly`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.NewId()
+
+    // Act
+    let result = Folder.create actorUserId "Test Folder" None spaceId
+
+    // Assert
+    match result with
+    | Ok folder -> Assert.Equal(spaceId, folder.State.SpaceId)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Folder.getSpaceId should return correct SpaceId`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.NewId()
+    let folder = Folder.create actorUserId "Test Folder" None spaceId |> unwrapResult
+
+    // Act
+    let returnedSpaceId = Folder.getSpaceId folder
+
+    // Assert
+    Assert.Equal(spaceId, returnedSpaceId)

@@ -18,50 +18,85 @@ open Freetool.Application.Commands
 open Freetool.Application.DTOs
 open Freetool.Application.Services
 open Freetool.Domain.ValueObjects
+open Freetool.Domain.Entities
 open Freetool.Api.Tracing
 open Freetool.Api.Middleware
 open Freetool.Api.OpenApi
 
-/// Ensures an OpenFGA store exists, creating one if necessary
-/// Returns the store ID to use for the application
-let ensureOpenFgaStore (apiUrl: string) (configuredStoreId: string) : string =
-    // Create a temporary service without store ID to check/create stores
+/// Creates a new OpenFGA store and saves the ID to the database
+let private createAndSaveNewStore (connectionString: string) (apiUrl: string) : string =
     let tempService = OpenFgaService(apiUrl)
     let authService = tempService :> IAuthorizationService
 
-    if System.String.IsNullOrEmpty(configuredStoreId) then
-        // No store ID configured, create a new store
-        eprintfn "No OpenFGA store ID configured. Creating new store..."
+    eprintfn "Creating new OpenFGA store..."
+    let storeTask = authService.CreateStoreAsync({ Name = "freetool-authorization" })
+    storeTask.Wait()
+    let newStoreId = storeTask.Result.Id
+    eprintfn "Created new OpenFGA store with ID: %s" newStoreId
 
-        let storeTask = authService.CreateStoreAsync({ Name = "freetool-authorization" })
+    // Save to database for future restarts
+    SettingsStore.set connectionString "OpenFGA:StoreId" newStoreId
+    eprintfn "Saved OpenFGA store ID to database"
 
-        storeTask.Wait()
-        let newStoreId = storeTask.Result.Id
-        eprintfn "Created new OpenFGA store with ID: %s" newStoreId
-        newStoreId
-    else
-        // Check if configured store exists
-        eprintfn "Checking if OpenFGA store %s exists..." configuredStoreId
-        let existsTask = authService.StoreExistsAsync(configuredStoreId)
-        existsTask.Wait()
+    newStoreId
 
-        if existsTask.Result then
-            eprintfn "OpenFGA store %s exists, using it." configuredStoreId
-            configuredStoreId
+/// Checks if a store exists in OpenFGA
+let private storeExists (apiUrl: string) (storeId: string) : bool =
+    let tempService = OpenFgaService(apiUrl)
+    let authService = tempService :> IAuthorizationService
+    let existsTask = authService.StoreExistsAsync(storeId)
+    existsTask.Wait()
+    existsTask.Result
+
+/// Ensures an OpenFGA store exists, creating one if necessary
+/// Persists the store ID to the database to survive restarts
+/// Returns the store ID to use for the application
+let ensureOpenFgaStore (connectionString: string) (apiUrl: string) (configuredStoreId: string) : string =
+    // First, check if we have a store ID saved in the database
+    let dbStoreId = SettingsStore.get connectionString "OpenFGA:StoreId"
+
+    match dbStoreId with
+    | Some storeId when not (System.String.IsNullOrEmpty(storeId)) ->
+        // We have a store ID in the database, verify it exists in OpenFGA
+        eprintfn "Found OpenFGA store ID in database: %s" storeId
+
+        if storeExists apiUrl storeId then
+            eprintfn "OpenFGA store %s exists, using it." storeId
+            storeId
         else
-            // Store doesn't exist, create a new one
-            eprintfn "OpenFGA store %s does not exist. Creating new store..." configuredStoreId
+            // Store was deleted from OpenFGA, create a new one
+            eprintfn "OpenFGA store %s no longer exists. Creating new store..." storeId
+            createAndSaveNewStore connectionString apiUrl
+    | _ ->
+        // No store ID in database, check config
+        if System.String.IsNullOrEmpty(configuredStoreId) then
+            // No store configured anywhere, create a new one
+            eprintfn "No OpenFGA store ID configured. Creating new store..."
+            createAndSaveNewStore connectionString apiUrl
+        else
+            // Check if configured store exists
+            eprintfn "Checking if configured OpenFGA store %s exists..." configuredStoreId
 
-            let storeTask = authService.CreateStoreAsync({ Name = "freetool-authorization" })
-
-            storeTask.Wait()
-            let newStoreId = storeTask.Result.Id
-            eprintfn "Created new OpenFGA store with ID: %s" newStoreId
-            newStoreId
+            if storeExists apiUrl configuredStoreId then
+                eprintfn "OpenFGA store %s exists, using it and saving to database." configuredStoreId
+                // Save the config store ID to database for future restarts
+                SettingsStore.set connectionString "OpenFGA:StoreId" configuredStoreId
+                configuredStoreId
+            else
+                // Configured store doesn't exist, create a new one
+                eprintfn "OpenFGA store %s does not exist. Creating new store..." configuredStoreId
+                createAndSaveNewStore connectionString apiUrl
 
 [<EntryPoint>]
 let main args =
     let builder = WebApplication.CreateBuilder(args)
+
+    // Run database migrations early (before OpenFGA store check)
+    // This ensures the Settings table exists for storing the store ID
+    let connectionString =
+        builder.Configuration.GetConnectionString("DefaultConnection")
+
+    Persistence.upgradeDatabase connectionString
 
     // Add services to the container
     builder.Services
@@ -114,6 +149,12 @@ let main args =
         WorkspaceRepository(context, eventRepository))
     |> ignore
 
+    builder.Services.AddScoped<ISpaceRepository>(fun serviceProvider ->
+        let context = serviceProvider.GetRequiredService<FreetoolDbContext>()
+        let eventRepository = serviceProvider.GetRequiredService<IEventRepository>()
+        SpaceRepository(context, eventRepository))
+    |> ignore
+
     builder.Services.AddScoped<IResourceRepository, ResourceRepository>() |> ignore
     builder.Services.AddScoped<IFolderRepository, FolderRepository>() |> ignore
     builder.Services.AddScoped<IAppRepository, AppRepository>() |> ignore
@@ -122,12 +163,13 @@ let main args =
     builder.Services.AddScoped<IEventPublisher, EventPublisher>() |> ignore
 
     // Ensure OpenFGA store exists before registering the service
+    // The store ID is persisted to the database to survive restarts
     let openFgaApiUrl = builder.Configuration["OpenFGA:ApiUrl"]
     let configuredStoreId = builder.Configuration["OpenFGA:StoreId"]
 
     let actualStoreId =
         try
-            ensureOpenFgaStore openFgaApiUrl configuredStoreId
+            ensureOpenFgaStore connectionString openFgaApiUrl configuredStoreId
         with ex ->
             eprintfn "Warning: Could not ensure OpenFGA store exists: %s" ex.Message
             eprintfn "Using configured store ID (if any). Authorization may fail."
@@ -147,8 +189,16 @@ let main args =
         let groupRepository = serviceProvider.GetRequiredService<IGroupRepository>()
         let folderRepository = serviceProvider.GetRequiredService<IFolderRepository>()
         let resourceRepository = serviceProvider.GetRequiredService<IResourceRepository>()
+        let spaceRepository = serviceProvider.GetRequiredService<ISpaceRepository>()
 
-        EventEnhancementService(userRepository, appRepository, groupRepository, folderRepository, resourceRepository)
+        EventEnhancementService(
+            userRepository,
+            appRepository,
+            groupRepository,
+            folderRepository,
+            resourceRepository,
+            spaceRepository
+        )
         :> IEventEnhancementService)
     |> ignore
 
@@ -157,6 +207,12 @@ let main args =
     builder.Services.AddScoped<GroupHandler>() |> ignore
 
     builder.Services.AddScoped<WorkspaceHandler>() |> ignore
+
+    builder.Services.AddScoped<SpaceHandler>(fun serviceProvider ->
+        let spaceRepository = serviceProvider.GetRequiredService<ISpaceRepository>()
+        let userRepository = serviceProvider.GetRequiredService<IUserRepository>()
+        SpaceHandler(spaceRepository, userRepository))
+    |> ignore
 
     builder.Services.AddScoped<ResourceHandler>(fun serviceProvider ->
         let resourceRepository = serviceProvider.GetRequiredService<IResourceRepository>()
@@ -191,6 +247,12 @@ let main args =
             let workspaceHandler = serviceProvider.GetRequiredService<WorkspaceHandler>()
             let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
             AutoTracing.createMultiRepositoryTracingDecorator "workspace" workspaceHandler activitySource)
+    |> ignore
+
+    builder.Services.AddScoped<IMultiRepositoryCommandHandler<SpaceCommand, SpaceCommandResult>>(fun serviceProvider ->
+        let spaceHandler = serviceProvider.GetRequiredService<SpaceHandler>()
+        let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
+        AutoTracing.createMultiRepositoryTracingDecorator "space" spaceHandler activitySource)
     |> ignore
 
     builder.Services.AddScoped<IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>>
@@ -237,10 +299,7 @@ let main args =
     eprintfn "Web root: %s" builder.Environment.WebRootPath
     eprintfn "Current directory: %s" (System.IO.Directory.GetCurrentDirectory())
 
-    let connectionString =
-        builder.Configuration.GetConnectionString("DefaultConnection")
-
-    Persistence.upgradeDatabase connectionString
+    // Note: Database migrations were already run at startup (before OpenFGA store check)
 
     // Initialize OpenFGA authorization model if we have a valid store
     // Note: actualStoreId was set during DI registration (store was created if needed)
@@ -253,33 +312,33 @@ let main args =
             modelTask.Wait()
             eprintfn "OpenFGA authorization model initialized successfully"
 
-            // Set up organization relations for all existing workspaces
-            // This ensures org admins inherit permissions on all workspaces
+            // Set up organization relations for all existing spaces
+            // This ensures org admins inherit permissions on all spaces
             try
-                eprintfn "Setting up organization relations for existing workspaces..."
+                eprintfn "Setting up organization relations for existing spaces..."
 
-                let workspaceRepository =
-                    scope.ServiceProvider.GetRequiredService<IWorkspaceRepository>()
+                let spaceRepository = scope.ServiceProvider.GetRequiredService<ISpaceRepository>()
 
-                let workspacesTask = workspaceRepository.GetAllAsync 0 1000
-                workspacesTask.Wait()
-                let workspaces = workspacesTask.Result
+                let spacesTask = spaceRepository.GetAllAsync 0 1000
+                spacesTask.Wait()
+                let spaces = spacesTask.Result
 
-                for workspace in workspaces do
-                    let workspaceId = workspace.State.Id.Value.ToString()
+                for space in spaces do
+                    let spaceId = Space.getId space
+                    let spaceIdStr = spaceId.Value.ToString()
 
                     let tuple =
                         { Subject = Organization "default"
-                          Relation = WorkspaceOrganization
-                          Object = WorkspaceObject workspaceId }
+                          Relation = SpaceOrganization
+                          Object = SpaceObject spaceIdStr }
 
                     let relationTask = authService.CreateRelationshipsAsync([ tuple ])
                     relationTask.Wait()
 
-                eprintfn "Organization relations set up for %d workspaces" (List.length workspaces)
+                eprintfn "Organization relations set up for %d spaces" (List.length spaces)
             with ex ->
-                eprintfn "Warning: Could not set up organization relations for workspaces: %s" ex.Message
-                eprintfn "Org admins may not have permissions on existing workspaces."
+                eprintfn "Warning: Could not set up organization relations for spaces: %s" ex.Message
+                eprintfn "Org admins may not have permissions on existing spaces."
 
             // Note: Organization admin is now set automatically when the user first logs in
             // via TailscaleAuthMiddleware if their email matches OpenFGA:OrgAdminEmail config

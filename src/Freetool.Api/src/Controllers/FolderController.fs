@@ -31,26 +31,26 @@ type FolderController
         task {
             let userId = this.CurrentUserId
 
-            // Parse and validate workspace ID
-            match Guid.TryParse(createDto.WorkspaceId) with
-            | false, _ -> return this.HandleDomainError(ValidationError "Invalid workspace ID format")
-            | true, workspaceGuid ->
-                let workspaceId = WorkspaceId.FromGuid(workspaceGuid)
+            // Parse and validate space ID
+            match Guid.TryParse(createDto.SpaceId) with
+            | false, _ -> return this.HandleDomainError(ValidationError "Invalid space ID format")
+            | true, spaceGuid ->
+                let spaceId = SpaceId.FromGuid(spaceGuid)
 
-                // Check authorization: user must have create_folder permission on workspace
+                // Check authorization: user must have create_folder permission on space
                 // Org admins inherit this permission via OpenFGA tupleToUserset
                 let! hasPermission =
                     authorizationService.CheckPermissionAsync
                         (User(userId.ToString()))
                         FolderCreate
-                        (WorkspaceObject(workspaceId.ToString()))
+                        (SpaceObject(spaceId.ToString()))
 
                 if not hasPermission then
                     return
                         this.StatusCode(
                             403,
                             {| error = "Forbidden"
-                               message = "You do not have permission to create folders in this workspace" |}
+                               message = "You do not have permission to create folders in this space" |}
                         )
                         :> IActionResult
                 else
@@ -128,7 +128,7 @@ type FolderController
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetAllFolders
-        ([<FromQuery>] workspaceId: string, [<FromQuery>] skip: int, [<FromQuery>] take: int)
+        ([<FromQuery>] spaceId: string, [<FromQuery>] skip: int, [<FromQuery>] take: int)
         : Task<IActionResult> =
         task {
             let skipValue = if skip < 0 then 0 else skip
@@ -138,9 +138,9 @@ type FolderController
                 elif take > 100 then 100
                 else take
 
-            // Parse optional workspaceId
-            if System.String.IsNullOrWhiteSpace(workspaceId) then
-                // No workspace filter - backward compatibility
+            // Parse optional spaceId
+            if System.String.IsNullOrWhiteSpace(spaceId) then
+                // No space filter - backward compatibility
                 let! result = commandHandler.HandleCommand folderRepository (GetAllFolders(None, skipValue, takeValue))
 
                 return
@@ -149,16 +149,16 @@ type FolderController
                     | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                     | Error error -> this.HandleDomainError(error)
             else
-                // Validate and parse workspace ID
-                match Guid.TryParse(workspaceId) with
-                | false, _ -> return this.HandleDomainError(ValidationError "Invalid workspace ID format")
+                // Validate and parse space ID
+                match Guid.TryParse(spaceId) with
+                | false, _ -> return this.HandleDomainError(ValidationError "Invalid space ID format")
                 | true, guid ->
-                    let workspaceIdObj = WorkspaceId.FromGuid(guid)
+                    let spaceIdObj = SpaceId.FromGuid(guid)
 
                     let! result =
                         commandHandler.HandleCommand
                             folderRepository
-                            (GetAllFolders(Some workspaceIdObj, skipValue, takeValue))
+                            (GetAllFolders(Some spaceIdObj, skipValue, takeValue))
 
                     return
                         match result with
@@ -183,28 +183,28 @@ type FolderController
             | true, folderGuid ->
                 let folderId = FolderId.FromGuid(folderGuid)
 
-                // Get folder to extract workspace ID
+                // Get folder to extract space ID
                 let! folderOption = folderRepository.GetByIdAsync folderId
 
                 match folderOption with
                 | None -> return this.HandleDomainError(NotFound "Folder not found")
                 | Some folder ->
-                    let workspaceId = Folder.getWorkspaceId folder
+                    let spaceId = Folder.getSpaceId folder
 
-                    // Check authorization: user must have edit_folder permission on workspace
+                    // Check authorization: user must have edit_folder permission on space
                     // Org admins inherit this permission via OpenFGA tupleToUserset
                     let! hasPermission =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
                             FolderEdit
-                            (WorkspaceObject(workspaceId.ToString()))
+                            (SpaceObject(spaceId.ToString()))
 
                     if not hasPermission then
                         return
                             this.StatusCode(
                                 403,
                                 {| error = "Forbidden"
-                                   message = "You do not have permission to edit folders in this workspace" |}
+                                   message = "You do not have permission to edit folders in this space" |}
                             )
                             :> IActionResult
                     else
@@ -234,28 +234,28 @@ type FolderController
             | true, folderGuid ->
                 let folderId = FolderId.FromGuid(folderGuid)
 
-                // Get folder to extract workspace ID
+                // Get folder to extract space ID
                 let! folderOption = folderRepository.GetByIdAsync folderId
 
                 match folderOption with
                 | None -> return this.HandleDomainError(NotFound "Folder not found")
                 | Some folder ->
-                    let workspaceId = Folder.getWorkspaceId folder
+                    let spaceId = Folder.getSpaceId folder
 
-                    // Check authorization: user must have edit_folder permission on workspace
+                    // Check authorization: user must have edit_folder permission on space
                     // Org admins inherit this permission via OpenFGA tupleToUserset
                     let! hasPermission =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
                             FolderEdit
-                            (WorkspaceObject(workspaceId.ToString()))
+                            (SpaceObject(spaceId.ToString()))
 
                     if not hasPermission then
                         return
                             this.StatusCode(
                                 403,
                                 {| error = "Forbidden"
-                                   message = "You do not have permission to edit folders in this workspace" |}
+                                   message = "You do not have permission to edit folders in this space" |}
                             )
                             :> IActionResult
                     else
@@ -284,28 +284,28 @@ type FolderController
             | true, folderGuid ->
                 let folderId = FolderId.FromGuid(folderGuid)
 
-                // Get folder to extract workspace ID
+                // Get folder to extract space ID
                 let! folderOption = folderRepository.GetByIdAsync folderId
 
                 match folderOption with
                 | None -> return this.HandleDomainError(NotFound "Folder not found")
                 | Some folder ->
-                    let workspaceId = Folder.getWorkspaceId folder
+                    let spaceId = Folder.getSpaceId folder
 
-                    // Check authorization: user must have delete_folder permission on workspace
+                    // Check authorization: user must have delete_folder permission on space
                     // Org admins inherit this permission via OpenFGA tupleToUserset
                     let! hasPermission =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
                             FolderDelete
-                            (WorkspaceObject(workspaceId.ToString()))
+                            (SpaceObject(spaceId.ToString()))
 
                     if not hasPermission then
                         return
                             this.StatusCode(
                                 403,
                                 {| error = "Forbidden"
-                                   message = "You do not have permission to delete folders in this workspace" |}
+                                   message = "You do not have permission to delete folders in this space" |}
                             )
                             :> IActionResult
                     else

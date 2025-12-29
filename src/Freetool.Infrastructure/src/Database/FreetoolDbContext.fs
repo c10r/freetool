@@ -36,6 +36,12 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     [<DefaultValue>]
     val mutable private _runs: DbSet<RunData>
 
+    [<DefaultValue>]
+    val mutable private _spaces: DbSet<SpaceData>
+
+    [<DefaultValue>]
+    val mutable private _spaceMembers: DbSet<SpaceMemberData>
+
     member this.Users
         with get () = this._users
         and set value = this._users <- value
@@ -71,6 +77,14 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     member this.Runs
         with get () = this._runs
         and set value = this._runs <- value
+
+    member this.Spaces
+        with get () = this._spaces
+        and set value = this._spaces <- value
+
+    member this.SpaceMembers
+        with get () = this._spaceMembers
+        and set value = this._spaceMembers <- value
 
     override this.OnModelCreating(modelBuilder: ModelBuilder) =
         base.OnModelCreating modelBuilder
@@ -138,10 +152,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                         | Error _ -> failwith $"Invalid FolderName in database: {str}")
                 )
 
-            let workspaceIdConverter =
-                ValueConverter<Freetool.Domain.ValueObjects.WorkspaceId, System.Guid>(
-                    (fun workspaceId -> workspaceId.Value),
-                    (fun guid -> Freetool.Domain.ValueObjects.WorkspaceId(guid))
+            let spaceIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.SpaceId, System.Guid>(
+                    (fun spaceId -> spaceId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.SpaceId(guid))
                 )
 
             let optionFolderIdConverter =
@@ -164,7 +178,7 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun f -> f.Name).HasColumnName("Name").HasConversion(folderNameConverter)
             |> ignore
 
-            entity.Property(fun f -> f.WorkspaceId).HasColumnName("WorkspaceId").HasConversion(workspaceIdConverter)
+            entity.Property(fun f -> f.SpaceId).HasColumnName("SpaceId").HasConversion(spaceIdConverter)
             |> ignore
 
             entity.Property(fun f -> f.CreatedAt).HasColumnName("CreatedAt") |> ignore
@@ -177,8 +191,8 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun f -> f.ParentId).HasConversion(optionFolderIdConverter)
             |> ignore
 
-            // Configure foreign key relationship to workspace
-            entity.HasOne<WorkspaceData>().WithMany().HasForeignKey(fun f -> f.WorkspaceId :> obj)
+            // Configure foreign key relationship to space
+            entity.HasOne<SpaceData>().WithMany().HasForeignKey(fun f -> f.SpaceId :> obj)
             |> ignore
 
             // Global query filter for soft delete
@@ -287,10 +301,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                         | Error _ -> failwith $"Invalid ResourceDescription in database: {str}")
                 )
 
-            let workspaceIdConverter =
-                ValueConverter<Freetool.Domain.ValueObjects.WorkspaceId, System.Guid>(
-                    (fun workspaceId -> workspaceId.Value),
-                    (fun guid -> Freetool.Domain.ValueObjects.WorkspaceId(guid))
+            let spaceIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.SpaceId, System.Guid>(
+                    (fun spaceId -> spaceId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.SpaceId(guid))
                 )
 
             let keyValuePairListConverter =
@@ -335,8 +349,7 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun r -> r.Description).HasConversion(resourceDescriptionConverter)
             |> ignore
 
-            entity.Property(fun r -> r.WorkspaceId).HasConversion(workspaceIdConverter)
-            |> ignore
+            entity.Property(fun r -> r.SpaceId).HasConversion(spaceIdConverter) |> ignore
 
             entity.Property(fun r -> r.HttpMethod).HasConversion(httpMethodConverter)
             |> ignore
@@ -352,8 +365,8 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun r -> r.Body).HasConversion(keyValuePairListConverter)
             |> ignore
 
-            // Configure foreign key relationship to workspace
-            entity.HasOne<WorkspaceData>().WithMany().HasForeignKey(fun r -> r.WorkspaceId :> obj)
+            // Configure foreign key relationship to space
+            entity.HasOne<SpaceData>().WithMany().HasForeignKey(fun r -> r.SpaceId :> obj)
             |> ignore
 
             // Global query filter for soft delete
@@ -630,4 +643,69 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
             // Global query filter for soft delete
             entity.HasQueryFilter(fun w -> not w.IsDeleted) |> ignore)
+        |> ignore
+
+        // Configure SpaceData
+        modelBuilder.Entity<SpaceData>(fun entity ->
+            let spaceIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.SpaceId, System.Guid>(
+                    (fun spaceId -> spaceId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.SpaceId(guid))
+                )
+
+            let userIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.UserId, System.Guid>(
+                    (fun userId -> userId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.UserId(guid))
+                )
+
+            // Explicit property configuration to help with constructor binding
+            entity.Property(fun s -> s.Id).HasColumnName("Id").HasConversion(spaceIdConverter)
+            |> ignore
+
+            entity.Property(fun s -> s.Name).HasColumnName("Name").HasMaxLength(100).IsRequired()
+            |> ignore
+
+            entity
+                .Property(fun s -> s.ModeratorUserId)
+                .HasColumnName("ModeratorUserId")
+                .HasConversion(userIdConverter)
+                .IsRequired()
+            |> ignore
+
+            entity.Property(fun s -> s.CreatedAt).HasColumnName("CreatedAt") |> ignore
+            entity.Property(fun s -> s.UpdatedAt).HasColumnName("UpdatedAt") |> ignore
+            entity.Property(fun s -> s.IsDeleted).HasColumnName("IsDeleted") |> ignore
+
+            // Ignore the MemberIds navigation properties explicitly (populated via SpaceMembers junction table)
+            entity.Ignore("MemberIds") |> ignore
+            entity.Ignore("_memberIds") |> ignore
+
+            // Global query filter for soft delete
+            entity.HasQueryFilter(fun s -> not s.IsDeleted) |> ignore)
+        |> ignore
+
+        // Configure SpaceMemberData
+        modelBuilder.Entity<SpaceMemberData>(fun entity ->
+            let userIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.UserId, System.Guid>(
+                    (fun userId -> userId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.UserId(guid))
+                )
+
+            let spaceIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.SpaceId, System.Guid>(
+                    (fun spaceId -> spaceId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.SpaceId(guid))
+                )
+
+            entity.Property(fun sm -> sm.UserId).HasConversion(userIdConverter) |> ignore
+            entity.Property(fun sm -> sm.SpaceId).HasConversion(spaceIdConverter) |> ignore
+
+            // Configure foreign key relationships
+            entity.HasOne<UserData>().WithMany().HasForeignKey(fun sm -> sm.UserId :> obj)
+            |> ignore
+
+            entity.HasOne<SpaceData>().WithMany().HasForeignKey(fun sm -> sm.SpaceId :> obj)
+            |> ignore)
         |> ignore

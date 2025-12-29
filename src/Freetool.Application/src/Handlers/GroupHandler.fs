@@ -67,14 +67,14 @@ module GroupHandler =
                                     match! workspaceRepository.AddAsync eventAwareWorkspace with
                                     | Error error -> return Error error
                                     | Ok() ->
-                                        // Set up organization relation for the workspace so org admins inherit permissions
+                                        // Set up organization relation for the space so org admins inherit permissions
                                         let workspaceId = Workspace.getId eventAwareWorkspace
 
                                         do!
                                             authorizationService.CreateRelationshipsAsync(
                                                 [ { Subject = Organization "default"
-                                                    Relation = WorkspaceOrganization
-                                                    Object = WorkspaceObject(workspaceId.Value.ToString()) } ]
+                                                    Relation = SpaceOrganization
+                                                    Object = SpaceObject(workspaceId.Value.ToString()) } ]
                                             )
 
                                         return Ok(GroupResult(eventAwareGroup.State))

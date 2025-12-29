@@ -67,7 +67,7 @@ let ``UpdateUserName returns 403 when user is not self and not org admin`` () : 
 
         // No org admin permission
         let permissions =
-            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
+            Map.ofList [ ((User(userId.Value.ToString()), OrganizationAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -114,7 +114,7 @@ let ``UpdateUserName succeeds when user is org admin updating another user`` () 
 
         // Grant org admin permission
         let permissions =
-            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), true) ]
+            Map.ofList [ ((User(userId.Value.ToString()), OrganizationAdmin, OrganizationObject "default"), true) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -138,7 +138,7 @@ let ``UpdateUserEmail returns 403 when user is not self and not org admin`` () :
         let targetUserId = UserId.NewId()
 
         let permissions =
-            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
+            Map.ofList [ ((User(userId.Value.ToString()), OrganizationAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -182,7 +182,7 @@ let ``SetProfilePicture returns 403 when user is not self and not org admin`` ()
         let targetUserId = UserId.NewId()
 
         let permissions =
-            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
+            Map.ofList [ ((User(userId.Value.ToString()), OrganizationAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -226,7 +226,7 @@ let ``RemoveProfilePicture returns 403 when user is not self and not org admin``
         let targetUserId = UserId.NewId()
 
         let permissions =
-            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
+            Map.ofList [ ((User(userId.Value.ToString()), OrganizationAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -267,7 +267,7 @@ let ``DeleteUser returns 403 when user is not org admin`` () : Task =
 
         // No org admin permission
         let permissions =
-            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
+            Map.ofList [ ((User(userId.Value.ToString()), OrganizationAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -289,7 +289,7 @@ let ``DeleteUser succeeds when user is org admin`` () : Task =
 
         // Grant org admin permission
         let permissions =
-            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), true) ]
+            Map.ofList [ ((User(userId.Value.ToString()), OrganizationAdmin, OrganizationObject "default"), true) ]
 
         let controller, _ = createTestController permissions (Some userId)
 
@@ -311,7 +311,7 @@ let ``DeleteUser returns 403 even when user tries to delete themselves`` () : Ta
 
         // No org admin permission - even self-delete requires admin
         let permissions =
-            Map.ofList [ ((User(userId.Value.ToString()), TeamAdmin, OrganizationObject "default"), false) ]
+            Map.ofList [ ((User(userId.Value.ToString()), OrganizationAdmin, OrganizationObject "default"), false) ]
 
         let controller, _ = createTestController permissions (Some userId)
 

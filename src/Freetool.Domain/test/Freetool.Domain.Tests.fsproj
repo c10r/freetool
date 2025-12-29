@@ -26,6 +26,7 @@
   <ItemGroup>
     <Compile Include="UserTests.fs" />
     <Compile Include="GroupTests.fs" />
+    <Compile Include="SpaceTests.fs" />
     <Compile Include="AppTests.fs" />
     <Compile Include="RequestComposerTests.fs" />
     <Compile Include="FolderTests.fs" />

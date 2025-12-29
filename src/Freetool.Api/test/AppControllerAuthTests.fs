@@ -19,18 +19,18 @@ let createServiceWithoutStore () =
 let createServiceWithStore storeId =
     OpenFgaService(openFgaApiUrl, storeId) :> IAuthorizationService
 
-// Test setup helper to create a workspace with proper permissions
-let setupWorkspaceWithPermissions (authService: IAuthorizationService) (userId: string) (permission: AuthRelation) =
+// Test setup helper to create a space with proper permissions
+let setupSpaceWithPermissions (authService: IAuthorizationService) (userId: string) (permission: AuthRelation) =
     task {
-        let workspaceId = Guid.NewGuid().ToString()
-        let teamId = "test-team"
+        let spaceId = Guid.NewGuid().ToString()
+        let orgId = "default"
 
-        // Associate workspace with team
+        // Associate space with organization
         do!
             authService.CreateRelationshipsAsync(
-                [ { Subject = AuthSubject.Team teamId
-                    Relation = WorkspaceTeam
-                    Object = AuthObject.WorkspaceObject workspaceId } ]
+                [ { Subject = AuthSubject.Organization orgId
+                    Relation = SpaceOrganization
+                    Object = AuthObject.SpaceObject spaceId } ]
             )
 
         // Grant permission to user
@@ -38,10 +38,10 @@ let setupWorkspaceWithPermissions (authService: IAuthorizationService) (userId: 
             authService.CreateRelationshipsAsync(
                 [ { Subject = AuthSubject.User userId
                     Relation = permission
-                    Object = AuthObject.WorkspaceObject workspaceId } ]
+                    Object = AuthObject.SpaceObject spaceId } ]
             )
 
-        return workspaceId
+        return spaceId
     }
 
 [<Fact>]
@@ -57,12 +57,12 @@ let ``CreateApp endpoint - User with create_app permission can create app`` () :
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId AppCreate
+        let! spaceId = setupSpaceWithPermissions authService userId AppCreate
 
         // Act - Check if user can create app on workspace
         let subject: AuthSubject = AuthSubject.User userId
         let relation = AppCreate
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
         let! canCreate = authService.CheckPermissionAsync subject relation obj
 
         // Assert
@@ -80,12 +80,12 @@ let ``CreateApp endpoint - User without create_app permission is denied`` () : T
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let workspaceId = Guid.NewGuid().ToString()
+        let spaceId = Guid.NewGuid().ToString()
 
         // Act - Check if user (without permission) can create app
         let subject: AuthSubject = AuthSubject.User userId
         let relation = AppCreate
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
         let! canCreate = authService.CheckPermissionAsync subject relation obj
 
         // Assert
@@ -103,12 +103,12 @@ let ``GetAppById endpoint - User with run_app permission can view app`` () : Tas
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId AppRun
+        let! spaceId = setupSpaceWithPermissions authService userId AppRun
 
         // Act
         let subject: AuthSubject = AuthSubject.User userId
         let relation = AppRun
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
         let! canView = authService.CheckPermissionAsync subject relation obj
 
         // Assert
@@ -126,12 +126,12 @@ let ``GetAppById endpoint - User without run_app permission is denied`` () : Tas
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let workspaceId = Guid.NewGuid().ToString()
+        let spaceId = Guid.NewGuid().ToString()
 
         // Act
         let subject: AuthSubject = AuthSubject.User userId
         let relation = AppRun
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
         let! canView = authService.CheckPermissionAsync subject relation obj
 
         // Assert
@@ -149,12 +149,12 @@ let ``UpdateAppName endpoint - User with edit_app permission can update`` () : T
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId AppEdit
+        let! spaceId = setupSpaceWithPermissions authService userId AppEdit
 
         // Act
         let subject: AuthSubject = AuthSubject.User userId
         let relation = AppEdit
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
         let! canEdit = authService.CheckPermissionAsync subject relation obj
 
         // Assert
@@ -172,12 +172,12 @@ let ``UpdateAppName endpoint - User without edit_app permission is denied`` () :
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let workspaceId = Guid.NewGuid().ToString()
+        let spaceId = Guid.NewGuid().ToString()
 
         // Act
         let subject: AuthSubject = AuthSubject.User userId
         let relation = AppEdit
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
         let! canEdit = authService.CheckPermissionAsync subject relation obj
 
         // Assert
@@ -197,12 +197,12 @@ let ``DeleteApp endpoint - User with delete_app permission can delete`` () : Tas
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId AppDelete
+        let! spaceId = setupSpaceWithPermissions authService userId AppDelete
 
         // Act
         let subject: AuthSubject = AuthSubject.User userId
         let relation = AppDelete
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
         let! canDelete = authService.CheckPermissionAsync subject relation obj
 
         // Assert
@@ -220,12 +220,12 @@ let ``DeleteApp endpoint - User without delete_app permission is denied`` () : T
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let workspaceId = Guid.NewGuid().ToString()
+        let spaceId = Guid.NewGuid().ToString()
 
         // Act
         let subject: AuthSubject = AuthSubject.User userId
         let relation = AppDelete
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
         let! canDelete = authService.CheckPermissionAsync subject relation obj
 
         // Assert
@@ -243,12 +243,12 @@ let ``RunApp endpoint - User with run_app permission can run`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId AppRun
+        let! spaceId = setupSpaceWithPermissions authService userId AppRun
 
         // Act
         let subject: AuthSubject = AuthSubject.User userId
         let relation = AppRun
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
         let! canRun = authService.CheckPermissionAsync subject relation obj
 
         // Assert
@@ -266,12 +266,12 @@ let ``RunApp endpoint - User without run_app permission is denied`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let workspaceId = Guid.NewGuid().ToString()
+        let spaceId = Guid.NewGuid().ToString()
 
         // Act
         let subject: AuthSubject = AuthSubject.User userId
         let relation = AppRun
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
         let! canRun = authService.CheckPermissionAsync subject relation obj
 
         // Assert
@@ -289,28 +289,27 @@ let ``Team admin has all app permissions on workspace`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let teamId = Guid.NewGuid().ToString()
-        let workspaceId = Guid.NewGuid().ToString()
+        let spaceId = Guid.NewGuid().ToString()
 
-        // Make user a team admin
+        // Make user a space moderator of the space we'll check permissions on
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = AuthSubject.User userId
-                    Relation = TeamAdmin
-                    Object = AuthObject.TeamObject teamId } ]
+                    Relation = SpaceModerator
+                    Object = AuthObject.SpaceObject spaceId } ]
             )
 
-        // Associate workspace with team
+        // Associate space with organization
         do!
             authService.CreateRelationshipsAsync(
-                [ { Subject = AuthSubject.Team teamId
-                    Relation = WorkspaceTeam
-                    Object = AuthObject.WorkspaceObject workspaceId } ]
+                [ { Subject = AuthSubject.Organization "default"
+                    Relation = SpaceOrganization
+                    Object = AuthObject.SpaceObject spaceId } ]
             )
 
-        // Act & Assert - Verify user has all app permissions
+        // Act & Assert - Verify user has all app permissions (as moderator of the space)
         let subject: AuthSubject = AuthSubject.User userId
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
 
         let relation1 = AppCreate
         let! canCreateApp = authService.CheckPermissionAsync subject relation1 obj
@@ -340,37 +339,27 @@ let ``Global admin has all app permissions on any workspace`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let orgId = Guid.NewGuid().ToString()
-        let workspaceId = Guid.NewGuid().ToString()
+        let spaceId = Guid.NewGuid().ToString()
 
-        // Make user a global admin
+        // Make user an organization admin
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = AuthSubject.User userId
-                    Relation = TeamAdmin
-                    Object = AuthObject.OrganizationObject orgId } ]
+                    Relation = OrganizationAdmin
+                    Object = AuthObject.OrganizationObject "default" } ]
             )
 
-        // Grant global admin permissions on workspace
+        // Associate space with organization (org admin gets permissions via tuple lookup)
         do!
             authService.CreateRelationshipsAsync(
-                [ { Subject = AuthSubject.UserSetFromRelation("organization", orgId, "admin")
-                    Relation = AppCreate
-                    Object = AuthObject.WorkspaceObject workspaceId }
-                  { Subject = AuthSubject.UserSetFromRelation("organization", orgId, "admin")
-                    Relation = AppEdit
-                    Object = AuthObject.WorkspaceObject workspaceId }
-                  { Subject = AuthSubject.UserSetFromRelation("organization", orgId, "admin")
-                    Relation = AppDelete
-                    Object = AuthObject.WorkspaceObject workspaceId }
-                  { Subject = AuthSubject.UserSetFromRelation("organization", orgId, "admin")
-                    Relation = AppRun
-                    Object = AuthObject.WorkspaceObject workspaceId } ]
+                [ { Subject = AuthSubject.Organization "default"
+                    Relation = SpaceOrganization
+                    Object = AuthObject.SpaceObject spaceId } ]
             )
 
         // Act & Assert - Verify global admin has all permissions
         let subject: AuthSubject = AuthSubject.User userId
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
 
         let relation1 = AppCreate
         let! canCreateApp = authService.CheckPermissionAsync subject relation1 obj
@@ -401,22 +390,22 @@ let ``Team member with specific permission can only perform allowed actions`` ()
 
         let userId = Guid.NewGuid().ToString()
         let teamId = Guid.NewGuid().ToString()
-        let workspaceId = Guid.NewGuid().ToString()
+        let spaceId = Guid.NewGuid().ToString()
 
         // Make user a team member (not admin)
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = AuthSubject.User userId
-                    Relation = TeamMember
-                    Object = AuthObject.TeamObject teamId } ]
+                    Relation = SpaceMember
+                    Object = AuthObject.SpaceObject teamId } ]
             )
 
         // Associate workspace with team
         do!
             authService.CreateRelationshipsAsync(
-                [ { Subject = AuthSubject.Team teamId
-                    Relation = WorkspaceTeam
-                    Object = AuthObject.WorkspaceObject workspaceId } ]
+                [ { Subject = AuthSubject.Organization teamId
+                    Relation = SpaceOrganization
+                    Object = AuthObject.SpaceObject spaceId } ]
             )
 
         // Grant only run_app permission
@@ -424,12 +413,12 @@ let ``Team member with specific permission can only perform allowed actions`` ()
             authService.CreateRelationshipsAsync(
                 [ { Subject = AuthSubject.User userId
                     Relation = AppRun
-                    Object = AuthObject.WorkspaceObject workspaceId } ]
+                    Object = AuthObject.SpaceObject spaceId } ]
             )
 
         // Act & Assert
         let subject: AuthSubject = AuthSubject.User userId
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
 
         let relation1 = AppRun
         let! canRunApp = authService.CheckPermissionAsync subject relation1 obj
@@ -459,12 +448,12 @@ let ``All update endpoints require edit_app permission`` () : Task =
         let! _ = authService.WriteAuthorizationModelAsync()
 
         let userId = Guid.NewGuid().ToString()
-        let! workspaceId = setupWorkspaceWithPermissions authService userId AppEdit
+        let! spaceId = setupSpaceWithPermissions authService userId AppEdit
 
         // Act - Verify that all these update operations use the same permission
         let subject: AuthSubject = AuthSubject.User userId
         let relation = AppEdit
-        let obj: AuthObject = AuthObject.WorkspaceObject workspaceId
+        let obj: AuthObject = AuthObject.SpaceObject spaceId
 
         let! canUpdateName = authService.CheckPermissionAsync subject relation obj
         let! canUpdateInputs = authService.CheckPermissionAsync subject relation obj
@@ -496,33 +485,32 @@ let ``GetApps endpoint - Team member belongs without run_app permission`` () : T
 
         let userId = Guid.NewGuid().ToString()
         let teamId = Guid.NewGuid().ToString()
-        let workspaceId = Guid.NewGuid().ToString()
+        let spaceId = Guid.NewGuid().ToString()
 
         // Associate workspace with team
         do!
             authService.CreateRelationshipsAsync(
-                [ { Subject = AuthSubject.Team teamId
-                    Relation = WorkspaceTeam
-                    Object = AuthObject.WorkspaceObject workspaceId } ]
+                [ { Subject = AuthSubject.Organization teamId
+                    Relation = SpaceOrganization
+                    Object = AuthObject.SpaceObject spaceId } ]
             )
 
         // Add user as a team member only
         do!
             authService.CreateRelationshipsAsync(
                 [ { Subject = AuthSubject.User userId
-                    Relation = TeamMember
-                    Object = AuthObject.TeamObject teamId } ]
+                    Relation = SpaceMember
+                    Object = AuthObject.SpaceObject teamId } ]
             )
 
         // Act
-        let! isTeamMember =
-            authService.CheckPermissionAsync (AuthSubject.User userId) TeamMember (AuthObject.TeamObject teamId)
+        let! isSpaceMember =
+            authService.CheckPermissionAsync (AuthSubject.User userId) SpaceMember (AuthObject.SpaceObject teamId)
 
-        let! canRun =
-            authService.CheckPermissionAsync (AuthSubject.User userId) AppRun (AuthObject.WorkspaceObject workspaceId)
+        let! canRun = authService.CheckPermissionAsync (AuthSubject.User userId) AppRun (AuthObject.SpaceObject spaceId)
 
         // Assert
-        Assert.True(isTeamMember, "Team members should belong to the workspace even without app permissions")
+        Assert.True(isSpaceMember, "Team members should belong to the workspace even without app permissions")
         Assert.False(canRun, "Team membership alone should not grant run_app permission")
     }
 
@@ -540,20 +528,20 @@ let ``GetApps endpoint - User outside team is not considered a member`` () : Tas
 
         let userId = Guid.NewGuid().ToString()
         let teamId = Guid.NewGuid().ToString()
-        let workspaceId = Guid.NewGuid().ToString()
+        let spaceId = Guid.NewGuid().ToString()
 
         // Associate workspace with team only
         do!
             authService.CreateRelationshipsAsync(
-                [ { Subject = AuthSubject.Team teamId
-                    Relation = WorkspaceTeam
-                    Object = AuthObject.WorkspaceObject workspaceId } ]
+                [ { Subject = AuthSubject.Organization teamId
+                    Relation = SpaceOrganization
+                    Object = AuthObject.SpaceObject spaceId } ]
             )
 
         // Act
-        let! isTeamMember =
-            authService.CheckPermissionAsync (AuthSubject.User userId) TeamMember (AuthObject.TeamObject teamId)
+        let! isSpaceMember =
+            authService.CheckPermissionAsync (AuthSubject.User userId) SpaceMember (AuthObject.SpaceObject teamId)
 
         // Assert
-        Assert.False(isTeamMember, "Users outside the workspace team should not be considered members")
+        Assert.False(isSpaceMember, "Users outside the workspace team should not be considered members")
     }

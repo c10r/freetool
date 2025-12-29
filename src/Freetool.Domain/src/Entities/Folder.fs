@@ -32,7 +32,7 @@ type FolderData =
       ParentId: FolderId option
 
       [<Required>]
-      WorkspaceId: WorkspaceId
+      SpaceId: SpaceId
 
       [<Required>]
       [<JsonIgnore>]
@@ -70,7 +70,7 @@ module Folder =
         (actorUserId: UserId)
         (name: string)
         (parentId: FolderId option)
-        (workspaceId: WorkspaceId)
+        (spaceId: SpaceId)
         : Result<ValidatedFolder, DomainError> =
         match FolderName.Create(Some name) with
         | Error err -> Error err
@@ -79,14 +79,14 @@ module Folder =
                 { Id = FolderId.NewId()
                   Name = validName
                   ParentId = parentId
-                  WorkspaceId = workspaceId
+                  SpaceId = spaceId
                   CreatedAt = DateTime.UtcNow
                   UpdatedAt = DateTime.UtcNow
                   IsDeleted = false
                   Children = [] }
 
             let folderCreatedEvent =
-                FolderEvents.folderCreated actorUserId folderData.Id validName parentId
+                FolderEvents.folderCreated actorUserId folderData.Id validName parentId spaceId
 
             Ok
                 { State = folderData
@@ -148,7 +148,7 @@ module Folder =
 
     let getParentId (folder: Folder) : FolderId option = folder.State.ParentId
 
-    let getWorkspaceId (folder: Folder) : WorkspaceId = folder.State.WorkspaceId
+    let getSpaceId (folder: Folder) : SpaceId = folder.State.SpaceId
 
     let getCreatedAt (folder: Folder) : DateTime = folder.State.CreatedAt
 

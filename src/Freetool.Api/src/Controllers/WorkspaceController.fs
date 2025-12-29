@@ -24,7 +24,7 @@ type WorkspaceController
 
     /// Helper to check if a user is an organization admin
     member private _.IsOrganizationAdmin(userId: string, orgId: string) : Task<bool> =
-        authService.CheckPermissionAsync (User userId) TeamAdmin (OrganizationObject orgId)
+        authService.CheckPermissionAsync (User userId) OrganizationAdmin (OrganizationObject orgId)
 
     [<HttpPost>]
     [<ProducesResponseType(typeof<WorkspaceData>, StatusCodes.Status201Created)>]
@@ -57,12 +57,12 @@ type WorkspaceController
 
                     match result with
                     | Ok(WorkspaceResult workspaceDto) ->
-                        // Set up organization relation for the workspace so org admins inherit permissions
+                        // Set up organization relation for the space so org admins inherit permissions
                         do!
                             authService.CreateRelationshipsAsync(
                                 [ { Subject = Organization "default"
-                                    Relation = WorkspaceOrganization
-                                    Object = WorkspaceObject(workspaceDto.Id.Value.ToString()) } ]
+                                    Relation = SpaceOrganization
+                                    Object = SpaceObject(workspaceDto.Id.Value.ToString()) } ]
                             )
 
                         return
@@ -164,50 +164,43 @@ type WorkspaceController
                     // Check if user is org admin
                     let! isOrgAdmin = this.IsOrganizationAdmin(userIdStr, "organization:default")
 
-                    // Get workspace's team/group
+                    // Get workspace's group (Space)
                     let groupId = workspaceData.GroupId
                     let groupIdStr = groupId.Value.ToString()
 
-                    // Check if user is team admin
-                    let! isTeamAdmin =
-                        authService.CheckPermissionAsync (User userIdStr) TeamAdmin (TeamObject groupIdStr)
+                    // Check if user is space moderator (replaces team admin)
+                    let! isModerator =
+                        authService.CheckPermissionAsync (User userIdStr) SpaceModerator (SpaceObject groupIdStr)
 
-                    // Check all 10 workspace permissions
+                    // Check all 10 space permissions
                     let! createResource =
-                        authService.CheckPermissionAsync
-                            (User userIdStr)
-                            ResourceCreate
-                            (WorkspaceObject workspaceIdStr)
+                        authService.CheckPermissionAsync (User userIdStr) ResourceCreate (SpaceObject workspaceIdStr)
 
                     let! editResource =
-                        authService.CheckPermissionAsync (User userIdStr) ResourceEdit (WorkspaceObject workspaceIdStr)
+                        authService.CheckPermissionAsync (User userIdStr) ResourceEdit (SpaceObject workspaceIdStr)
 
                     let! deleteResource =
-                        authService.CheckPermissionAsync
-                            (User userIdStr)
-                            ResourceDelete
-                            (WorkspaceObject workspaceIdStr)
+                        authService.CheckPermissionAsync (User userIdStr) ResourceDelete (SpaceObject workspaceIdStr)
 
                     let! createApp =
-                        authService.CheckPermissionAsync (User userIdStr) AppCreate (WorkspaceObject workspaceIdStr)
+                        authService.CheckPermissionAsync (User userIdStr) AppCreate (SpaceObject workspaceIdStr)
 
                     let! editApp =
-                        authService.CheckPermissionAsync (User userIdStr) AppEdit (WorkspaceObject workspaceIdStr)
+                        authService.CheckPermissionAsync (User userIdStr) AppEdit (SpaceObject workspaceIdStr)
 
                     let! deleteApp =
-                        authService.CheckPermissionAsync (User userIdStr) AppDelete (WorkspaceObject workspaceIdStr)
+                        authService.CheckPermissionAsync (User userIdStr) AppDelete (SpaceObject workspaceIdStr)
 
-                    let! runApp =
-                        authService.CheckPermissionAsync (User userIdStr) AppRun (WorkspaceObject workspaceIdStr)
+                    let! runApp = authService.CheckPermissionAsync (User userIdStr) AppRun (SpaceObject workspaceIdStr)
 
                     let! createFolder =
-                        authService.CheckPermissionAsync (User userIdStr) FolderCreate (WorkspaceObject workspaceIdStr)
+                        authService.CheckPermissionAsync (User userIdStr) FolderCreate (SpaceObject workspaceIdStr)
 
                     let! editFolder =
-                        authService.CheckPermissionAsync (User userIdStr) FolderEdit (WorkspaceObject workspaceIdStr)
+                        authService.CheckPermissionAsync (User userIdStr) FolderEdit (SpaceObject workspaceIdStr)
 
                     let! deleteFolder =
-                        authService.CheckPermissionAsync (User userIdStr) FolderDelete (WorkspaceObject workspaceIdStr)
+                        authService.CheckPermissionAsync (User userIdStr) FolderDelete (SpaceObject workspaceIdStr)
 
                     let permissions: WorkspacePermissionsData =
                         { CreateResource = createResource
@@ -226,7 +219,7 @@ type WorkspaceController
                           UserId = userIdStr
                           Permissions = permissions
                           IsOrgAdmin = isOrgAdmin
-                          IsTeamAdmin = isTeamAdmin
+                          IsTeamAdmin = isModerator
                           TeamId = Some groupIdStr }
 
                     return this.Ok(dto) :> IActionResult

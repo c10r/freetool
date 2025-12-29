@@ -20,25 +20,24 @@ type AppController
         resourceRepository: IResourceRepository,
         runRepository: IRunRepository,
         folderRepository: IFolderRepository,
-        groupRepository: IGroupRepository,
-        workspaceRepository: IWorkspaceRepository,
+        spaceRepository: ISpaceRepository,
         authorizationService: IAuthorizationService,
         commandHandler: IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>
     ) =
     inherit AuthenticatedControllerBase()
 
-    // Helper method to get workspace ID from folder ID
-    member private this.GetWorkspaceIdFromFolder(folderId: FolderId) : Task<Result<WorkspaceId, DomainError>> =
+    // Helper method to get space ID from folder ID
+    member private this.GetSpaceIdFromFolder(folderId: FolderId) : Task<Result<SpaceId, DomainError>> =
         task {
             let! folderOption = folderRepository.GetByIdAsync folderId
 
             match folderOption with
             | None -> return Error(NotFound "Folder not found")
-            | Some folder -> return Ok(Folder.getWorkspaceId folder)
+            | Some folder -> return Ok(Folder.getSpaceId folder)
         }
 
-    // Helper method to get workspace ID from app ID
-    member private this.GetWorkspaceIdFromApp(appId: string) : Task<Result<WorkspaceId, DomainError>> =
+    // Helper method to get space ID from app ID
+    member private this.GetSpaceIdFromApp(appId: string) : Task<Result<SpaceId, DomainError>> =
         task {
             match System.Guid.TryParse appId with
             | false, _ -> return Error(ValidationError "Invalid app ID format")
@@ -50,12 +49,12 @@ type AppController
                 | None -> return Error(NotFound "App not found")
                 | Some app ->
                     let folderId = App.getFolderId app
-                    return! this.GetWorkspaceIdFromFolder folderId
+                    return! this.GetSpaceIdFromFolder folderId
         }
 
     // Helper method to check authorization
     member private this.CheckAuthorization
-        (workspaceId: WorkspaceId)
+        (spaceId: SpaceId)
         (permission: AuthRelation)
         : Task<Result<unit, DomainError>> =
         task {
@@ -65,34 +64,20 @@ type AppController
                 authorizationService.CheckPermissionAsync
                     (User(userId.Value.ToString()))
                     permission
-                    (WorkspaceObject(workspaceId.Value.ToString()))
+                    (SpaceObject(spaceId.Value.ToString()))
 
             if hasPermission then
                 return Ok()
             else
                 let permissionName = AuthTypes.relationToString permission
-                return Error(InvalidOperation $"User does not have {permissionName} permission on this workspace")
+                return Error(InvalidOperation $"User does not have {permissionName} permission on this space")
         }
 
-    member private this.GetAccessibleWorkspaceIdsForCurrentUser() : Task<WorkspaceId list> =
+    member private this.GetAccessibleSpaceIdsForCurrentUser() : Task<SpaceId list> =
         task {
             let userId = this.CurrentUserId
-            let! groups = groupRepository.GetByUserIdAsync userId
-
-            if List.isEmpty groups then
-                return []
-            else
-                let! workspaceOptions =
-                    groups
-                    |> List.map (fun group ->
-                        task {
-                            let! workspaceOption = workspaceRepository.GetByGroupIdAsync(group.State.Id)
-                            return workspaceOption |> Option.map (fun workspace -> workspace.State.Id)
-                        })
-                    |> List.toArray
-                    |> Task.WhenAll
-
-                return workspaceOptions |> Array.choose id |> Array.distinct |> Array.toList
+            let! spaces = spaceRepository.GetByUserIdAsync userId
+            return spaces |> List.map (fun space -> space.State.Id)
         }
 
     // Helper method to handle authorization errors
@@ -136,13 +121,13 @@ type AppController
             | _, Error error, _ -> return this.HandleDomainError(error)
             | _, _, Error error -> return this.HandleDomainError(error)
             | Ok folderId, Ok resourceId, Ok _ ->
-                // Check authorization: user must have create_app permission on the workspace
-                let! workspaceIdResult = this.GetWorkspaceIdFromFolder folderId
+                // Check authorization: user must have create_app permission on the space
+                let! spaceIdResult = this.GetSpaceIdFromFolder folderId
 
-                match workspaceIdResult with
+                match spaceIdResult with
                 | Error error -> return this.HandleDomainError(error)
-                | Ok workspaceId ->
-                    let! authResult = this.CheckAuthorization workspaceId AppCreate
+                | Ok spaceId ->
+                    let! authResult = this.CheckAuthorization spaceId AppCreate
 
                     match authResult with
                     | Error _ -> return this.HandleAuthorizationError()
@@ -188,13 +173,13 @@ type AppController
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetAppById(id: string) : Task<IActionResult> =
         task {
-            // Check authorization: user must have run_app permission on the workspace
-            let! workspaceIdResult = this.GetWorkspaceIdFromApp id
+            // Check authorization: user must have run_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
 
-            match workspaceIdResult with
+            match spaceIdResult with
             | Error error -> return this.HandleDomainError(error)
-            | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId AppRun
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppRun
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -230,13 +215,13 @@ type AppController
             | true, guid ->
                 let folderIdObj = FolderId.FromGuid(guid)
 
-                // Check authorization: user must have run_app permission on the workspace
-                let! workspaceIdResult = this.GetWorkspaceIdFromFolder folderIdObj
+                // Check authorization: user must have run_app permission on the space
+                let! spaceIdResult = this.GetSpaceIdFromFolder folderIdObj
 
-                match workspaceIdResult with
+                match spaceIdResult with
                 | Error error -> return this.HandleDomainError(error)
-                | Ok workspaceId ->
-                    let! authResult = this.CheckAuthorization workspaceId AppRun
+                | Ok spaceId ->
+                    let! authResult = this.CheckAuthorization spaceId AppRun
 
                     match authResult with
                     | Error _ -> return this.HandleAuthorizationError()
@@ -267,9 +252,9 @@ type AppController
                 elif take > 100 then 100
                 else take
 
-            let! workspaceIds = this.GetAccessibleWorkspaceIdsForCurrentUser()
+            let! spaceIds = this.GetAccessibleSpaceIdsForCurrentUser()
 
-            if List.isEmpty workspaceIds then
+            if List.isEmpty spaceIds then
                 let emptyResult: PagedResult<AppData> =
                     { Items = []
                       TotalCount = 0
@@ -279,9 +264,7 @@ type AppController
                 return this.Ok(emptyResult) :> IActionResult
             else
                 let! result =
-                    commandHandler.HandleCommand
-                        appRepository
-                        (GetAppsByWorkspaceIds(workspaceIds, skipValue, takeValue))
+                    commandHandler.HandleCommand appRepository (GetAppsBySpaceIds(spaceIds, skipValue, takeValue))
 
                 return
                     match result with
@@ -300,13 +283,13 @@ type AppController
         task {
             let userId = this.CurrentUserId
 
-            // Check authorization: user must have edit_app permission on the workspace
-            let! workspaceIdResult = this.GetWorkspaceIdFromApp id
+            // Check authorization: user must have edit_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
 
-            match workspaceIdResult with
+            match spaceIdResult with
             | Error error -> return this.HandleDomainError(error)
-            | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId AppEdit
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppEdit
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -330,13 +313,13 @@ type AppController
         task {
             let userId = this.CurrentUserId
 
-            // Check authorization: user must have edit_app permission on the workspace
-            let! workspaceIdResult = this.GetWorkspaceIdFromApp id
+            // Check authorization: user must have edit_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
 
-            match workspaceIdResult with
+            match spaceIdResult with
             | Error error -> return this.HandleDomainError(error)
-            | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId AppEdit
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppEdit
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -362,13 +345,13 @@ type AppController
         task {
             let userId = this.CurrentUserId
 
-            // Check authorization: user must have edit_app permission on the workspace
-            let! workspaceIdResult = this.GetWorkspaceIdFromApp id
+            // Check authorization: user must have edit_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
 
-            match workspaceIdResult with
+            match spaceIdResult with
             | Error error -> return this.HandleDomainError(error)
-            | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId AppEdit
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppEdit
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -396,13 +379,13 @@ type AppController
         task {
             let userId = this.CurrentUserId
 
-            // Check authorization: user must have edit_app permission on the workspace
-            let! workspaceIdResult = this.GetWorkspaceIdFromApp id
+            // Check authorization: user must have edit_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
 
-            match workspaceIdResult with
+            match spaceIdResult with
             | Error error -> return this.HandleDomainError(error)
-            | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId AppEdit
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppEdit
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -430,13 +413,13 @@ type AppController
         task {
             let userId = this.CurrentUserId
 
-            // Check authorization: user must have edit_app permission on the workspace
-            let! workspaceIdResult = this.GetWorkspaceIdFromApp id
+            // Check authorization: user must have edit_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
 
-            match workspaceIdResult with
+            match spaceIdResult with
             | Error error -> return this.HandleDomainError(error)
-            | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId AppEdit
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppEdit
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -469,13 +452,13 @@ type AppController
                 let error = ValidationError "URL path cannot exceed 500 characters"
                 return this.HandleDomainError(error)
             | _ ->
-                // Check authorization: user must have edit_app permission on the workspace
-                let! workspaceIdResult = this.GetWorkspaceIdFromApp id
+                // Check authorization: user must have edit_app permission on the space
+                let! spaceIdResult = this.GetSpaceIdFromApp id
 
-                match workspaceIdResult with
+                match spaceIdResult with
                 | Error error -> return this.HandleDomainError(error)
-                | Ok workspaceId ->
-                    let! authResult = this.CheckAuthorization workspaceId AppEdit
+                | Ok spaceId ->
+                    let! authResult = this.CheckAuthorization spaceId AppEdit
 
                     match authResult with
                     | Error _ -> return this.HandleAuthorizationError()
@@ -499,13 +482,13 @@ type AppController
         task {
             let userId = this.CurrentUserId
 
-            // Check authorization: user must have delete_app permission on the workspace
-            let! workspaceIdResult = this.GetWorkspaceIdFromApp id
+            // Check authorization: user must have delete_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
 
-            match workspaceIdResult with
+            match spaceIdResult with
             | Error error -> return this.HandleDomainError(error)
-            | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId AppDelete
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppDelete
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
@@ -529,13 +512,13 @@ type AppController
         task {
             let userId = this.CurrentUserId
 
-            // Check authorization: user must have run_app permission on the workspace
-            let! workspaceIdResult = this.GetWorkspaceIdFromApp id
+            // Check authorization: user must have run_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
 
-            match workspaceIdResult with
+            match spaceIdResult with
             | Error error -> return this.HandleDomainError(error)
-            | Ok workspaceId ->
-                let! authResult = this.CheckAuthorization workspaceId AppRun
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppRun
 
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()

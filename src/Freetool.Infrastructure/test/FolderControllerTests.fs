@@ -40,14 +40,14 @@ type MockFolderRepository(getByIdFn: FolderId -> Task<ValidatedFolder option>) =
         member _.GetChildrenAsync(_) = Task.FromResult([])
         member _.GetRootFoldersAsync _ _ = Task.FromResult([])
         member _.GetAllAsync _ _ = Task.FromResult([])
-        member _.GetByWorkspaceAsync _ _ _ = Task.FromResult([])
+        member _.GetBySpaceAsync _ _ _ = Task.FromResult([])
         member _.AddAsync(_) = Task.FromResult(Ok())
         member _.UpdateAsync(_) = Task.FromResult(Ok())
         member _.DeleteAsync(_) = Task.FromResult(Ok())
         member _.ExistsAsync(_) = Task.FromResult(false)
         member _.ExistsByNameInParentAsync _ _ = Task.FromResult(false)
         member _.GetCountAsync() = Task.FromResult(0)
-        member _.GetCountByWorkspaceAsync(_) = Task.FromResult(0)
+        member _.GetCountBySpaceAsync(_) = Task.FromResult(0)
         member _.GetRootCountAsync() = Task.FromResult(0)
         member _.GetChildCountAsync(_) = Task.FromResult(0)
 
@@ -84,7 +84,7 @@ let createTestController
     controller
 
 // Helper to create a test folder
-let createTestFolder (workspaceId: WorkspaceId) (folderId: FolderId) : ValidatedFolder =
+let createTestFolder (spaceId: SpaceId) (folderId: FolderId) : ValidatedFolder =
     let folderName =
         FolderName.Create(Some "Test Folder") |> Result.toOption |> Option.get
 
@@ -92,7 +92,7 @@ let createTestFolder (workspaceId: WorkspaceId) (folderId: FolderId) : Validated
         { Id = folderId
           Name = folderName
           ParentId = None
-          WorkspaceId = workspaceId
+          SpaceId = spaceId
           CreatedAt = DateTime.UtcNow
           UpdatedAt = DateTime.UtcNow
           IsDeleted = false
@@ -108,7 +108,7 @@ let ``CreateFolder returns 403 when user does not have create_folder permission`
     task {
         // Arrange
         let userId = UserId.NewId()
-        let workspaceId = WorkspaceId.NewId()
+        let spaceId = SpaceId.NewId()
         let checkPermission _ _ _ = false // No permissions granted
 
         let getById _ = Task.FromResult(None)
@@ -121,7 +121,7 @@ let ``CreateFolder returns 403 when user does not have create_folder permission`
         let createDto: CreateFolderDto =
             { Name = "My Folder"
               Location = None
-              WorkspaceId = workspaceId.Value.ToString() }
+              SpaceId = spaceId.Value.ToString() }
 
         // Act
         let! result = controller.CreateFolder(createDto)
@@ -137,13 +137,12 @@ let ``CreateFolder succeeds when user has create_folder permission`` () : Task =
     task {
         // Arrange
         let userId = UserId.NewId()
-        let workspaceId = WorkspaceId.NewId()
+        let spaceId = SpaceId.NewId()
 
         // Grant create_folder permission
         let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
             match subject, relation, obj with
-            | User uid, FolderCreate, WorkspaceObject wid ->
-                uid = userId.Value.ToString() && wid = workspaceId.Value.ToString()
+            | User uid, FolderCreate, SpaceObject sid -> uid = userId.Value.ToString() && sid = spaceId.Value.ToString()
             | _ -> false
 
         let getById _ = Task.FromResult(None)
@@ -155,7 +154,7 @@ let ``CreateFolder succeeds when user has create_folder permission`` () : Task =
                     { Id = FolderId.NewId()
                       Name = FolderName.Create(Some "My Folder") |> Result.toOption |> Option.get
                       ParentId = None
-                      WorkspaceId = workspaceId
+                      SpaceId = spaceId
                       CreatedAt = DateTime.UtcNow
                       UpdatedAt = DateTime.UtcNow
                       IsDeleted = false
@@ -169,7 +168,7 @@ let ``CreateFolder succeeds when user has create_folder permission`` () : Task =
         let createDto: CreateFolderDto =
             { Name = "My Folder"
               Location = None
-              WorkspaceId = workspaceId.Value.ToString() }
+              SpaceId = spaceId.Value.ToString() }
 
         // Act
         let! result = controller.CreateFolder(createDto)
@@ -190,11 +189,11 @@ let ``UpdateFolderName returns 403 when user does not have edit_folder permissio
     task {
         // Arrange
         let userId = UserId.NewId()
-        let workspaceId = WorkspaceId.NewId()
+        let spaceId = SpaceId.NewId()
         let folderId = FolderId.NewId()
         let checkPermission _ _ _ = false // No permissions granted
 
-        let folder = createTestFolder workspaceId folderId
+        let folder = createTestFolder spaceId folderId
 
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
@@ -220,17 +219,16 @@ let ``UpdateFolderName succeeds when user has edit_folder permission`` () : Task
     task {
         // Arrange
         let userId = UserId.NewId()
-        let workspaceId = WorkspaceId.NewId()
+        let spaceId = SpaceId.NewId()
         let folderId = FolderId.NewId()
 
         // Grant edit_folder permission
         let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
             match subject, relation, obj with
-            | User uid, FolderEdit, WorkspaceObject wid ->
-                uid = userId.Value.ToString() && wid = workspaceId.Value.ToString()
+            | User uid, FolderEdit, SpaceObject sid -> uid = userId.Value.ToString() && sid = spaceId.Value.ToString()
             | _ -> false
 
-        let folder = createTestFolder workspaceId folderId
+        let folder = createTestFolder spaceId folderId
 
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
@@ -265,11 +263,11 @@ let ``MoveFolder returns 403 when user does not have edit_folder permission`` ()
     task {
         // Arrange
         let userId = UserId.NewId()
-        let workspaceId = WorkspaceId.NewId()
+        let spaceId = SpaceId.NewId()
         let folderId = FolderId.NewId()
         let checkPermission _ _ _ = false // No permissions granted
 
-        let folder = createTestFolder workspaceId folderId
+        let folder = createTestFolder spaceId folderId
 
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
@@ -295,17 +293,16 @@ let ``MoveFolder succeeds when user has edit_folder permission`` () : Task =
     task {
         // Arrange
         let userId = UserId.NewId()
-        let workspaceId = WorkspaceId.NewId()
+        let spaceId = SpaceId.NewId()
         let folderId = FolderId.NewId()
 
         // Grant edit_folder permission
         let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
             match subject, relation, obj with
-            | User uid, FolderEdit, WorkspaceObject wid ->
-                uid = userId.Value.ToString() && wid = workspaceId.Value.ToString()
+            | User uid, FolderEdit, SpaceObject sid -> uid = userId.Value.ToString() && sid = spaceId.Value.ToString()
             | _ -> false
 
-        let folder = createTestFolder workspaceId folderId
+        let folder = createTestFolder spaceId folderId
 
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
@@ -340,11 +337,11 @@ let ``DeleteFolder returns 403 when user does not have delete_folder permission`
     task {
         // Arrange
         let userId = UserId.NewId()
-        let workspaceId = WorkspaceId.NewId()
+        let spaceId = SpaceId.NewId()
         let folderId = FolderId.NewId()
         let checkPermission _ _ _ = false // No permissions granted
 
-        let folder = createTestFolder workspaceId folderId
+        let folder = createTestFolder spaceId folderId
 
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
@@ -368,17 +365,16 @@ let ``DeleteFolder succeeds when user has delete_folder permission`` () : Task =
     task {
         // Arrange
         let userId = UserId.NewId()
-        let workspaceId = WorkspaceId.NewId()
+        let spaceId = SpaceId.NewId()
         let folderId = FolderId.NewId()
 
         // Grant delete_folder permission
         let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
             match subject, relation, obj with
-            | User uid, FolderDelete, WorkspaceObject wid ->
-                uid = userId.Value.ToString() && wid = workspaceId.Value.ToString()
+            | User uid, FolderDelete, SpaceObject sid -> uid = userId.Value.ToString() && sid = spaceId.Value.ToString()
             | _ -> false
 
-        let folder = createTestFolder workspaceId folderId
+        let folder = createTestFolder spaceId folderId
 
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
@@ -409,11 +405,11 @@ let ``GetFolderById allows any authenticated user`` () : Task =
     task {
         // Arrange
         let userId = UserId.NewId()
-        let workspaceId = WorkspaceId.NewId()
+        let spaceId = SpaceId.NewId()
         let folderId = FolderId.NewId()
         let checkPermission _ _ _ = false // No special permissions needed for read
 
-        let folder = createTestFolder workspaceId folderId
+        let folder = createTestFolder spaceId folderId
 
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
@@ -439,11 +435,11 @@ let ``GetFolderWithChildren allows any authenticated user`` () : Task =
     task {
         // Arrange
         let userId = UserId.NewId()
-        let workspaceId = WorkspaceId.NewId()
+        let spaceId = SpaceId.NewId()
         let folderId = FolderId.NewId()
         let checkPermission _ _ _ = false // No special permissions needed for read
 
-        let folder = createTestFolder workspaceId folderId
+        let folder = createTestFolder spaceId folderId
 
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)

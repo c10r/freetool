@@ -195,6 +195,27 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                         Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
                         Tracing.addAttribute currentActivity "user.id" (existingUser.State.Id.Value.ToString())
 
+                        // Ensure org admin tuple exists if email matches config
+                        // This handles the case where store was recreated or user was created before org admin config
+                        let configuration = context.RequestServices.GetRequiredService<IConfiguration>()
+                        let orgAdminEmail = configuration["OpenFGA:OrgAdminEmail"]
+
+                        if
+                            not (System.String.IsNullOrEmpty(orgAdminEmail))
+                            && userEmail.Equals(orgAdminEmail, System.StringComparison.OrdinalIgnoreCase)
+                        then
+                            let authService =
+                                context.RequestServices.GetRequiredService<IAuthorizationService>()
+
+                            let userId = existingUser.State.Id.ToString()
+
+                            try
+                                do! authService.InitializeOrganizationAsync "default" userId
+                                Tracing.addAttribute currentActivity "tailscale.auth.org_admin_ensured" "true"
+                            with ex ->
+                                Tracing.addAttribute currentActivity "tailscale.auth.org_admin_error" ex.Message
+                                eprintfn "[WARNING] Failed to ensure org admin for %s: %s" userEmail ex.Message
+
                         Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
                         Tracing.setSpanStatus currentActivity true None
                         do! next.Invoke context

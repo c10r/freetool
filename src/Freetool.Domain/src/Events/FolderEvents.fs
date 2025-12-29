@@ -12,6 +12,7 @@ type FolderCreatedEvent =
     { FolderId: FolderId
       Name: FolderName
       ParentId: FolderId option
+      SpaceId: SpaceId
       OccurredAt: DateTime
       EventId: Guid
       ActorUserId: UserId }
@@ -46,10 +47,17 @@ type FolderDeletedEvent =
         member this.UserId = this.ActorUserId
 
 module FolderEvents =
-    let folderCreated (actorUserId: UserId) (folderId: FolderId) (name: FolderName) (parentId: FolderId option) =
+    let folderCreated
+        (actorUserId: UserId)
+        (folderId: FolderId)
+        (name: FolderName)
+        (parentId: FolderId option)
+        (spaceId: SpaceId)
+        =
         { FolderId = folderId
           Name = name
           ParentId = parentId
+          SpaceId = spaceId
           OccurredAt = DateTime.UtcNow
           EventId = Guid.NewGuid()
           ActorUserId = actorUserId }

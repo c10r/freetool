@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <Compile Include="GroupMapperTests.fs" />
+    <Compile Include="SpaceMapperTests.fs" />
     <Compile Include="RunMapperTests.fs" />
     <Compile Include="FolderHandlerTests.fs" />
     <Compile Include="EventEnhancementServiceTests.fs" />

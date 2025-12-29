@@ -37,7 +37,7 @@ type MockAppRepository() =
         member _.GetByNameAndFolderIdAsync name folderId = task { return None }
         member _.GetByFolderIdAsync folderId skip take = task { return [] }
         member _.GetAllAsync skip take = task { return [] }
-        member _.GetByWorkspaceIdsAsync workspaceIds skip take = task { return [] }
+        member _.GetBySpaceIdsAsync spaceIds skip take = task { return [] }
         member _.AddAsync(app: ValidatedApp) = task { return Ok() }
         member _.UpdateAsync(app: ValidatedApp) = task { return Ok() }
         member _.DeleteAsync appId userId = task { return Ok() }
@@ -45,7 +45,7 @@ type MockAppRepository() =
         member _.ExistsByNameAndFolderIdAsync name folderId = task { return false }
         member _.GetCountAsync() = task { return 0 }
         member _.GetCountByFolderIdAsync folderId = task { return 0 }
-        member _.GetCountByWorkspaceIdsAsync workspaceIds = task { return 0 }
+        member _.GetCountBySpaceIdsAsync spaceIds = task { return 0 }
         member _.GetByResourceIdAsync resourceId = task { return [] }
 
 type MockGroupRepository() =
@@ -67,16 +67,30 @@ type MockFolderRepository() =
         member _.GetChildrenAsync(folderId: FolderId) = task { return [] }
         member _.GetRootFoldersAsync skip take = task { return [] }
         member _.GetAllAsync skip take = task { return [] }
-        member _.GetByWorkspaceAsync workspaceId skip take = task { return [] }
+        member _.GetBySpaceAsync spaceId skip take = task { return [] }
         member _.AddAsync(folder: ValidatedFolder) = task { return Ok() }
         member _.UpdateAsync(folder: ValidatedFolder) = task { return Ok() }
         member _.DeleteAsync(folder: ValidatedFolder) = task { return Ok() }
         member _.ExistsAsync(folderId: FolderId) = task { return false }
         member _.ExistsByNameInParentAsync name parentId = task { return false }
         member _.GetCountAsync() = task { return 0 }
-        member _.GetCountByWorkspaceAsync workspaceId = task { return 0 }
+        member _.GetCountBySpaceAsync spaceId = task { return 0 }
         member _.GetRootCountAsync() = task { return 0 }
         member _.GetChildCountAsync parentId = task { return 0 }
+
+type MockSpaceRepository() =
+    interface ISpaceRepository with
+        member _.GetByIdAsync(spaceId: SpaceId) = task { return None }
+        member _.GetByNameAsync(name: string) = task { return None }
+        member _.GetAllAsync skip take = task { return [] }
+        member _.GetByUserIdAsync userId = task { return [] }
+        member _.GetByModeratorUserIdAsync userId = task { return [] }
+        member _.AddAsync(space: ValidatedSpace) = task { return Ok() }
+        member _.UpdateAsync(space: ValidatedSpace) = task { return Ok() }
+        member _.DeleteAsync(space: ValidatedSpace) = task { return Ok() }
+        member _.ExistsAsync(spaceId: SpaceId) = task { return false }
+        member _.ExistsByNameAsync(name: string) = task { return false }
+        member _.GetCountAsync() = task { return 0 }
 
 type MockResourceRepository() =
     interface IResourceRepository with
@@ -95,7 +109,8 @@ let createService () =
         MockAppRepository(),
         MockGroupRepository(),
         MockFolderRepository(),
-        MockResourceRepository()
+        MockResourceRepository(),
+        MockSpaceRepository()
     )
     :> IEventEnhancementService
 
@@ -124,7 +139,8 @@ let ``FolderCreatedEvent extracts name correctly`` () =
 
         let actorUserId = UserId.NewId()
 
-        let event = FolderEvents.folderCreated actorUserId folderId folderName None
+        let spaceId = SpaceId.NewId()
+        let event = FolderEvents.folderCreated actorUserId folderId folderName None spaceId
 
         let eventData =
             createEventData event (FolderEvents FolderCreatedEvent) EntityType.Folder (folderId.Value.ToString())

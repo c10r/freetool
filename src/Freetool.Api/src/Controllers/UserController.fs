@@ -28,7 +28,7 @@ type UserController
             return!
                 authService.CheckPermissionAsync
                     (User(userId.Value.ToString()))
-                    TeamAdmin
+                    OrganizationAdmin
                     (OrganizationObject "default")
         }
 
@@ -121,7 +121,7 @@ type UserController
                 // Get user's groups/teams using the group repository directly
                 let! groups = groupRepository.GetByUserIdAsync userId
 
-                // For each group, check if user is admin or member
+                // For each group/space, check if user is moderator or member
                 let! teams =
                     task {
                         let mutable teamList = []
@@ -130,10 +130,13 @@ type UserController
                             let groupData = group.State
                             let groupIdStr = groupData.Id.Value.ToString()
 
-                            let! isTeamAdmin =
-                                authService.CheckPermissionAsync (User userIdStr) TeamAdmin (TeamObject groupIdStr)
+                            let! isModerator =
+                                authService.CheckPermissionAsync
+                                    (User userIdStr)
+                                    SpaceModerator
+                                    (SpaceObject groupIdStr)
 
-                            let role = if isTeamAdmin then "admin" else "member"
+                            let role = if isModerator then "moderator" else "member"
 
                             let teamDto: TeamMembershipDto =
                                 { Id = groupIdStr

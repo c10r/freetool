@@ -221,7 +221,7 @@ let ``AddUserToGroup succeeds when user is team admin`` () : Task =
         // Grant team admin permission only (not org admin)
         let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
             match subject, relation, obj with
-            | User uid, TeamAdmin, TeamObject tid -> uid = userId.Value.ToString() && tid = groupId
+            | User uid, SpaceModerator, SpaceObject tid -> uid = userId.Value.ToString() && tid = groupId
             | _ -> false
 
         let handleCommand _ =
@@ -305,7 +305,7 @@ let ``RemoveUserFromGroup succeeds when user is team admin`` () : Task =
         // Grant team admin permission only (not org admin)
         let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
             match subject, relation, obj with
-            | User uid, TeamAdmin, TeamObject tid -> uid = userId.Value.ToString() && tid = groupId
+            | User uid, SpaceModerator, SpaceObject tid -> uid = userId.Value.ToString() && tid = groupId
             | _ -> false
 
         let handleCommand _ =

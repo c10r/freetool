@@ -154,8 +154,8 @@ type GroupController
         task {
             let userId = this.CurrentUserId
 
-            // Org admins or team admins can add users to groups
-            let! hasPermission = this.CheckIsOrgOrTeamAdminAsync(id)
+            // Org admins or space moderators can add users to groups/spaces
+            let! hasPermission = this.CheckIsOrgOrSpaceModeratorAsync(id)
 
             if not hasPermission then
                 return
@@ -182,8 +182,8 @@ type GroupController
         task {
             let userId = this.CurrentUserId
 
-            // Org admins or team admins can remove users from groups
-            let! hasPermission = this.CheckIsOrgOrTeamAdminAsync(id)
+            // Org admins or space moderators can remove users from groups/spaces
+            let! hasPermission = this.CheckIsOrgOrSpaceModeratorAsync(id)
 
             if not hasPermission then
                 return
@@ -234,8 +234,8 @@ type GroupController
             return! authService.CheckPermissionAsync (User userIdStr) OrganizationAdmin (OrganizationObject "default")
         }
 
-    /// Checks if the current user is either an org admin OR a team admin for the specified group
-    member private this.CheckIsOrgOrTeamAdminAsync(groupId: string) : Task<bool> =
+    /// Checks if the current user is either an org admin OR a space moderator for the specified group/space
+    member private this.CheckIsOrgOrSpaceModeratorAsync(groupId: string) : Task<bool> =
         task {
             let userId = this.CurrentUserId
 
@@ -245,10 +245,10 @@ type GroupController
                     OrganizationAdmin
                     (OrganizationObject "default")
 
-            let! isTeamAdmin =
-                authService.CheckPermissionAsync (User(userId.Value.ToString())) TeamAdmin (TeamObject groupId)
+            let! isModerator =
+                authService.CheckPermissionAsync (User(userId.Value.ToString())) SpaceModerator (SpaceObject groupId)
 
-            return isOrgAdmin || isTeamAdmin
+            return isOrgAdmin || isModerator
         }
 
     /// Returns a 403 Forbidden response with the given message

@@ -224,15 +224,15 @@ module FolderHandler =
 
                     return Ok(FoldersResult result)
 
-            | GetAllFolders(workspaceId, skip, take) ->
+            | GetAllFolders(spaceId, skip, take) ->
                 if skip < 0 then
                     return Error(ValidationError "Skip cannot be negative")
                 elif take <= 0 || take > 100 then
                     return Error(ValidationError "Take must be between 1 and 100")
                 else
-                    match workspaceId with
+                    match spaceId with
                     | None ->
-                        // No workspace filter - return all folders (backward compatibility)
+                        // No space filter - return all folders (backward compatibility)
                         let! folders = folderRepository.GetAllAsync skip take
                         let! totalCount = folderRepository.GetCountAsync()
 
@@ -243,10 +243,10 @@ module FolderHandler =
                               Take = take }
 
                         return Ok(FoldersResult result)
-                    | Some wId ->
-                        // Filter by workspace
-                        let! folders = folderRepository.GetByWorkspaceAsync wId skip take
-                        let! totalCount = folderRepository.GetCountByWorkspaceAsync wId
+                    | Some sId ->
+                        // Filter by space
+                        let! folders = folderRepository.GetBySpaceAsync sId skip take
+                        let! totalCount = folderRepository.GetCountBySpaceAsync sId
 
                         let result =
                             { Items = folders |> List.map (fun folder -> folder.State)

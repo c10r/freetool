@@ -19,7 +19,8 @@ type EventEnhancementService
         appRepository: IAppRepository,
         groupRepository: IGroupRepository,
         folderRepository: IFolderRepository,
-        resourceRepository: IResourceRepository
+        resourceRepository: IResourceRepository,
+        spaceRepository: ISpaceRepository
     ) =
 
     // Shared JSON options for deserializing F# event types
@@ -219,6 +220,29 @@ type EventEnhancementService
                             return $"Workspace {workspaceIdElement.GetString()}"
                         else
                             return "Workspace (Unknown)"
+                | SpaceEvents spaceEvent ->
+                    match spaceEvent with
+                    | SpaceCreatedEvent ->
+                        let spaceEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.SpaceCreatedEvent>(eventData, jsonOptions)
+
+                        return spaceEventData.Name
+                    | SpaceUpdatedEvent ->
+                        // SpaceUpdatedEvent doesn't have Name directly, look up from repository
+                        let spaceEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.SpaceUpdatedEvent>(eventData, jsonOptions)
+
+                        let! space = spaceRepository.GetByIdAsync spaceEventData.SpaceId
+
+                        match space with
+                        | Some s -> return Space.getName s
+                        | None -> return $"Space {spaceEventData.SpaceId.Value}"
+                    | SpaceDeletedEvent ->
+                        // SpaceDeletedEvent has Name
+                        let spaceEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.SpaceDeletedEvent>(eventData, jsonOptions)
+
+                        return spaceEventData.Name
             with ex ->
                 let entityTypeStr = EntityTypeConverter.toString entityType
                 // Include some of the raw event data for debugging
@@ -281,6 +305,11 @@ type EventEnhancementService
             | WorkspaceCreatedEvent -> $"{userName} created workspace \"{entityName}\""
             | WorkspaceUpdatedEvent -> $"{userName} updated workspace \"{entityName}\""
             | WorkspaceDeletedEvent -> $"{userName} deleted workspace \"{entityName}\""
+        | SpaceEvents spaceEvent ->
+            match spaceEvent with
+            | SpaceCreatedEvent -> $"{userName} created space \"{entityName}\""
+            | SpaceUpdatedEvent -> $"{userName} updated space \"{entityName}\""
+            | SpaceDeletedEvent -> $"{userName} deleted space \"{entityName}\""
 
     interface IEventEnhancementService with
         member this.EnhanceEventAsync(event: EventData) : Task<EnhancedEventData> =

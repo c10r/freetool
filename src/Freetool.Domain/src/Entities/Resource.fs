@@ -10,7 +10,7 @@ open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 
 [<Table("Resources")>]
-[<Index([| "Name" |], IsUnique = true, Name = "IX_Resources_Name")>]
+[<Index([| "Name"; "SpaceId" |], IsUnique = true, Name = "IX_Resources_Name_SpaceId")>]
 // CLIMutable for EntityFramework
 [<CLIMutable>]
 type ResourceData =
@@ -26,7 +26,7 @@ type ResourceData =
       Description: ResourceDescription
 
       [<Required>]
-      WorkspaceId: WorkspaceId
+      SpaceId: SpaceId
 
       [<Required>]
       [<MaxLength(10)>]
@@ -79,7 +79,7 @@ module Resource =
 
     let create
         (actorUserId: UserId)
-        (workspaceId: WorkspaceId)
+        (spaceId: SpaceId)
         (name: string)
         (description: string)
         (baseUrl: string)
@@ -131,7 +131,7 @@ module Resource =
                                         { Id = ResourceId.NewId()
                                           Name = validName
                                           Description = validDescription
-                                          WorkspaceId = workspaceId
+                                          SpaceId = spaceId
                                           HttpMethod = validHttpMethod
                                           BaseUrl = validBaseUrl
                                           UrlParameters = validUrlParams
@@ -147,7 +147,7 @@ module Resource =
                                             resourceData.Id
                                             validName
                                             validDescription
-                                            workspaceId
+                                            spaceId
                                             validBaseUrl
                                             validUrlParams
                                             validHeaders
@@ -385,7 +385,7 @@ module Resource =
 
     let getDescription (resource: Resource) : string = resource.State.Description.Value
 
-    let getWorkspaceId (resource: Resource) : WorkspaceId = resource.State.WorkspaceId
+    let getSpaceId (resource: Resource) : SpaceId = resource.State.SpaceId
 
     let getBaseUrl (resource: Resource) : string = resource.State.BaseUrl.Value
 

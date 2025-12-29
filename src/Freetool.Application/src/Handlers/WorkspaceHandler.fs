@@ -58,7 +58,7 @@ module WorkspaceHandler =
                         // Delete workspace and save event atomically
                         match! workspaceRepository.DeleteAsync workspaceWithDeleteEvent with
                         | Error error -> return Error error
-                        | Ok() -> return Ok(UnitResult())
+                        | Ok() -> return Ok(WorkspaceCommandResult.UnitResult())
 
             | UpdateWorkspaceGroup(actorUserId, workspaceId, dto) ->
                 match Guid.TryParse workspaceId, Guid.TryParse dto.GroupId with

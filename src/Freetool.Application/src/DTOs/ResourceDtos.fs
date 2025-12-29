@@ -27,7 +27,7 @@ type CreateResourceDto =
       Description: string
 
       [<Required>]
-      WorkspaceId: string
+      SpaceId: string
 
       [<Required>]
       [<StringLength(ValidationConstants.InputValueMaxLength,

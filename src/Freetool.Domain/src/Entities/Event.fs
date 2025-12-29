@@ -42,6 +42,11 @@ type WorkspaceEvents =
     | WorkspaceUpdatedEvent
     | WorkspaceDeletedEvent
 
+type SpaceEvents =
+    | SpaceCreatedEvent
+    | SpaceUpdatedEvent
+    | SpaceDeletedEvent
+
 type EventType =
     | UserEvents of UserEvents
     | AppEvents of AppEvents
@@ -50,6 +55,7 @@ type EventType =
     | GroupEvents of GroupEvents
     | RunEvents of RunEvents
     | WorkspaceEvents of WorkspaceEvents
+    | SpaceEvents of SpaceEvents
 
 type EntityType =
     | User
@@ -59,6 +65,7 @@ type EntityType =
     | Group
     | Run
     | Workspace
+    | Space
 
 module EventTypeConverter =
     let toString (eventType: EventType) : string =
@@ -99,6 +106,11 @@ module EventTypeConverter =
             | WorkspaceCreatedEvent -> "WorkspaceCreatedEvent"
             | WorkspaceUpdatedEvent -> "WorkspaceUpdatedEvent"
             | WorkspaceDeletedEvent -> "WorkspaceDeletedEvent"
+        | SpaceEvents spaceEvent ->
+            match spaceEvent with
+            | SpaceCreatedEvent -> "SpaceCreatedEvent"
+            | SpaceUpdatedEvent -> "SpaceUpdatedEvent"
+            | SpaceDeletedEvent -> "SpaceDeletedEvent"
 
     let fromString (str: string) : EventType option =
         match str with
@@ -124,6 +136,9 @@ module EventTypeConverter =
         | "WorkspaceCreatedEvent" -> Some(WorkspaceEvents WorkspaceCreatedEvent)
         | "WorkspaceUpdatedEvent" -> Some(WorkspaceEvents WorkspaceUpdatedEvent)
         | "WorkspaceDeletedEvent" -> Some(WorkspaceEvents WorkspaceDeletedEvent)
+        | "SpaceCreatedEvent" -> Some(SpaceEvents SpaceCreatedEvent)
+        | "SpaceUpdatedEvent" -> Some(SpaceEvents SpaceUpdatedEvent)
+        | "SpaceDeletedEvent" -> Some(SpaceEvents SpaceDeletedEvent)
         | _ -> None
 
 module EntityTypeConverter =
@@ -136,6 +151,7 @@ module EntityTypeConverter =
         | Group -> "Group"
         | Run -> "Run"
         | Workspace -> "Workspace"
+        | Space -> "Space"
 
     let fromString (str: string) : EntityType option =
         match str with
@@ -146,6 +162,7 @@ module EntityTypeConverter =
         | "Group" -> Some Group
         | "Run" -> Some Run
         | "Workspace" -> Some Workspace
+        | "Space" -> Some Space
         | _ -> None
 
 [<Table("Events")>]

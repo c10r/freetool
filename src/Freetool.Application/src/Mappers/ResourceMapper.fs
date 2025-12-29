@@ -13,13 +13,13 @@ module ResourceMapper =
         let headers = dto.Headers |> List.map keyValuePairFromDto
         let body = dto.Body |> List.map keyValuePairFromDto
 
-        match System.Guid.TryParse dto.WorkspaceId with
+        match System.Guid.TryParse dto.SpaceId with
         | true, guid ->
-            let workspaceId = WorkspaceId.FromGuid guid
+            let spaceId = SpaceId.FromGuid guid
 
             Resource.create
                 actorUserId
-                workspaceId
+                spaceId
                 dto.Name
                 dto.Description
                 dto.BaseUrl
@@ -27,7 +27,7 @@ module ResourceMapper =
                 headers
                 body
                 dto.HttpMethod
-        | false, _ -> Error(ValidationError "Invalid workspace ID format")
+        | false, _ -> Error(ValidationError "Invalid space ID format")
 
     let fromUpdateNameDto
         (actorUserId: UserId)

@@ -13,11 +13,15 @@ let unwrapResult result =
     | Ok value -> value
     | Error error -> failwith $"Expected Ok but got Error: {error}"
 
+// ============================================================================
+// Resource Creation Tests (with SpaceId)
+// ============================================================================
+
 [<Fact>]
 let ``Resource creation should generate ResourceCreatedEvent`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
     let urlParams = [ "userId", "123"; "format", "json" ]
 
     let headers =
@@ -29,7 +33,7 @@ let ``Resource creation should generate ResourceCreatedEvent`` () =
     let result =
         Resource.create
             actorUserId
-            workspaceId
+            spaceId
             "User API"
             "Manages user data"
             "https://api.example.com/users"
@@ -52,6 +56,7 @@ let ``Resource creation should generate ResourceCreatedEvent`` () =
             Assert.Equal(2, event.UrlParameters.Length)
             Assert.Equal(2, event.Headers.Length)
             Assert.Equal(2, event.Body.Length)
+            Assert.Equal(spaceId, event.SpaceId)
         | _ -> Assert.True(false, "Expected ResourceCreatedEvent")
     | Error error -> Assert.True(false, $"Expected success but got error: {error}")
 
@@ -59,10 +64,10 @@ let ``Resource creation should generate ResourceCreatedEvent`` () =
 let ``Resource name update should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let resource =
-        Resource.create actorUserId workspaceId "Old API Name" "Description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "Old API Name" "Description" "https://api.example.com" [] [] [] "GET"
         |> unwrapResult
 
     // Act
@@ -90,10 +95,10 @@ let ``Resource name update should generate correct event`` () =
 let ``Resource description update should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let resource =
-        Resource.create actorUserId workspaceId "API Name" "Old description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "API Name" "Old description" "https://api.example.com" [] [] [] "GET"
         |> unwrapResult
 
     // Act
@@ -122,10 +127,10 @@ let ``Resource description update should generate correct event`` () =
 let ``Resource base URL update should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let resource =
-        Resource.create actorUserId workspaceId "API Name" "Description" "https://old-api.example.com" [] [] [] "POST"
+        Resource.create actorUserId spaceId "API Name" "Description" "https://old-api.example.com" [] [] [] "POST"
         |> unwrapResult
 
     // Act
@@ -154,20 +159,11 @@ let ``Resource base URL update should generate correct event`` () =
 let ``Resource URL parameters update should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
     let initialParams = [ ("id", "1") ]
 
     let resource =
-        Resource.create
-            actorUserId
-            workspaceId
-            "API Name"
-            "Description"
-            "https://api.example.com"
-            initialParams
-            []
-            []
-            "PUT"
+        Resource.create actorUserId spaceId "API Name" "Description" "https://api.example.com" initialParams [] [] "PUT"
         |> unwrapResult
 
     let newParams = [ "userId", "123"; "format", "json"; "limit", "10" ]
@@ -201,13 +197,13 @@ let ``Resource URL parameters update should generate correct event`` () =
 let ``Resource headers update should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
     let initialHeaders = [ ("Accept", "application/json") ]
 
     let resource =
         Resource.create
             actorUserId
-            workspaceId
+            spaceId
             "API Name"
             "Description"
             "https://api.example.com"
@@ -247,20 +243,11 @@ let ``Resource headers update should generate correct event`` () =
 let ``Resource body update should generate correct event`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
     let initialBody = [ ("name", "John") ]
 
     let resource =
-        Resource.create
-            actorUserId
-            workspaceId
-            "API Name"
-            "Description"
-            "https://api.example.com"
-            []
-            []
-            initialBody
-            "PATCH"
+        Resource.create actorUserId spaceId "API Name" "Description" "https://api.example.com" [] [] initialBody "PATCH"
         |> unwrapResult
 
     let newBody = [ "firstName", "Jane"; "lastName", "Doe"; "age", "30" ]
@@ -292,10 +279,10 @@ let ``Resource body update should generate correct event`` () =
 let ``Resource creation should reject empty name`` () =
     // Act
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let result =
-        Resource.create actorUserId workspaceId "" "Description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "" "Description" "https://api.example.com" [] [] [] "GET"
 
     // Assert
     match result with
@@ -306,10 +293,10 @@ let ``Resource creation should reject empty name`` () =
 let ``Resource creation should reject empty description`` () =
     // Act
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let result =
-        Resource.create actorUserId workspaceId "API Name" "" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "API Name" "" "https://api.example.com" [] [] [] "GET"
 
     // Assert
     match result with
@@ -320,10 +307,10 @@ let ``Resource creation should reject empty description`` () =
 let ``Resource creation should reject invalid URL`` () =
     // Act
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let result =
-        Resource.create actorUserId workspaceId "API Name" "Description" "not-a-valid-url" [] [] [] "GET"
+        Resource.create actorUserId spaceId "API Name" "Description" "not-a-valid-url" [] [] [] "GET"
 
     // Assert
     match result with
@@ -334,21 +321,12 @@ let ``Resource creation should reject invalid URL`` () =
 let ``Resource creation should reject invalid key-value pairs`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
     let invalidParams = [ ("", "value") ] // Empty key
 
     // Act
     let result =
-        Resource.create
-            actorUserId
-            workspaceId
-            "API Name"
-            "Description"
-            "https://api.example.com"
-            invalidParams
-            []
-            []
-            "GET"
+        Resource.create actorUserId spaceId "API Name" "Description" "https://api.example.com" invalidParams [] [] "GET"
 
     // Assert
     match result with
@@ -359,10 +337,10 @@ let ``Resource creation should reject invalid key-value pairs`` () =
 let ``Resource deletion should generate ResourceDeletedEvent`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())
-    let workspaceId = WorkspaceId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let resource =
-        Resource.create actorUserId workspaceId "Test API" "Description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "Test API" "Description" "https://api.example.com" [] [] [] "GET"
         |> unwrapResult
 
     // Act
@@ -375,3 +353,38 @@ let ``Resource deletion should generate ResourceDeletedEvent`` () =
     match events.[1] with // The deletion event is the second one
     | :? ResourceDeletedEvent as event -> Assert.Equal(resource.State.Id, event.ResourceId)
     | _ -> Assert.True(false, "Expected ResourceDeletedEvent")
+
+// ============================================================================
+// Resource SpaceId Tests
+// ============================================================================
+
+[<Fact>]
+let ``Resource should store SpaceId correctly`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
+
+    // Act
+    let result =
+        Resource.create actorUserId spaceId "Test API" "Description" "https://api.example.com" [] [] [] "GET"
+
+    // Assert
+    match result with
+    | Ok resource -> Assert.Equal(spaceId, resource.State.SpaceId)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Resource.getSpaceId should return correct SpaceId`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
+
+    let resource =
+        Resource.create actorUserId spaceId "Test API" "Description" "https://api.example.com" [] [] [] "GET"
+        |> unwrapResult
+
+    // Act
+    let returnedSpaceId = Resource.getSpaceId resource
+
+    // Assert
+    Assert.Equal(spaceId, returnedSpaceId)

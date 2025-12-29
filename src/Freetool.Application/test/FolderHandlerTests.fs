@@ -33,11 +33,11 @@ type MockFolderRepository(folders: ValidatedFolder list) =
         member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedFolder list> =
             task { return folderList |> List.skip skip |> List.truncate take }
 
-        member _.GetByWorkspaceAsync (workspaceId: WorkspaceId) (skip: int) (take: int) : Task<ValidatedFolder list> =
+        member _.GetBySpaceAsync (spaceId: SpaceId) (skip: int) (take: int) : Task<ValidatedFolder list> =
             task {
                 return
                     folderList
-                    |> List.filter (fun f -> f.State.WorkspaceId = workspaceId)
+                    |> List.filter (fun f -> f.State.SpaceId = spaceId)
                     |> List.skip skip
                     |> List.truncate take
             }
@@ -72,13 +72,8 @@ type MockFolderRepository(folders: ValidatedFolder list) =
 
         member _.GetCountAsync() : Task<int> = task { return folderList.Length }
 
-        member _.GetCountByWorkspaceAsync(workspaceId: WorkspaceId) : Task<int> =
-            task {
-                return
-                    folderList
-                    |> List.filter (fun f -> f.State.WorkspaceId = workspaceId)
-                    |> List.length
-            }
+        member _.GetCountBySpaceAsync(spaceId: SpaceId) : Task<int> =
+            task { return folderList |> List.filter (fun f -> f.State.SpaceId = spaceId) |> List.length }
 
         member _.GetRootCountAsync() : Task<int> =
             task { return folderList |> List.filter (fun f -> f.State.ParentId.IsNone) |> List.length }
@@ -92,8 +87,8 @@ type MockFolderRepository(folders: ValidatedFolder list) =
             }
 
 // Test helper to create a folder
-let createTestFolder (name: string) (workspaceId: WorkspaceId) (parentId: FolderId option) : ValidatedFolder =
-    match Folder.create (UserId.NewId()) name parentId workspaceId with
+let createTestFolder (name: string) (spaceId: SpaceId) (parentId: FolderId option) : ValidatedFolder =
+    match Folder.create (UserId.NewId()) name parentId spaceId with
     | Ok folder -> folder
     | Error _ -> failwith "Failed to create test folder"
 
@@ -101,8 +96,8 @@ let createTestFolder (name: string) (workspaceId: WorkspaceId) (parentId: Folder
 let ``GetAllFolders without workspace filter returns all folders`` () =
     task {
         // Arrange
-        let workspace1 = WorkspaceId.NewId()
-        let workspace2 = WorkspaceId.NewId()
+        let workspace1 = SpaceId.NewId()
+        let workspace2 = SpaceId.NewId()
 
         let folders =
             [ createTestFolder "Folder 1" workspace1 None
@@ -128,8 +123,8 @@ let ``GetAllFolders without workspace filter returns all folders`` () =
 let ``GetAllFolders with workspace filter returns only folders from that workspace`` () =
     task {
         // Arrange
-        let workspace1 = WorkspaceId.NewId()
-        let workspace2 = WorkspaceId.NewId()
+        let workspace1 = SpaceId.NewId()
+        let workspace2 = SpaceId.NewId()
 
         let folders =
             [ createTestFolder "Folder 1" workspace1 None
@@ -148,7 +143,7 @@ let ``GetAllFolders with workspace filter returns only folders from that workspa
         | Ok(FoldersResult pagedResult) ->
             Assert.Equal(2, pagedResult.TotalCount)
             Assert.Equal(2, pagedResult.Items.Length)
-            Assert.All(pagedResult.Items, fun item -> Assert.Equal(workspace1, item.WorkspaceId))
+            Assert.All(pagedResult.Items, fun item -> Assert.Equal(workspace1, item.SpaceId))
         | _ -> Assert.Fail("Expected FoldersResult")
     }
 
@@ -156,7 +151,7 @@ let ``GetAllFolders with workspace filter returns only folders from that workspa
 let ``GetAllFolders with workspace filter and pagination returns correct subset`` () =
     task {
         // Arrange
-        let workspace1 = WorkspaceId.NewId()
+        let workspace1 = SpaceId.NewId()
 
         let folders =
             [ createTestFolder "Folder 1" workspace1 None
@@ -185,9 +180,9 @@ let ``GetAllFolders with workspace filter and pagination returns correct subset`
 let ``GetAllFolders with workspace filter returns empty list when no folders match`` () =
     task {
         // Arrange
-        let workspace1 = WorkspaceId.NewId()
-        let workspace2 = WorkspaceId.NewId()
-        let workspace3 = WorkspaceId.NewId() // No folders in this workspace
+        let workspace1 = SpaceId.NewId()
+        let workspace2 = SpaceId.NewId()
+        let workspace3 = SpaceId.NewId() // No folders in this workspace
 
         let folders =
             [ createTestFolder "Folder 1" workspace1 None
@@ -211,7 +206,7 @@ let ``GetAllFolders with workspace filter returns empty list when no folders mat
 let ``GetAllFolders with negative skip returns validation error`` () =
     task {
         // Arrange
-        let workspace1 = WorkspaceId.NewId()
+        let workspace1 = SpaceId.NewId()
         let folders = [ createTestFolder "Folder 1" workspace1 None ]
         let repository = MockFolderRepository(folders) :> IFolderRepository
         let command = GetAllFolders(Some workspace1, -1, 10)
@@ -229,7 +224,7 @@ let ``GetAllFolders with negative skip returns validation error`` () =
 let ``GetAllFolders with take less than or equal to 0 returns validation error`` () =
     task {
         // Arrange
-        let workspace1 = WorkspaceId.NewId()
+        let workspace1 = SpaceId.NewId()
         let folders = [ createTestFolder "Folder 1" workspace1 None ]
         let repository = MockFolderRepository(folders) :> IFolderRepository
         let command = GetAllFolders(Some workspace1, 0, 0)
@@ -247,7 +242,7 @@ let ``GetAllFolders with take less than or equal to 0 returns validation error``
 let ``GetAllFolders with take greater than 100 returns validation error`` () =
     task {
         // Arrange
-        let workspace1 = WorkspaceId.NewId()
+        let workspace1 = SpaceId.NewId()
         let folders = [ createTestFolder "Folder 1" workspace1 None ]
         let repository = MockFolderRepository(folders) :> IFolderRepository
         let command = GetAllFolders(Some workspace1, 0, 101)
