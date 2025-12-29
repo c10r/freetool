@@ -700,16 +700,22 @@ export default function UsersSpacesView() {
                           <SelectValue placeholder="Select a moderator" />
                         </SelectTrigger>
                         <SelectContent>
-                          {users.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              <div className="flex items-center gap-2">
-                                <Crown className="h-3 w-3 text-amber-500" />
-                                {isInvitedPlaceholder(user)
-                                  ? user.email
-                                  : user.name}
-                              </div>
-                            </SelectItem>
-                          ))}
+                          {users
+                            .filter(
+                              (user) =>
+                                editSelectedMemberIds.includes(user.id) ||
+                                user.id === editModeratorId
+                            )
+                            .map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                <div className="flex items-center gap-2">
+                                  <Crown className="h-3 w-3 text-amber-500" />
+                                  {isInvitedPlaceholder(user)
+                                    ? user.email
+                                    : user.name}
+                                </div>
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
