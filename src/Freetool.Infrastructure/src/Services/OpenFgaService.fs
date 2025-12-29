@@ -150,21 +150,31 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
 
                 workspaceRelations.["create_workspace"] <- Userset(tupleToUserset = orgCreateTupleToUserset)
 
-                // Helper to create permission definition: [user, organization#admin] or admin from team
+                // Helper to create permission definition: [user, admin from team, admin from organization]
                 let createPermissionUserset () =
-                    let computedUserset = ObjectRelation()
-                    computedUserset.Relation <- "admin"
+                    // Team admin check: admin from team relation
+                    let teamAdminComputedUserset = ObjectRelation()
+                    teamAdminComputedUserset.Relation <- "admin"
 
-                    let tupleToUserset = TupleToUserset()
-                    tupleToUserset.Tupleset <- ObjectRelation(Object = "", Relation = "team")
-                    tupleToUserset.ComputedUserset <- computedUserset
+                    let teamTupleToUserset = TupleToUserset()
+                    teamTupleToUserset.Tupleset <- ObjectRelation(Object = "", Relation = "team")
+                    teamTupleToUserset.ComputedUserset <- teamAdminComputedUserset
+
+                    // Organization admin check: admin from organization relation
+                    let orgAdminComputedUserset = ObjectRelation()
+                    orgAdminComputedUserset.Relation <- "admin"
+
+                    let orgTupleToUserset = TupleToUserset()
+                    orgTupleToUserset.Tupleset <- ObjectRelation(Object = "", Relation = "organization")
+                    orgTupleToUserset.ComputedUserset <- orgAdminComputedUserset
 
                     let unionUsersets = Usersets()
 
                     unionUsersets.Child <-
                         ResizeArray(
                             [ Userset(varThis = obj ()) // Direct assignment
-                              Userset(tupleToUserset = tupleToUserset) ] // admin from team
+                              Userset(tupleToUserset = teamTupleToUserset) // admin from team
+                              Userset(tupleToUserset = orgTupleToUserset) ] // admin from organization
                         )
 
                     Userset(union = unionUsersets)

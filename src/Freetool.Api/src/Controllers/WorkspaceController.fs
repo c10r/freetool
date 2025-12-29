@@ -55,13 +55,21 @@ type WorkspaceController
                 | Ok validatedWorkspace ->
                     let! result = commandHandler.HandleCommand(CreateWorkspace(userId, validatedWorkspace))
 
-                    return
-                        match result with
-                        | Ok(WorkspaceResult workspaceDto) ->
+                    match result with
+                    | Ok(WorkspaceResult workspaceDto) ->
+                        // Set up organization relation for the workspace so org admins inherit permissions
+                        do!
+                            authService.CreateRelationshipsAsync(
+                                [ { Subject = Organization "default"
+                                    Relation = WorkspaceOrganization
+                                    Object = WorkspaceObject(workspaceDto.Id.Value.ToString()) } ]
+                            )
+
+                        return
                             this.CreatedAtAction(nameof this.GetWorkspaceById, {| id = workspaceDto.Id |}, workspaceDto)
                             :> IActionResult
-                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                        | Error error -> this.HandleDomainError(error)
+                    | Ok _ -> return this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> return this.HandleDomainError(error)
         }
 
     [<HttpGet("{id}")>]

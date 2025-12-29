@@ -620,3 +620,63 @@ let ``Team member with granted folder permission can manage folders`` () : Task 
         let! canDeleteFolder = service.CheckPermissionAsync (User "ivan") FolderDelete (WorkspaceObject "main")
         Assert.False(canDeleteFolder, "User should NOT have delete_folder permission (not granted)")
     }
+
+[<Fact>]
+let ``Org admin inherits workspace permissions via tupleToUserset`` () : Task =
+    task {
+        // Arrange - Create store, write model
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-org-inherit-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        // 1. Make Alice an organization admin
+        do!
+            service.CreateRelationshipsAsync(
+                [ { Subject = User "alice"
+                    Relation = OrganizationAdmin
+                    Object = OrganizationObject "default" } ]
+            )
+
+        // 2. Associate workspace with organization (NOT team, NOT direct grants)
+        // This is the pattern used by commit 5be26020 to enable org admin inheritance
+        do!
+            service.CreateRelationshipsAsync(
+                [ { Subject = Organization "default"
+                    Relation = WorkspaceOrganization
+                    Object = WorkspaceObject "main" } ]
+            )
+
+        // 3. Check permissions - should inherit via tupleToUserset (NO direct grants created)
+        // If this fails, the OpenFGA model's tupleToUserset for org admin is broken
+        let! canCreateResource = service.CheckPermissionAsync (User "alice") ResourceCreate (WorkspaceObject "main")
+        Assert.True(canCreateResource, "Org admin should inherit create_resource via tupleToUserset")
+
+        let! canEditResource = service.CheckPermissionAsync (User "alice") ResourceEdit (WorkspaceObject "main")
+        Assert.True(canEditResource, "Org admin should inherit edit_resource via tupleToUserset")
+
+        let! canDeleteResource = service.CheckPermissionAsync (User "alice") ResourceDelete (WorkspaceObject "main")
+        Assert.True(canDeleteResource, "Org admin should inherit delete_resource via tupleToUserset")
+
+        let! canCreateApp = service.CheckPermissionAsync (User "alice") AppCreate (WorkspaceObject "main")
+        Assert.True(canCreateApp, "Org admin should inherit create_app via tupleToUserset")
+
+        let! canEditApp = service.CheckPermissionAsync (User "alice") AppEdit (WorkspaceObject "main")
+        Assert.True(canEditApp, "Org admin should inherit edit_app via tupleToUserset")
+
+        let! canDeleteApp = service.CheckPermissionAsync (User "alice") AppDelete (WorkspaceObject "main")
+        Assert.True(canDeleteApp, "Org admin should inherit delete_app via tupleToUserset")
+
+        let! canRunApp = service.CheckPermissionAsync (User "alice") AppRun (WorkspaceObject "main")
+        Assert.True(canRunApp, "Org admin should inherit run_app via tupleToUserset")
+
+        let! canCreateFolder = service.CheckPermissionAsync (User "alice") FolderCreate (WorkspaceObject "main")
+        Assert.True(canCreateFolder, "Org admin should inherit create_folder via tupleToUserset")
+
+        let! canEditFolder = service.CheckPermissionAsync (User "alice") FolderEdit (WorkspaceObject "main")
+        Assert.True(canEditFolder, "Org admin should inherit edit_folder via tupleToUserset")
+
+        let! canDeleteFolder = service.CheckPermissionAsync (User "alice") FolderDelete (WorkspaceObject "main")
+        Assert.True(canDeleteFolder, "Org admin should inherit delete_folder via tupleToUserset")
+    }

@@ -207,6 +207,29 @@ let main args =
             modelTask.Wait()
             eprintfn "OpenFGA authorization model initialized successfully"
 
+            // Set up organization relations for all existing workspaces
+            // This ensures org admins inherit permissions on all workspaces
+            try
+                eprintfn "Setting up organization relations for existing workspaces..."
+                let workspaceRepository = scope.ServiceProvider.GetRequiredService<IWorkspaceRepository>()
+                let workspacesTask = workspaceRepository.GetAllAsync 0 1000
+                workspacesTask.Wait()
+                let workspaces = workspacesTask.Result
+
+                for workspace in workspaces do
+                    let workspaceId = workspace.State.Id.Value.ToString()
+                    let tuple =
+                        { Subject = Organization "default"
+                          Relation = WorkspaceOrganization
+                          Object = WorkspaceObject workspaceId }
+                    let relationTask = authService.CreateRelationshipsAsync([ tuple ])
+                    relationTask.Wait()
+
+                eprintfn "Organization relations set up for %d workspaces" (List.length workspaces)
+            with ex ->
+                eprintfn "Warning: Could not set up organization relations for workspaces: %s" ex.Message
+                eprintfn "Org admins may not have permissions on existing workspaces."
+
             // Note: Organization admin is now set automatically when the user first logs in
             // via TailscaleAuthMiddleware if their email matches OpenFGA:OrgAdminEmail config
             let orgAdminEmail = builder.Configuration["OpenFGA:OrgAdminEmail"]
