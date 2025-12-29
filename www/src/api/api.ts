@@ -425,12 +425,9 @@ export const removeSpaceMember = ({
   spaceId: string;
   userId: string;
 }) => {
-  return client.DELETE("/space/{id}/members", {
+  return client.DELETE("/space/{id}/members/{memberId}", {
     params: {
-      path: { id: spaceId },
-    },
-    body: {
-      userId,
+      path: { id: spaceId, memberId: userId },
     },
   });
 };
