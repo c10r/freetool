@@ -120,8 +120,9 @@ module FolderHandler =
                         // Parse and validate parent ID format first
                         let parseResult =
                             match dto.ParentId with
-                            | RootFolder -> Ok(None)
-                            | ChildFolder parentId ->
+                            | None -> Ok(None)
+                            | Some RootFolder -> Ok(None)
+                            | Some(ChildFolder parentId) ->
                                 match Guid.TryParse(parentId) with
                                 | true, parentGuid -> Ok(Some(FolderId.FromGuid(parentGuid)))
                                 | false, _ -> Error(ValidationError "Invalid parent folder ID format")

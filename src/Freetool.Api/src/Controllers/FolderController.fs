@@ -37,12 +37,22 @@ type FolderController
             | true, workspaceGuid ->
                 let workspaceId = WorkspaceId.FromGuid(workspaceGuid)
 
-                // Check authorization: user must have create_folder permission on workspace
-                let! hasPermission =
+                // Check if user is an organization admin (org admins have all permissions)
+                let! isOrgAdmin =
                     authorizationService.CheckPermissionAsync
                         (User(userId.ToString()))
-                        FolderCreate
-                        (WorkspaceObject(workspaceId.ToString()))
+                        OrganizationAdmin
+                        (OrganizationObject "default")
+
+                // Check authorization: user must be org admin or have create_folder permission on workspace
+                let! hasPermission =
+                    if isOrgAdmin then
+                        Task.FromResult(true)
+                    else
+                        authorizationService.CheckPermissionAsync
+                            (User(userId.ToString()))
+                            FolderCreate
+                            (WorkspaceObject(workspaceId.ToString()))
 
                 if not hasPermission then
                     return
@@ -190,12 +200,22 @@ type FolderController
                 | Some folder ->
                     let workspaceId = Folder.getWorkspaceId folder
 
-                    // Check authorization: user must have edit_folder permission on workspace
-                    let! hasPermission =
+                    // Check if user is an organization admin (org admins have all permissions)
+                    let! isOrgAdmin =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
-                            FolderEdit
-                            (WorkspaceObject(workspaceId.ToString()))
+                            OrganizationAdmin
+                            (OrganizationObject "default")
+
+                    // Check authorization: user must be org admin or have edit_folder permission on workspace
+                    let! hasPermission =
+                        if isOrgAdmin then
+                            Task.FromResult(true)
+                        else
+                            authorizationService.CheckPermissionAsync
+                                (User(userId.ToString()))
+                                FolderEdit
+                                (WorkspaceObject(workspaceId.ToString()))
 
                     if not hasPermission then
                         return
@@ -240,12 +260,22 @@ type FolderController
                 | Some folder ->
                     let workspaceId = Folder.getWorkspaceId folder
 
-                    // Check authorization: user must have edit_folder permission on workspace
-                    let! hasPermission =
+                    // Check if user is an organization admin (org admins have all permissions)
+                    let! isOrgAdmin =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
-                            FolderEdit
-                            (WorkspaceObject(workspaceId.ToString()))
+                            OrganizationAdmin
+                            (OrganizationObject "default")
+
+                    // Check authorization: user must be org admin or have edit_folder permission on workspace
+                    let! hasPermission =
+                        if isOrgAdmin then
+                            Task.FromResult(true)
+                        else
+                            authorizationService.CheckPermissionAsync
+                                (User(userId.ToString()))
+                                FolderEdit
+                                (WorkspaceObject(workspaceId.ToString()))
 
                     if not hasPermission then
                         return
@@ -289,12 +319,22 @@ type FolderController
                 | Some folder ->
                     let workspaceId = Folder.getWorkspaceId folder
 
-                    // Check authorization: user must have delete_folder permission on workspace
-                    let! hasPermission =
+                    // Check if user is an organization admin (org admins have all permissions)
+                    let! isOrgAdmin =
                         authorizationService.CheckPermissionAsync
                             (User(userId.ToString()))
-                            FolderDelete
-                            (WorkspaceObject(workspaceId.ToString()))
+                            OrganizationAdmin
+                            (OrganizationObject "default")
+
+                    // Check authorization: user must be org admin or have delete_folder permission on workspace
+                    let! hasPermission =
+                        if isOrgAdmin then
+                            Task.FromResult(true)
+                        else
+                            authorizationService.CheckPermissionAsync
+                                (User(userId.ToString()))
+                                FolderDelete
+                                (WorkspaceObject(workspaceId.ToString()))
 
                     if not hasPermission then
                         return

@@ -28,20 +28,6 @@ type StringOptionConverter() =
             else
                 writer.WriteStringValue(str)
 
-type FolderLocationConverter() =
-    inherit JsonConverter<FolderLocation>()
-
-    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
-        if reader.TokenType = JsonTokenType.Null then
-            RootFolder
-        else
-            ChildFolder(reader.GetString())
-
-    override _.Write(writer: Utf8JsonWriter, value: FolderLocation, _options: JsonSerializerOptions) =
-        match value with
-        | RootFolder -> writer.WriteNullValue()
-        | ChildFolder parentId -> writer.WriteStringValue(parentId)
-
 type UserIdConverter() =
     inherit JsonConverter<UserId>()
 
@@ -124,3 +110,22 @@ type KeyValuePairConverter() =
         writer.WriteString("key", value.Key)
         writer.WriteString("value", value.Value)
         writer.WriteEndObject()
+
+type FolderLocationConverter() =
+    inherit JsonConverter<FolderLocation>()
+
+    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
+        if reader.TokenType = JsonTokenType.Null then
+            RootFolder
+        else
+            let str = reader.GetString()
+
+            if String.IsNullOrWhiteSpace(str) then
+                RootFolder
+            else
+                ChildFolder str
+
+    override _.Write(writer: Utf8JsonWriter, value: FolderLocation, _options: JsonSerializerOptions) =
+        match value with
+        | RootFolder -> writer.WriteNullValue()
+        | ChildFolder parentId -> writer.WriteStringValue(parentId)

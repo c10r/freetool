@@ -118,7 +118,7 @@ let ``CreateFolder returns 403 when user does not have create_folder permission`
 
         let createDto: CreateFolderDto =
             { Name = "My Folder"
-              Location = RootFolder
+              Location = None
               WorkspaceId = workspaceId.Value.ToString() }
 
         // Act
@@ -166,7 +166,7 @@ let ``CreateFolder succeeds when user has create_folder permission`` () : Task =
 
         let createDto: CreateFolderDto =
             { Name = "My Folder"
-              Location = RootFolder
+              Location = None
               WorkspaceId = workspaceId.Value.ToString() }
 
         // Act
@@ -277,7 +277,7 @@ let ``MoveFolder returns 403 when user does not have edit_folder permission`` ()
 
         let controller = createTestController checkPermission getById handleCommand userId
 
-        let moveDto: MoveFolderDto = { ParentId = RootFolder }
+        let moveDto: MoveFolderDto = { ParentId = None }
 
         // Act
         let! result = controller.MoveFolder(folderId.Value.ToString(), moveDto)
@@ -317,7 +317,7 @@ let ``MoveFolder succeeds when user has edit_folder permission`` () : Task =
 
         let controller = createTestController checkPermission getById handleCommand userId
 
-        let moveDto: MoveFolderDto = { ParentId = RootFolder }
+        let moveDto: MoveFolderDto = { ParentId = None }
 
         // Act
         let! result = controller.MoveFolder(folderId.Value.ToString(), moveDto)

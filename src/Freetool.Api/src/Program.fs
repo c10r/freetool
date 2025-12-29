@@ -37,7 +37,9 @@ let main args =
             options.JsonSerializerOptions.Converters.Add(EntityTypeConverter())
             options.JsonSerializerOptions.Converters.Add(KeyValuePairConverter())
             options.JsonSerializerOptions.Converters.Add(FolderLocationConverter())
-            options.JsonSerializerOptions.Converters.Add(JsonFSharpConverter()))
+
+            // allowOverride = true lets property-level [<JsonConverter>] attributes take precedence
+            options.JsonSerializerOptions.Converters.Add(JsonFSharpConverter(allowOverride = true)))
     |> ignore
 
     builder.Services.AddEndpointsApiExplorer() |> ignore

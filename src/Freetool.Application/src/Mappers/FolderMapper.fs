@@ -11,8 +11,9 @@ module FolderMapper =
     let fromCreateDto (actorUserId: UserId) (dto: CreateFolderDto) : Result<ValidatedFolder, DomainError> =
         let parentId =
             match dto.Location with
-            | RootFolder -> None
-            | ChildFolder parentId ->
+            | None -> None
+            | Some RootFolder -> None
+            | Some(ChildFolder parentId) ->
                 match Guid.TryParse(parentId) with
                 | true, guid -> Some(FolderId.FromGuid(guid))
                 | false, _ -> None // Will be validated in handler
@@ -34,8 +35,9 @@ module FolderMapper =
     let fromMoveDto (actorUserId: UserId) (dto: MoveFolderDto) (folder: ValidatedFolder) : ValidatedFolder =
         let parentId =
             match dto.ParentId with
-            | RootFolder -> None
-            | ChildFolder parentId ->
+            | None -> None
+            | Some RootFolder -> None
+            | Some(ChildFolder parentId) ->
                 match Guid.TryParse(parentId) with
                 | true, guid -> Some(FolderId.FromGuid(guid))
                 | false, _ -> None // Will be validated in handler

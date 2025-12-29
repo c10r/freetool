@@ -11,9 +11,8 @@ type CreateFolderDto =
                      ErrorMessage = ValidationConstants.NameErrorMessage)>]
       Name: string
 
-      [<JsonConverter(typeof<FolderLocationConverter>)>]
       [<Description("Parent folder ID. Leave null to create a root folder.")>]
-      Location: FolderLocation
+      Location: FolderLocation option
 
       [<Required>]
       WorkspaceId: string }
@@ -26,6 +25,5 @@ type UpdateFolderNameDto =
       Name: string }
 
 type MoveFolderDto =
-    { [<JsonConverter(typeof<FolderLocationConverter>)>]
-      [<Description("Parent folder ID. Leave null or empty to move to the root folder.")>]
-      ParentId: FolderLocation }
+    { [<Description("Parent folder ID. Leave null or empty to move to the root folder.")>]
+      ParentId: FolderLocation option }
