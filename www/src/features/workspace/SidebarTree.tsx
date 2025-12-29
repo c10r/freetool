@@ -24,6 +24,7 @@ interface SidebarTreeProps {
 
 export default function SidebarTree({
   nodes,
+  rootId,
   selectedId,
   onSelect,
   workspaceId,
@@ -69,14 +70,15 @@ export default function SidebarTree({
         if (!grouped[wsId]) {
           grouped[wsId] = [];
         }
-        // Only include root-level folders (no parentId or parentId is null)
-        if (!node.parentId) {
+        // Only include top-level workspace folders (those whose parent is the virtual root)
+        // This excludes the virtual root node itself (which has no parentId)
+        if (node.parentId === rootId) {
           grouped[wsId].push(node);
         }
       }
     });
     return grouped;
-  }, [nodes]);
+  }, [nodes, rootId]);
 
   return (
     <aside className="w-64 border-r bg-card/40">
