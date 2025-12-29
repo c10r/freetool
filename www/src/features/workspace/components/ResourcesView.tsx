@@ -1,4 +1,4 @@
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, Edit, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
   createResource,
@@ -54,9 +54,15 @@ const initialFormData: ResourceFormData = {
 
 interface ResourcesViewProps {
   workspaceId: string;
+  workspaceName?: string;
+  onBackClick?: () => void;
 }
 
-export default function ResourcesView({ workspaceId }: ResourcesViewProps) {
+export default function ResourcesView({
+  workspaceId,
+  workspaceName,
+  onBackClick,
+}: ResourcesViewProps) {
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -228,7 +234,15 @@ export default function ResourcesView({ workspaceId }: ResourcesViewProps) {
   return (
     <section className="p-6 space-y-4 overflow-y-auto flex-1">
       <header className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Resources</h2>
+        <div className="flex items-center gap-2">
+          {onBackClick && (
+            <Button variant="ghost" size="sm" onClick={onBackClick}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              {workspaceName || "Workspace"}
+            </Button>
+          )}
+          <h2 className="text-2xl font-semibold">Resources</h2>
+        </div>
         <div className="flex gap-2">
           <PermissionButton
             workspaceId={workspaceId}

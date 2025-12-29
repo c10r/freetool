@@ -6,12 +6,18 @@ import UsersTeamsView from "./components/UsersTeamsView";
 import type { WorkspaceMainProps } from "./types";
 
 export default function WorkspaceMain(props: WorkspaceMainProps) {
-  const { nodes, selectedId, workspaceId } = props;
+  const { nodes, selectedId, workspaceId, workspaceName, onSelect } = props;
   const selected = nodes[selectedId];
 
   // Handle special sections from sidebar
   if (selectedId === "resources") {
-    return <ResourcesView workspaceId={workspaceId} />;
+    return (
+      <ResourcesView
+        workspaceId={workspaceId}
+        workspaceName={workspaceName}
+        onBackClick={() => onSelect("root")}
+      />
+    );
   }
 
   if (selectedId === "audit-log") {

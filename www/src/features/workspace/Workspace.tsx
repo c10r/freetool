@@ -332,8 +332,9 @@ function WorkspaceContent() {
   }, [loading, nodeId, selectedId, nodes]);
 
   // Function to update URL when selection changes
-  const setSelectedId = (id: string) => {
-    const newPath = getPathFromSelectedId(id, nodes, workspaceId);
+  const setSelectedId = (id: string, targetWorkspaceId?: string) => {
+    const effectiveWorkspaceId = targetWorkspaceId || workspaceId;
+    const newPath = getPathFromSelectedId(id, nodes, effectiveWorkspaceId);
     navigate(newPath);
   };
 
@@ -477,9 +478,13 @@ function WorkspaceContent() {
     });
 
   const breadcrumbs = useMemo(
-    () => buildBreadcrumb(nodes, selectedId),
-    [nodes, selectedId]
+    () => buildBreadcrumb(nodes, selectedId, workspaces, workspaceId),
+    [nodes, selectedId, workspaces, workspaceId]
   );
+
+  // Get current workspace name for display
+  const currentWorkspace = workspaces.find((w) => w.id === workspaceId);
+  const workspaceName = currentWorkspace?.groupName || "Workspace";
 
   // Show loading state (combined workspace data + permissions)
   if (loading || permissionsLoading || loadingWorkspaces || loadingWorkspace) {
@@ -688,6 +693,7 @@ function WorkspaceContent() {
             updateEndpoint={updateEndpoint}
             deleteEndpoint={deleteEndpoint}
             workspaceId={workspaceId || ""}
+            workspaceName={workspaceName}
           />
         )}
       </div>
@@ -704,8 +710,21 @@ export default function Workspace() {
   );
 }
 
-function buildBreadcrumb(nodes: Record<string, WorkspaceNode>, id: string) {
+function buildBreadcrumb(
+  nodes: Record<string, WorkspaceNode>,
+  id: string,
+  workspaces: WorkspaceWithGroup[],
+  currentWorkspaceId?: string
+) {
   // Handle special sections
+  if (id === "resources" && currentWorkspaceId) {
+    const workspace = workspaces.find((w) => w.id === currentWorkspaceId);
+    const workspaceName = workspace?.groupName || "Workspace";
+    return [
+      { id: "root", name: workspaceName },
+      { id: "resources", name: "Resources" },
+    ];
+  }
   if (id === "resources") {
     return [{ id: "resources", name: "Resources" }];
   }

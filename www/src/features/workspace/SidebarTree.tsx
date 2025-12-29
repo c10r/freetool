@@ -17,7 +17,7 @@ interface SidebarTreeProps {
   nodes: Record<string, WorkspaceNode>;
   rootId: string;
   selectedId: string;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, targetWorkspaceId?: string) => void;
   workspaceId: string;
   workspaces: WorkspaceWithGroup[];
 }
@@ -110,33 +110,55 @@ export default function SidebarTree({
 
             return (
               <div key={workspace.id}>
-                <button
-                  type="button"
-                  onClick={() => toggleWorkspace(workspace.id)}
+                <div
                   className={cn(
-                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent font-semibold",
+                    "flex items-center rounded-md hover:bg-accent",
                     isCurrentWorkspace && "bg-accent/50"
                   )}
                 >
-                  {isExpanded ? (
-                    <ChevronDown size={16} />
-                  ) : (
-                    <ChevronRight size={16} />
-                  )}
-                  {isExpanded ? (
-                    <FolderOpen size={16} />
-                  ) : (
-                    <FolderClosed size={16} />
-                  )}
-                  <span>{workspaceLabel}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleWorkspace(workspace.id);
+                    }}
+                    className="flex-shrink-0 p-1.5 hover:bg-accent/50 rounded"
+                    aria-label={
+                      isExpanded ? "Collapse workspace" : "Expand workspace"
+                    }
+                  >
+                    {isExpanded ? (
+                      <ChevronDown size={16} />
+                    ) : (
+                      <ChevronRight size={16} />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Auto-expand when navigating to workspace
+                      if (!expandedWorkspaces.has(workspace.id)) {
+                        toggleWorkspace(workspace.id);
+                      }
+                      onSelect("root", workspace.id);
+                    }}
+                    className="flex items-center gap-2 px-2 py-1.5 text-left font-semibold flex-1"
+                  >
+                    {isExpanded ? (
+                      <FolderOpen size={16} />
+                    ) : (
+                      <FolderClosed size={16} />
+                    )}
+                    <span>{workspaceLabel}</span>
+                  </button>
+                </div>
 
                 {isExpanded && (
                   <div className="ml-4 mt-1 space-y-1">
                     {/* Resources (workspace-specific) */}
                     <button
                       type="button"
-                      onClick={() => onSelect("resources")}
+                      onClick={() => onSelect("resources", workspace.id)}
                       className={cn(
                         "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent",
                         selectedId === "resources" &&

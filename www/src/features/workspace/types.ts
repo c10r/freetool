@@ -69,7 +69,7 @@ export interface TreeNode extends BaseNode {
 export interface WorkspaceMainProps {
   nodes: Record<string, WorkspaceNode>;
   selectedId: string;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, targetWorkspaceId?: string) => void;
   updateNode: (node: WorkspaceNode) => void;
   insertFolderNode: (folder: FolderNode) => void;
   createFolder: (parentId: string) => void;
@@ -85,4 +85,5 @@ export interface WorkspaceMainProps {
   updateEndpoint: (ep: Endpoint) => void;
   deleteEndpoint: (id: string) => void;
   workspaceId: string;
+  workspaceName?: string;
 }
