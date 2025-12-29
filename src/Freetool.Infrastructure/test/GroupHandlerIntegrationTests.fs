@@ -94,6 +94,22 @@ type MockUserRepository(users: System.Collections.Generic.Dictionary<UserId, boo
         member _.ExistsByEmailAsync(_) = Task.FromResult(false)
         member _.GetCountAsync() = Task.FromResult(0)
 
+type MockAuthorizationService() =
+    interface IAuthorizationService with
+        member _.CheckPermissionAsync _subject _relation _object = Task.FromResult(true)
+        member _.CreateRelationshipsAsync(_relationships) = Task.FromResult(())
+        member _.DeleteRelationshipsAsync(_relationships) = Task.FromResult(())
+        member _.UpdateRelationshipsAsync(_request) = Task.FromResult(())
+
+        member _.WriteAuthorizationModelAsync() =
+            Task.FromResult({ AuthorizationModelId = "test-model" })
+
+        member _.CreateStoreAsync(_request) =
+            Task.FromResult({ Id = "test-store"; Name = "test" })
+
+        member _.StoreExistsAsync(_storeId) = Task.FromResult(true)
+        member _.InitializeOrganizationAsync _organizationId _adminUserId = Task.FromResult(())
+
 type MockWorkspaceRepository(workspaces: System.Collections.Generic.Dictionary<WorkspaceId, ValidatedWorkspace>) =
     let mutable groupIndex =
         System.Collections.Generic.Dictionary<GroupId, WorkspaceId>()
@@ -180,6 +196,8 @@ let ``CreateGroup creates both group and workspace`` () : Task =
         let workspaceRepository =
             MockWorkspaceRepository(workspaces) :> IWorkspaceRepository
 
+        let authorizationService = MockAuthorizationService() :> IAuthorizationService
+
         let actorUserId = UserId.NewId()
         let groupName = "Engineering Team"
 
@@ -198,7 +216,8 @@ let ``CreateGroup creates both group and workspace`` () : Task =
         let command = CreateGroup(actorUserId, validatedGroup)
 
         // Act
-        let! result = GroupHandler.handleCommand groupRepository userRepository workspaceRepository command
+        let! result =
+            GroupHandler.handleCommand groupRepository userRepository workspaceRepository authorizationService command
 
         // Assert
         match result with
@@ -234,6 +253,8 @@ let ``CreateGroup creates workspace with correct audit events`` () : Task =
         let workspaceRepository =
             MockWorkspaceRepository(workspaces) :> IWorkspaceRepository
 
+        let authorizationService = MockAuthorizationService() :> IAuthorizationService
+
         let actorUserId = UserId.NewId()
         let groupName = "Marketing Team"
 
@@ -251,7 +272,8 @@ let ``CreateGroup creates workspace with correct audit events`` () : Task =
         let command = CreateGroup(actorUserId, validatedGroup)
 
         // Act
-        let! result = GroupHandler.handleCommand groupRepository userRepository workspaceRepository command
+        let! result =
+            GroupHandler.handleCommand groupRepository userRepository workspaceRepository authorizationService command
 
         // Assert
         match result with
@@ -286,6 +308,8 @@ let ``CreateGroup fails if group name already exists, workspace not created`` ()
         let workspaceRepository =
             MockWorkspaceRepository(workspaces) :> IWorkspaceRepository
 
+        let authorizationService = MockAuthorizationService() :> IAuthorizationService
+
         let actorUserId = UserId.NewId()
         let groupName = "Sales Team"
 
@@ -311,7 +335,8 @@ let ``CreateGroup fails if group name already exists, workspace not created`` ()
         let command = CreateGroup(actorUserId, validatedSecondGroup)
 
         // Act
-        let! result = GroupHandler.handleCommand groupRepository userRepository workspaceRepository command
+        let! result =
+            GroupHandler.handleCommand groupRepository userRepository workspaceRepository authorizationService command
 
         // Assert
         match result with
@@ -341,6 +366,8 @@ let ``CreateGroup with users creates workspace`` () : Task =
         let workspaceRepository =
             MockWorkspaceRepository(workspaces) :> IWorkspaceRepository
 
+        let authorizationService = MockAuthorizationService() :> IAuthorizationService
+
         let actorUserId = UserId.NewId()
         let user1Id = UserId.NewId()
         let user2Id = UserId.NewId()
@@ -364,7 +391,8 @@ let ``CreateGroup with users creates workspace`` () : Task =
         let command = CreateGroup(actorUserId, validatedGroup)
 
         // Act
-        let! result = GroupHandler.handleCommand groupRepository userRepository workspaceRepository command
+        let! result =
+            GroupHandler.handleCommand groupRepository userRepository workspaceRepository authorizationService command
 
         // Assert
         match result with

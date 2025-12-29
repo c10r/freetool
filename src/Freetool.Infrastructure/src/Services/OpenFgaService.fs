@@ -323,3 +323,15 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                 eprintfn "[DEBUG OpenFGA] Permission check response: Allowed=%b" allowed
                 return allowed
             }
+
+        /// Checks if a store with the given ID exists
+        member _.StoreExistsAsync(storeId: string) : Task<bool> =
+            task {
+                try
+                    use client = createClientWithoutStore ()
+                    let request = ClientListStoresRequest()
+                    let! response = client.ListStores(request)
+                    return response.Stores |> Seq.exists (fun s -> s.Id = storeId)
+                with _ ->
+                    return false
+            }

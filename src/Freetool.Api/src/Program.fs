@@ -22,6 +22,43 @@ open Freetool.Api.Tracing
 open Freetool.Api.Middleware
 open Freetool.Api.OpenApi
 
+/// Ensures an OpenFGA store exists, creating one if necessary
+/// Returns the store ID to use for the application
+let ensureOpenFgaStore (apiUrl: string) (configuredStoreId: string) : string =
+    // Create a temporary service without store ID to check/create stores
+    let tempService = OpenFgaService(apiUrl)
+    let authService = tempService :> IAuthorizationService
+
+    if System.String.IsNullOrEmpty(configuredStoreId) then
+        // No store ID configured, create a new store
+        eprintfn "No OpenFGA store ID configured. Creating new store..."
+
+        let storeTask = authService.CreateStoreAsync({ Name = "freetool-authorization" })
+
+        storeTask.Wait()
+        let newStoreId = storeTask.Result.Id
+        eprintfn "Created new OpenFGA store with ID: %s" newStoreId
+        newStoreId
+    else
+        // Check if configured store exists
+        eprintfn "Checking if OpenFGA store %s exists..." configuredStoreId
+        let existsTask = authService.StoreExistsAsync(configuredStoreId)
+        existsTask.Wait()
+
+        if existsTask.Result then
+            eprintfn "OpenFGA store %s exists, using it." configuredStoreId
+            configuredStoreId
+        else
+            // Store doesn't exist, create a new one
+            eprintfn "OpenFGA store %s does not exist. Creating new store..." configuredStoreId
+
+            let storeTask = authService.CreateStoreAsync({ Name = "freetool-authorization" })
+
+            storeTask.Wait()
+            let newStoreId = storeTask.Result.Id
+            eprintfn "Created new OpenFGA store with ID: %s" newStoreId
+            newStoreId
+
 [<EntryPoint>]
 let main args =
     let builder = WebApplication.CreateBuilder(args)
@@ -84,18 +121,24 @@ let main args =
     builder.Services.AddScoped<IEventRepository, EventRepository>() |> ignore
     builder.Services.AddScoped<IEventPublisher, EventPublisher>() |> ignore
 
-    builder.Services.AddScoped<IAuthorizationService>(fun serviceProvider ->
-        let apiUrl = builder.Configuration["OpenFGA:ApiUrl"]
-        let storeId = builder.Configuration["OpenFGA:StoreId"]
+    // Ensure OpenFGA store exists before registering the service
+    let openFgaApiUrl = builder.Configuration["OpenFGA:ApiUrl"]
+    let configuredStoreId = builder.Configuration["OpenFGA:StoreId"]
 
-        // Create service with optional store ID (empty string means no store ID yet)
-        let service =
-            if System.String.IsNullOrEmpty(storeId) then
-                OpenFgaService(apiUrl)
-            else
-                OpenFgaService(apiUrl, storeId)
+    let actualStoreId =
+        try
+            ensureOpenFgaStore openFgaApiUrl configuredStoreId
+        with ex ->
+            eprintfn "Warning: Could not ensure OpenFGA store exists: %s" ex.Message
+            eprintfn "Using configured store ID (if any). Authorization may fail."
+            configuredStoreId
 
-        service :> IAuthorizationService)
+    builder.Services.AddScoped<IAuthorizationService>(fun _ ->
+        // Always create with the actual store ID (which may have been created)
+        if System.String.IsNullOrEmpty(actualStoreId) then
+            OpenFgaService(openFgaApiUrl) :> IAuthorizationService
+        else
+            OpenFgaService(openFgaApiUrl, actualStoreId) :> IAuthorizationService)
     |> ignore
 
     builder.Services.AddScoped<IEventEnhancementService>(fun serviceProvider ->
@@ -199,10 +242,9 @@ let main args =
 
     Persistence.upgradeDatabase connectionString
 
-    // Initialize OpenFGA authorization model if StoreId is configured
-    let storeId = builder.Configuration["OpenFGA:StoreId"]
-
-    if not (System.String.IsNullOrEmpty(storeId)) then
+    // Initialize OpenFGA authorization model if we have a valid store
+    // Note: actualStoreId was set during DI registration (store was created if needed)
+    if not (System.String.IsNullOrEmpty(actualStoreId)) then
         try
             eprintfn "Initializing OpenFGA authorization model..."
             use scope = app.Services.CreateScope()

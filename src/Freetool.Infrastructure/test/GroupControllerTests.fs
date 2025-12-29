@@ -31,6 +31,8 @@ type MockAuthorizationService(checkPermissionFn: AuthSubject -> AuthRelation -> 
         member _.CheckPermissionAsync (subject: AuthSubject) (relation: AuthRelation) (object: AuthObject) =
             Task.FromResult(checkPermissionFn subject relation object)
 
+        member _.StoreExistsAsync(_storeId: string) = Task.FromResult(true)
+
 // Mock command handler for testing
 type MockGroupCommandHandler(handleCommandFn: GroupCommand -> Task<Result<GroupCommandResult, DomainError>>) =
     interface IMultiRepositoryCommandHandler<GroupCommand, GroupCommandResult> with

@@ -15,6 +15,7 @@ module GroupHandler =
         (groupRepository: IGroupRepository)
         (userRepository: IUserRepository)
         (workspaceRepository: IWorkspaceRepository)
+        (authorizationService: IAuthorizationService)
         (command: GroupCommand)
         : Task<Result<GroupCommandResult, DomainError>> =
         task {
@@ -65,7 +66,18 @@ module GroupHandler =
                                     // Save workspace and events atomically
                                     match! workspaceRepository.AddAsync eventAwareWorkspace with
                                     | Error error -> return Error error
-                                    | Ok() -> return Ok(GroupResult(eventAwareGroup.State))
+                                    | Ok() ->
+                                        // Set up organization relation for the workspace so org admins inherit permissions
+                                        let workspaceId = Workspace.getId eventAwareWorkspace
+
+                                        do!
+                                            authorizationService.CreateRelationshipsAsync(
+                                                [ { Subject = Organization "default"
+                                                    Relation = WorkspaceOrganization
+                                                    Object = WorkspaceObject(workspaceId.Value.ToString()) } ]
+                                            )
+
+                                        return Ok(GroupResult(eventAwareGroup.State))
                     | invalidIds ->
                         let invalidIdStrings = invalidIds |> List.map (fun id -> id.Value.ToString())
 
@@ -233,7 +245,12 @@ module GroupHandler =
         }
 
 type GroupHandler
-    (groupRepository: IGroupRepository, userRepository: IUserRepository, workspaceRepository: IWorkspaceRepository) =
+    (
+        groupRepository: IGroupRepository,
+        userRepository: IUserRepository,
+        workspaceRepository: IWorkspaceRepository,
+        authorizationService: IAuthorizationService
+    ) =
     interface IMultiRepositoryCommandHandler<GroupCommand, GroupCommandResult> with
         member this.HandleCommand command =
-            GroupHandler.handleCommand groupRepository userRepository workspaceRepository command
+            GroupHandler.handleCommand groupRepository userRepository workspaceRepository authorizationService command

@@ -31,6 +31,8 @@ type MockAuthorizationService(checkPermissionFn: AuthSubject -> AuthRelation -> 
         member _.CheckPermissionAsync (subject: AuthSubject) (relation: AuthRelation) (object: AuthObject) =
             Task.FromResult(checkPermissionFn subject relation object)
 
+        member _.StoreExistsAsync(_storeId: string) = Task.FromResult(true)
+
 // Mock folder repository for testing
 type MockFolderRepository(getByIdFn: FolderId -> Task<ValidatedFolder option>) =
     interface IFolderRepository with

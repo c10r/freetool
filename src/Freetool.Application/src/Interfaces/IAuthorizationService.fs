@@ -136,3 +136,6 @@ type IAuthorizationService =
     /// Checks if a user has a specific permission on an object
     abstract member CheckPermissionAsync:
         subject: AuthSubject -> relation: AuthRelation -> object: AuthObject -> Task<bool>
+
+    /// Checks if a store with the given ID exists
+    abstract member StoreExistsAsync: storeId: string -> Task<bool>

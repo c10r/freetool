@@ -78,11 +78,6 @@ type EventRepository(context: FreetoolDbContext) =
                         (e.WorkspaceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | _ -> ("unknown", JsonSerializer.Serialize(event, jsonOptions))
 
-                // Temporary debug logging
-                System.Console.WriteLine($"=== SERIALIZED EVENT DATA ===")
-                System.Console.WriteLine(eventData)
-                System.Console.WriteLine($"=============================\n")
-
                 let eventDataRecord: Entities.EventData =
                     { Id = Guid.NewGuid()
                       EventId = event.EventId.ToString()

@@ -32,6 +32,8 @@ type MockAuthorizationService(permissions: Map<AuthSubject * AuthRelation * Auth
             let key = (subject, relation, object)
             Task.FromResult(permissions.TryFind(key) |> Option.defaultValue false)
 
+        member _.StoreExistsAsync(_storeId: string) = Task.FromResult(true)
+
 // Mock command handler for testing - returns NotFound for all commands
 type MockUserCommandHandler() =
     interface ICommandHandler with
