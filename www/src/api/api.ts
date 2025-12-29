@@ -1,10 +1,35 @@
-import createClient from "openapi-fetch";
+import createClient, { type Middleware } from "openapi-fetch";
 import type { KeyValuePair } from "@/features/workspace/types";
 import type { paths } from "../schema";
+import { handleApiError } from "./errorHandler";
 
 const client = createClient<paths>({
   baseUrl: `${typeof window !== "undefined" ? window.location.origin : "http://localhost:5000"}/freetool`,
 });
+
+// Error handling middleware - shows toast notifications for API errors
+const errorMiddleware: Middleware = {
+  async onResponse({ response }) {
+    if (!response.ok) {
+      let serverMessage: string | undefined;
+
+      try {
+        // Clone response to avoid consuming the body
+        const body = await response.clone().json();
+        // Extract message from ProblemDetails or generic error response
+        serverMessage = body?.detail || body?.title || body?.message;
+      } catch {
+        // Response body is not JSON or already consumed - use status-based message
+      }
+
+      handleApiError(response.status, serverMessage);
+    }
+    return response;
+  },
+};
+
+// Register middleware
+client.use(errorMiddleware);
 
 /**
  * App
@@ -441,6 +466,7 @@ export const getResources = (skip?: number, take?: number) => {
 };
 
 export const createResource = ({
+  workspaceId,
   name,
   description,
   baseUrl,
@@ -449,6 +475,7 @@ export const createResource = ({
   headers,
   body,
 }: {
+  workspaceId: string;
   name: string;
   description: string;
   baseUrl: string;
@@ -459,6 +486,7 @@ export const createResource = ({
 }) => {
   return client.POST("/resource", {
     body: {
+      workspaceId,
       name,
       description,
       baseUrl,
