@@ -269,6 +269,19 @@ let main args =
             AutoTracing.createTracingDecorator "app" appHandler activitySource)
     |> ignore
 
+    builder.Services.AddScoped<TrashHandler>(fun serviceProvider ->
+        let appRepository = serviceProvider.GetRequiredService<IAppRepository>()
+        let folderRepository = serviceProvider.GetRequiredService<IFolderRepository>()
+        let resourceRepository = serviceProvider.GetRequiredService<IResourceRepository>()
+        TrashHandler(appRepository, folderRepository, resourceRepository))
+    |> ignore
+
+    builder.Services.AddScoped<IMultiRepositoryCommandHandler<TrashCommand, TrashCommandResult>>(fun serviceProvider ->
+        let trashHandler = serviceProvider.GetRequiredService<TrashHandler>()
+        let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
+        AutoTracing.createMultiRepositoryTracingDecorator "trash" trashHandler activitySource)
+    |> ignore
+
     // Configure OpenTelemetry
     let activitySource = new ActivitySource("Freetool.Api")
     builder.Services.AddSingleton<ActivitySource>(activitySource) |> ignore

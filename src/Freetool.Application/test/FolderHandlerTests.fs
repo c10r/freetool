@@ -86,6 +86,20 @@ type MockFolderRepository(folders: ValidatedFolder list) =
                     |> List.length
             }
 
+        member _.GetDeletedBySpaceAsync(_spaceId: SpaceId) : Task<ValidatedFolder list> = task { return [] }
+
+        member _.GetDeletedByIdAsync(_folderId: FolderId) : Task<ValidatedFolder option> = task { return None }
+
+        member _.RestoreWithChildrenAsync(_folder: ValidatedFolder) : Task<Result<int, DomainError>> =
+            task { return Ok 0 }
+
+        member _.CheckNameConflictAsync
+            (_name: FolderName)
+            (_parentId: FolderId option)
+            (_spaceId: SpaceId)
+            : Task<bool> =
+            task { return false }
+
 // Test helper to create a folder
 let createTestFolder (name: string) (spaceId: SpaceId) (parentId: FolderId option) : ValidatedFolder =
     match Folder.create (UserId.NewId()) name parentId spaceId with

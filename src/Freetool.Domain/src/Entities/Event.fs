@@ -17,11 +17,13 @@ type AppEvents =
     | AppCreatedEvent
     | AppUpdatedEvent
     | AppDeletedEvent
+    | AppRestoredEvent
 
 type FolderEvents =
     | FolderCreatedEvent
     | FolderUpdatedEvent
     | FolderDeletedEvent
+    | FolderRestoredEvent
 
 type GroupEvents =
     | GroupCreatedEvent
@@ -32,6 +34,7 @@ type ResourceEvents =
     | ResourceCreatedEvent
     | ResourceUpdatedEvent
     | ResourceDeletedEvent
+    | ResourceRestoredEvent
 
 type RunEvents =
     | RunCreatedEvent
@@ -82,16 +85,19 @@ module EventTypeConverter =
             | AppCreatedEvent -> "AppCreatedEvent"
             | AppUpdatedEvent -> "AppUpdatedEvent"
             | AppDeletedEvent -> "AppDeletedEvent"
+            | AppRestoredEvent -> "AppRestoredEvent"
         | ResourceEvents resourceEvent ->
             match resourceEvent with
             | ResourceCreatedEvent -> "ResourceCreatedEvent"
             | ResourceUpdatedEvent -> "ResourceUpdatedEvent"
             | ResourceDeletedEvent -> "ResourceDeletedEvent"
+            | ResourceRestoredEvent -> "ResourceRestoredEvent"
         | FolderEvents folderEvent ->
             match folderEvent with
             | FolderCreatedEvent -> "FolderCreatedEvent"
             | FolderUpdatedEvent -> "FolderUpdatedEvent"
             | FolderDeletedEvent -> "FolderDeletedEvent"
+            | FolderRestoredEvent -> "FolderRestoredEvent"
         | GroupEvents groupEvent ->
             match groupEvent with
             | GroupCreatedEvent -> "GroupCreatedEvent"
@@ -122,12 +128,15 @@ module EventTypeConverter =
         | "AppCreatedEvent" -> Some(AppEvents AppCreatedEvent)
         | "AppUpdatedEvent" -> Some(AppEvents AppUpdatedEvent)
         | "AppDeletedEvent" -> Some(AppEvents AppDeletedEvent)
+        | "AppRestoredEvent" -> Some(AppEvents AppRestoredEvent)
         | "ResourceCreatedEvent" -> Some(ResourceEvents ResourceCreatedEvent)
         | "ResourceUpdatedEvent" -> Some(ResourceEvents ResourceUpdatedEvent)
         | "ResourceDeletedEvent" -> Some(ResourceEvents ResourceDeletedEvent)
+        | "ResourceRestoredEvent" -> Some(ResourceEvents ResourceRestoredEvent)
         | "FolderCreatedEvent" -> Some(FolderEvents FolderCreatedEvent)
         | "FolderUpdatedEvent" -> Some(FolderEvents FolderUpdatedEvent)
         | "FolderDeletedEvent" -> Some(FolderEvents FolderDeletedEvent)
+        | "FolderRestoredEvent" -> Some(FolderEvents FolderRestoredEvent)
         | "GroupCreatedEvent" -> Some(GroupEvents GroupCreatedEvent)
         | "GroupUpdatedEvent" -> Some(GroupEvents GroupUpdatedEvent)
         | "GroupDeletedEvent" -> Some(GroupEvents GroupDeletedEvent)

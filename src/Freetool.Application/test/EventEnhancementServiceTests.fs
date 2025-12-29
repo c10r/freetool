@@ -47,6 +47,10 @@ type MockAppRepository() =
         member _.GetCountByFolderIdAsync folderId = task { return 0 }
         member _.GetCountBySpaceIdsAsync spaceIds = task { return 0 }
         member _.GetByResourceIdAsync resourceId = task { return [] }
+        member _.GetDeletedByFolderIdsAsync _ = task { return [] }
+        member _.GetDeletedByIdAsync _ = task { return None }
+        member _.RestoreAsync _ = task { return Ok() }
+        member _.CheckNameConflictAsync _ _ = task { return false }
 
 type MockGroupRepository() =
     interface IGroupRepository with
@@ -77,6 +81,10 @@ type MockFolderRepository() =
         member _.GetCountBySpaceAsync spaceId = task { return 0 }
         member _.GetRootCountAsync() = task { return 0 }
         member _.GetChildCountAsync parentId = task { return 0 }
+        member _.GetDeletedBySpaceAsync _ = task { return [] }
+        member _.GetDeletedByIdAsync _ = task { return None }
+        member _.RestoreWithChildrenAsync _ = task { return Ok 0 }
+        member _.CheckNameConflictAsync _ _ _ = task { return false }
 
 type MockSpaceRepository() =
     interface ISpaceRepository with
@@ -102,6 +110,10 @@ type MockResourceRepository() =
         member _.ExistsAsync(resourceId: ResourceId) = task { return false }
         member _.ExistsByNameAsync(name: ResourceName) = task { return false }
         member _.GetCountAsync() = task { return 0 }
+        member _.GetDeletedBySpaceAsync _ = task { return [] }
+        member _.GetDeletedByIdAsync _ = task { return None }
+        member _.RestoreAsync _ = task { return Ok() }
+        member _.CheckNameConflictAsync _ _ = task { return false }
 
 let createService () =
     EventEnhancementService(

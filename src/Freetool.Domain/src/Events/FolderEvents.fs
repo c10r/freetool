@@ -46,6 +46,18 @@ type FolderDeletedEvent =
         member this.EventId = this.EventId
         member this.UserId = this.ActorUserId
 
+type FolderRestoredEvent =
+    { FolderId: FolderId
+      Name: FolderName
+      OccurredAt: DateTime
+      EventId: Guid
+      ActorUserId: UserId }
+
+    interface IDomainEvent with
+        member this.OccurredAt = this.OccurredAt
+        member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
+
 module FolderEvents =
     let folderCreated
         (actorUserId: UserId)
@@ -78,3 +90,11 @@ module FolderEvents =
           EventId = Guid.NewGuid()
           ActorUserId = actorUserId }
         : FolderDeletedEvent
+
+    let folderRestored (actorUserId: UserId) (folderId: FolderId) (name: FolderName) =
+        { FolderId = folderId
+          Name = name
+          OccurredAt = DateTime.UtcNow
+          EventId = Guid.NewGuid()
+          ActorUserId = actorUserId }
+        : FolderRestoredEvent

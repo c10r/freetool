@@ -21,3 +21,11 @@ type IResourceRepository =
     abstract member ExistsByNameAsync: ResourceName -> Task<bool>
 
     abstract member GetCountAsync: unit -> Task<int>
+
+    abstract member GetDeletedBySpaceAsync: SpaceId -> Task<ValidatedResource list>
+
+    abstract member GetDeletedByIdAsync: ResourceId -> Task<ValidatedResource option>
+
+    abstract member RestoreAsync: ValidatedResource -> Task<Result<unit, DomainError>>
+
+    abstract member CheckNameConflictAsync: ResourceName -> SpaceId -> Task<bool>

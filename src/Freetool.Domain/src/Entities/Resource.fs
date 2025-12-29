@@ -374,6 +374,20 @@ module Resource =
         { resource with
             UncommittedEvents = resource.UncommittedEvents @ [ resourceDeletedEvent :> IDomainEvent ] }
 
+    let restore (actorUserId: UserId) (newName: ResourceName option) (resource: ValidatedResource) : ValidatedResource =
+        let finalName = newName |> Option.defaultValue resource.State.Name
+
+        let resourceRestoredEvent =
+            ResourceEvents.resourceRestored actorUserId resource.State.Id finalName
+
+        { resource with
+            State =
+                { resource.State with
+                    Name = finalName
+                    IsDeleted = false
+                    UpdatedAt = DateTime.UtcNow }
+            UncommittedEvents = resource.UncommittedEvents @ [ resourceRestoredEvent :> IDomainEvent ] }
+
     let getUncommittedEvents (resource: ValidatedResource) : IDomainEvent list = resource.UncommittedEvents
 
     let markEventsAsCommitted (resource: ValidatedResource) : ValidatedResource =

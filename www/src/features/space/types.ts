@@ -87,3 +87,25 @@ export interface SpaceMainProps {
   spaceId: string;
   spaceName?: string;
 }
+
+/**
+ * Trash / Restore types
+ */
+export interface TrashItem {
+  id: string;
+  name: string;
+  itemType: "app" | "folder" | "resource";
+  spaceId: string;
+  deletedAt: string;
+}
+
+export interface TrashListDto {
+  items: TrashItem[];
+  totalCount: number;
+}
+
+export interface RestoreResult {
+  restoredId: string;
+  newName?: string;
+  autoRestoredResourceId?: string;
+}

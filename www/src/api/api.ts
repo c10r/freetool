@@ -707,3 +707,32 @@ export const getSpacePermissions = async (
     },
   };
 };
+
+/**
+ * Trash / Restore
+ */
+export const getTrashBySpace = (spaceId: string) => {
+  return client.GET("/trash/space/{spaceId}", {
+    params: {
+      path: { spaceId },
+    },
+  });
+};
+
+export const restoreApp = (appId: string) => {
+  return client.POST("/trash/app/{appId}/restore", {
+    params: { path: { appId } },
+  });
+};
+
+export const restoreFolder = (folderId: string) => {
+  return client.POST("/trash/folder/{folderId}/restore", {
+    params: { path: { folderId } },
+  });
+};
+
+export const restoreResource = (resourceId: string) => {
+  return client.POST("/trash/resource/{resourceId}/restore", {
+    params: { path: { resourceId } },
+  });
+};

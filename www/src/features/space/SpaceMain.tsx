@@ -2,6 +2,7 @@ import AppView from "./components/AppView";
 import AuditLogView from "./components/AuditLogView";
 import FolderView from "./components/FolderView";
 import ResourcesView from "./components/ResourcesView";
+import TrashView from "./components/TrashView";
 import UsersSpacesView from "./components/UsersSpacesView";
 import type { SpaceMainProps } from "./types";
 
@@ -18,6 +19,10 @@ export default function WorkspaceMain(props: SpaceMainProps) {
         onBackClick={() => onSelect("root")}
       />
     );
+  }
+
+  if (selectedId === "trash") {
+    return <TrashView spaceId={spaceId} spaceName={spaceName} />;
   }
 
   if (selectedId === "audit-log") {

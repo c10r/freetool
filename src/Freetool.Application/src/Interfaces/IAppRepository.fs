@@ -33,3 +33,11 @@ type IAppRepository =
     abstract member GetCountBySpaceIdsAsync: SpaceId list -> Task<int>
 
     abstract member GetByResourceIdAsync: ResourceId -> Task<ValidatedApp list>
+
+    abstract member GetDeletedByFolderIdsAsync: FolderId list -> Task<ValidatedApp list>
+
+    abstract member GetDeletedByIdAsync: AppId -> Task<ValidatedApp option>
+
+    abstract member RestoreAsync: ValidatedApp -> Task<Result<unit, DomainError>>
+
+    abstract member CheckNameConflictAsync: string -> FolderId -> Task<bool>

@@ -229,6 +229,8 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
                         for event in events do
                             do! eventRepository.SaveEventAsync event
 
+                        // Commit the events to the database
+                        let! _ = context.SaveChangesAsync()
                         return Ok()
                 with
                 | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete folder: {ex.Message}")
@@ -262,3 +264,116 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
 
         member _.GetChildCountAsync(parentId: FolderId) : Task<int> =
             task { return! context.Folders.CountAsync(fun f -> f.ParentId = Some(parentId)) }
+
+        member _.GetDeletedByIdAsync(folderId: FolderId) : Task<ValidatedFolder option> =
+            task {
+                let! folderData =
+                    context.Folders
+                        .IgnoreQueryFilters()
+                        .Where(fun f -> f.Id = folderId && f.IsDeleted)
+                        .FirstOrDefaultAsync()
+
+                let folderDataOption = Option.ofObj folderData
+
+                match folderDataOption with
+                | None -> return None
+                | Some data ->
+                    // Initialize Children to prevent null reference
+                    data.Children <- []
+                    return Some(Folder.fromData data)
+            }
+
+        member _.GetDeletedBySpaceAsync(spaceId: SpaceId) : Task<ValidatedFolder list> =
+            task {
+                let! folderDatas =
+                    context.Folders
+                        .IgnoreQueryFilters()
+                        .Where(fun f -> f.SpaceId = spaceId && f.IsDeleted)
+                        .OrderByDescending(fun f -> f.UpdatedAt)
+                        .ToListAsync()
+
+                // Initialize Children for all retrieved folders
+                folderDatas |> Seq.iter (fun data -> data.Children <- [])
+
+                return folderDatas |> Seq.map Folder.fromData |> Seq.toList
+            }
+
+        member _.RestoreWithChildrenAsync(folder: ValidatedFolder) : Task<Result<int, DomainError>> =
+            task {
+                try
+                    let folderId = Folder.getId folder
+                    let folderIdValue = folderId.Value
+                    let updatedAt = System.DateTime.UtcNow
+                    let newName = folder.State.Name.Value
+
+                    // First, update the root folder with new name (if renamed) and restore it
+                    let! rootUpdated =
+                        context.Database.ExecuteSqlInterpolatedAsync(
+                            $"""
+                            UPDATE Folders
+                            SET IsDeleted = 0, UpdatedAt = {updatedAt}, Name = {newName}
+                            WHERE Id = {folderIdValue} AND IsDeleted = 1
+                            """
+                        )
+
+                    if rootUpdated = 0 then
+                        return Error(NotFound "Folder not found in trash")
+                    else
+                        // Then restore child folders using CTE (not the root, already done)
+                        let! childFoldersRestored =
+                            context.Database.ExecuteSqlInterpolatedAsync(
+                                $"""
+                                WITH FolderHierarchy AS (
+                                    SELECT Id FROM Folders WHERE Id = {folderIdValue}
+                                    UNION ALL
+                                    SELECT f.Id FROM Folders f
+                                    INNER JOIN FolderHierarchy fh ON f.ParentId = fh.Id
+                                    WHERE f.IsDeleted = 1
+                                )
+                                UPDATE Folders
+                                SET IsDeleted = 0, UpdatedAt = {updatedAt}
+                                WHERE Id IN (SELECT Id FROM FolderHierarchy) AND Id <> {folderIdValue} AND IsDeleted = 1
+                                """
+                            )
+
+                        // Then restore apps in those folders
+                        let! appsRestored =
+                            context.Database.ExecuteSqlInterpolatedAsync(
+                                $"""
+                                WITH FolderHierarchy AS (
+                                    SELECT Id FROM Folders WHERE Id = {folderIdValue}
+                                    UNION ALL
+                                    SELECT f.Id FROM Folders f
+                                    INNER JOIN FolderHierarchy fh ON f.ParentId = fh.Id
+                                )
+                                UPDATE Apps
+                                SET IsDeleted = 0, UpdatedAt = {updatedAt}
+                                WHERE FolderId IN (SELECT Id FROM FolderHierarchy) AND IsDeleted = 1
+                                """
+                            )
+
+                        // Save the restore event for the root folder
+                        let events = Folder.getUncommittedEvents folder
+
+                        for event in events do
+                            do! eventRepository.SaveEventAsync event
+
+                        // Commit the events to the database
+                        let! _ = context.SaveChangesAsync()
+                        return Ok(1 + childFoldersRestored + appsRestored)
+                with ex ->
+                    return Error(InvalidOperation $"Database error: {ex.Message}")
+            }
+
+        member _.CheckNameConflictAsync (name: FolderName) (parentId: FolderId option) (spaceId: SpaceId) : Task<bool> =
+            task {
+                match parentId with
+                | Some pid ->
+                    return!
+                        context.Folders.AnyAsync(fun f ->
+                            f.Name = name && f.ParentId = Some pid && f.SpaceId = spaceId && not f.IsDeleted)
+                | None ->
+                    return!
+                        context.Folders.AnyAsync(fun f ->
+                            f.Name = name && f.ParentId = None && f.SpaceId = spaceId && not f.IsDeleted)
+            }

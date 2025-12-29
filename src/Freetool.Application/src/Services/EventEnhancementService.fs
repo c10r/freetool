@@ -89,6 +89,11 @@ type EventEnhancementService
                             JsonSerializer.Deserialize<Freetool.Domain.Events.AppDeletedEvent>(eventData, jsonOptions)
 
                         return appEventData.Name.Value
+                    | AppRestoredEvent ->
+                        let appEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.AppRestoredEvent>(eventData, jsonOptions)
+
+                        return appEventData.Name.Value
                 | FolderEvents folderEvent ->
                     match folderEvent with
                     | FolderCreatedEvent ->
@@ -119,6 +124,14 @@ type EventEnhancementService
                             )
 
                         return folderEventData.Name.Value
+                    | FolderRestoredEvent ->
+                        let folderEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.FolderRestoredEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        return folderEventData.Name.Value
                 | ResourceEvents resourceEvent ->
                     match resourceEvent with
                     | ResourceCreatedEvent ->
@@ -144,6 +157,14 @@ type EventEnhancementService
                     | ResourceDeletedEvent ->
                         let resourceEventData =
                             JsonSerializer.Deserialize<Freetool.Domain.Events.ResourceDeletedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        return resourceEventData.Name.Value
+                    | ResourceRestoredEvent ->
+                        let resourceEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.ResourceRestoredEvent>(
                                 eventData,
                                 jsonOptions
                             )
@@ -281,16 +302,19 @@ type EventEnhancementService
             | AppCreatedEvent -> $"{userName} created app \"{entityName}\""
             | AppUpdatedEvent -> $"{userName} updated app \"{entityName}\""
             | AppDeletedEvent -> $"{userName} deleted app \"{entityName}\""
+            | AppRestoredEvent -> $"{userName} restored app \"{entityName}\""
         | FolderEvents folderEvent ->
             match folderEvent with
             | FolderCreatedEvent -> $"{userName} created folder \"{entityName}\""
             | FolderUpdatedEvent -> $"{userName} updated folder \"{entityName}\""
             | FolderDeletedEvent -> $"{userName} deleted folder \"{entityName}\""
+            | FolderRestoredEvent -> $"{userName} restored folder \"{entityName}\""
         | ResourceEvents resourceEvent ->
             match resourceEvent with
             | ResourceCreatedEvent -> $"{userName} created resource \"{entityName}\""
             | ResourceUpdatedEvent -> $"{userName} updated resource \"{entityName}\""
             | ResourceDeletedEvent -> $"{userName} deleted resource \"{entityName}\""
+            | ResourceRestoredEvent -> $"{userName} restored resource \"{entityName}\""
         | GroupEvents groupEvent ->
             match groupEvent with
             | GroupCreatedEvent -> $"{userName} created group \"{entityName}\""

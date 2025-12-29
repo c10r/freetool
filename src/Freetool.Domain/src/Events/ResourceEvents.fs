@@ -56,6 +56,18 @@ type ResourceDeletedEvent =
         member this.EventId = this.EventId
         member this.UserId = this.ActorUserId
 
+type ResourceRestoredEvent =
+    { ResourceId: ResourceId
+      Name: ResourceName
+      OccurredAt: DateTime
+      EventId: Guid
+      ActorUserId: UserId }
+
+    interface IDomainEvent with
+        member this.OccurredAt = this.OccurredAt
+        member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
+
 module ResourceEvents =
     let resourceCreated
         (actorUserId: UserId)
@@ -98,3 +110,11 @@ module ResourceEvents =
           EventId = Guid.NewGuid()
           ActorUserId = actorUserId }
         : ResourceDeletedEvent
+
+    let resourceRestored (actorUserId: UserId) (resourceId: ResourceId) (name: ResourceName) =
+        { ResourceId = resourceId
+          Name = name
+          OccurredAt = DateTime.UtcNow
+          EventId = Guid.NewGuid()
+          ActorUserId = actorUserId }
+        : ResourceRestoredEvent

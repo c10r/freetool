@@ -59,6 +59,18 @@ type AppDeletedEvent =
         member this.EventId = this.EventId
         member this.UserId = this.ActorUserId
 
+type AppRestoredEvent =
+    { AppId: AppId
+      Name: AppName
+      OccurredAt: DateTime
+      EventId: Guid
+      ActorUserId: UserId }
+
+    interface IDomainEvent with
+        member this.OccurredAt = this.OccurredAt
+        member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
+
 module AppEvents =
     let appCreated
         (actorUserId: UserId)
@@ -93,3 +105,11 @@ module AppEvents =
           EventId = Guid.NewGuid()
           ActorUserId = actorUserId }
         : AppDeletedEvent
+
+    let appRestored (actorUserId: UserId) (appId: AppId) (name: AppName) =
+        { AppId = appId
+          Name = name
+          OccurredAt = DateTime.UtcNow
+          EventId = Guid.NewGuid()
+          ActorUserId = actorUserId }
+        : AppRestoredEvent

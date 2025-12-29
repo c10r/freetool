@@ -33,6 +33,10 @@ function getPathFromSelectedId(
     // Resources are now space-specific
     return spaceId ? `/spaces/${spaceId}/resources` : "/spaces";
   }
+  if (selectedId === "trash") {
+    // Trash is space-specific
+    return spaceId ? `/spaces/${spaceId}/trash` : "/spaces";
+  }
   if (selectedId === "root") {
     return spaceId ? `/spaces/${spaceId}` : "/spaces";
   }
@@ -59,6 +63,9 @@ function getSelectedIdFromPath(
   }
   if (pathname === `/spaces/${spaceId}/resources`) {
     return "resources";
+  }
+  if (pathname === `/spaces/${spaceId}/trash`) {
+    return "trash";
   }
   if (pathname === "/spaces" && !spaceId) {
     return rootId;
@@ -134,7 +141,9 @@ function WorkspaceContent() {
     if (!nodeId) {
       return true; // Root path is always valid
     }
-    if (["resources", "users-&-teams", "audit-log"].includes(selectedId)) {
+    if (
+      ["resources", "trash", "users-&-teams", "audit-log"].includes(selectedId)
+    ) {
       return true; // Special sections are valid
     }
     return nodes[selectedId] !== undefined; // Check if node exists
@@ -482,6 +491,17 @@ function buildBreadcrumb(
   }
   if (id === "resources") {
     return [{ id: "resources", name: "Resources" }];
+  }
+  if (id === "trash" && currentSpaceId) {
+    const space = spaces.find((s) => s.id === currentSpaceId);
+    const spaceName = space?.name || "Space";
+    return [
+      { id: "root", name: spaceName },
+      { id: "trash", name: "Trash" },
+    ];
+  }
+  if (id === "trash") {
+    return [{ id: "trash", name: "Trash" }];
   }
   if (id === "users-&-spaces") {
     return [{ id: "users-&-spaces", name: "Users & Spaces" }];

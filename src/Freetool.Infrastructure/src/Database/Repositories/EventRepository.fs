@@ -50,17 +50,22 @@ type EventRepository(context: FreetoolDbContext) =
                     | :? Events.AppCreatedEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.AppUpdatedEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.AppDeletedEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.AppRestoredEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.ResourceCreatedEvent as e ->
                         (e.ResourceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.ResourceUpdatedEvent as e ->
                         (e.ResourceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.ResourceDeletedEvent as e ->
                         (e.ResourceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.ResourceRestoredEvent as e ->
+                        (e.ResourceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.FolderCreatedEvent as e ->
                         (e.FolderId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.FolderUpdatedEvent as e ->
                         (e.FolderId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.FolderDeletedEvent as e ->
+                        (e.FolderId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.FolderRestoredEvent as e ->
                         (e.FolderId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.GroupCreatedEvent as e ->
                         (e.GroupId.ToString(), JsonSerializer.Serialize(e, jsonOptions))

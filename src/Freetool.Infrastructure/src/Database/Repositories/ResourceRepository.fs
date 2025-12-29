@@ -116,3 +116,54 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
 
         member _.GetCountAsync() : Task<int> =
             task { return! context.Resources.CountAsync() }
+
+        member _.GetDeletedByIdAsync(resourceId: ResourceId) : Task<ValidatedResource option> =
+            task {
+                let! resourceData =
+                    context.Resources
+                        .IgnoreQueryFilters()
+                        .Where(fun r -> r.Id = resourceId && r.IsDeleted)
+                        .FirstOrDefaultAsync()
+
+                return resourceData |> Option.ofObj |> Option.map Resource.fromData
+            }
+
+        member _.GetDeletedBySpaceAsync(spaceId: SpaceId) : Task<ValidatedResource list> =
+            task {
+                let! resourceDatas =
+                    context.Resources
+                        .IgnoreQueryFilters()
+                        .Where(fun r -> r.SpaceId = spaceId && r.IsDeleted)
+                        .OrderByDescending(fun r -> r.UpdatedAt)
+                        .ToListAsync()
+
+                return resourceDatas |> Seq.map Resource.fromData |> Seq.toList
+            }
+
+        member _.RestoreAsync(resource: ValidatedResource) : Task<Result<unit, DomainError>> =
+            task {
+                try
+                    let resourceId = Resource.getId resource
+
+                    let! existingData =
+                        context.Resources.IgnoreQueryFilters().FirstOrDefaultAsync(fun r -> r.Id = resourceId)
+
+                    match Option.ofObj existingData with
+                    | None -> return Error(NotFound "Resource not found in trash")
+                    | Some entity ->
+                        context.Entry(entity).CurrentValues.SetValues(resource.State)
+
+                        let events = Resource.getUncommittedEvents resource
+
+                        for event in events do
+                            do! eventRepository.SaveEventAsync event
+
+                        let! _ = context.SaveChangesAsync()
+                        return Ok()
+                with
+                | :? DbUpdateException as ex -> return Error(Conflict $"Failed to restore resource: {ex.Message}")
+                | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
+            }
+
+        member _.CheckNameConflictAsync (name: ResourceName) (spaceId: SpaceId) : Task<bool> =
+            task { return! context.Resources.AnyAsync(fun r -> r.Name = name && r.SpaceId = spaceId) }

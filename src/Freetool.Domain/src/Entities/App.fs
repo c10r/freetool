@@ -262,6 +262,19 @@ module App =
         { app with
             UncommittedEvents = app.UncommittedEvents @ [ appDeletedEvent :> IDomainEvent ] }
 
+    let restore (actorUserId: UserId) (newName: string option) (app: ValidatedApp) : ValidatedApp =
+        let finalName = newName |> Option.defaultValue app.State.Name
+        let appName = AppName.Create(Some finalName) |> Result.defaultValue (AppName(""))
+        let appRestoredEvent = AppEvents.appRestored actorUserId app.State.Id appName
+
+        { app with
+            State =
+                { app.State with
+                    Name = finalName
+                    IsDeleted = false
+                    UpdatedAt = DateTime.UtcNow }
+            UncommittedEvents = app.UncommittedEvents @ [ appRestoredEvent :> IDomainEvent ] }
+
     let getUncommittedEvents (app: ValidatedApp) : IDomainEvent list = app.UncommittedEvents
 
     let markEventsAsCommitted (app: ValidatedApp) : ValidatedApp = { app with UncommittedEvents = [] }

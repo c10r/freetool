@@ -50,6 +50,10 @@ type MockFolderRepository(getByIdFn: FolderId -> Task<ValidatedFolder option>) =
         member _.GetCountBySpaceAsync(_) = Task.FromResult(0)
         member _.GetRootCountAsync() = Task.FromResult(0)
         member _.GetChildCountAsync(_) = Task.FromResult(0)
+        member _.GetDeletedBySpaceAsync(_) = Task.FromResult([])
+        member _.GetDeletedByIdAsync(_) = Task.FromResult(None)
+        member _.RestoreWithChildrenAsync _ = Task.FromResult(Ok 0)
+        member _.CheckNameConflictAsync _ _ _ = Task.FromResult(false)
 
 // Mock command handler for testing
 type MockFolderCommandHandler

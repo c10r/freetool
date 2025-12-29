@@ -192,3 +192,50 @@ type AppRepository(context: FreetoolDbContext, eventRepository: IEventRepository
                 let! appDatas = context.Apps.Where(fun a -> a.ResourceId = resourceId).ToListAsync()
                 return appDatas |> Seq.map (fun data -> App.fromData data) |> Seq.toList
             }
+
+        member _.GetDeletedByIdAsync(appId: AppId) : Task<ValidatedApp option> =
+            task {
+                let! appData =
+                    context.Apps.IgnoreQueryFilters().Where(fun a -> a.Id = appId && a.IsDeleted).FirstOrDefaultAsync()
+
+                return appData |> Option.ofObj |> Option.map App.fromData
+            }
+
+        member _.GetDeletedByFolderIdsAsync(folderIds: FolderId list) : Task<ValidatedApp list> =
+            task {
+                let! appDatas =
+                    context.Apps
+                        .IgnoreQueryFilters()
+                        .Where(fun a -> folderIds.Contains(a.FolderId) && a.IsDeleted)
+                        .OrderByDescending(fun a -> a.UpdatedAt)
+                        .ToListAsync()
+
+                return appDatas |> Seq.map App.fromData |> Seq.toList
+            }
+
+        member _.RestoreAsync(app: ValidatedApp) : Task<Result<unit, DomainError>> =
+            task {
+                try
+                    let appId = App.getId app
+
+                    let! existingData = context.Apps.IgnoreQueryFilters().FirstOrDefaultAsync(fun a -> a.Id = appId)
+
+                    match Option.ofObj existingData with
+                    | None -> return Error(NotFound "App not found in trash")
+                    | Some entity ->
+                        context.Entry(entity).CurrentValues.SetValues(app.State)
+
+                        let events = App.getUncommittedEvents app
+
+                        for event in events do
+                            do! eventRepository.SaveEventAsync event
+
+                        let! _ = context.SaveChangesAsync()
+                        return Ok()
+                with
+                | :? DbUpdateException as ex -> return Error(Conflict $"Failed to restore app: {ex.Message}")
+                | ex -> return Error(InvalidOperation $"Database error: {ex.Message}")
+            }
+
+        member _.CheckNameConflictAsync (name: string) (folderId: FolderId) : Task<bool> =
+            task { return! context.Apps.AnyAsync(fun a -> a.Name = name && a.FolderId = folderId) }

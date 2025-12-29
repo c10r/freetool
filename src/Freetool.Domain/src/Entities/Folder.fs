@@ -138,6 +138,20 @@ module Folder =
         { folder with
             UncommittedEvents = folder.UncommittedEvents @ [ folderDeletedEvent :> IDomainEvent ] }
 
+    let restore (actorUserId: UserId) (newName: FolderName option) (folder: ValidatedFolder) : ValidatedFolder =
+        let finalName = newName |> Option.defaultValue folder.State.Name
+
+        let folderRestoredEvent =
+            FolderEvents.folderRestored actorUserId folder.State.Id finalName
+
+        { folder with
+            State =
+                { folder.State with
+                    Name = finalName
+                    IsDeleted = false
+                    UpdatedAt = DateTime.UtcNow }
+            UncommittedEvents = folder.UncommittedEvents @ [ folderRestoredEvent :> IDomainEvent ] }
+
     let getUncommittedEvents (folder: ValidatedFolder) : IDomainEvent list = folder.UncommittedEvents
 
     let markEventsAsCommitted (folder: ValidatedFolder) : ValidatedFolder = { folder with UncommittedEvents = [] }

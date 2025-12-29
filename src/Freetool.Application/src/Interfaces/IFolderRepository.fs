@@ -33,3 +33,11 @@ type IFolderRepository =
     abstract member GetRootCountAsync: unit -> Task<int>
 
     abstract member GetChildCountAsync: FolderId -> Task<int>
+
+    abstract member GetDeletedBySpaceAsync: SpaceId -> Task<ValidatedFolder list>
+
+    abstract member GetDeletedByIdAsync: FolderId -> Task<ValidatedFolder option>
+
+    abstract member RestoreWithChildrenAsync: ValidatedFolder -> Task<Result<int, DomainError>>
+
+    abstract member CheckNameConflictAsync: FolderName -> FolderId option -> SpaceId -> Task<bool>

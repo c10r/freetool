@@ -18,12 +18,17 @@ const safeJsonParse = (
 
 type UserEvents = "UserCreatedEvent" | "UserUpdatedEvent" | "UserDeletedEvent";
 
-type AppEvents = "AppCreatedEvent" | "AppUpdatedEvent" | "AppDeletedEvent";
+type AppEvents =
+  | "AppCreatedEvent"
+  | "AppUpdatedEvent"
+  | "AppDeletedEvent"
+  | "AppRestoredEvent";
 
 type FolderEvents =
   | "FolderCreatedEvent"
   | "FolderUpdatedEvent"
-  | "FolderDeletedEvent";
+  | "FolderDeletedEvent"
+  | "FolderRestoredEvent";
 
 type GroupEvents =
   | "GroupCreatedEvent"
@@ -33,7 +38,8 @@ type GroupEvents =
 type ResourceEvents =
   | "ResourceCreatedEvent"
   | "ResourceUpdatedEvent"
-  | "ResourceDeletedEvent";
+  | "ResourceDeletedEvent"
+  | "ResourceRestoredEvent";
 
 type RunEvents = "RunCreatedEvent" | "RunStatusChangedEvent";
 
@@ -71,6 +77,9 @@ const getEventTypeColor = (eventType: EventType): string => {
   }
   if (eventType.includes("Deleted")) {
     return "bg-red-100 text-red-800";
+  }
+  if (eventType.includes("Restored")) {
+    return "bg-teal-100 text-teal-800";
   }
   if (eventType.includes("StatusChanged")) {
     return "bg-yellow-100 text-yellow-800";

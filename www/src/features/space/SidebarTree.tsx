@@ -6,6 +6,7 @@ import {
   FolderClosed,
   FolderOpen,
   Shield,
+  Trash2,
   Users,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -166,6 +167,19 @@ export default function SidebarTree({
                     >
                       <Database size={16} />
                       <span>Resources</span>
+                    </button>
+
+                    {/* Trash (space-specific) */}
+                    <button
+                      type="button"
+                      onClick={() => onSelect("trash", space.id)}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent",
+                        selectedId === "trash" && isCurrentSpace && "bg-accent"
+                      )}
+                    >
+                      <Trash2 size={16} />
+                      <span>Trash</span>
                     </button>
 
                     {/* Space folders and apps */}
