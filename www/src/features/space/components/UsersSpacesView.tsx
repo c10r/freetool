@@ -689,11 +689,18 @@ export default function UsersSpacesView() {
                       <Select
                         value={editModeratorId}
                         onValueChange={(value) => {
+                          const oldModeratorId = editModeratorId;
                           setEditModeratorId(value);
-                          // Remove new moderator from members
-                          setEditSelectedMemberIds((prev) =>
-                            prev.filter((id) => id !== value)
-                          );
+                          // Add old moderator back to members, remove new moderator from members
+                          setEditSelectedMemberIds((prev) => {
+                            const withOldModerator =
+                              oldModeratorId && !prev.includes(oldModeratorId)
+                                ? [...prev, oldModeratorId]
+                                : prev;
+                            return withOldModerator.filter(
+                              (id) => id !== value
+                            );
+                          });
                         }}
                       >
                         <SelectTrigger id="edit-moderator-select">
@@ -910,7 +917,11 @@ export default function UsersSpacesView() {
                       <Crown className="h-4 w-4 text-amber-500" />
                       <span className="text-muted-foreground">Moderator:</span>
                       <span className="font-medium">
-                        {moderator?.name || "Unknown"}
+                        {moderator
+                          ? isInvitedPlaceholder(moderator)
+                            ? moderator.email
+                            : moderator.name
+                          : "Unknown"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
