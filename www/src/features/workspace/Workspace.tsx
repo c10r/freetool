@@ -52,7 +52,8 @@ interface ApiFolderResponse {
 // Transform API folder data to workspace nodes structure
 function transformFoldersToNodes(
   folders: ApiFolderResponse[],
-  rootId: string
+  rootId: string,
+  workspaceId?: string
 ): Record<string, WorkspaceNode> {
   const nodes: Record<string, WorkspaceNode> = {};
 
@@ -62,6 +63,7 @@ function transformFoldersToNodes(
     name: "Workspaces",
     type: "folder",
     childrenIds: [],
+    workspaceId,
   };
   nodes[rootId] = root;
 
@@ -74,6 +76,7 @@ function transformFoldersToNodes(
         type: "folder",
         parentId: folder.parentId ?? rootId, // Use nullish coalescing to handle null parentId
         childrenIds: [],
+        workspaceId,
       };
       nodes[folder.id] = folderNode;
     }
@@ -211,7 +214,8 @@ function WorkspaceContent() {
           // Transform API response to nodes structure
           const transformedNodes = transformFoldersToNodes(
             response.data.items || [],
-            rootId
+            rootId,
+            workspaceId
           );
           setNodes(transformedNodes);
         }
@@ -339,6 +343,33 @@ function WorkspaceContent() {
 
   const updateNode = (node: WorkspaceNode) =>
     setNodes((prev) => ({ ...prev, [node.id]: node }));
+
+  const insertFolderNode = (folder: FolderNode) =>
+    setNodes((prev) => {
+      const parentId = folder.parentId || rootId;
+      const parentNode = prev[parentId];
+
+      if (!parentNode || parentNode.type !== "folder") {
+        return {
+          ...prev,
+          [folder.id]: folder,
+        };
+      }
+
+      const hasChild = parentNode.childrenIds.includes(folder.id);
+      const updatedParent: FolderNode = {
+        ...parentNode,
+        childrenIds: hasChild
+          ? parentNode.childrenIds
+          : [...parentNode.childrenIds, folder.id],
+      };
+
+      return {
+        ...prev,
+        [folder.id]: folder,
+        [parentId]: updatedParent,
+      };
+    });
 
   const addFolder = (parentId: string) =>
     setNodes((prev) => {
@@ -648,6 +679,7 @@ function WorkspaceContent() {
             selectedId={selectedId}
             onSelect={setSelectedId}
             updateNode={updateNode}
+            insertFolderNode={insertFolderNode}
             createFolder={addFolder}
             createApp={addApp}
             deleteNode={deleteNode}
@@ -655,7 +687,7 @@ function WorkspaceContent() {
             createEndpoint={createEndpoint}
             updateEndpoint={updateEndpoint}
             deleteEndpoint={deleteEndpoint}
-            workspaceId={workspaceId}
+            workspaceId={workspaceId || ""}
           />
         )}
       </div>

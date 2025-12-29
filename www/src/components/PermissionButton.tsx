@@ -5,6 +5,7 @@
  * Shows a tooltip explaining why the button is disabled.
  */
 
+import { forwardRef } from "react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import {
   Tooltip,
@@ -79,16 +80,22 @@ export interface PermissionButtonProps extends ButtonProps {
  * </PermissionButton>
  * ```
  */
-export function PermissionButton({
-  workspaceId,
-  permission,
-  tooltipMessage,
-  hideWhenDisabled = false,
-  children,
-  className,
-  disabled,
-  ...props
-}: PermissionButtonProps) {
+export const PermissionButton = forwardRef<
+  HTMLButtonElement,
+  PermissionButtonProps
+>(function PermissionButton(
+  {
+    workspaceId,
+    permission,
+    tooltipMessage,
+    hideWhenDisabled = false,
+    children,
+    className,
+    disabled,
+    ...props
+  },
+  ref
+) {
   const hasPermission = useHasPermission(workspaceId, permission);
   const isDisabled = !hasPermission || disabled;
 
@@ -99,6 +106,7 @@ export function PermissionButton({
 
   const button = (
     <Button
+      ref={ref}
       {...props}
       disabled={isDisabled}
       className={cn(className, !hasPermission && "cursor-not-allowed")}
@@ -125,4 +133,4 @@ export function PermissionButton({
 
   // User has permission - render button normally (may still be disabled for other reasons)
   return button;
-}
+});

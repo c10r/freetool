@@ -71,6 +71,7 @@ export interface WorkspaceMainProps {
   selectedId: string;
   onSelect: (id: string) => void;
   updateNode: (node: WorkspaceNode) => void;
+  insertFolderNode: (folder: FolderNode) => void;
   createFolder: (parentId: string) => void;
   createApp: (
     parentId: string,

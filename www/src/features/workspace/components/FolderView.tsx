@@ -48,19 +48,27 @@ export default function FolderView({
   onSelect,
   createApp,
   updateNode,
+  insertFolderNode,
   deleteNode,
   workspaceId,
 }: WorkspaceMainProps & { folder: FolderNode }) {
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(folder.name);
+  const effectiveWorkspaceId = folder.workspaceId || workspaceId || "";
 
   // Permission checks
-  const _canCreateFolder = useHasPermission(workspaceId, "create_folder");
-  const _canEditFolder = useHasPermission(workspaceId, "edit_folder");
-  const _canDeleteFolder = useHasPermission(workspaceId, "delete_folder");
-  const _canCreateApp = useHasPermission(workspaceId, "create_app");
-  const _canDeleteApp = useHasPermission(workspaceId, "delete_app");
+  const _canCreateFolder = useHasPermission(
+    effectiveWorkspaceId,
+    "create_folder"
+  );
+  const _canEditFolder = useHasPermission(effectiveWorkspaceId, "edit_folder");
+  const _canDeleteFolder = useHasPermission(
+    effectiveWorkspaceId,
+    "delete_folder"
+  );
+  const _canCreateApp = useHasPermission(effectiveWorkspaceId, "create_app");
+  const _canDeleteApp = useHasPermission(effectiveWorkspaceId, "delete_app");
 
   // Update name when folder changes
   useEffect(() => {
@@ -128,7 +136,7 @@ export default function FolderView({
       return;
     }
 
-    if (!workspaceId) {
+    if (!effectiveWorkspaceId) {
       setCreateFolderError("Select a workspace before creating folders.");
       return;
     }
@@ -144,7 +152,7 @@ export default function FolderView({
       const response = await createFolderAPI(
         trimmedName,
         parentIdForApi,
-        workspaceId
+        effectiveWorkspaceId
       );
       if (response.error) {
         setCreateFolderError(
@@ -159,18 +167,10 @@ export default function FolderView({
           type: "folder" as const,
           parentId: newFolderParentId,
           childrenIds: [],
+          workspaceId: effectiveWorkspaceId,
         };
 
-        // Update nodes and parent's childrenIds
-        updateNode(folderNode);
-        const parentNode = nodes[newFolderParentId];
-        if (parentNode && parentNode.type === "folder") {
-          const updatedParent = {
-            ...parentNode,
-            childrenIds: [...parentNode.childrenIds, newFolder.id ?? ""],
-          };
-          updateNode(updatedParent);
-        }
+        insertFolderNode(folderNode);
 
         // Reset form
         setNewFolderName("");
@@ -392,7 +392,7 @@ export default function FolderView({
           )}
           {folder.id !== "root" && (
             <PermissionButton
-              workspaceId={workspaceId}
+              workspaceId={effectiveWorkspaceId}
               permission="edit_folder"
               tooltipMessage="You don't have permission to rename folders. Contact your team admin."
               variant="secondary"
@@ -409,7 +409,7 @@ export default function FolderView({
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
               <PermissionButton
-                workspaceId={workspaceId}
+                workspaceId={effectiveWorkspaceId}
                 permission="create_folder"
                 tooltipMessage="You don't have permission to create folders. Contact your team admin."
                 onClick={() => {
@@ -431,6 +431,8 @@ export default function FolderView({
                 </div>
                 <div className="space-y-2">
                   <Input
+                    id="new-folder-name"
+                    name="newFolderName"
                     placeholder="Folder name"
                     value={newFolderName}
                     onChange={(e) => {
@@ -478,7 +480,7 @@ export default function FolderView({
               <TooltipTrigger asChild>
                 <span>
                   <PermissionButton
-                    workspaceId={workspaceId}
+                    workspaceId={effectiveWorkspaceId}
                     permission="create_app"
                     tooltipMessage="You don't have permission to create apps. Contact your team admin."
                     variant="secondary"
@@ -604,7 +606,7 @@ export default function FolderView({
                   >
                     <PopoverTrigger asChild>
                       <PermissionButton
-                        workspaceId={workspaceId}
+                        workspaceId={effectiveWorkspaceId}
                         permission="create_folder"
                         tooltipMessage="You don't have permission to create folders. Contact your team admin."
                         variant="secondary"
@@ -629,6 +631,8 @@ export default function FolderView({
                         </div>
                         <div className="space-y-2">
                           <Input
+                            id={`nested-folder-name-${newFolderParentId}`}
+                            name="nestedFolderName"
                             placeholder="Folder name"
                             value={newFolderName}
                             onChange={(e) => {
@@ -687,7 +691,7 @@ export default function FolderView({
                       <Play size={16} />
                     </Button>
                     <PermissionButton
-                      workspaceId={workspaceId}
+                      workspaceId={effectiveWorkspaceId}
                       permission="edit_app"
                       tooltipMessage="You don't have permission to edit apps. Contact your team admin."
                       variant="secondary"
@@ -704,7 +708,7 @@ export default function FolderView({
                   </>
                 )}
                 <PermissionButton
-                  workspaceId={workspaceId}
+                  workspaceId={effectiveWorkspaceId}
                   permission={
                     child.type === "folder" ? "delete_folder" : "delete_app"
                   }
