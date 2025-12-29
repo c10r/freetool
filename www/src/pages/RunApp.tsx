@@ -393,12 +393,12 @@ const RunApp = () => {
                         <div>
                           <h4 className="font-medium mb-2">Method & URL</h4>
                           <p className="text-sm bg-muted p-2 rounded font-mono">
-                            {result.executableRequest?.value?.httpMethod}{" "}
-                            {result.executableRequest?.value?.baseUrl}
-                            {result.executableRequest?.value?.urlParameters &&
-                              result.executableRequest.value.urlParameters
-                                .length > 0 &&
-                              `?${result.executableRequest.value.urlParameters
+                            {result.executableRequest?.httpMethod}{" "}
+                            {result.executableRequest?.baseUrl}
+                            {result.executableRequest?.urlParameters &&
+                              result.executableRequest.urlParameters.length >
+                                0 &&
+                              `?${result.executableRequest.urlParameters
                                 .map(
                                   (tuple) =>
                                     `${tuple.item1 ?? ""}=${tuple.item2 ?? ""}`
@@ -407,15 +407,15 @@ const RunApp = () => {
                           </p>
                         </div>
 
-                        {result.executableRequest?.value?.headers &&
-                          result.executableRequest.value.headers.length > 0 && (
+                        {result.executableRequest?.headers &&
+                          result.executableRequest.headers.length > 0 && (
                             <div>
                               <h4 className="font-medium mb-2">Headers</h4>
                               <div className="bg-muted p-3 rounded">
                                 <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
                                   {JSON.stringify(
                                     Object.fromEntries(
-                                      result.executableRequest.value.headers.map(
+                                      result.executableRequest.headers.map(
                                         (tuple) => [
                                           tuple.item1 ?? "",
                                           tuple.item2 ?? "",
@@ -430,15 +430,15 @@ const RunApp = () => {
                             </div>
                           )}
 
-                        {result.executableRequest?.value?.body &&
-                          result.executableRequest.value.body.length > 0 && (
+                        {result.executableRequest?.body &&
+                          result.executableRequest.body.length > 0 && (
                             <div>
                               <h4 className="font-medium mb-2">Body</h4>
                               <div className="bg-muted p-3 rounded">
                                 <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
                                   {JSON.stringify(
                                     Object.fromEntries(
-                                      result.executableRequest.value.body.map(
+                                      result.executableRequest.body.map(
                                         (tuple) => [
                                           tuple.item1 ?? "",
                                           tuple.item2 ?? "",

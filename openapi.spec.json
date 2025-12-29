@@ -5553,7 +5553,7 @@
           "executableRequest": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/ExecutableHttpRequestFSharpOption"
+                "$ref": "#/components/schemas/ExecutableHttpRequest"
               }
             ],
             "nullable": true

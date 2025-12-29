@@ -334,7 +334,7 @@ export default function FolderView({
   };
 
   const handleRunApp = (appId: string) => {
-    navigate(`/workspaces/${appId}/run`);
+    navigate(`/workspaces/${effectiveWorkspaceId}/${appId}/run`);
   };
 
   const handleCardClick = (child: WorkspaceNode) => {

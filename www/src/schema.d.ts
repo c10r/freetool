@@ -3365,9 +3365,7 @@ export interface components {
       appId: string & components["schemas"]["AppId"];
       status: components["schemas"]["RunStatus"];
       inputValues: components["schemas"]["RunInputValue"][];
-      executableRequest?:
-        | components["schemas"]["ExecutableHttpRequestFSharpOption"]
-        | null;
+      executableRequest?: components["schemas"]["ExecutableHttpRequest"] | null;
       response?: (string & components["schemas"]["StringFSharpOption"]) | null;
       errorMessage?:
         | (string & components["schemas"]["StringFSharpOption"])
