@@ -78,6 +78,10 @@ export default function SidebarTree({
         }
       }
     });
+    // Sort folders alphabetically within each space
+    for (const spId of Object.keys(grouped)) {
+      grouped[spId].sort((a, b) => a.name.localeCompare(b.name));
+    }
     return grouped;
   }, [nodes, rootId]);
 
@@ -154,6 +158,25 @@ export default function SidebarTree({
 
                 {isExpanded && (
                   <div className="ml-4 mt-1 space-y-1">
+                    {/* Space folders and apps */}
+                    {rootFolders.map((folder) => {
+                      const node = buildTree(nodes, folder.id);
+                      if (!node) {
+                        return null;
+                      }
+                      return (
+                        <TreeNodeComponent
+                          key={folder.id}
+                          node={node}
+                          depth={1}
+                          selectedId={selectedId}
+                          onSelect={onSelect}
+                          expandedFolders={expandedFolders}
+                          toggleExpanded={toggleFolder}
+                        />
+                      );
+                    })}
+
                     {/* Resources (space-specific) */}
                     <button
                       type="button"
@@ -181,25 +204,6 @@ export default function SidebarTree({
                       <Trash2 size={16} />
                       <span>Trash</span>
                     </button>
-
-                    {/* Space folders and apps */}
-                    {rootFolders.map((folder) => {
-                      const node = buildTree(nodes, folder.id);
-                      if (!node) {
-                        return null;
-                      }
-                      return (
-                        <TreeNodeComponent
-                          key={folder.id}
-                          node={node}
-                          depth={1}
-                          selectedId={selectedId}
-                          onSelect={onSelect}
-                          expandedFolders={expandedFolders}
-                          toggleExpanded={toggleFolder}
-                        />
-                      );
-                    })}
                   </div>
                 )}
               </div>
@@ -343,7 +347,8 @@ function buildTree(
       ...n,
       children: n.childrenIds
         .map((cid) => buildTree(nodes, cid))
-        .filter((node): node is TreeNode => node !== null),
+        .filter((node): node is TreeNode => node !== null)
+        .sort((a, b) => a.name.localeCompare(b.name)),
     };
   }
   return n;
