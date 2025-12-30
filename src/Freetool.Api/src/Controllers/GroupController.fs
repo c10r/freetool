@@ -110,7 +110,15 @@ type GroupController
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetGroupsByUserId(userId: string) : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand(GetGroupsByUserId userId)
+            let! isOrgAdmin = this.CheckIsOrgAdminAsync()
+
+            let! result =
+                if isOrgAdmin then
+                    // Org admins can see all groups
+                    commandHandler.HandleCommand(GetAllGroups(0, System.Int32.MaxValue))
+                else
+                    // Regular users see only groups they're members of
+                    commandHandler.HandleCommand(GetGroupsByUserId userId)
 
             return
                 match result with

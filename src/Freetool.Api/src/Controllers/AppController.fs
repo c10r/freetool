@@ -73,11 +73,30 @@ type AppController
                 return Error(InvalidOperation $"User does not have {permissionName} permission on this space")
         }
 
-    member private this.GetAccessibleSpaceIdsForCurrentUser() : Task<SpaceId list> =
+    member private this.IsOrganizationAdmin() : Task<bool> =
         task {
             let userId = this.CurrentUserId
-            let! spaces = spaceRepository.GetByUserIdAsync userId
-            return spaces |> List.map (fun space -> space.State.Id)
+
+            return!
+                authorizationService.CheckPermissionAsync
+                    (User(userId.Value.ToString()))
+                    OrganizationAdmin
+                    (OrganizationObject "default")
+        }
+
+    member private this.GetAccessibleSpaceIdsForCurrentUser() : Task<SpaceId list> =
+        task {
+            let! isOrgAdmin = this.IsOrganizationAdmin()
+
+            if isOrgAdmin then
+                // Org admins can see all spaces
+                let! allSpaces = spaceRepository.GetAllAsync 0 System.Int32.MaxValue
+                return allSpaces |> List.map (fun space -> space.State.Id)
+            else
+                // Regular users see only spaces they're members of
+                let userId = this.CurrentUserId
+                let! spaces = spaceRepository.GetByUserIdAsync userId
+                return spaces |> List.map (fun space -> space.State.Id)
         }
 
     // Helper method to handle authorization errors

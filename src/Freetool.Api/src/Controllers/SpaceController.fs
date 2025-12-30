@@ -202,7 +202,15 @@ type SpaceController
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetSpacesByUserId(userId: string) : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand(GetSpacesByUserId userId)
+            let! isOrgAdmin = this.CheckIsOrgAdminAsync()
+
+            let! result =
+                if isOrgAdmin then
+                    // Org admins can see all spaces
+                    commandHandler.HandleCommand(GetAllSpaces(0, System.Int32.MaxValue))
+                else
+                    // Regular users see only spaces they're members/moderators of
+                    commandHandler.HandleCommand(GetSpacesByUserId userId)
 
             return
                 match result with
