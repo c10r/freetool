@@ -107,14 +107,27 @@ export const deleteApp = (appId: string) => {
   });
 };
 
-export const runApp = (appId: string) => {
+export const runApp = (
+  appId: string,
+  inputValues?: { title: string; value: string }[]
+) => {
   return client.POST("/app/{id}/run", {
     params: {
       path: { id: appId },
     },
     body: {
-      inputValues: [],
+      inputValues: inputValues ?? [],
     },
+  });
+};
+
+export const updateAppInputSchema = (
+  appId: string,
+  inputs: { input: { title: string; type: unknown }; required: boolean }[]
+) => {
+  return client.PUT("/app/{id}/inputs", {
+    params: { path: { id: appId } },
+    body: { inputs },
   });
 };
 

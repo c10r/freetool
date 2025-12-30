@@ -1,29 +1,17 @@
-import { Check, Edit, Eye, Plus, Trash2, X } from "lucide-react";
+import { Check, Edit, Eye, Loader2, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { updateAppName } from "@/api/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import { useHasPermission } from "@/hooks/usePermissions";
 import { useAppForm } from "../hooks/useAppForm";
-import type {
-  AppField,
-  AppNode,
-  FieldType,
-  KeyValuePair,
-  SpaceMainProps,
-} from "../types";
+import { useAppInputs } from "../hooks/useAppInputs";
+import type { AppNode, KeyValuePair, SpaceMainProps } from "../types";
 import AppConfigForm from "./AppConfigForm";
+import InputFieldEditor from "./InputFieldEditor";
 import ResourceSelector from "./ResourceSelector";
 
 export default function AppView({
@@ -73,6 +61,24 @@ export default function AppView({
     }
   );
 
+  // App inputs hook for field autosave functionality
+  const {
+    fields,
+    inputsState,
+    addField,
+    resetState: resetInputsState,
+    setFields,
+    triggerSave,
+  } = useAppInputs(app.fields, app.id, (updatedFields) => {
+    // Update the app node when autosave occurs (only if user has edit permission)
+    if (canEditApp) {
+      updateNode({
+        ...app,
+        fields: updatedFields,
+      });
+    }
+  });
+
   // Update form data when app changes
   useEffect(() => {
     setName(app.name);
@@ -91,34 +97,22 @@ export default function AppView({
       body: app.body || [],
     });
     resetFieldStates();
+
+    // Update app inputs when app changes
+    setFields(app.fields);
+    resetInputsState();
   }, [
     app.name,
     app.urlPath,
     app.urlParameters,
     app.headers,
     app.body,
+    app.fields,
     setAppFormData,
     resetFieldStates,
+    setFields,
+    resetInputsState,
   ]);
-
-  const updateField = (id: string, patch: Partial<AppField>) => {
-    updateNode({
-      ...app,
-      fields: app.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)),
-    });
-  };
-  const deleteField = (id: string) => {
-    updateNode({ ...app, fields: app.fields.filter((f) => f.id !== id) });
-  };
-  const addField = () => {
-    const id = crypto.randomUUID();
-    const nf: AppField = {
-      id,
-      label: `Field ${app.fields.length + 1}`,
-      type: "text",
-    };
-    updateNode({ ...app, fields: [...app.fields, nf] });
-  };
 
   const updateUrlParameters = (urlParameters: KeyValuePair[]) => {
     updateAppFormData("urlParameters", urlParameters);
@@ -284,58 +278,41 @@ export default function AppView({
       )}
 
       <Separator />
-      {app.fields.map((f) => (
-        <Card key={f.id}>
-          <CardContent className="py-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-            <div className="md:col-span-4">
-              <Input
-                value={f.label}
-                onChange={(e) => updateField(f.id, { label: e.target.value })}
-                aria-label="Field label"
-                disabled={!canEditApp}
-              />
-            </div>
-            <div className="md:col-span-3">
-              <Select
-                value={f.type}
-                onValueChange={(v: FieldType) => updateField(f.id, { type: v })}
-                disabled={!canEditApp}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text">Text</SelectItem>
-                  <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="integer">Integer</SelectItem>
-                  <SelectItem value="boolean">Boolean</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="md:col-span-3 flex items-center gap-2">
-              <Switch
-                checked={!!f.required}
-                onCheckedChange={(v) => updateField(f.id, { required: v })}
-                disabled={!canEditApp}
-              />
-              <span className="text-sm text-muted-foreground">Required</span>
-            </div>
-            <div className="md:col-span-2 flex justify-end">
-              {canEditApp && (
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  onClick={() => deleteField(f.id)}
-                  aria-label="Delete field"
-                >
-                  <Trash2 size={16} />
-                </Button>
+
+      {/* Fields section header with save status indicators */}
+      {fields.length > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">
+            Fields
+          </span>
+          {inputsState.updating && (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+          {inputsState.saved && !inputsState.updating && !inputsState.error && (
+            <Check className="h-4 w-4 text-green-500" />
+          )}
+          {inputsState.error && !inputsState.updating && (
+            <div className="flex items-center gap-1">
+              <X className="h-4 w-4 text-red-500" />
+              {inputsState.errorMessage && (
+                <span className="text-xs text-red-500">
+                  {inputsState.errorMessage}
+                </span>
               )}
             </div>
-          </CardContent>
-        </Card>
-      ))}
+          )}
+        </div>
+      )}
+
+      <InputFieldEditor
+        fields={fields}
+        onChange={(updatedFields) => {
+          setFields(updatedFields);
+          triggerSave(updatedFields);
+        }}
+        disabled={!canEditApp || inputsState.updating}
+        showAddButton={false}
+      />
 
       <Card>
         <CardContent className="py-4">

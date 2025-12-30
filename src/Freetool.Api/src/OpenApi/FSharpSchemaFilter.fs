@@ -26,6 +26,7 @@ type FSharpUnionSchemaFilter() =
                 || context.Type = typeof<FolderId>
                 || context.Type = typeof<ResourceId>
                 || context.Type = typeof<RunId>
+                || context.Type = typeof<SpaceId>
             then
                 schema.Type <- "string"
                 schema.Format <- "uuid"

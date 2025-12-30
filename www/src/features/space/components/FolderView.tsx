@@ -36,12 +36,14 @@ import { useHasPermission } from "@/hooks/usePermissions";
 import { useResources } from "@/hooks/useResources";
 import type { components } from "@/schema";
 import type {
+  AppField,
   FolderNode,
   KeyValuePair,
   SpaceMainProps,
   SpaceNode,
 } from "../types";
 import AppConfigForm from "./AppConfigForm";
+import InputFieldEditor from "./InputFieldEditor";
 
 export default function FolderView({
   folder,
@@ -82,9 +84,11 @@ export default function FolderView({
     setAppFormData({
       name: "",
       resourceId: "",
+      urlPath: "",
       queryParameters: [],
       headers: [],
       body: [],
+      inputs: [],
     });
   }, []);
   const [newFolderName, setNewFolderName] = useState("");
@@ -114,6 +118,7 @@ export default function FolderView({
     queryParameters: [] as KeyValuePair[],
     headers: [] as KeyValuePair[],
     body: [] as KeyValuePair[],
+    inputs: [] as AppField[],
   });
 
   // App running state
@@ -286,7 +291,8 @@ export default function FolderView({
         appFormData.urlPath,
         appFormData.queryParameters,
         appFormData.headers,
-        appFormData.body
+        appFormData.body,
+        appFormData.inputs
       );
 
       // Reset form and close on success
@@ -297,6 +303,7 @@ export default function FolderView({
         queryParameters: [],
         headers: [],
         body: [],
+        inputs: [],
       });
       setShowCreateAppForm(false);
     } catch (error) {
@@ -321,9 +328,11 @@ export default function FolderView({
     setAppFormData({
       name: "",
       resourceId: "",
+      urlPath: "",
       queryParameters: [],
       headers: [],
       body: [],
+      inputs: [],
     });
   };
 
@@ -541,6 +550,12 @@ export default function FolderView({
               />
             </div>
 
+            <InputFieldEditor
+              fields={appFormData.inputs}
+              onChange={(inputs) => setAppFormData({ ...appFormData, inputs })}
+              disabled={isCreatingApp}
+            />
+
             <AppConfigForm
               resourceId={appFormData.resourceId}
               urlPath={appFormData.urlPath}
@@ -561,6 +576,10 @@ export default function FolderView({
               }
               onBodyChange={(body) => setAppFormData({ ...appFormData, body })}
               disabled={isCreatingApp}
+              inputs={appFormData.inputs.map((f) => ({
+                title: f.label,
+                required: f.required,
+              }))}
             />
 
             <div className="flex gap-2 pt-2">

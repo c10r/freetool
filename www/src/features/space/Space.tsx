@@ -11,11 +11,18 @@ import {
 } from "@/hooks/usePermissions";
 import { useSidebarTree } from "@/hooks/useSidebarTree";
 import { useSpace } from "@/hooks/useSpaces";
+import { toBackendInputType } from "@/lib/inputTypeMapper";
 import NotFound from "@/pages/NotFound";
 import type { SpaceWithDetails } from "@/types/space";
 import SidebarTree from "./SidebarTree";
 import SpaceMain from "./SpaceMain";
-import type { Endpoint, FolderNode, KeyValuePair, SpaceNode } from "./types";
+import type {
+  AppField,
+  Endpoint,
+  FolderNode,
+  KeyValuePair,
+  SpaceNode,
+} from "./types";
 
 // Helper functions to convert between selectedId and URL paths
 function getPathFromSelectedId(
@@ -185,13 +192,23 @@ function WorkspaceContent() {
     urlPath = "",
     urlParameters: KeyValuePair[] = [],
     headers: KeyValuePair[] = [],
-    body: KeyValuePair[] = []
+    body: KeyValuePair[] = [],
+    inputs: AppField[] = []
   ) => {
+    // Map frontend AppField[] to backend AppInputDto[] format
+    const backendInputs = inputs.map((f) => ({
+      input: {
+        title: f.label,
+        type: toBackendInputType(f.type),
+      },
+      required: f.required ?? false,
+    }));
+
     // Call backend API to create the app
     const response = await createAppAPI({
       name: name.trim(),
       folderId: parentId === "root" ? null : parentId,
-      inputs: [],
+      inputs: backendInputs,
       resourceId: resourceId || "",
       urlPath: urlPath || "",
       body: body,

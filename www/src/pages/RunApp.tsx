@@ -17,12 +17,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useHasPermission } from "@/hooks/usePermissions";
+import { fromBackendInputType } from "@/lib/inputTypeMapper";
 import type { components } from "@/schema";
 
 type AppData = components["schemas"]["AppData"];
 type RunData = components["schemas"]["RunData"];
 type KeyValuePair = components["schemas"]["KeyValuePair"];
+type AppInput = components["schemas"]["Input"];
 
 // Helper function to safely format response content
 const formatResponse = (
@@ -55,8 +60,13 @@ const RunApp = () => {
   const [isRequestCollapsed, setIsRequestCollapsed] = useState(true);
   const [spaceId, setSpaceId] = useState("");
   const [spaceLoading, setSpaceLoading] = useState(false);
+  const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const canRunApp = useHasPermission(spaceId, "run_app");
+
+  // Check if app has inputs that need to be filled
+  const hasInputs = app?.inputs && app.inputs.length > 0;
 
   // Load app details
   useEffect(() => {
@@ -129,12 +139,35 @@ const RunApp = () => {
       return;
     }
 
+    // Validate required fields if app has inputs
+    if (hasInputs && app?.inputs) {
+      const errors: Record<string, string> = {};
+      for (const input of app.inputs) {
+        if (input.required && input.title && !inputValues[input.title]) {
+          errors[input.title] = "This field is required";
+        }
+      }
+      if (Object.keys(errors).length > 0) {
+        setFormErrors(errors);
+        return;
+      }
+    }
+
+    setFormErrors({});
     setRunning(true);
     setRunError(null);
     setResult(null);
 
     try {
-      const response = await runApp(nodeId);
+      // Convert inputValues object to array format
+      const inputValuesArray = Object.entries(inputValues).map(
+        ([title, value]) => ({
+          title,
+          value: String(value),
+        })
+      );
+
+      const response = await runApp(nodeId, inputValuesArray);
       if (response.error) {
         setRunError((response.error?.message as string) || "Failed to run app");
       } else {
@@ -145,14 +178,101 @@ const RunApp = () => {
     } finally {
       setRunning(false);
     }
-  }, [nodeId]);
+  }, [nodeId, hasInputs, inputValues, app?.inputs]);
 
-  // Auto-run the app when component loads
+  // Auto-run the app when component loads (only if no inputs required)
   useEffect(() => {
-    if (app && !running && !result && !runError) {
+    if (app && !running && !result && !runError && !hasInputs) {
       handleRunApp();
     }
-  }, [app, running, result, runError, handleRunApp]);
+  }, [app, running, result, runError, hasInputs, handleRunApp]);
+
+  // Handle input value changes
+  const handleInputChange = (title: string, value: string) => {
+    setInputValues((prev) => ({ ...prev, [title]: value }));
+    // Clear error when user starts typing
+    if (formErrors[title]) {
+      setFormErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[title];
+        return newErrors;
+      });
+    }
+  };
+
+  // Render an input field based on its type
+  const renderInputField = (input: AppInput) => {
+    const title = input.title || "";
+    const fieldType = input.type ? fromBackendInputType(input.type) : "text";
+    const value = inputValues[title] || "";
+    const hasError = !!formErrors[title];
+
+    switch (fieldType) {
+      case "boolean":
+        return (
+          <div className="flex items-center space-x-2">
+            <Switch
+              id={`input-${title}`}
+              checked={value === "true"}
+              onCheckedChange={(checked) =>
+                handleInputChange(title, checked ? "true" : "false")
+              }
+              disabled={running}
+            />
+            <Label htmlFor={`input-${title}`} className="cursor-pointer">
+              {value === "true" ? "Yes" : "No"}
+            </Label>
+          </div>
+        );
+      case "email":
+        return (
+          <Input
+            id={`input-${title}`}
+            type="email"
+            value={value}
+            onChange={(e) => handleInputChange(title, e.target.value)}
+            placeholder={`Enter ${title}`}
+            disabled={running}
+            className={hasError ? "border-red-500" : ""}
+          />
+        );
+      case "date":
+        return (
+          <Input
+            id={`input-${title}`}
+            type="date"
+            value={value}
+            onChange={(e) => handleInputChange(title, e.target.value)}
+            disabled={running}
+            className={hasError ? "border-red-500" : ""}
+          />
+        );
+      case "integer":
+        return (
+          <Input
+            id={`input-${title}`}
+            type="number"
+            value={value}
+            onChange={(e) => handleInputChange(title, e.target.value)}
+            placeholder={`Enter ${title}`}
+            disabled={running}
+            className={hasError ? "border-red-500" : ""}
+          />
+        );
+      default:
+        return (
+          <Input
+            id={`input-${title}`}
+            type="text"
+            value={value}
+            onChange={(e) => handleInputChange(title, e.target.value)}
+            placeholder={`Enter ${title}`}
+            disabled={running}
+            className={hasError ? "border-red-500" : ""}
+          />
+        );
+    }
+  };
 
   const handleGoBack = () => {
     if (app?.parentId) {
@@ -254,6 +374,64 @@ const RunApp = () => {
                     You don't have permission to run this app. Contact your
                     space moderator to request run_app access.
                   </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Input Form - shown when app has inputs and no result yet */}
+        {hasInputs && !result && (
+          <Card>
+            <CardHeader>
+              <CardTitle>App Inputs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {app?.inputs.map((input, index) => (
+                  <div key={input.title || index} className="space-y-2">
+                    <Label htmlFor={`input-${input.title}`}>
+                      {input.title}
+                      {input.required && (
+                        <span className="text-red-500 ml-1">*</span>
+                      )}
+                    </Label>
+                    {renderInputField(input)}
+                    {formErrors[input.title || ""] && (
+                      <p className="text-sm text-red-500">
+                        {formErrors[input.title || ""]}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                <div className="pt-4">
+                  {spaceReady ? (
+                    <PermissionButton
+                      spaceId={spaceId}
+                      permission="run_app"
+                      tooltipMessage="You don't have permission to run this app. Contact your space moderator."
+                      onClick={handleRunApp}
+                      disabled={running}
+                      variant={running ? "secondary" : "default"}
+                    >
+                      {running ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Running...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="mr-2 h-4 w-4" />
+                          Run App
+                        </>
+                      )}
+                    </PermissionButton>
+                  ) : (
+                    <Button variant="outline" disabled>
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      Checking access...
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>

@@ -31,6 +31,11 @@ interface FieldState {
   errorMessage: string;
 }
 
+interface AppInput {
+  title?: string | null;
+  required?: boolean;
+}
+
 interface AppConfigFormProps {
   resourceId?: string;
   urlPath?: string;
@@ -57,6 +62,7 @@ interface AppConfigFormProps {
     value: KeyValuePair[]
   ) => void;
   onUrlPathFieldBlur?: (value: string) => void;
+  inputs?: AppInput[];
 }
 
 const FieldIndicator = ({ state }: { state: FieldState }) => {
@@ -92,6 +98,7 @@ export default function AppConfigForm({
   fieldStates,
   onKeyValueFieldBlur,
   onUrlPathFieldBlur,
+  inputs,
 }: AppConfigFormProps) {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loadingResources, setLoadingResources] = useState(false);
@@ -199,6 +206,22 @@ export default function AppConfigForm({
               )}
             </SelectContent>
           </Select>
+        </div>
+      )}
+
+      {/* Placeholder hints for available inputs */}
+      {inputs && inputs.length > 0 && (
+        <div className="bg-muted/50 p-3 rounded-md text-sm">
+          <span className="font-medium">Available placeholders: </span>
+          {inputs.map((input, i) => (
+            <span key={input.title || i}>
+              <code className="bg-muted px-1 rounded">{`{${input.title}}`}</code>
+              {i < inputs.length - 1 ? ", " : ""}
+            </span>
+          ))}
+          <p className="text-muted-foreground mt-1">
+            Use these in URL path, parameters, headers, or body values.
+          </p>
         </div>
       )}
 

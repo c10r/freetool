@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "generate-api-types": "openapi-typescript ../openapi.spec.json -o src/schema.d.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "3.10.0",

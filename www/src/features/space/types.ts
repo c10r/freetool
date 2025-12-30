@@ -77,7 +77,11 @@ export interface SpaceMainProps {
     parentId: string,
     name?: string,
     resourceId?: string,
-    urlPath?: string
+    urlPath?: string,
+    queryParameters?: KeyValuePair[],
+    headers?: KeyValuePair[],
+    body?: KeyValuePair[],
+    inputs?: AppField[]
   ) => Promise<void>;
   deleteNode: (id: string) => void;
   endpoints: Record<string, Endpoint>;
