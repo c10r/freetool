@@ -1,7 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllFolders, getApps, getSpaces, getUsers } from "@/api/api";
 import type { AppNode, FolderNode, SpaceNode } from "@/features/space/types";
+import { fromBackendInputType } from "@/lib/inputTypeMapper";
+import type { components } from "@/schema";
 import type { Space, SpaceUser, SpaceWithDetails } from "@/types/space";
+
+type InputType = components["schemas"]["InputType"];
 
 // Constants for pagination
 const MAX_PAGE_SIZE = 100;
@@ -69,6 +73,11 @@ interface ApiAppData {
   urlParameters?: { key?: string; value?: string }[];
   headers?: { key?: string; value?: string }[];
   body?: { key?: string; value?: string }[];
+  inputs?: {
+    title?: string | null;
+    type?: unknown;
+    required?: boolean;
+  }[];
 }
 
 interface ApiUserData {
@@ -139,7 +148,12 @@ export function useSidebarTree() {
             name: app.name || "Unnamed App",
             type: "app",
             parentId: app.folderId || rootId,
-            fields: [],
+            fields: (app.inputs || []).map((input) => ({
+              id: crypto.randomUUID(),
+              label: input.title || "",
+              type: fromBackendInputType(input.type as InputType),
+              required: input.required ?? false,
+            })),
             resourceId: app.resourceId || undefined,
             urlPath: app.urlPath || "",
             urlParameters: (app.urlParameters || []).map((kvp) => ({
