@@ -288,7 +288,7 @@ function TreeNodeComponent({
         )}
         aria-current={isSelected ? "page" : undefined}
       >
-        {hasChildren && (
+        {hasChildren ? (
           <button
             type="button"
             className="flex-shrink-0 cursor-pointer hover:bg-accent/50 rounded p-0.5"
@@ -301,6 +301,8 @@ function TreeNodeComponent({
               <ChevronRight size={16} />
             )}
           </button>
+        ) : (
+          <span className="flex-shrink-0 w-[20px]" />
         )}
         {isFolder ? (
           isExpanded ? (
