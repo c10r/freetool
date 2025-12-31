@@ -29,6 +29,12 @@ type RunData = components["schemas"]["RunData"];
 type KeyValuePair = components["schemas"]["KeyValuePair"];
 type AppInput = components["schemas"]["Input"];
 
+// Helper function to validate email format
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
 // Helper function to safely format response content
 const formatResponse = (
   response: string
@@ -139,12 +145,23 @@ const RunApp = () => {
       return;
     }
 
-    // Validate required fields if app has inputs
+    // Validate inputs if app has inputs
     if (hasInputs && app?.inputs) {
       const errors: Record<string, string> = {};
       for (const input of app.inputs) {
-        if (input.required && input.title && !inputValues[input.title]) {
-          errors[input.title] = "This field is required";
+        const title = input.title || "";
+        const value = inputValues[title] || "";
+        const fieldType = input.type
+          ? fromBackendInputType(input.type)
+          : "text";
+
+        // Check required fields
+        if (input.required && !value) {
+          errors[title] = "This field is required";
+        }
+        // Validate email format (only if there's a value)
+        else if (fieldType === "email" && value && !isValidEmail(value)) {
+          errors[title] = "Please enter a valid email address";
         }
       }
       if (Object.keys(errors).length > 0) {
@@ -193,6 +210,16 @@ const RunApp = () => {
     }
   };
 
+  // Validate email on blur
+  const handleEmailBlur = (title: string, value: string) => {
+    if (value && !isValidEmail(value)) {
+      setFormErrors((prev) => ({
+        ...prev,
+        [title]: "Please enter a valid email address",
+      }));
+    }
+  };
+
   // Render an input field based on its type
   const renderInputField = (input: AppInput) => {
     const title = input.title || "";
@@ -224,6 +251,7 @@ const RunApp = () => {
             type="email"
             value={value}
             onChange={(e) => handleInputChange(title, e.target.value)}
+            onBlur={(e) => handleEmailBlur(title, e.target.value)}
             placeholder={`Enter ${title}`}
             disabled={running}
             className={hasError ? "border-red-500" : ""}
