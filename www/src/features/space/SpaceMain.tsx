@@ -35,7 +35,9 @@ export default function WorkspaceMain(props: SpaceMainProps) {
   }
 
   if (selectedId === "permissions") {
-    return <SpacePermissionsView onBackClick={() => onSelect("root")} />;
+    return (
+      <SpacePermissionsView onBackClick={() => onSelect("users-&-spaces")} />
+    );
   }
 
   if (!selected) {
