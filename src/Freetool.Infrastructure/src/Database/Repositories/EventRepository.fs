@@ -28,9 +28,7 @@ type EventRepository(context: FreetoolDbContext) =
                     | AppEvents _ -> EntityType.App
                     | ResourceEvents _ -> EntityType.Resource
                     | FolderEvents _ -> EntityType.Folder
-                    | GroupEvents _ -> EntityType.Group
                     | RunEvents _ -> EntityType.Run
-                    | WorkspaceEvents _ -> EntityType.Workspace
                     | SpaceEvents _ -> EntityType.Space
 
                 let jsonOptions = JsonSerializerOptions()
@@ -67,21 +65,9 @@ type EventRepository(context: FreetoolDbContext) =
                         (e.FolderId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.FolderRestoredEvent as e ->
                         (e.FolderId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
-                    | :? Events.GroupCreatedEvent as e ->
-                        (e.GroupId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
-                    | :? Events.GroupUpdatedEvent as e ->
-                        (e.GroupId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
-                    | :? Events.GroupDeletedEvent as e ->
-                        (e.GroupId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.RunCreatedEvent as e -> (e.RunId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.RunStatusChangedEvent as e ->
                         (e.RunId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
-                    | :? Events.WorkspaceCreatedEvent as e ->
-                        (e.WorkspaceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
-                    | :? Events.WorkspaceUpdatedEvent as e ->
-                        (e.WorkspaceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
-                    | :? Events.WorkspaceDeletedEvent as e ->
-                        (e.WorkspaceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.SpaceCreatedEvent as e ->
                         (e.SpaceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.SpaceUpdatedEvent as e ->

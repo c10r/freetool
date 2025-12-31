@@ -13,15 +13,6 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     val mutable private _users: DbSet<UserData>
 
     [<DefaultValue>]
-    val mutable private _groups: DbSet<GroupData>
-
-    [<DefaultValue>]
-    val mutable private _userGroups: DbSet<UserGroupData>
-
-    [<DefaultValue>]
-    val mutable private _workspaces: DbSet<WorkspaceData>
-
-    [<DefaultValue>]
     val mutable private _resources: DbSet<ResourceData>
 
     [<DefaultValue>]
@@ -45,18 +36,6 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     member this.Users
         with get () = this._users
         and set value = this._users <- value
-
-    member this.Groups
-        with get () = this._groups
-        and set value = this._groups <- value
-
-    member this.UserGroups
-        with get () = this._userGroups
-        and set value = this._userGroups <- value
-
-    member this.Workspaces
-        with get () = this._workspaces
-        and set value = this._workspaces <- value
 
     member this.Resources
         with get () = this._resources
@@ -560,89 +539,6 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun e -> e.OccurredAt).HasColumnName("OccurredAt") |> ignore
             entity.Property(fun e -> e.CreatedAt).HasColumnName("CreatedAt") |> ignore
             entity.Property(fun e -> e.UserId).HasConversion(userIdConverter) |> ignore)
-        |> ignore
-
-        // Configure GroupData
-        modelBuilder.Entity<GroupData>(fun entity ->
-            let groupIdConverter =
-                ValueConverter<Freetool.Domain.ValueObjects.GroupId, System.Guid>(
-                    (fun groupId -> groupId.Value),
-                    (fun guid -> Freetool.Domain.ValueObjects.GroupId(guid))
-                )
-
-            // Explicit property configuration to help with constructor binding
-            entity.Property(fun g -> g.Id).HasColumnName("Id").HasConversion(groupIdConverter)
-            |> ignore
-
-            entity.Property(fun g -> g.Name).HasColumnName("Name") |> ignore
-            entity.Property(fun g -> g.CreatedAt).HasColumnName("CreatedAt") |> ignore
-            entity.Property(fun g -> g.UpdatedAt).HasColumnName("UpdatedAt") |> ignore
-            entity.Property(fun g -> g.IsDeleted).HasColumnName("IsDeleted") |> ignore
-
-            // Ignore the UserIds navigation properties explicitly
-            entity.Ignore("UserIds") |> ignore
-            entity.Ignore("_userIds") |> ignore
-
-            // Global query filter for soft delete
-            entity.HasQueryFilter(fun g -> not g.IsDeleted) |> ignore)
-        |> ignore
-
-        // Configure UserGroupData
-        modelBuilder.Entity<UserGroupData>(fun entity ->
-            let userIdConverter =
-                ValueConverter<Freetool.Domain.ValueObjects.UserId, System.Guid>(
-                    (fun userId -> userId.Value),
-                    (fun guid -> Freetool.Domain.ValueObjects.UserId(guid))
-                )
-
-            let groupIdConverter =
-                ValueConverter<Freetool.Domain.ValueObjects.GroupId, System.Guid>(
-                    (fun groupId -> groupId.Value),
-                    (fun guid -> Freetool.Domain.ValueObjects.GroupId(guid))
-                )
-
-            entity.Property(fun ug -> ug.UserId).HasConversion(userIdConverter) |> ignore
-            entity.Property(fun ug -> ug.GroupId).HasConversion(groupIdConverter) |> ignore
-
-            // Configure foreign key relationships - now the types will match
-            entity.HasOne<UserData>().WithMany().HasForeignKey(fun ug -> ug.UserId :> obj)
-            |> ignore
-
-            entity.HasOne<GroupData>().WithMany().HasForeignKey(fun ug -> ug.GroupId :> obj)
-            |> ignore)
-        |> ignore
-
-        // Configure WorkspaceData
-        modelBuilder.Entity<WorkspaceData>(fun entity ->
-            let workspaceIdConverter =
-                ValueConverter<Freetool.Domain.ValueObjects.WorkspaceId, System.Guid>(
-                    (fun workspaceId -> workspaceId.Value),
-                    (fun guid -> Freetool.Domain.ValueObjects.WorkspaceId(guid))
-                )
-
-            let groupIdConverter =
-                ValueConverter<Freetool.Domain.ValueObjects.GroupId, System.Guid>(
-                    (fun groupId -> groupId.Value),
-                    (fun guid -> Freetool.Domain.ValueObjects.GroupId(guid))
-                )
-
-            // Explicit property configuration
-            entity.Property(fun w -> w.Id).HasColumnName("Id").HasConversion(workspaceIdConverter)
-            |> ignore
-
-            entity.Property(fun w -> w.GroupId).HasColumnName("GroupId").HasConversion(groupIdConverter)
-            |> ignore
-
-            entity.Property(fun w -> w.CreatedAt).HasColumnName("CreatedAt") |> ignore
-            entity.Property(fun w -> w.UpdatedAt).HasColumnName("UpdatedAt") |> ignore
-            entity.Property(fun w -> w.IsDeleted).HasColumnName("IsDeleted") |> ignore
-
-            // Configure foreign key relationship
-            entity.HasOne<GroupData>().WithMany().HasForeignKey(fun w -> w.GroupId :> obj)
-            |> ignore
-
-            // Global query filter for soft delete
-            entity.HasQueryFilter(fun w -> not w.IsDeleted) |> ignore)
         |> ignore
 
         // Configure SpaceData

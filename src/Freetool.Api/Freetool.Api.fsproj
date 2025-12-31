@@ -33,8 +33,6 @@
     <Compile Include="src/OpenApi/FSharpSchemaFilter.fs" />
     <Compile Include="src/Controllers/AuthenticatedControllerBase.fs" />
     <Compile Include="src/Controllers/UserController.fs" />
-    <Compile Include="src/Controllers/GroupController.fs" />
-    <Compile Include="src/Controllers/WorkspaceController.fs" />
     <Compile Include="src/Controllers/SpaceController.fs" />
     <Compile Include="src/Controllers/ResourceController.fs" />
     <Compile Include="src/Controllers/FolderController.fs" />

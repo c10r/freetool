@@ -207,8 +207,8 @@ let ``Entity Framework model validation passes for all configured entities`` () 
               "FolderData"
               "EventData"
               "RunData"
-              "GroupData"
-              "UserGroupData" ]
+              "SpaceData"
+              "SpaceMemberData" ]
 
     Assert.True(
         expectedTypes.IsSubsetOf(entityTypeNames),

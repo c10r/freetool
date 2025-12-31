@@ -45,10 +45,10 @@ let createTestController (permissions: Map<AuthSubject * AuthRelation * AuthObje
     let authService = MockAuthorizationService(permissions) :> IAuthorizationService
     let commandHandler = MockUserCommandHandler() :> ICommandHandler
     let userRepository = Unchecked.defaultof<IUserRepository> // Not used in these tests
-    let groupRepository = Unchecked.defaultof<IGroupRepository> // Not used in these tests
+    let spaceRepository = Unchecked.defaultof<ISpaceRepository> // Not used in these tests
 
     let controller =
-        UserController(userRepository, groupRepository, commandHandler, authService)
+        UserController(userRepository, spaceRepository, commandHandler, authService)
 
     // Setup HttpContext with a fake UserId
     let httpContext = DefaultHttpContext()

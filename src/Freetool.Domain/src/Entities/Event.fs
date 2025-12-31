@@ -25,11 +25,6 @@ type FolderEvents =
     | FolderDeletedEvent
     | FolderRestoredEvent
 
-type GroupEvents =
-    | GroupCreatedEvent
-    | GroupUpdatedEvent
-    | GroupDeletedEvent
-
 type ResourceEvents =
     | ResourceCreatedEvent
     | ResourceUpdatedEvent
@@ -39,11 +34,6 @@ type ResourceEvents =
 type RunEvents =
     | RunCreatedEvent
     | RunStatusChangedEvent
-
-type WorkspaceEvents =
-    | WorkspaceCreatedEvent
-    | WorkspaceUpdatedEvent
-    | WorkspaceDeletedEvent
 
 type SpaceEvents =
     | SpaceCreatedEvent
@@ -55,9 +45,7 @@ type EventType =
     | AppEvents of AppEvents
     | ResourceEvents of ResourceEvents
     | FolderEvents of FolderEvents
-    | GroupEvents of GroupEvents
     | RunEvents of RunEvents
-    | WorkspaceEvents of WorkspaceEvents
     | SpaceEvents of SpaceEvents
 
 type EntityType =
@@ -65,9 +53,7 @@ type EntityType =
     | App
     | Resource
     | Folder
-    | Group
     | Run
-    | Workspace
     | Space
 
 module EventTypeConverter =
@@ -98,20 +84,10 @@ module EventTypeConverter =
             | FolderUpdatedEvent -> "FolderUpdatedEvent"
             | FolderDeletedEvent -> "FolderDeletedEvent"
             | FolderRestoredEvent -> "FolderRestoredEvent"
-        | GroupEvents groupEvent ->
-            match groupEvent with
-            | GroupCreatedEvent -> "GroupCreatedEvent"
-            | GroupUpdatedEvent -> "GroupUpdatedEvent"
-            | GroupDeletedEvent -> "GroupDeletedEvent"
         | RunEvents runEvent ->
             match runEvent with
             | RunCreatedEvent -> "RunCreatedEvent"
             | RunStatusChangedEvent -> "RunStatusChangedEvent"
-        | WorkspaceEvents workspaceEvent ->
-            match workspaceEvent with
-            | WorkspaceCreatedEvent -> "WorkspaceCreatedEvent"
-            | WorkspaceUpdatedEvent -> "WorkspaceUpdatedEvent"
-            | WorkspaceDeletedEvent -> "WorkspaceDeletedEvent"
         | SpaceEvents spaceEvent ->
             match spaceEvent with
             | SpaceCreatedEvent -> "SpaceCreatedEvent"
@@ -137,14 +113,8 @@ module EventTypeConverter =
         | "FolderUpdatedEvent" -> Some(FolderEvents FolderUpdatedEvent)
         | "FolderDeletedEvent" -> Some(FolderEvents FolderDeletedEvent)
         | "FolderRestoredEvent" -> Some(FolderEvents FolderRestoredEvent)
-        | "GroupCreatedEvent" -> Some(GroupEvents GroupCreatedEvent)
-        | "GroupUpdatedEvent" -> Some(GroupEvents GroupUpdatedEvent)
-        | "GroupDeletedEvent" -> Some(GroupEvents GroupDeletedEvent)
         | "RunCreatedEvent" -> Some(RunEvents RunCreatedEvent)
         | "RunStatusChangedEvent" -> Some(RunEvents RunStatusChangedEvent)
-        | "WorkspaceCreatedEvent" -> Some(WorkspaceEvents WorkspaceCreatedEvent)
-        | "WorkspaceUpdatedEvent" -> Some(WorkspaceEvents WorkspaceUpdatedEvent)
-        | "WorkspaceDeletedEvent" -> Some(WorkspaceEvents WorkspaceDeletedEvent)
         | "SpaceCreatedEvent" -> Some(SpaceEvents SpaceCreatedEvent)
         | "SpaceUpdatedEvent" -> Some(SpaceEvents SpaceUpdatedEvent)
         | "SpaceDeletedEvent" -> Some(SpaceEvents SpaceDeletedEvent)
@@ -157,9 +127,7 @@ module EntityTypeConverter =
         | App -> "App"
         | Resource -> "Resource"
         | Folder -> "Folder"
-        | Group -> "Group"
         | Run -> "Run"
-        | Workspace -> "Workspace"
         | Space -> "Space"
 
     let fromString (str: string) : EntityType option =
@@ -168,9 +136,7 @@ module EntityTypeConverter =
         | "App" -> Some App
         | "Resource" -> Some Resource
         | "Folder" -> Some Folder
-        | "Group" -> Some Group
         | "Run" -> Some Run
-        | "Workspace" -> Some Workspace
         | "Space" -> Some Space
         | _ -> None
 

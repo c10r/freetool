@@ -137,18 +137,6 @@ let main args =
         UserRepository(context, eventRepository))
     |> ignore
 
-    builder.Services.AddScoped<IGroupRepository>(fun serviceProvider ->
-        let context = serviceProvider.GetRequiredService<FreetoolDbContext>()
-        let eventRepository = serviceProvider.GetRequiredService<IEventRepository>()
-        GroupRepository(context, eventRepository))
-    |> ignore
-
-    builder.Services.AddScoped<IWorkspaceRepository>(fun serviceProvider ->
-        let context = serviceProvider.GetRequiredService<FreetoolDbContext>()
-        let eventRepository = serviceProvider.GetRequiredService<IEventRepository>()
-        WorkspaceRepository(context, eventRepository))
-    |> ignore
-
     builder.Services.AddScoped<ISpaceRepository>(fun serviceProvider ->
         let context = serviceProvider.GetRequiredService<FreetoolDbContext>()
         let eventRepository = serviceProvider.GetRequiredService<IEventRepository>()
@@ -186,27 +174,15 @@ let main args =
     builder.Services.AddScoped<IEventEnhancementService>(fun serviceProvider ->
         let userRepository = serviceProvider.GetRequiredService<IUserRepository>()
         let appRepository = serviceProvider.GetRequiredService<IAppRepository>()
-        let groupRepository = serviceProvider.GetRequiredService<IGroupRepository>()
         let folderRepository = serviceProvider.GetRequiredService<IFolderRepository>()
         let resourceRepository = serviceProvider.GetRequiredService<IResourceRepository>()
         let spaceRepository = serviceProvider.GetRequiredService<ISpaceRepository>()
 
-        EventEnhancementService(
-            userRepository,
-            appRepository,
-            groupRepository,
-            folderRepository,
-            resourceRepository,
-            spaceRepository
-        )
+        EventEnhancementService(userRepository, appRepository, folderRepository, resourceRepository, spaceRepository)
         :> IEventEnhancementService)
     |> ignore
 
     builder.Services.AddScoped<UserHandler>() |> ignore
-
-    builder.Services.AddScoped<GroupHandler>() |> ignore
-
-    builder.Services.AddScoped<WorkspaceHandler>() |> ignore
 
     builder.Services.AddScoped<SpaceHandler>(fun serviceProvider ->
         let spaceRepository = serviceProvider.GetRequiredService<ISpaceRepository>()
@@ -234,19 +210,6 @@ let main args =
             let resourceHandler = serviceProvider.GetRequiredService<ResourceHandler>()
             let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
             AutoTracing.createMultiRepositoryTracingDecorator "resource" resourceHandler activitySource)
-    |> ignore
-
-    builder.Services.AddScoped<IMultiRepositoryCommandHandler<GroupCommand, GroupCommandResult>>(fun serviceProvider ->
-        let groupHandler = serviceProvider.GetRequiredService<GroupHandler>()
-        let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-        AutoTracing.createMultiRepositoryTracingDecorator "group" groupHandler activitySource)
-    |> ignore
-
-    builder.Services.AddScoped<IMultiRepositoryCommandHandler<WorkspaceCommand, WorkspaceCommandResult>>
-        (fun serviceProvider ->
-            let workspaceHandler = serviceProvider.GetRequiredService<WorkspaceHandler>()
-            let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-            AutoTracing.createMultiRepositoryTracingDecorator "workspace" workspaceHandler activitySource)
     |> ignore
 
     builder.Services.AddScoped<IMultiRepositoryCommandHandler<SpaceCommand, SpaceCommandResult>>(fun serviceProvider ->

@@ -14,7 +14,7 @@ open Freetool.Application.Interfaces
 type UserController
     (
         userRepository: IUserRepository,
-        groupRepository: IGroupRepository,
+        spaceRepository: ISpaceRepository,
         commandHandler: ICommandHandler,
         authService: IAuthorizationService
     ) =
@@ -118,29 +118,29 @@ type UserController
                 let! isOrgAdmin =
                     authService.CheckPermissionAsync (User userIdStr) OrganizationAdmin (OrganizationObject "default")
 
-                // Get user's groups/teams using the group repository directly
-                let! groups = groupRepository.GetByUserIdAsync userId
+                // Get user's spaces/teams using the space repository directly
+                let! spaces = spaceRepository.GetByUserIdAsync userId
 
-                // For each group/space, check if user is moderator or member
+                // For each space, check if user is moderator or member
                 let! teams =
                     task {
                         let mutable teamList = []
 
-                        for group in groups do
-                            let groupData = group.State
-                            let groupIdStr = groupData.Id.Value.ToString()
+                        for space in spaces do
+                            let spaceData = space.State
+                            let spaceIdStr = spaceData.Id.Value.ToString()
 
                             let! isModerator =
                                 authService.CheckPermissionAsync
                                     (User userIdStr)
                                     SpaceModerator
-                                    (SpaceObject groupIdStr)
+                                    (SpaceObject spaceIdStr)
 
                             let role = if isModerator then "moderator" else "member"
 
                             let teamDto: TeamMembershipDto =
-                                { Id = groupIdStr
-                                  Name = groupData.Name
+                                { Id = spaceIdStr
+                                  Name = spaceData.Name
                                   Role = role }
 
                             teamList <- teamDto :: teamList

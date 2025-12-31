@@ -40,6 +40,7 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.016_AddSettingsTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.017_RemoveWorkspaceIdColumns.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.018_UpdateResourceUniqueIndexForSoftDelete.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.019_DropGroupWorkspaceTables.sql" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,8 +48,6 @@
     <Compile Include="src/Database/FreetoolDbContext.fs" />
     <Compile Include="src/Database/Persistence.fs" />
     <Compile Include="src/Database/Repositories/UserRepository.fs" />
-    <Compile Include="src/Database/Repositories/GroupRepository.fs" />
-    <Compile Include="src/Database/Repositories/WorkspaceRepository.fs" />
     <Compile Include="src/Database/Repositories/SpaceRepository.fs" />
     <Compile Include="src/Database/Repositories/ResourceRepository.fs" />
     <Compile Include="src/Database/Repositories/FolderRepository.fs" />

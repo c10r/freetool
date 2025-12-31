@@ -17,7 +17,6 @@ type EventEnhancementService
     (
         userRepository: IUserRepository,
         appRepository: IAppRepository,
-        groupRepository: IGroupRepository,
         folderRepository: IFolderRepository,
         resourceRepository: IResourceRepository,
         spaceRepository: ISpaceRepository
@@ -170,33 +169,6 @@ type EventEnhancementService
                             )
 
                         return resourceEventData.Name.Value
-                | GroupEvents groupEvent ->
-                    match groupEvent with
-                    | GroupCreatedEvent ->
-                        let groupEventData =
-                            JsonSerializer.Deserialize<Freetool.Domain.Events.GroupCreatedEvent>(eventData, jsonOptions)
-
-                        return groupEventData.Name
-                    | GroupUpdatedEvent ->
-                        // GroupUpdatedEvent doesn't have Name directly, look up from repository
-                        let groupEventData =
-                            JsonSerializer.Deserialize<Freetool.Domain.Events.GroupUpdatedEvent>(eventData, jsonOptions)
-
-                        let! group = groupRepository.GetByIdAsync groupEventData.GroupId
-
-                        match group with
-                        | Some g -> return Group.getName g
-                        | None -> return $"Group {groupEventData.GroupId.Value}"
-                    | GroupDeletedEvent ->
-                        // GroupDeletedEvent doesn't have Name, look up from repository
-                        let groupEventData =
-                            JsonSerializer.Deserialize<Freetool.Domain.Events.GroupDeletedEvent>(eventData, jsonOptions)
-
-                        let! group = groupRepository.GetByIdAsync groupEventData.GroupId
-
-                        match group with
-                        | Some g -> return Group.getName g
-                        | None -> return $"Group {groupEventData.GroupId.Value}"
                 | RunEvents runEvent ->
                     match runEvent with
                     | RunCreatedEvent ->
@@ -221,26 +193,6 @@ type EventEnhancementService
                             )
 
                         return $"Run {runEventData.RunId.Value}"
-                | WorkspaceEvents workspaceEvent ->
-                    match workspaceEvent with
-                    | WorkspaceCreatedEvent ->
-                        let workspaceEventData =
-                            JsonSerializer.Deserialize<Freetool.Domain.Events.WorkspaceCreatedEvent>(
-                                eventData,
-                                jsonOptions
-                            )
-
-                        return $"Workspace {workspaceEventData.WorkspaceId.Value}"
-                    | _ ->
-                        // For update/delete events, try to get workspace ID
-                        let jsonDocument = JsonDocument.Parse(eventData)
-                        let root = jsonDocument.RootElement
-                        let mutable workspaceIdElement = Unchecked.defaultof<JsonElement>
-
-                        if root.TryGetProperty("WorkspaceId", &workspaceIdElement) then
-                            return $"Workspace {workspaceIdElement.GetString()}"
-                        else
-                            return "Workspace (Unknown)"
                 | SpaceEvents spaceEvent ->
                     match spaceEvent with
                     | SpaceCreatedEvent ->
@@ -315,20 +267,10 @@ type EventEnhancementService
             | ResourceUpdatedEvent -> $"{userName} updated resource \"{entityName}\""
             | ResourceDeletedEvent -> $"{userName} deleted resource \"{entityName}\""
             | ResourceRestoredEvent -> $"{userName} restored resource \"{entityName}\""
-        | GroupEvents groupEvent ->
-            match groupEvent with
-            | GroupCreatedEvent -> $"{userName} created group \"{entityName}\""
-            | GroupUpdatedEvent -> $"{userName} updated group \"{entityName}\""
-            | GroupDeletedEvent -> $"{userName} deleted group \"{entityName}\""
         | RunEvents runEvent ->
             match runEvent with
             | RunCreatedEvent -> $"{userName} ran \"{entityName}\""
             | RunStatusChangedEvent -> $"{userName} changed status of \"{entityName}\""
-        | WorkspaceEvents workspaceEvent ->
-            match workspaceEvent with
-            | WorkspaceCreatedEvent -> $"{userName} created workspace \"{entityName}\""
-            | WorkspaceUpdatedEvent -> $"{userName} updated workspace \"{entityName}\""
-            | WorkspaceDeletedEvent -> $"{userName} deleted workspace \"{entityName}\""
         | SpaceEvents spaceEvent ->
             match spaceEvent with
             | SpaceCreatedEvent -> $"{userName} created space \"{entityName}\""

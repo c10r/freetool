@@ -23,7 +23,6 @@ type FSharpUnionSchemaFilter() =
             elif
                 context.Type = typeof<UserId>
                 || context.Type = typeof<AppId>
-                || context.Type = typeof<GroupId>
                 || context.Type = typeof<FolderId>
                 || context.Type = typeof<ResourceId>
                 || context.Type = typeof<RunId>
@@ -119,11 +118,11 @@ type FSharpUnionSchemaFilter() =
                        OpenApiString("FolderCreatedEvent") :> IOpenApiAny
                        OpenApiString("FolderUpdatedEvent") :> IOpenApiAny
                        OpenApiString("FolderDeletedEvent") :> IOpenApiAny
-                       OpenApiString("GroupCreatedEvent") :> IOpenApiAny
-                       OpenApiString("GroupUpdatedEvent") :> IOpenApiAny
-                       OpenApiString("GroupDeletedEvent") :> IOpenApiAny
                        OpenApiString("RunCreatedEvent") :> IOpenApiAny
-                       OpenApiString("RunStatusChangedEvent") :> IOpenApiAny |]
+                       OpenApiString("RunStatusChangedEvent") :> IOpenApiAny
+                       OpenApiString("SpaceCreatedEvent") :> IOpenApiAny
+                       OpenApiString("SpaceUpdatedEvent") :> IOpenApiAny
+                       OpenApiString("SpaceDeletedEvent") :> IOpenApiAny |]
 
                 schema.Properties <- null
                 schema.AdditionalProperties <- null
@@ -153,8 +152,8 @@ type FSharpUnionSchemaFilter() =
                        OpenApiString("App") :> IOpenApiAny
                        OpenApiString("Resource") :> IOpenApiAny
                        OpenApiString("Folder") :> IOpenApiAny
-                       OpenApiString("Group") :> IOpenApiAny
-                       OpenApiString("Run") :> IOpenApiAny |]
+                       OpenApiString("Run") :> IOpenApiAny
+                       OpenApiString("Space") :> IOpenApiAny |]
 
                 schema.Properties <- null
                 schema.AdditionalProperties <- null

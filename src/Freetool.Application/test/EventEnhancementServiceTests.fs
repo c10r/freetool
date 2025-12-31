@@ -52,19 +52,6 @@ type MockAppRepository() =
         member _.RestoreAsync _ = task { return Ok() }
         member _.CheckNameConflictAsync _ _ = task { return false }
 
-type MockGroupRepository() =
-    interface IGroupRepository with
-        member _.GetByIdAsync(groupId: GroupId) = task { return None }
-        member _.GetByNameAsync(name: string) = task { return None }
-        member _.GetAllAsync skip take = task { return [] }
-        member _.AddAsync(group: ValidatedGroup) = task { return Ok() }
-        member _.UpdateAsync(group: ValidatedGroup) = task { return Ok() }
-        member _.DeleteAsync(group: ValidatedGroup) = task { return Ok() }
-        member _.ExistsAsync(groupId: GroupId) = task { return false }
-        member _.ExistsByNameAsync(name: string) = task { return false }
-        member _.GetCountAsync() = task { return 0 }
-        member _.GetByUserIdAsync userId = task { return [] }
-
 type MockFolderRepository() =
     interface IFolderRepository with
         member _.GetByIdAsync(folderId: FolderId) = task { return None }
@@ -119,7 +106,6 @@ let createService () =
     EventEnhancementService(
         MockUserRepository(),
         MockAppRepository(),
-        MockGroupRepository(),
         MockFolderRepository(),
         MockResourceRepository(),
         MockSpaceRepository()
