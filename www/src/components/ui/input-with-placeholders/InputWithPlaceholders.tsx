@@ -1,0 +1,255 @@
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { ContentEditable } from "@lexical/react/LexicalContentEditable";
+import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
+import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import type { NodeKey } from "lexical";
+import { useCallback, useMemo, useRef, useState } from "react";
+
+import { cn } from "@/lib/utils";
+import { Badge } from "../badge";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../command";
+import type { InputWithPlaceholdersProps } from "../input-with-placeholders.types";
+import { Popover, PopoverAnchor, PopoverContent } from "../popover";
+import {
+  type PopoverPayload,
+  RESTORE_CURSOR_AFTER_BRACE_COMMAND,
+  SELECT_PLACEHOLDER_INPUT_COMMAND,
+} from "./commands";
+import { DisabledPlugin } from "./DisabledPlugin";
+import { OnBlurPlugin } from "./OnBlurPlugin";
+import { PlaceholderNode } from "./PlaceholderNode";
+import { PlaceholderPlugin } from "./PlaceholderPlugin";
+import { theme } from "./theme";
+import { ValidityUpdatePlugin } from "./ValidityUpdatePlugin";
+import { ValueSyncPlugin } from "./ValueSyncPlugin";
+
+interface PopoverState {
+  isOpen: boolean;
+  triggerType: "insert" | "edit";
+  editingNodeKey?: NodeKey;
+}
+
+export function InputWithPlaceholders({
+  value,
+  onChange,
+  onBlur,
+  availableInputs,
+  placeholder,
+  disabled = false,
+  className,
+  id,
+  "aria-label": ariaLabel,
+}: InputWithPlaceholdersProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<{
+    dispatchCommand: (cmd: unknown, payload: unknown) => void;
+    restoreCursorAfterBrace: () => void;
+  } | null>(null);
+  const [popoverState, setPopoverState] = useState<PopoverState>({
+    isOpen: false,
+    triggerType: "insert",
+  });
+  const [searchFilter, setSearchFilter] = useState("");
+
+  const initialConfig = useMemo(
+    () => ({
+      namespace: "InputWithPlaceholders",
+      theme,
+      nodes: [PlaceholderNode],
+      onError: (_error: Error) => {
+        // Errors are handled by LexicalErrorBoundary
+      },
+      editable: !disabled,
+    }),
+    [disabled]
+  );
+
+  const handleOpenPopover = useCallback((payload: PopoverPayload) => {
+    setPopoverState({
+      isOpen: true,
+      triggerType: payload.mode,
+      editingNodeKey: payload.nodeKey,
+    });
+    setSearchFilter("");
+  }, []);
+
+  const handleSelectInput = useCallback(
+    (inputTitle: string) => {
+      if (editorRef.current) {
+        editorRef.current.dispatchCommand(SELECT_PLACEHOLDER_INPUT_COMMAND, {
+          inputTitle,
+          nodeKey: popoverState.editingNodeKey,
+        });
+      }
+      setPopoverState({ isOpen: false, triggerType: "insert" });
+    },
+    [popoverState.editingNodeKey]
+  );
+
+  const handlePopoverOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        const wasInsertMode = popoverState.triggerType === "insert";
+        setPopoverState((prev) => ({ ...prev, isOpen: false }));
+        // Return focus to the editor when popover closes
+        requestAnimationFrame(() => {
+          const editorElement = containerRef.current?.querySelector(
+            '[contenteditable="true"]'
+          );
+          if (editorElement instanceof HTMLElement) {
+            editorElement.focus();
+            // Restore cursor to after the "{" if we were in insert mode
+            if (wasInsertMode && editorRef.current) {
+              editorRef.current.restoreCursorAfterBrace();
+            }
+          }
+        });
+      }
+    },
+    [popoverState.triggerType]
+  );
+
+  const handleClosePopover = useCallback(() => {
+    setPopoverState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const filteredInputs = availableInputs.filter((input) =>
+    input.title?.toLowerCase().includes(searchFilter.toLowerCase())
+  );
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <LexicalComposer initialConfig={initialConfig}>
+        <EditorRefPlugin editorRef={editorRef} />
+        <Popover
+          open={popoverState.isOpen}
+          onOpenChange={handlePopoverOpenChange}
+        >
+          <PopoverAnchor asChild>
+            <div className="relative">
+              <RichTextPlugin
+                contentEditable={
+                  <ContentEditable
+                    id={id}
+                    aria-label={ariaLabel}
+                    className={cn(
+                      "flex min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base",
+                      "ring-offset-background",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      "disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+                      "whitespace-pre-wrap break-words",
+                      disabled && "cursor-not-allowed opacity-50",
+                      !value && placeholder && "text-muted-foreground",
+                      className
+                    )}
+                  />
+                }
+                placeholder={
+                  !value && placeholder ? (
+                    <div className="absolute left-3 top-2 text-muted-foreground pointer-events-none text-sm">
+                      {placeholder}
+                    </div>
+                  ) : null
+                }
+                ErrorBoundary={LexicalErrorBoundary}
+              />
+            </div>
+          </PopoverAnchor>
+
+          <PopoverContent
+            className="w-[220px] p-0"
+            align="start"
+            sideOffset={5}
+          >
+            <Command>
+              <CommandInput
+                placeholder="Search inputs..."
+                value={searchFilter}
+                onValueChange={setSearchFilter}
+              />
+              <CommandList>
+                <CommandEmpty>No inputs found.</CommandEmpty>
+                <CommandGroup heading="Available Inputs">
+                  {filteredInputs.map((input) => (
+                    <CommandItem
+                      key={input.title}
+                      value={input.title || ""}
+                      onSelect={() => {
+                        if (input.title) {
+                          handleSelectInput(input.title);
+                        }
+                      }}
+                    >
+                      <span>{input.title}</span>
+                      {input.required && (
+                        <Badge variant="outline" className="ml-auto text-xs">
+                          Required
+                        </Badge>
+                      )}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+
+        {/* Plugins */}
+        <HistoryPlugin />
+        <ValueSyncPlugin
+          value={value}
+          onChange={onChange}
+          availableInputs={availableInputs}
+        />
+        <PlaceholderPlugin
+          availableInputs={availableInputs}
+          onOpenPopover={handleOpenPopover}
+          onClosePopover={handleClosePopover}
+          isPopoverOpen={popoverState.isOpen}
+          popoverMode={popoverState.triggerType}
+        />
+        <OnBlurPlugin onBlur={onBlur} />
+        <DisabledPlugin disabled={disabled} />
+        <ValidityUpdatePlugin availableInputs={availableInputs} />
+      </LexicalComposer>
+    </div>
+  );
+}
+
+// Plugin to capture editor reference for dispatching commands
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import type { MutableRefObject } from "react";
+
+interface EditorRefPluginProps {
+  editorRef: MutableRefObject<{
+    dispatchCommand: (cmd: unknown, payload: unknown) => void;
+    restoreCursorAfterBrace: () => void;
+  } | null>;
+}
+
+function EditorRefPlugin({ editorRef }: EditorRefPluginProps): null {
+  const [editor] = useLexicalComposerContext();
+
+  // Store reference to editor for command dispatch
+  editorRef.current = {
+    dispatchCommand: (cmd, payload) => {
+      editor.dispatchCommand(
+        cmd as Parameters<typeof editor.dispatchCommand>[0],
+        payload
+      );
+    },
+    restoreCursorAfterBrace: () => {
+      editor.dispatchCommand(RESTORE_CURSOR_AFTER_BRACE_COMMAND, undefined);
+    },
+  };
+
+  return null;
+}
