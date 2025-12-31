@@ -674,6 +674,7 @@ tailscale serve --bg --set-path=/freetool 5001
 
 1. **Domain Layer:**
    - Create value object (e.g., `NewEntityId.fs`) in `ValueObjects/`
+   - **If creating a new ID type**: Add it to `FSharpSchemaFilter.fs` (see step 6)
    - Create entity (e.g., `NewEntity.fs`) in `Entities/` with business logic
    - Create events (e.g., `NewEntityEvents.fs`) in `Events/`
    - Update `.fsproj` file ordering
@@ -702,6 +703,17 @@ tailscale serve --bg --set-path=/freetool 5001
    - Infrastructure tests for repository
    - API tests for endpoints
 
+6. **OpenAPI Schema Filter** (if you created a new ID value object):
+   - Add to `src/Freetool.Api/src/OpenApi/FSharpSchemaFilter.fs`
+   - Find the ID type list (around line 23-29) and add your new ID type
+   - Example: `|| context.Type = typeof<NewEntityId>`
+
+7. **Regenerate Frontend Types:**
+   - Start backend: `docker compose up -d`
+   - Export spec: `curl http://localhost:5001/swagger/v1/swagger.json > openapi.spec.json`
+   - Generate types: `cd www && npm run generate-api-types`
+   - Verify: `cd www && npx tsc --noEmit`
+
 ### Adding a New Command to Existing Entity
 
 1. Add command case to command DU in `Commands/`
@@ -709,6 +721,7 @@ tailscale serve --bg --set-path=/freetool 5001
 3. Create domain method if needed (or reuse existing)
 4. Add controller endpoint in `Controllers/`
 5. Add tests
+6. **Regenerate frontend types** (see step 7 above)
 
 **Note:** AutoTracing automatically picks up new commands - no extra configuration needed!
 
@@ -720,17 +733,19 @@ tailscale serve --bg --set-path=/freetool 5001
 3. **Tracing Missing**: Check that handler is wrapped with `AutoTracing.createTracingDecorator` in DI
 4. **Authorization Failing**: Verify OpenFGA store has correct relationships (`CreateRelationshipsAsync`)
 5. **Migration Not Running**: Ensure SQL file is marked as `<EmbeddedResource>` in `.fsproj`
+5a. **New ID Type Not Serializing as String**: Add the ID type to `FSharpSchemaFilter.fs` - see "Adding a New Entity" step 6
 
 ### Audit Log Issues
 6. **Entity Name Shows "Unknown"**: Update/Delete events need proper name extraction in EventEnhancementService - use repository lookups for updates, include Name in deleted events
 7. **Parse Error in Audit Log**: Event schema changed but old events in DB have different structure - wipe DB during development or add fallback deserialization
 
 ### Frontend
-8. **Frontend Type Errors**: Regenerate types from OpenAPI spec after backend changes
+8. **Frontend Type Errors / `never` Types**: If `response.data` is typed as `never` or API calls show type mismatches, regenerate types: `docker compose up -d && curl http://localhost:5001/swagger/v1/swagger.json > openapi.spec.json && cd www && npm run generate-api-types`
 9. **Linting Fails on Commit**: Pre-commit hooks enforce zero warnings - run `npm run lint -- --fix` to auto-fix
 10. **Fast Refresh Not Working**: Component files must only export components - see [Frontend Code Quality Standards](#frontend-code-quality-standards)
 11. **Stale State in useEffect**: Fix React Hook dependency warnings immediately - they are real bugs
 12. **TypeScript Errors with `any`**: Never use `any` type - use proper interfaces or `unknown` with type guards
+13. **F# Discriminated Union JSON Format**: When sending F# DUs to the backend, use `{ case: "CaseName" }` format (or `{ case: "CaseName", fields: [...] }` for DUs with parameters). The OpenAPI spec shows the *serialization* format (`{ tag: N, is*: true }`), but deserialization requires the `case` format. See `www/src/lib/inputTypeMapper.ts` for the correct pattern.
 
 ## Code Style
 
