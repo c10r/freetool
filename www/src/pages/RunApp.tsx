@@ -180,13 +180,6 @@ const RunApp = () => {
     }
   }, [nodeId, hasInputs, inputValues, app?.inputs]);
 
-  // Auto-run the app when component loads (only if no inputs required)
-  useEffect(() => {
-    if (app && !running && !result && !runError && !hasInputs) {
-      handleRunApp();
-    }
-  }, [app, running, result, runError, hasInputs, handleRunApp]);
-
   // Handle input value changes
   const handleInputChange = (title: string, value: string) => {
     setInputValues((prev) => ({ ...prev, [title]: value }));
@@ -345,7 +338,7 @@ const RunApp = () => {
                 ) : (
                   <>
                     <Play className="mr-2 h-4 w-4" />
-                    Run Again
+                    {result ? "Run Again" : "Run"}
                   </>
                 )}
               </PermissionButton>
@@ -380,11 +373,11 @@ const RunApp = () => {
           </Card>
         )}
 
-        {/* Input Form - shown when app has inputs and no result yet */}
-        {hasInputs && !result && (
+        {/* Run App Form - shown until first run */}
+        {!result && (
           <Card>
             <CardHeader>
-              <CardTitle>App Inputs</CardTitle>
+              <CardTitle>{hasInputs ? "App Inputs" : "Run App"}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -438,115 +431,119 @@ const RunApp = () => {
           </Card>
         )}
 
-        {/* App Configuration Display */}
-        <Card>
-          <CardHeader>
-            <CardTitle>App Configuration</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-medium mb-2">Resource</h4>
-              <p className="text-sm text-muted-foreground">
-                {app?.resourceId || "No resource selected"}
-              </p>
-            </div>
-
-            {app?.urlPath && (
+        {/* App Configuration Display - only shown after run attempted */}
+        {(result || running || runError) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>App Configuration</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <h4 className="font-medium mb-2">URL Path</h4>
-                <p className="text-sm bg-muted p-2 rounded">{app.urlPath}</p>
+                <h4 className="font-medium mb-2">Resource</h4>
+                <p className="text-sm text-muted-foreground">
+                  {app?.resourceId || "No resource selected"}
+                </p>
               </div>
-            )}
 
-            {app?.urlParameters?.length > 0 && (
-              <div>
-                <h4 className="font-medium mb-2">URL Parameters</h4>
-                <div className="space-y-1">
-                  {app.urlParameters.map(
-                    (param: KeyValuePair, index: number) => (
+              {app?.urlPath && (
+                <div>
+                  <h4 className="font-medium mb-2">URL Path</h4>
+                  <p className="text-sm bg-muted p-2 rounded">{app.urlPath}</p>
+                </div>
+              )}
+
+              {app?.urlParameters?.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">URL Parameters</h4>
+                  <div className="space-y-1">
+                    {app.urlParameters.map(
+                      (param: KeyValuePair, index: number) => (
+                        <div
+                          key={`param-${param.key}-${index}`}
+                          className="text-sm bg-muted p-2 rounded flex justify-between"
+                        >
+                          <span className="font-mono">{param.key}</span>
+                          <span className="text-muted-foreground">
+                            {param.value}
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {app?.headers?.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Headers</h4>
+                  <div className="space-y-1">
+                    {app.headers.map((header: KeyValuePair, index: number) => (
                       <div
-                        key={`param-${param.key}-${index}`}
+                        key={`header-${header.key}-${index}`}
                         className="text-sm bg-muted p-2 rounded flex justify-between"
                       >
-                        <span className="font-mono">{param.key}</span>
+                        <span className="font-mono">{header.key}</span>
                         <span className="text-muted-foreground">
-                          {param.value}
+                          {header.value}
                         </span>
                       </div>
-                    )
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {app?.headers?.length > 0 && (
-              <div>
-                <h4 className="font-medium mb-2">Headers</h4>
-                <div className="space-y-1">
-                  {app.headers.map((header: KeyValuePair, index: number) => (
-                    <div
-                      key={`header-${header.key}-${index}`}
-                      className="text-sm bg-muted p-2 rounded flex justify-between"
-                    >
-                      <span className="font-mono">{header.key}</span>
-                      <span className="text-muted-foreground">
-                        {header.value}
-                      </span>
-                    </div>
-                  ))}
+              {app?.body?.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Body</h4>
+                  <div className="space-y-1">
+                    {app.body.map((bodyParam: KeyValuePair, index: number) => (
+                      <div
+                        key={`body-${bodyParam.key}-${index}`}
+                        className="text-sm bg-muted p-2 rounded flex justify-between"
+                      >
+                        <span className="font-mono">{bodyParam.key}</span>
+                        <span className="text-muted-foreground">
+                          {bodyParam.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </CardContent>
+          </Card>
+        )}
 
-            {app?.body?.length > 0 && (
-              <div>
-                <h4 className="font-medium mb-2">Body</h4>
-                <div className="space-y-1">
-                  {app.body.map((bodyParam: KeyValuePair, index: number) => (
-                    <div
-                      key={`body-${bodyParam.key}-${index}`}
-                      className="text-sm bg-muted p-2 rounded flex justify-between"
-                    >
-                      <span className="font-mono">{bodyParam.key}</span>
-                      <span className="text-muted-foreground">
-                        {bodyParam.value}
-                      </span>
-                    </div>
-                  ))}
+        {/* Execution Status - only shown after run attempted */}
+        {(result || running || runError) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Execution Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {running && (
+                <div className="flex items-center gap-2 text-blue-600">
+                  <Loader className="h-4 w-4 animate-spin" />
+                  <span>Running app...</span>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
 
-        {/* Execution Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Execution Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {running && (
-              <div className="flex items-center gap-2 text-blue-600">
-                <Loader className="h-4 w-4 animate-spin" />
-                <span>Running app...</span>
-              </div>
-            )}
+              {runError && (
+                <div className="text-red-600 bg-red-50 p-3 rounded">
+                  <h4 className="font-medium mb-1">Error</h4>
+                  <p className="text-sm">{runError}</p>
+                </div>
+              )}
 
-            {runError && (
-              <div className="text-red-600 bg-red-50 p-3 rounded">
-                <h4 className="font-medium mb-1">Error</h4>
-                <p className="text-sm">{runError}</p>
-              </div>
-            )}
-
-            {result && !running && (
-              <div className="text-green-600 bg-green-50 p-3 rounded">
-                <h4 className="font-medium mb-1">Success</h4>
-                <p className="text-sm">App executed successfully</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              {result && !running && (
+                <div className="text-green-600 bg-green-50 p-3 rounded">
+                  <h4 className="font-medium mb-1">Success</h4>
+                  <p className="text-sm">App executed successfully</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Request Details */}
         {result && (
