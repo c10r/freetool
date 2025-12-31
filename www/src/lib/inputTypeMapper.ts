@@ -14,24 +14,6 @@ interface InputTypeDtoWrite {
 }
 
 /**
- * F# discriminated union tag values for InputTypeDto.
- * These correspond to the order of cases in the F# DU:
- * Email = 0, Date = 1, Text = 2, Integer = 3, Boolean = 4, etc.
- * Used for reading/deserializing backend responses.
- */
-const INPUT_TYPE_TAGS = {
-  Email: 0,
-  Date: 1,
-  Text: 2,
-  Integer: 3,
-  Boolean: 4,
-  MultiEmail: 5,
-  MultiDate: 6,
-  MultiText: 7,
-  MultiInteger: 8,
-} as const;
-
-/**
  * Maps a frontend FieldType string to a backend InputTypeDto object.
  * Uses the F# discriminated union format expected by JsonFSharpConverter.
  *
@@ -62,60 +44,28 @@ export function toBackendInputType(frontendType: FieldType): InputTypeDtoWrite {
  * @returns A FieldType string for frontend use
  */
 export function fromBackendInputType(backendType: InputType): FieldType {
-  // Check the item/value property which contains the InputTypeValue
-  const typeValue = backendType.item ?? backendType.value;
+  // The backend sends { Case: "Email" } or { Case: "Text", Fields: [500] }
+  const caseName = (backendType as unknown as { Case?: string }).Case;
 
-  if (typeValue) {
-    if (typeValue.isEmail) {
-      return "email";
-    }
-    if (typeValue.isDate) {
-      return "date";
-    }
-    if (typeValue.isText) {
-      return "text";
-    }
-    if (typeValue.isInteger) {
-      return "integer";
-    }
-    if (typeValue.isBoolean) {
-      return "boolean";
-    }
-    // Multi-types are not supported as frontend FieldTypes, default to text
-    if (typeValue.isMultiEmail) {
-      return "email";
-    }
-    if (typeValue.isMultiDate) {
-      return "date";
-    }
-    if (typeValue.isMultiText) {
-      return "text";
-    }
-    if (typeValue.isMultiInteger) {
-      return "integer";
-    }
-  }
-
-  // Fallback: check tag value
-  if (backendType.tag !== undefined) {
-    switch (backendType.tag) {
-      case INPUT_TYPE_TAGS.Email:
+  if (caseName) {
+    switch (caseName) {
+      case "Email":
         return "email";
-      case INPUT_TYPE_TAGS.Date:
+      case "Date":
         return "date";
-      case INPUT_TYPE_TAGS.Text:
+      case "Text":
         return "text";
-      case INPUT_TYPE_TAGS.Integer:
+      case "Integer":
         return "integer";
-      case INPUT_TYPE_TAGS.Boolean:
+      case "Boolean":
         return "boolean";
-      case INPUT_TYPE_TAGS.MultiEmail:
+      case "MultiEmail":
         return "email";
-      case INPUT_TYPE_TAGS.MultiDate:
+      case "MultiDate":
         return "date";
-      case INPUT_TYPE_TAGS.MultiText:
+      case "MultiText":
         return "text";
-      case INPUT_TYPE_TAGS.MultiInteger:
+      case "MultiInteger":
         return "integer";
     }
   }
