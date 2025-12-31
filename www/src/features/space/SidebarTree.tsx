@@ -173,6 +173,7 @@ export default function SidebarTree({
                           onSelect={onSelect}
                           expandedFolders={expandedFolders}
                           toggleExpanded={toggleFolder}
+                          spaceId={space.id}
                         />
                       );
                     })}
@@ -255,13 +256,15 @@ function TreeNodeComponent({
   onSelect,
   expandedFolders,
   toggleExpanded,
+  spaceId,
 }: {
   node: TreeNode;
   depth: number;
   selectedId: string;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, targetSpaceId?: string) => void;
   expandedFolders: Set<string>;
   toggleExpanded: (folderId: string) => void;
+  spaceId: string;
 }) {
   const isFolder = node.type === "folder";
   const isSelected = node.id === selectedId;
@@ -274,7 +277,7 @@ function TreeNodeComponent({
   };
 
   const handleFolderClick = () => {
-    onSelect(node.id);
+    onSelect(node.id, spaceId);
   };
 
   return (
@@ -328,6 +331,7 @@ function TreeNodeComponent({
               onSelect={onSelect}
               expandedFolders={expandedFolders}
               toggleExpanded={toggleExpanded}
+              spaceId={spaceId}
             />
           ))}
         </div>
