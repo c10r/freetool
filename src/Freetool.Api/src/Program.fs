@@ -104,13 +104,14 @@ let main args =
         .ConfigureApiBehaviorOptions(fun options -> options.SuppressModelStateInvalidFilter <- false)
         .AddJsonOptions(fun options ->
             options.JsonSerializerOptions.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull
+            options.JsonSerializerOptions.PropertyNamingPolicy <- System.Text.Json.JsonNamingPolicy.CamelCase
             options.JsonSerializerOptions.Converters.Add(HttpMethodConverter())
             options.JsonSerializerOptions.Converters.Add(EventTypeConverter())
             options.JsonSerializerOptions.Converters.Add(EntityTypeConverter())
             options.JsonSerializerOptions.Converters.Add(KeyValuePairConverter())
             options.JsonSerializerOptions.Converters.Add(FolderLocationConverter())
 
-            // allowOverride = true lets property-level [<JsonConverter>] attributes take precedence
+            // allowOverride = true lets type-level [<JsonFSharpConverter>] attributes take precedence
             options.JsonSerializerOptions.Converters.Add(JsonFSharpConverter(allowOverride = true)))
     |> ignore
 

@@ -1,9 +1,12 @@
 namespace Freetool.Application.DTOs
 
+open System.Text.Json.Serialization
+
 type FolderLocation =
     | RootFolder
     | ChildFolder of parentId: string
 
+[<JsonFSharpConverter(UnionTagName = "case", UnionFieldsName = "fields")>]
 type InputTypeDto =
     | Email
     | Date
