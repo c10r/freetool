@@ -2,6 +2,7 @@ import { Check, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getResources } from "@/api/api";
 import { Input } from "@/components/ui/input";
+import { InputWithPlaceholders } from "@/components/ui/input-with-placeholders";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -209,22 +210,6 @@ export default function AppConfigForm({
         </div>
       )}
 
-      {/* Placeholder hints for available inputs */}
-      {inputs && inputs.length > 0 && (
-        <div className="bg-muted/50 p-3 rounded-md text-sm">
-          <span className="font-medium">Available placeholders: </span>
-          {inputs.map((input, i) => (
-            <span key={input.title || i}>
-              <code className="bg-muted px-1 rounded">{`{${input.title}}`}</code>
-              {i < inputs.length - 1 ? ", " : ""}
-            </span>
-          ))}
-          <p className="text-muted-foreground mt-1">
-            Use these in URL path, parameters, headers, or body values.
-          </p>
-        </div>
-      )}
-
       {selectedResource && (
         <div className="space-y-2">
           <Label>URL</Label>
@@ -253,14 +238,26 @@ export default function AppConfigForm({
                 Custom Path
               </Label>
               <div className="relative">
-                <Input
-                  id="url-path"
-                  value={urlPath}
-                  onChange={(e) => onUrlPathChange?.(e.target.value)}
-                  onBlur={(e) => onUrlPathFieldBlur?.(e.target.value)}
-                  placeholder="Example: /api/users"
-                  disabled={disabled || getFieldState("urlPath").updating}
-                />
+                {inputs && inputs.length > 0 ? (
+                  <InputWithPlaceholders
+                    id="url-path"
+                    value={urlPath}
+                    onChange={(value) => onUrlPathChange?.(value)}
+                    onBlur={() => onUrlPathFieldBlur?.(urlPath)}
+                    availableInputs={inputs}
+                    placeholder="Example: /api/users/{id}"
+                    disabled={disabled || getFieldState("urlPath").updating}
+                  />
+                ) : (
+                  <Input
+                    id="url-path"
+                    value={urlPath}
+                    onChange={(e) => onUrlPathChange?.(e.target.value)}
+                    onBlur={(e) => onUrlPathFieldBlur?.(e.target.value)}
+                    placeholder="Example: /api/users"
+                    disabled={disabled || getFieldState("urlPath").updating}
+                  />
+                )}
                 {mode === "edit" && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                     <FieldIndicator state={getFieldState("urlPath")} />
@@ -297,6 +294,7 @@ export default function AppConfigForm({
             }}
             ariaLabel="Query parameters"
             disabled={disabled || getFieldState("urlParameters").updating}
+            availableInputs={inputs}
           />
           {mode === "edit" && (
             <div className="absolute right-3 top-3">
@@ -330,6 +328,7 @@ export default function AppConfigForm({
             }}
             ariaLabel="Headers"
             disabled={disabled || getFieldState("headers").updating}
+            availableInputs={inputs}
           />
           {mode === "edit" && (
             <div className="absolute right-3 top-3">
@@ -363,6 +362,7 @@ export default function AppConfigForm({
             }}
             ariaLabel="JSON body"
             disabled={disabled || getFieldState("body").updating}
+            availableInputs={inputs}
           />
           {mode === "edit" && (
             <div className="absolute right-3 top-3">

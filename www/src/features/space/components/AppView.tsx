@@ -339,6 +339,10 @@ export default function AppView({
               updateUrlPathField(value);
             }}
             disabled={!canEditApp}
+            inputs={fields.map((f) => ({
+              title: f.label,
+              required: f.required,
+            }))}
           />
         </CardContent>
       </Card>

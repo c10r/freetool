@@ -1,6 +1,8 @@
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputWithPlaceholders } from "@/components/ui/input-with-placeholders";
+import type { AppInput } from "@/components/ui/input-with-placeholders.types";
 import type { KeyValuePair } from "../types";
 
 interface KeyValueListProps {
@@ -11,6 +13,7 @@ interface KeyValueListProps {
   readOnly?: boolean;
   readOnlyLabel?: string;
   disabled?: boolean;
+  availableInputs?: AppInput[];
 }
 
 export default function KeyValueList({
@@ -21,6 +24,7 @@ export default function KeyValueList({
   readOnly = false,
   readOnlyLabel,
   disabled = false,
+  availableInputs = [],
 }: KeyValueListProps) {
   const add = () => onChange?.([...(items || []), { key: "", value: "" }]);
   const remove = (i: number) => onChange?.(items.filter((_, idx) => idx !== i));
@@ -92,14 +96,26 @@ export default function KeyValueList({
             aria-label={`Key ${i + 1}`}
             disabled={disabled}
           />
-          <Input
-            placeholder="Value"
-            value={kv.value}
-            onChange={(e) => update(i, { value: e.target.value })}
-            className="col-span-6"
-            aria-label={`Value ${i + 1}`}
-            disabled={disabled}
-          />
+          {availableInputs.length > 0 ? (
+            <InputWithPlaceholders
+              value={kv.value}
+              onChange={(value) => update(i, { value })}
+              availableInputs={availableInputs}
+              placeholder="Value"
+              className="col-span-6"
+              aria-label={`Value ${i + 1}`}
+              disabled={disabled}
+            />
+          ) : (
+            <Input
+              placeholder="Value"
+              value={kv.value}
+              onChange={(e) => update(i, { value: e.target.value })}
+              className="col-span-6"
+              aria-label={`Value ${i + 1}`}
+              disabled={disabled}
+            />
+          )}
           <Button
             type="button"
             variant="secondary"
