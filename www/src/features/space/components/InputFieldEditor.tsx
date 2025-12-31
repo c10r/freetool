@@ -1,4 +1,12 @@
-import { Plus, Trash2 } from "lucide-react";
+import {
+  ALargeSmall,
+  Calendar,
+  Hash,
+  Mail,
+  Plus,
+  ToggleLeft,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -95,11 +103,31 @@ export default function InputFieldEditor({
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="text">Text</SelectItem>
-                  <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="integer">Integer</SelectItem>
-                  <SelectItem value="boolean">Boolean</SelectItem>
+                  <SelectItem value="text">
+                    <span className="flex items-center gap-2">
+                      <ALargeSmall className="h-4 w-4" /> Text
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="email">
+                    <span className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" /> Email
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="date">
+                    <span className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" /> Date
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="integer">
+                    <span className="flex items-center gap-2">
+                      <Hash className="h-4 w-4" /> Integer
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="boolean">
+                    <span className="flex items-center gap-2">
+                      <ToggleLeft className="h-4 w-4" /> Boolean
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
