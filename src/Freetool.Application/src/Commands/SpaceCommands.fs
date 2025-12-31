@@ -8,6 +8,7 @@ open Freetool.Application.DTOs
 type SpaceCommandResult =
     | SpaceResult of SpaceData
     | SpacesResult of PagedResult<SpaceData>
+    | SpaceMembersPermissionsResult of SpaceMembersPermissionsResponseDto
     | UnitResult of unit
 
 /// Commands for Space operations
@@ -32,3 +33,7 @@ type SpaceCommand =
     | AddMember of actorUserId: UserId * spaceId: string * AddMemberDto
     /// Removes a member from a Space
     | RemoveMember of actorUserId: UserId * spaceId: string * RemoveMemberDto
+    /// Gets all space members with their permissions
+    | GetSpaceMembersWithPermissions of spaceId: string
+    /// Updates a user's permissions in a Space
+    | UpdateUserPermissions of actorUserId: UserId * spaceId: string * UpdateUserPermissionsDto

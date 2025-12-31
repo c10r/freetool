@@ -2,6 +2,7 @@ import AppView from "./components/AppView";
 import AuditLogView from "./components/AuditLogView";
 import FolderView from "./components/FolderView";
 import ResourcesView from "./components/ResourcesView";
+import SpacePermissionsView from "./components/SpacePermissionsView";
 import TrashView from "./components/TrashView";
 import UsersSpacesView from "./components/UsersSpacesView";
 import type { SpaceMainProps } from "./types";
@@ -31,6 +32,10 @@ export default function WorkspaceMain(props: SpaceMainProps) {
 
   if (selectedId === "users-&-spaces") {
     return <UsersSpacesView />;
+  }
+
+  if (selectedId === "permissions") {
+    return <SpacePermissionsView onBackClick={() => onSelect("root")} />;
   }
 
   if (!selected) {

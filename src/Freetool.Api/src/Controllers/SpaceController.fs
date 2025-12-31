@@ -486,3 +486,92 @@ type SpaceController
                     | Error error -> return this.HandleDomainError(error)
                 | Ok _ -> return this.StatusCode(500, "Unexpected result type") :> IActionResult
         }
+
+    /// Checks if the current user is a member (including moderator) of a specific space
+    member private this.CheckIsSpaceMemberAsync(spaceId: string) : Task<bool> =
+        task {
+            let userId = this.CurrentUserId
+            let userIdStr = userId.Value.ToString()
+
+            // Check if user is moderator
+            let! isModerator = authService.CheckPermissionAsync (User userIdStr) SpaceModerator (SpaceObject spaceId)
+
+            if isModerator then
+                return true
+            else
+                // Check if user is member
+                return! authService.CheckPermissionAsync (User userIdStr) SpaceMember (SpaceObject spaceId)
+        }
+
+    [<HttpGet("{id}/permissions")>]
+    [<ProducesResponseType(typeof<SpaceMembersPermissionsResponseDto>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.GetSpacePermissions(id: string) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+
+            // Any space member (moderator or member) or org admin can view permissions
+            let! isOrgAdmin = this.CheckIsOrgAdminAsync()
+            let! isMember = this.CheckIsSpaceMemberAsync(id)
+
+            if not isOrgAdmin && not isMember then
+                logger.LogWarning(
+                    "User {UserId} attempted to view permissions for space {SpaceId} without being a member",
+                    userId.Value,
+                    id
+                )
+
+                return this.Forbidden("Only space members can view space permissions")
+            else
+                let! result = commandHandler.HandleCommand(GetSpaceMembersWithPermissions id)
+
+                return
+                    match result with
+                    | Ok(SpaceMembersPermissionsResult response) -> this.Ok(response) :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError(error)
+        }
+
+    [<HttpPut("{id}/permissions")>]
+    [<ProducesResponseType(StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.UpdateUserPermissions
+        (id: string, [<FromBody>] updateDto: UpdateUserPermissionsDto)
+        : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+
+            // Only moderators and org admins can update permissions
+            let! hasPermission = this.CheckIsOrgAdminOrModeratorAsync(id)
+
+            if not hasPermission then
+                logger.LogWarning(
+                    "User {UserId} attempted to update permissions for space {SpaceId} without moderator/admin permissions",
+                    userId.Value,
+                    id
+                )
+
+                return
+                    this.Forbidden("Only organization administrators or space moderators can update member permissions")
+            else
+                let! result = commandHandler.HandleCommand(UpdateUserPermissions(userId, id, updateDto))
+
+                match result with
+                | Ok(SpaceCommandResult.UnitResult()) ->
+                    logger.LogInformation(
+                        "Permissions updated for user {TargetUserId} in space {SpaceId} by user {ActorUserId}",
+                        updateDto.UserId,
+                        id,
+                        userId.Value
+                    )
+
+                    return this.Ok() :> IActionResult
+                | Ok _ -> return this.StatusCode(500, "Unexpected result type") :> IActionResult
+                | Error error -> return this.HandleDomainError(error)
+        }

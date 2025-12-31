@@ -319,3 +319,24 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                 with _ ->
                     return false
             }
+
+        /// Batch checks multiple permissions for a subject on an object
+        member this.BatchCheckPermissionsAsync
+            (subject: AuthSubject)
+            (relations: AuthRelation list)
+            (object: AuthObject)
+            : Task<Map<AuthRelation, bool>> =
+            task {
+                // Use parallel check calls for each relation
+                let! results =
+                    relations
+                    |> List.map (fun relation ->
+                        task {
+                            let! allowed = (this :> IAuthorizationService).CheckPermissionAsync subject relation object
+
+                            return (relation, allowed)
+                        })
+                    |> Task.WhenAll
+
+                return results |> Array.toList |> Map.ofList
+            }

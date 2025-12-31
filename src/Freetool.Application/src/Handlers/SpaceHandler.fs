@@ -12,9 +12,49 @@ open Freetool.Application.Mappers
 
 module SpaceHandler =
 
+    /// List of all 10 permission relations for space members
+    let allSpacePermissions =
+        [ ResourceCreate
+          ResourceEdit
+          ResourceDelete
+          AppCreate
+          AppEdit
+          AppDelete
+          AppRun
+          FolderCreate
+          FolderEdit
+          FolderDelete ]
+
+    /// Converts a Map of permission check results to SpacePermissionsDto
+    let permissionsMapToDto (permissionsMap: Map<AuthRelation, bool>) : SpacePermissionsDto =
+        { CreateResource = permissionsMap |> Map.tryFind ResourceCreate |> Option.defaultValue false
+          EditResource = permissionsMap |> Map.tryFind ResourceEdit |> Option.defaultValue false
+          DeleteResource = permissionsMap |> Map.tryFind ResourceDelete |> Option.defaultValue false
+          CreateApp = permissionsMap |> Map.tryFind AppCreate |> Option.defaultValue false
+          EditApp = permissionsMap |> Map.tryFind AppEdit |> Option.defaultValue false
+          DeleteApp = permissionsMap |> Map.tryFind AppDelete |> Option.defaultValue false
+          RunApp = permissionsMap |> Map.tryFind AppRun |> Option.defaultValue false
+          CreateFolder = permissionsMap |> Map.tryFind FolderCreate |> Option.defaultValue false
+          EditFolder = permissionsMap |> Map.tryFind FolderEdit |> Option.defaultValue false
+          DeleteFolder = permissionsMap |> Map.tryFind FolderDelete |> Option.defaultValue false }
+
+    /// Creates a SpacePermissionsDto with all permissions set to true (for moderators)
+    let allPermissionsDto: SpacePermissionsDto =
+        { CreateResource = true
+          EditResource = true
+          DeleteResource = true
+          CreateApp = true
+          EditApp = true
+          DeleteApp = true
+          RunApp = true
+          CreateFolder = true
+          EditFolder = true
+          DeleteFolder = true }
+
     let handleCommand
         (spaceRepository: ISpaceRepository)
         (userRepository: IUserRepository)
+        (authService: IAuthorizationService)
         (command: SpaceCommand)
         : Task<Result<SpaceCommandResult, DomainError>> =
         task {
@@ -263,10 +303,178 @@ module SpaceHandler =
                           Take = take }
 
                     return Ok(SpacesResult result)
+
+            | GetSpaceMembersWithPermissions spaceId ->
+                match Guid.TryParse spaceId with
+                | false, _ -> return Error(ValidationError "Invalid space ID format")
+                | true, guid ->
+                    let spaceIdObj = SpaceId.FromGuid guid
+                    let! spaceOption = spaceRepository.GetByIdAsync spaceIdObj
+
+                    match spaceOption with
+                    | None -> return Error(NotFound "Space not found")
+                    | Some space ->
+                        // Collect all user IDs (moderator + members)
+                        let moderatorId = space.State.ModeratorUserId
+                        let memberIds = space.State.MemberIds
+                        let allUserIds = moderatorId :: memberIds |> List.distinct
+
+                        // Fetch user details for all users
+                        let! userResults =
+                            allUserIds
+                            |> List.map (fun userId -> userRepository.GetByIdAsync userId)
+                            |> Task.WhenAll
+
+                        // Create a lookup map for users
+                        let userLookup =
+                            userResults
+                            |> Array.choose id
+                            |> Array.map (fun u -> (u.State.Id, u))
+                            |> Map.ofArray
+
+                        // Build member permissions DTOs
+                        let! memberPermissions =
+                            allUserIds
+                            |> List.map (fun userId ->
+                                task {
+                                    let userOption = userLookup |> Map.tryFind userId
+                                    let isModerator = userId = moderatorId
+                                    let userIdStr = userId.Value.ToString()
+
+                                    // For moderators, all permissions are true
+                                    // For non-moderators, batch check permissions
+                                    let! permissions =
+                                        if isModerator then
+                                            Task.FromResult allPermissionsDto
+                                        else
+                                            task {
+                                                let! permMap =
+                                                    authService.BatchCheckPermissionsAsync
+                                                        (User userIdStr)
+                                                        allSpacePermissions
+                                                        (SpaceObject spaceId)
+
+                                                return permissionsMapToDto permMap
+                                            }
+
+                                    let userName =
+                                        userOption
+                                        |> Option.map (fun u -> u.State.Name)
+                                        |> Option.defaultValue "Unknown User"
+
+                                    let userEmail =
+                                        userOption |> Option.map (fun u -> u.State.Email) |> Option.defaultValue ""
+
+                                    let profilePicUrl = userOption |> Option.bind (fun u -> u.State.ProfilePicUrl)
+
+                                    let memberDto: SpaceMemberPermissionsDto =
+                                        { UserId = userIdStr
+                                          UserName = userName
+                                          UserEmail = userEmail
+                                          ProfilePicUrl = profilePicUrl
+                                          IsModerator = isModerator
+                                          Permissions = permissions }
+
+                                    return memberDto
+                                })
+                            |> Task.WhenAll
+
+                        let response: SpaceMembersPermissionsResponseDto =
+                            { SpaceId = spaceId
+                              SpaceName = space.State.Name
+                              Members = memberPermissions |> Array.toList }
+
+                        return Ok(SpaceMembersPermissionsResult response)
+
+            | UpdateUserPermissions(actorUserId, spaceId, dto) ->
+                match Guid.TryParse spaceId, Guid.TryParse dto.UserId with
+                | (false, _), _ -> return Error(ValidationError "Invalid space ID format")
+                | _, (false, _) -> return Error(ValidationError "Invalid user ID format")
+                | (true, spaceGuid), (true, userGuid) ->
+                    let spaceIdObj = SpaceId.FromGuid spaceGuid
+                    let targetUserId = UserId.FromGuid userGuid
+
+                    let! spaceOption = spaceRepository.GetByIdAsync spaceIdObj
+
+                    match spaceOption with
+                    | None -> return Error(NotFound "Space not found")
+                    | Some space ->
+                        // Cannot modify moderator permissions
+                        if targetUserId = space.State.ModeratorUserId then
+                            return
+                                Error(
+                                    ValidationError
+                                        "Cannot modify moderator permissions - moderators have all permissions by default"
+                                )
+                        else if
+                            // Verify target user is a member of the space
+                            not (List.contains targetUserId space.State.MemberIds)
+                        then
+                            return Error(NotFound "User is not a member of this space")
+                        else
+                            let targetUserIdStr = dto.UserId
+
+                            // Get current permissions for the user
+                            let! currentPermissionsMap =
+                                authService.BatchCheckPermissionsAsync
+                                    (User targetUserIdStr)
+                                    allSpacePermissions
+                                    (SpaceObject spaceId)
+
+                            // Build the desired permissions map from DTO
+                            let desiredPermissions: Map<AuthRelation, bool> =
+                                Map.ofList
+                                    [ (ResourceCreate, dto.Permissions.CreateResource)
+                                      (ResourceEdit, dto.Permissions.EditResource)
+                                      (ResourceDelete, dto.Permissions.DeleteResource)
+                                      (AppCreate, dto.Permissions.CreateApp)
+                                      (AppEdit, dto.Permissions.EditApp)
+                                      (AppDelete, dto.Permissions.DeleteApp)
+                                      (AppRun, dto.Permissions.RunApp)
+                                      (FolderCreate, dto.Permissions.CreateFolder)
+                                      (FolderEdit, dto.Permissions.EditFolder)
+                                      (FolderDelete, dto.Permissions.DeleteFolder) ]
+
+                            // Compute diff: what to add and what to remove
+                            let tuplesToAdd =
+                                desiredPermissions
+                                |> Map.toList
+                                |> List.filter (fun (relation, desired) ->
+                                    let current =
+                                        currentPermissionsMap |> Map.tryFind relation |> Option.defaultValue false
+
+                                    desired && not current)
+                                |> List.map (fun (relation, _) ->
+                                    { Subject = User targetUserIdStr
+                                      Relation = relation
+                                      Object = SpaceObject spaceId })
+
+                            let tuplesToRemove =
+                                desiredPermissions
+                                |> Map.toList
+                                |> List.filter (fun (relation, desired) ->
+                                    let current =
+                                        currentPermissionsMap |> Map.tryFind relation |> Option.defaultValue false
+
+                                    not desired && current)
+                                |> List.map (fun (relation, _) ->
+                                    { Subject = User targetUserIdStr
+                                      Relation = relation
+                                      Object = SpaceObject spaceId })
+
+                            // Update relationships atomically if there are changes
+                            if not (List.isEmpty tuplesToAdd) || not (List.isEmpty tuplesToRemove) then
+                                do!
+                                    authService.UpdateRelationshipsAsync
+                                        { TuplesToAdd = tuplesToAdd
+                                          TuplesToRemove = tuplesToRemove }
+
+                            return Ok(SpaceCommandResult.UnitResult())
         }
 
 /// SpaceHandler class that implements IMultiRepositoryCommandHandler
-type SpaceHandler(spaceRepository: ISpaceRepository, userRepository: IUserRepository) =
+type SpaceHandler
+    (spaceRepository: ISpaceRepository, userRepository: IUserRepository, authService: IAuthorizationService) =
     interface IMultiRepositoryCommandHandler<SpaceCommand, SpaceCommandResult> with
         member this.HandleCommand command =
-            SpaceHandler.handleCommand spaceRepository userRepository command
+            SpaceHandler.handleCommand spaceRepository userRepository authService command

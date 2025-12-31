@@ -79,3 +79,32 @@ export interface CurrentUserResponse {
   isOrgAdmin: boolean;
   spaces: SpaceMembership[];
 }
+
+/**
+ * Individual member with their permissions in a space
+ */
+export interface SpaceMemberPermissions {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  profilePicUrl?: string;
+  isModerator: boolean;
+  permissions: SpacePermissions;
+}
+
+/**
+ * Response from the space members permissions endpoint
+ */
+export interface SpaceMembersPermissionsResponse {
+  spaceId: string;
+  spaceName: string;
+  members: SpaceMemberPermissions[];
+}
+
+/**
+ * Request to update a user's permissions in a space
+ */
+export interface UpdateUserPermissionsRequest {
+  userId: string;
+  permissions: SpacePermissions;
+}

@@ -3034,6 +3034,150 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/space/{id}/permissions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["SpaceMembersPermissionsResponseDto"];
+            "application/json": components["schemas"]["SpaceMembersPermissionsResponseDto"];
+            "text/json": components["schemas"]["SpaceMembersPermissionsResponseDto"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["UpdateUserPermissionsDto"];
+          "text/json": components["schemas"]["UpdateUserPermissionsDto"];
+          "application/*+json": components["schemas"]["UpdateUserPermissionsDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/trash/space/{spaceId}": {
     parameters: {
       query?: never;
@@ -4406,6 +4550,33 @@ export interface components {
     };
     /** Format: uuid */
     SpaceId: string;
+    SpaceMemberPermissionsDto: {
+      userId?: string | null;
+      userName?: string | null;
+      userEmail?: string | null;
+      profilePicUrl?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
+      isModerator?: boolean;
+      permissions?: components["schemas"]["SpacePermissionsDto"] | null;
+    };
+    SpaceMembersPermissionsResponseDto: {
+      spaceId?: string | null;
+      spaceName?: string | null;
+      members?: components["schemas"]["SpaceMemberPermissionsDto"][] | null;
+    };
+    SpacePermissionsDto: {
+      createResource?: boolean;
+      editResource?: boolean;
+      deleteResource?: boolean;
+      createApp?: boolean;
+      editApp?: boolean;
+      deleteApp?: boolean;
+      runApp?: boolean;
+      createFolder?: boolean;
+      editFolder?: boolean;
+      deleteFolder?: boolean;
+    };
     StringFSharpListFSharpOption: string[] | null;
     StringFSharpOption: string | null;
     "StringStringBoolean<>f__AnonymousType3183648458": {
@@ -4484,6 +4655,10 @@ export interface components {
     };
     UpdateUserNameDto: {
       name: string;
+    };
+    UpdateUserPermissionsDto: {
+      userId: string;
+      permissions: components["schemas"]["SpacePermissionsDto"];
     };
     UserData: {
       /** Format: uuid */

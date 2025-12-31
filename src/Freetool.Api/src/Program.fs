@@ -188,7 +188,8 @@ let main args =
     builder.Services.AddScoped<SpaceHandler>(fun serviceProvider ->
         let spaceRepository = serviceProvider.GetRequiredService<ISpaceRepository>()
         let userRepository = serviceProvider.GetRequiredService<IUserRepository>()
-        SpaceHandler(spaceRepository, userRepository))
+        let authService = serviceProvider.GetRequiredService<IAuthorizationService>()
+        SpaceHandler(spaceRepository, userRepository, authService))
     |> ignore
 
     builder.Services.AddScoped<ResourceHandler>(fun serviceProvider ->

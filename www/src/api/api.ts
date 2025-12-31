@@ -645,6 +645,7 @@ export const inviteUser = ({ email }: { email: string }) =>
 
 import type {
   CurrentUserResponse,
+  SpacePermissions,
   SpacePermissionsResponse,
 } from "@/types/permissions";
 
@@ -747,5 +748,44 @@ export const restoreFolder = (folderId: string) => {
 export const restoreResource = (resourceId: string) => {
   return client.POST("/trash/resource/{resourceId}/restore", {
     params: { path: { resourceId } },
+  });
+};
+
+/**
+ * Space Permissions Management
+ */
+
+/**
+ * Get all members and their permissions for a space
+ *
+ * @param spaceId - The ID of the space
+ * @returns All members with their permissions
+ */
+export const getSpaceMembersPermissions = (spaceId: string) => {
+  return client.GET("/space/{id}/permissions", {
+    params: { path: { id: spaceId } },
+  });
+};
+
+/**
+ * Update a user's permissions in a space
+ *
+ * @param spaceId - The ID of the space
+ * @param userId - The ID of the user to update
+ * @param permissions - The new permissions to set
+ * @returns Success or error
+ */
+export const updateUserPermissions = ({
+  spaceId,
+  userId,
+  permissions,
+}: {
+  spaceId: string;
+  userId: string;
+  permissions: SpacePermissions;
+}) => {
+  return client.PUT("/space/{id}/permissions", {
+    params: { path: { id: spaceId } },
+    body: { userId, permissions },
   });
 };

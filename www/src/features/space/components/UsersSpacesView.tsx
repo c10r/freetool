@@ -4,10 +4,12 @@ import {
   Crown,
   Edit,
   Plus,
+  Shield,
   User as UserIcon,
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   addSpaceMember,
   changeSpaceModerator,
@@ -70,6 +72,7 @@ const isInvitedPlaceholder = (user: User): boolean =>
 
 export default function UsersSpacesView() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -901,16 +904,37 @@ export default function UsersSpacesView() {
                           {space.name}
                         </CardTitle>
                       </div>
-                      {isOrgAdmin && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditSpace(space)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit size={14} />
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  navigate(`/spaces/${space.id}/permissions`)
+                                }
+                                className="h-8 w-8 p-0"
+                              >
+                                <Shield size={14} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Manage Permissions</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        {isOrgAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditSpace(space)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit size={14} />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">

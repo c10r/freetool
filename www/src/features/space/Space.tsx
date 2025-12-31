@@ -44,6 +44,10 @@ function getPathFromSelectedId(
     // Trash is space-specific
     return spaceId ? `/spaces/${spaceId}/trash` : "/spaces";
   }
+  if (selectedId === "permissions") {
+    // Permissions are space-specific
+    return spaceId ? `/spaces/${spaceId}/permissions` : "/spaces";
+  }
   if (selectedId === "root") {
     return spaceId ? `/spaces/${spaceId}` : "/spaces";
   }
@@ -73,6 +77,9 @@ function getSelectedIdFromPath(
   }
   if (pathname === `/spaces/${spaceId}/trash`) {
     return "trash";
+  }
+  if (pathname === `/spaces/${spaceId}/permissions`) {
+    return "permissions";
   }
   if (pathname === "/spaces" && !spaceId) {
     return rootId;

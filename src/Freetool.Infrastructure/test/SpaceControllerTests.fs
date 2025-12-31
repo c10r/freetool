@@ -35,6 +35,14 @@ type MockAuthorizationService(checkPermissionFn: AuthSubject -> AuthRelation -> 
 
         member _.StoreExistsAsync(_storeId: string) = Task.FromResult(true)
 
+        member _.BatchCheckPermissionsAsync (subject: AuthSubject) (relations: AuthRelation list) (object: AuthObject) =
+            let results =
+                relations
+                |> List.map (fun relation -> (relation, checkPermissionFn subject relation object))
+                |> Map.ofList
+
+            Task.FromResult(results)
+
 // Mock command handler for testing
 type MockSpaceCommandHandler(handleCommandFn: SpaceCommand -> Task<Result<SpaceCommandResult, DomainError>>) =
     interface IMultiRepositoryCommandHandler<SpaceCommand, SpaceCommandResult> with

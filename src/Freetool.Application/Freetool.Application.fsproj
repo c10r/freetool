@@ -21,6 +21,7 @@
     <Compile Include="src/DTOs/PermissionDtos.fs" />
     <Compile Include="src/DTOs/UserDtos.fs" />
     <Compile Include="src/DTOs/SpaceDtos.fs" />
+    <Compile Include="src/DTOs/SpacePermissionsDtos.fs" />
     <Compile Include="src/DTOs/ResourceDtos.fs" />
     <Compile Include="src/DTOs/FolderDtos.fs" />
     <Compile Include="src/DTOs/AppDtos.fs" />

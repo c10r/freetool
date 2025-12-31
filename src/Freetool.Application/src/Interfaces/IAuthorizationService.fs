@@ -136,3 +136,7 @@ type IAuthorizationService =
 
     /// Checks if a store with the given ID exists
     abstract member StoreExistsAsync: storeId: string -> Task<bool>
+
+    /// Batch checks multiple permissions for a subject on an object
+    abstract member BatchCheckPermissionsAsync:
+        subject: AuthSubject -> relations: AuthRelation list -> object: AuthObject -> Task<Map<AuthRelation, bool>>
