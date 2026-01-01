@@ -12,7 +12,7 @@ type ResourceCommandResult =
 type ResourceCommand =
     | CreateResource of actorUserId: UserId * ValidatedResource
     | GetResourceById of resourceId: string
-    | GetAllResources of skip: int * take: int
+    | GetAllResources of spaceId: SpaceId * skip: int * take: int
     | DeleteResource of actorUserId: UserId * resourceId: string
     | UpdateResourceName of actorUserId: UserId * resourceId: string * UpdateResourceNameDto
     | UpdateResourceDescription of actorUserId: UserId * resourceId: string * UpdateResourceDescriptionDto

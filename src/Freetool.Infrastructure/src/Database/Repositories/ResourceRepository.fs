@@ -28,6 +28,22 @@ type ResourceRepository(context: FreetoolDbContext, eventRepository: IEventRepos
                 return resourceDatas |> Seq.map (fun data -> Resource.fromData data) |> Seq.toList
             }
 
+        member _.GetBySpaceAsync (spaceId: SpaceId) (skip: int) (take: int) : Task<ValidatedResource list> =
+            task {
+                let! resourceDatas =
+                    context.Resources
+                        .Where(fun r -> r.SpaceId = spaceId)
+                        .OrderBy(fun r -> r.CreatedAt)
+                        .Skip(skip)
+                        .Take(take)
+                        .ToListAsync()
+
+                return resourceDatas |> Seq.map (fun data -> Resource.fromData data) |> Seq.toList
+            }
+
+        member _.GetCountBySpaceAsync(spaceId: SpaceId) : Task<int> =
+            task { return! context.Resources.Where(fun r -> r.SpaceId = spaceId).CountAsync() }
+
         member _.AddAsync(resource: ValidatedResource) : Task<Result<unit, DomainError>> =
             task {
                 try

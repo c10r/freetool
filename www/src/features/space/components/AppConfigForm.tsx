@@ -37,6 +37,7 @@ interface AppInput {
 }
 
 interface AppConfigFormProps {
+  spaceId?: string;
   resourceId?: string;
   urlPath?: string;
   httpMethod?: EndpointMethod;
@@ -85,6 +86,7 @@ const FieldIndicator = ({ state }: { state: FieldState }) => {
 };
 
 export default function AppConfigForm({
+  spaceId,
   resourceId,
   urlPath = "",
   httpMethod,
@@ -133,10 +135,15 @@ export default function AppConfigForm({
 
   useEffect(() => {
     const fetchResources = async () => {
+      if (!spaceId) {
+        setResources([]);
+        return;
+      }
+
       setLoadingResources(true);
       setResourcesError(null);
       try {
-        const response = await getResources();
+        const response = await getResources(spaceId);
         if (response.error) {
           setResourcesError("Failed to load resources");
           setResources([]);
@@ -171,7 +178,7 @@ export default function AppConfigForm({
     };
 
     fetchResources();
-  }, []);
+  }, [spaceId]);
 
   return (
     <div className="space-y-4">

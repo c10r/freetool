@@ -131,7 +131,7 @@ export default function ResourcesView({
     try {
       setLoading(true);
       setError(null);
-      const response = await getResources(skip, pageSize);
+      const response = await getResources(spaceId, skip, pageSize);
       if (response.data?.items) {
         const mappedItems = response.data?.items.map((item) => {
           return {
@@ -156,7 +156,7 @@ export default function ResourcesView({
     } finally {
       setLoading(false);
     }
-  }, [fetchApps, skip, pageSize, setTotalCount]);
+  }, [fetchApps, spaceId, skip, pageSize, setTotalCount]);
 
   const getAppsUsingResource = (resourceId: string) => {
     return apps.filter((app) => app.resourceId === resourceId);

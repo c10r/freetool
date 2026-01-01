@@ -859,6 +859,91 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/app/{id}/http-method": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["UpdateAppHttpMethodDto"];
+          "text/json": components["schemas"]["UpdateAppHttpMethodDto"];
+          "application/*+json": components["schemas"]["UpdateAppHttpMethodDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["AppData"];
+            "application/json": components["schemas"]["AppData"];
+            "text/json": components["schemas"]["AppData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/app/{id}/run": {
     parameters: {
       query?: never;
@@ -1589,49 +1674,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query?: {
-          skip?: number;
-          take?: number;
-        };
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "text/plain": components["schemas"]["ResourceDataPagedResult"];
-            "application/json": components["schemas"]["ResourceDataPagedResult"];
-            "text/json": components["schemas"]["ResourceDataPagedResult"];
-          };
-        };
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "text/plain": components["schemas"]["ProblemDetails"];
-            "application/json": components["schemas"]["ProblemDetails"];
-            "text/json": components["schemas"]["ProblemDetails"];
-          };
-        };
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
+    get?: never;
     put?: never;
     post: {
       parameters: {
@@ -1818,6 +1861,66 @@ export interface paths {
         };
       };
     };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/space/{spaceId}/resource": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          skip?: number;
+          take?: number;
+        };
+        header?: never;
+        path: {
+          spaceId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ResourceDataPagedResult"];
+            "application/json": components["schemas"]["ResourceDataPagedResult"];
+            "text/json": components["schemas"]["ResourceDataPagedResult"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -4216,6 +4319,8 @@ export interface components {
       folderId: string & components["schemas"]["FolderId"];
       /** Format: uuid */
       resourceId: string & components["schemas"]["ResourceId"];
+      /** @enum {string} */
+      httpMethod: "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
       inputs: components["schemas"]["Input"][];
       urlPath?: (string & components["schemas"]["StringFSharpOption"]) | null;
       urlParameters: components["schemas"]["KeyValuePair"][];
@@ -4249,6 +4354,7 @@ export interface components {
       name: string;
       folderId: string;
       resourceId: string;
+      httpMethod: string;
       inputs?: components["schemas"]["AppInputDto"][] | null;
       urlPath?: (string & components["schemas"]["StringFSharpOption"]) | null;
       urlParameters?: components["schemas"]["KeyValuePairDto"][] | null;
@@ -4267,7 +4373,6 @@ export interface components {
       spaceId: string;
       /** Format: uri */
       baseUrl: string;
-      httpMethod: string;
       urlParameters?: components["schemas"]["KeyValuePairDto"][] | null;
       headers?: components["schemas"]["KeyValuePairDto"][] | null;
       body?: components["schemas"]["KeyValuePairDto"][] | null;
@@ -4467,8 +4572,6 @@ export interface components {
       description: string & components["schemas"]["ResourceDescription"];
       /** Format: uuid */
       spaceId: string & components["schemas"]["SpaceId"];
-      /** @enum {string} */
-      httpMethod: "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
       baseUrl: string & components["schemas"]["BaseUrl"];
       urlParameters: components["schemas"]["KeyValuePair"][];
       headers: components["schemas"]["KeyValuePair"][];
@@ -4636,6 +4739,9 @@ export interface components {
     };
     UpdateAppHeadersDto: {
       headers?: components["schemas"]["KeyValuePairDto"][] | null;
+    };
+    UpdateAppHttpMethodDto: {
+      httpMethod: string;
     };
     UpdateAppInputsDto: {
       inputs: components["schemas"]["AppInputDto"][];

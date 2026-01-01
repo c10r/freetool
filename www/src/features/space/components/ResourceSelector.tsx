@@ -14,6 +14,7 @@ interface Resource {
 }
 
 interface ResourceSelectorProps {
+  spaceId: string;
   value?: string;
   onValueChange: (resourceId: string | undefined) => void;
   placeholder?: string;
@@ -22,6 +23,7 @@ interface ResourceSelectorProps {
 }
 
 export default function ResourceSelector({
+  spaceId,
   value,
   onValueChange,
   placeholder = "Select Resource",
@@ -37,7 +39,7 @@ export default function ResourceSelector({
       setLoading(true);
       setError(null);
       try {
-        const response = await getResources();
+        const response = await getResources(spaceId);
         if (response.error) {
           setError("Failed to load resources");
           setResources([]);
@@ -59,7 +61,7 @@ export default function ResourceSelector({
     };
 
     fetchResources();
-  }, []);
+  }, [spaceId]);
 
   const selectedResource = value
     ? resources.find((r) => r.id === value)

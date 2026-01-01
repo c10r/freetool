@@ -76,26 +76,30 @@ type ResourceController
                 | Error error -> this.HandleDomainError(error)
         }
 
-    [<HttpGet>]
+    [<HttpGet("/space/{spaceId}/resource")>]
     [<ProducesResponseType(typeof<PagedResult<ResourceData>>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.GetResources([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> =
+    member this.GetResources(spaceId: string, [<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> =
         task {
-            let skipValue = if skip < 0 then 0 else skip
+            match System.Guid.TryParse spaceId with
+            | false, _ -> return this.HandleDomainError(ValidationError "Invalid space ID format")
+            | true, guid ->
+                let spaceIdObj = SpaceId.FromGuid guid
+                let skipValue = if skip < 0 then 0 else skip
 
-            let takeValue =
-                if take <= 0 then 50
-                elif take > 100 then 100
-                else take
+                let takeValue =
+                    if take <= 0 then 50
+                    elif take > 100 then 100
+                    else take
 
-            let! result = commandHandler.HandleCommand(GetAllResources(skipValue, takeValue))
+                let! result = commandHandler.HandleCommand(GetAllResources(spaceIdObj, skipValue, takeValue))
 
-            return
-                match result with
-                | Ok(ResourcesResult pagedResources) -> this.Ok(pagedResources) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+                return
+                    match result with
+                    | Ok(ResourcesResult pagedResources) -> this.Ok(pagedResources) :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpPut("{id}/name")>]

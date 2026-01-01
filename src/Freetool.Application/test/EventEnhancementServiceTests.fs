@@ -91,6 +91,8 @@ type MockResourceRepository() =
     interface IResourceRepository with
         member _.GetByIdAsync(resourceId: ResourceId) = task { return None }
         member _.GetAllAsync skip take = task { return [] }
+        member _.GetBySpaceAsync spaceId skip take = task { return [] }
+        member _.GetCountBySpaceAsync spaceId = task { return 0 }
         member _.AddAsync(resource: ValidatedResource) = task { return Ok() }
         member _.UpdateAsync(resource: ValidatedResource) = task { return Ok() }
         member _.DeleteAsync(resource: ValidatedResource) = task { return Ok() }

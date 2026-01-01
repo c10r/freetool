@@ -460,16 +460,21 @@ export const removeSpaceMember = ({
  * Resources
  */
 
-export const getResources = (skip?: number, take?: number) => {
-  if (skip && take) {
-    return client.GET("/resource", {
+export const getResources = (spaceId: string, skip?: number, take?: number) => {
+  if (skip !== undefined && take !== undefined) {
+    return client.GET("/space/{spaceId}/resource", {
       params: {
+        path: { spaceId },
         query: { skip, take },
       },
     });
   }
 
-  return client.GET("/resource");
+  return client.GET("/space/{spaceId}/resource", {
+    params: {
+      path: { spaceId },
+    },
+  });
 };
 
 export const createResource = ({

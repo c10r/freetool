@@ -69,7 +69,8 @@ export default function FolderView({
   const _canDeleteApp = useHasPermission(effectiveSpaceId, "delete_app");
 
   // Check if resources exist (needed to enable/disable New App button)
-  const { hasResources, isLoading: loadingResources } = useResources();
+  const { hasResources, isLoading: loadingResources } =
+    useResources(effectiveSpaceId);
 
   // Update name when folder changes
   useEffect(() => {
@@ -569,6 +570,7 @@ export default function FolderView({
             />
 
             <AppConfigForm
+              spaceId={effectiveSpaceId}
               resourceId={appFormData.resourceId}
               httpMethod={appFormData.httpMethod}
               urlPath={appFormData.urlPath}

@@ -20,17 +20,18 @@ module ResourceHandler =
         task {
             match command with
             | CreateResource(actorUserId, validatedResource) ->
-                // Check if name already exists
+                // Check if name already exists within the same space
                 let resourceName =
                     ResourceName.Create(Some(Resource.getName validatedResource))
                     |> function
                         | Ok n -> n
                         | Error _ -> failwith "ValidatedResource should have valid name"
 
-                let! existsByName = resourceRepository.ExistsByNameAsync resourceName
+                let spaceId = Resource.getSpaceId validatedResource
+                let! existsByName = resourceRepository.CheckNameConflictAsync resourceName spaceId
 
                 if existsByName then
-                    return Error(Conflict "A resource with this name already exists")
+                    return Error(Conflict "A resource with this name already exists in this space")
                 else
                     match! resourceRepository.AddAsync validatedResource with
                     | Error error -> return Error error
@@ -64,15 +65,17 @@ module ResourceHandler =
                     match resourceOption with
                     | None -> return Error(NotFound "Resource not found")
                     | Some resource ->
+                        let spaceId = Resource.getSpaceId resource
+
                         // Check if the new name already exists (only if it's different from current name)
                         if Resource.getName resource <> dto.Name then
                             match ResourceName.Create(Some dto.Name) with
                             | Error error -> return Error error
                             | Ok newResourceName ->
-                                let! existsByName = resourceRepository.ExistsByNameAsync newResourceName
+                                let! existsByName = resourceRepository.CheckNameConflictAsync newResourceName spaceId
 
                                 if existsByName then
-                                    return Error(Conflict "A resource with this name already exists")
+                                    return Error(Conflict "A resource with this name already exists in this space")
                                 else
                                     match ResourceMapper.fromUpdateNameDto actorUserId dto resource with
                                     | Error error -> return Error error
@@ -215,14 +218,14 @@ module ResourceHandler =
                     | None -> return Error(NotFound "Resource not found")
                     | Some resource -> return Ok(ResourceResult(resource.State))
 
-            | GetAllResources(skip, take) ->
+            | GetAllResources(spaceId, skip, take) ->
                 if skip < 0 then
                     return Error(ValidationError "Skip cannot be negative")
                 elif take <= 0 || take > 100 then
                     return Error(ValidationError "Take must be between 1 and 100")
                 else
-                    let! resources = resourceRepository.GetAllAsync skip take
-                    let! totalCount = resourceRepository.GetCountAsync()
+                    let! resources = resourceRepository.GetBySpaceAsync spaceId skip take
+                    let! totalCount = resourceRepository.GetCountBySpaceAsync spaceId
 
                     let result =
                         { Items = resources |> List.map (fun resource -> resource.State)

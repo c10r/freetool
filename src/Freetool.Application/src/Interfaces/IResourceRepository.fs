@@ -10,6 +10,10 @@ type IResourceRepository =
 
     abstract member GetAllAsync: skip: int -> take: int -> Task<ValidatedResource list>
 
+    abstract member GetBySpaceAsync: SpaceId -> skip: int -> take: int -> Task<ValidatedResource list>
+
+    abstract member GetCountBySpaceAsync: SpaceId -> Task<int>
+
     abstract member AddAsync: ValidatedResource -> Task<Result<unit, DomainError>>
 
     abstract member UpdateAsync: ValidatedResource -> Task<Result<unit, DomainError>>

@@ -264,6 +264,7 @@ export default function AppView({
         </div>
         <div className="flex gap-2 items-center">
           <ResourceSelector
+            spaceId={spaceId}
             value={app.resourceId}
             onValueChange={(resourceId) => updateNode({ ...app, resourceId })}
             className="w-64"
@@ -332,6 +333,7 @@ export default function AppView({
       <Card>
         <CardContent className="py-4">
           <AppConfigForm
+            spaceId={spaceId}
             resourceId={app.resourceId}
             httpMethod={appFormData.httpMethod}
             urlPath={appFormData.urlPath}
