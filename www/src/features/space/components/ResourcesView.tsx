@@ -260,7 +260,7 @@ export default function ResourcesView({
             onClick={() => setShowCreateForm(!showCreateForm)}
             variant={showCreateForm ? "secondary" : "default"}
           >
-            <Plus className="w-4 h-4 mr-2" />
+            {!showCreateForm && <Plus className="w-4 h-4 mr-2" />}
             {showCreateForm ? "Cancel" : "Create Resource"}
           </PermissionButton>
           <Button onClick={fetchResources} variant="outline">
