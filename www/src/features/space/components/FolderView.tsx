@@ -132,7 +132,11 @@ export default function FolderView({
   const [_runError, _setRunError] = useState<string | null>(null);
 
   const children = useMemo(
-    () => folder.childrenIds.map((id) => nodes[id]).filter(Boolean),
+    () =>
+      folder.childrenIds
+        .map((id) => nodes[id])
+        .filter(Boolean)
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [folder.childrenIds, nodes]
   );
 
