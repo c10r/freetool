@@ -325,14 +325,16 @@ function TreeNodeComponent({
         )}
         {isFolder ? (
           isExpanded ? (
-            <FolderOpen size={16} />
+            <FolderOpen size={16} className="flex-shrink-0" />
           ) : (
-            <FolderClosed size={16} />
+            <FolderClosed size={16} className="flex-shrink-0" />
           )
         ) : (
-          <FileType size={16} />
+          <FileType size={16} className="flex-shrink-0" />
         )}
-        <span className={cn(depth === 0 ? "font-semibold" : "")}>
+        <span
+          className={cn("truncate min-w-0", depth === 0 && "font-semibold")}
+        >
           {node.name}
         </span>
       </button>
