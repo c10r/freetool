@@ -248,7 +248,6 @@ export default function ResourcesView({
           <PermissionButton
             spaceId={spaceId}
             permission="create_resource"
-            tooltipMessage="You don't have permission to create resources. Contact your space moderator."
             onClick={() => setShowCreateForm(!showCreateForm)}
             variant={showCreateForm ? "secondary" : "default"}
           >
@@ -346,7 +345,6 @@ export default function ResourcesView({
                       spaceId={spaceId}
                       permission="edit_resource"
                       showTooltip={true}
-                      tooltipMessage="You don't have permission to edit resources."
                     >
                       <Button
                         variant="ghost"
@@ -361,7 +359,6 @@ export default function ResourcesView({
                       spaceId={spaceId}
                       permission="delete_resource"
                       showTooltip={true}
-                      tooltipMessage="You don't have permission to delete resources."
                     >
                       <TooltipProvider>
                         <Tooltip>

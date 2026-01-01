@@ -401,7 +401,6 @@ export default function FolderView({
             <PermissionButton
               spaceId={effectiveSpaceId}
               permission="edit_folder"
-              tooltipMessage="You don't have permission to rename folders. Contact your space moderator."
               variant="secondary"
               size="icon"
               onClick={() => setEditing((v) => !v)}
@@ -418,7 +417,6 @@ export default function FolderView({
               <PermissionButton
                 spaceId={effectiveSpaceId}
                 permission="create_folder"
-                tooltipMessage="You don't have permission to create folders. Contact your space moderator."
                 onClick={() => {
                   setNewFolderParentId(folder.id);
                   setPopoverOpen(true);
@@ -489,7 +487,6 @@ export default function FolderView({
                   <PermissionButton
                     spaceId={effectiveSpaceId}
                     permission="create_app"
-                    tooltipMessage="You don't have permission to create apps. Contact your space moderator."
                     variant="secondary"
                     onClick={handleShowCreateAppForm}
                     disabled={
@@ -630,7 +627,6 @@ export default function FolderView({
                       <PermissionButton
                         spaceId={effectiveSpaceId}
                         permission="create_folder"
-                        tooltipMessage="You don't have permission to create folders. Contact your space moderator."
                         variant="secondary"
                         size="icon"
                         onClick={(e) => {
@@ -701,7 +697,9 @@ export default function FolderView({
                   </Popover>
                 ) : (
                   <>
-                    <Button
+                    <PermissionButton
+                      spaceId={effectiveSpaceId}
+                      permission="run_app"
                       variant="secondary"
                       size="icon"
                       onClick={(e) => {
@@ -711,11 +709,10 @@ export default function FolderView({
                       aria-label="Run App"
                     >
                       <Play size={16} />
-                    </Button>
+                    </PermissionButton>
                     <PermissionButton
                       spaceId={effectiveSpaceId}
                       permission="edit_app"
-                      tooltipMessage="You don't have permission to edit apps. Contact your space moderator."
                       variant="secondary"
                       size="icon"
                       onClick={(e) => {
@@ -733,11 +730,6 @@ export default function FolderView({
                   spaceId={effectiveSpaceId}
                   permission={
                     child.type === "folder" ? "delete_folder" : "delete_app"
-                  }
-                  tooltipMessage={
-                    child.type === "folder"
-                      ? "You don't have permission to delete folders. Contact your space moderator."
-                      : "You don't have permission to delete apps. Contact your space moderator."
                   }
                   variant="secondary"
                   size="icon"

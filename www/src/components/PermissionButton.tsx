@@ -6,6 +6,7 @@
  */
 
 import { forwardRef } from "react";
+import { PermissionTooltipContent } from "@/components/PermissionTooltipContent";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import {
   Tooltip,
@@ -14,7 +15,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useHasPermission } from "@/hooks/usePermissions";
-import { getPermissionMessage } from "@/lib/permissionMessages";
 import { cn } from "@/lib/utils";
 import type { Permission } from "@/types/permissions";
 
@@ -117,14 +117,16 @@ export const PermissionButton = forwardRef<
 
   // If user lacks permission, wrap in tooltip
   if (!hasPermission) {
-    const message = getPermissionMessage(permission, tooltipMessage);
-
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>{button}</TooltipTrigger>
           <TooltipContent>
-            <p>{message}</p>
+            <PermissionTooltipContent
+              permission={permission}
+              spaceId={spaceId}
+              customMessage={tooltipMessage}
+            />
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

@@ -6,6 +6,7 @@
  */
 
 import type { ReactNode } from "react";
+import { PermissionTooltipContent } from "@/components/PermissionTooltipContent";
 import {
   Tooltip,
   TooltipContent,
@@ -13,7 +14,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useHasPermission } from "@/hooks/usePermissions";
-import { getPermissionMessage } from "@/lib/permissionMessages";
 import type { Permission } from "@/types/permissions";
 
 /**
@@ -98,8 +98,6 @@ export function PermissionGate({
 
   // User lacks permission and tooltip is requested
   if (showTooltip && children) {
-    const message = getPermissionMessage(permission, tooltipMessage);
-
     return (
       <TooltipProvider>
         <Tooltip>
@@ -109,7 +107,11 @@ export function PermissionGate({
             </div>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{message}</p>
+            <PermissionTooltipContent
+              permission={permission}
+              spaceId={spaceId}
+              customMessage={tooltipMessage}
+            />
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

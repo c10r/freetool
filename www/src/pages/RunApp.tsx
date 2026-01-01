@@ -7,7 +7,7 @@ import {
   Play,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { getAppById, getFolderById, runApp } from "@/api/api";
 import { PermissionButton } from "@/components/PermissionButton";
 import { Button } from "@/components/ui/button";
@@ -353,7 +353,6 @@ const RunApp = () => {
               <PermissionButton
                 spaceId={spaceId}
                 permission="run_app"
-                tooltipMessage="You don't have permission to run this app. Contact your space moderator."
                 onClick={handleRunApp}
                 disabled={running}
                 variant={running ? "secondary" : "default"}
@@ -392,8 +391,14 @@ const RunApp = () => {
                     Permission Required
                   </h4>
                   <p className="text-sm text-yellow-800">
-                    You don't have permission to run this app. Contact your
-                    space moderator to request run_app access.
+                    You don't have permission to run this app.{" "}
+                    <Link
+                      to={`/spaces/${spaceId}/permissions`}
+                      className="underline hover:no-underline"
+                    >
+                      Ask a moderator
+                    </Link>{" "}
+                    for permissions.
                   </p>
                 </div>
               </div>
@@ -430,7 +435,6 @@ const RunApp = () => {
                     <PermissionButton
                       spaceId={spaceId}
                       permission="run_app"
-                      tooltipMessage="You don't have permission to run this app. Contact your space moderator."
                       onClick={handleRunApp}
                       disabled={running}
                       variant={running ? "secondary" : "default"}
