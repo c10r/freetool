@@ -136,9 +136,13 @@ export default function FolderView({
     () =>
       folder.childrenIds
         .map((id) => nodes[id])
-        .filter(Boolean)
+        .filter(
+          (node): node is SpaceNode =>
+            Boolean(node) &&
+            (folder.id !== "root" || node.spaceId === effectiveSpaceId)
+        )
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [folder.childrenIds, nodes]
+    [folder.childrenIds, nodes, folder.id, effectiveSpaceId]
   );
 
   const handleCreateFolder = async () => {
