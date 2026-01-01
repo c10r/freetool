@@ -1,7 +1,25 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react-swc";
 import { componentTagger } from "lovable-tagger";
+import type { Plugin } from "vite";
 import { defineConfig } from "vite";
+
+// Plugin to redirect /freetool to /freetool/ (adds trailing slash)
+function trailingSlashRedirect(): Plugin {
+  return {
+    name: "trailing-slash-redirect",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url === "/freetool") {
+          res.writeHead(301, { Location: "/freetool/" });
+          res.end();
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -58,9 +76,11 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(
-    Boolean
-  ),
+  plugins: [
+    trailingSlashRedirect(),
+    react(),
+    mode === "development" && componentTagger(),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
