@@ -19,6 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { compareUsersByName } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -133,7 +134,7 @@ export default function UsersView() {
   }, []);
 
   const usersWithSpaces = useMemo(
-    () => buildUserSpacesMap(users, spaces),
+    () => buildUserSpacesMap(users, spaces).sort(compareUsersByName),
     [users, spaces]
   );
 

@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useIsOrgAdmin, useIsSpaceModerator } from "@/hooks/usePermissions";
 import { useSpaceMembersPermissions } from "@/hooks/useSpaceMembersPermissions";
+import { compareUsersByName } from "@/lib/utils";
 import type { Permission, SpacePermissions } from "@/types/permissions";
 
 interface SpaceSettingsViewProps {
@@ -545,6 +546,7 @@ export default function SpaceSettingsView({
             <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
               {allUsers
                 .filter((user) => user.id !== editModeratorId)
+                .sort(compareUsersByName)
                 .map((user) => (
                   <div key={user.id} className="flex items-center space-x-3">
                     <Checkbox
@@ -699,7 +701,7 @@ export default function SpaceSettingsView({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {members.map((member) => {
+                    {[...members].sort(compareUsersByName).map((member) => {
                       const effectivePermissions = getEffectivePermissions(
                         member.userId,
                         member.permissions
