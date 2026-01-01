@@ -57,16 +57,17 @@ function PlaceholderPill({
         }
       }}
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-        "cursor-pointer select-none mx-0.5 align-baseline",
+        "inline-flex items-center cursor-pointer select-none mx-0.5 align-baseline text-xs font-medium rounded-sm p-1",
         isValid
           ? isCurrentUser
-            ? "bg-green-100 text-green-800 border border-green-300 hover:bg-green-200"
-            : "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20"
-          : "bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 line-through"
+            ? "bg-green-100 text-green-800"
+            : "bg-primary/10 text-primary"
+          : "text-destructive bg-destructive/10 line-through"
       )}
     >
+      {"{"}
       {inputTitle}
+      {"}"}
     </span>
   );
 }
