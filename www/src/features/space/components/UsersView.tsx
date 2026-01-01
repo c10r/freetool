@@ -243,7 +243,6 @@ export default function UsersView() {
                   <TableHead className="w-12" />
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Badge</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Spaces</TableHead>
                 </TableRow>
@@ -269,40 +268,40 @@ export default function UsersView() {
 
                     {/* Name */}
                     <TableCell className="font-medium">
-                      {isInvitedPlaceholder(user) ? (
-                        <span className="text-muted-foreground italic">
-                          Invited
+                      <div className="flex flex-col gap-1">
+                        <span>
+                          {isInvitedPlaceholder(user) ? (
+                            <span className="text-muted-foreground italic">
+                              Invited
+                            </span>
+                          ) : (
+                            user.name
+                          )}
                         </span>
-                      ) : (
-                        user.name
-                      )}
+                        {user.isOrgAdmin && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge
+                                  variant="secondary"
+                                  className="w-fit gap-1 text-blue-600 bg-blue-50 hover:bg-blue-100"
+                                >
+                                  <GlobeLock className="h-3 w-3" />
+                                  Org Admin
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Has full access to all spaces</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </TableCell>
 
                     {/* Email */}
                     <TableCell className="text-muted-foreground">
                       {user.email}
-                    </TableCell>
-
-                    {/* Badge (Org Admin only) */}
-                    <TableCell>
-                      {user.isOrgAdmin && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge
-                                variant="secondary"
-                                className="gap-1 text-blue-600 bg-blue-50 hover:bg-blue-100"
-                              >
-                                <GlobeLock className="h-3 w-3" />
-                                Org Admin
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Has full access to all spaces</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
                     </TableCell>
 
                     {/* Status (Pending or none) */}
