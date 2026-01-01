@@ -234,15 +234,24 @@ export default function AppConfigForm({
                 <SelectValue placeholder="Select HTTP method" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="GET">GET</SelectItem>
-                <SelectItem value="POST">POST</SelectItem>
-                <SelectItem value="PUT">PUT</SelectItem>
-                <SelectItem value="PATCH">PATCH</SelectItem>
-                <SelectItem value="DELETE">DELETE</SelectItem>
+                <SelectItem value="GET">
+                  <HttpMethodBadge method="GET" />
+                </SelectItem>
+                <SelectItem value="POST">
+                  <HttpMethodBadge method="POST" />
+                </SelectItem>
+                <SelectItem value="PUT">
+                  <HttpMethodBadge method="PUT" />
+                </SelectItem>
+                <SelectItem value="PATCH">
+                  <HttpMethodBadge method="PATCH" />
+                </SelectItem>
+                <SelectItem value="DELETE">
+                  <HttpMethodBadge method="DELETE" />
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
-          {httpMethod && <HttpMethodBadge method={httpMethod} />}
           {mode === "edit" && (
             <FieldIndicator state={getFieldState("httpMethod")} />
           )}

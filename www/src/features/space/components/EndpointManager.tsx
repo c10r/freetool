@@ -126,7 +126,7 @@ export default function EndpointManager({
                       <SelectContent>
                         {methods.map((m) => (
                           <SelectItem key={m} value={m}>
-                            {m}
+                            <HttpMethodBadge method={m} />
                           </SelectItem>
                         ))}
                       </SelectContent>
