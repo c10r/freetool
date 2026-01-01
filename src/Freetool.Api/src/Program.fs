@@ -22,6 +22,7 @@ open Freetool.Domain.Entities
 open Freetool.Api.Tracing
 open Freetool.Api.Middleware
 open Freetool.Api.OpenApi
+open Freetool.Api.Services
 
 /// Creates a new OpenFGA store and saves the ID to the database
 let private createAndSaveNewStore (connectionString: string) (apiUrl: string) : string =
@@ -90,6 +91,24 @@ let ensureOpenFgaStore (connectionString: string) (apiUrl: string) (configuredSt
 [<EntryPoint>]
 let main args =
     let builder = WebApplication.CreateBuilder(args)
+
+    // Detect dev mode from environment variable
+    let isDevMode =
+        System.Environment.GetEnvironmentVariable("FREETOOL_DEV_MODE") = "true"
+
+    if isDevMode then
+        eprintfn "[DEV MODE] Running in development mode with user impersonation"
+
+    // Add CORS for dev mode (allows frontend on different port)
+    if isDevMode then
+        builder.Services.AddCors(fun options ->
+            options.AddPolicy("DevCors", fun policy ->
+                policy
+                    .AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                |> ignore))
+        |> ignore
 
     // Run database migrations early (before OpenFGA store check)
     // This ensures the Settings table exists for storing the store ID
@@ -324,6 +343,31 @@ let main args =
 
             if not (System.String.IsNullOrEmpty(orgAdminEmail)) then
                 eprintfn "Organization admin email configured: %s (will be set when user first logs in)" orgAdminEmail
+
+            // Run dev seeding after OpenFGA is initialized (only in dev mode)
+            if isDevMode then
+                try
+                    let userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>()
+                    let spaceRepository = scope.ServiceProvider.GetRequiredService<ISpaceRepository>()
+
+                    let resourceRepository =
+                        scope.ServiceProvider.GetRequiredService<IResourceRepository>()
+
+                    let folderRepository = scope.ServiceProvider.GetRequiredService<IFolderRepository>()
+                    let appRepository = scope.ServiceProvider.GetRequiredService<IAppRepository>()
+
+                    let seedTask =
+                        DevSeedingService.seedDataAsync
+                            userRepository
+                            spaceRepository
+                            resourceRepository
+                            folderRepository
+                            appRepository
+                            authService
+
+                    seedTask |> Async.AwaitTask |> Async.RunSynchronously
+                with ex ->
+                    eprintfn "[DEV MODE] Warning: Failed to seed dev data: %s" ex.Message
         with ex ->
             eprintfn "Warning: Could not initialize OpenFGA authorization model: %s" ex.Message
             eprintfn "The application will continue, but authorization checks may fail."
@@ -334,13 +378,21 @@ let main args =
 
     app.UseHttpsRedirection() |> ignore
 
+    // Enable CORS for dev mode
+    if isDevMode then
+        app.UseCors("DevCors") |> ignore
+
     let provider = FileExtensionContentTypeProvider()
     provider.Mappings[".js"] <- "application/javascript"
     let staticFileOptions = StaticFileOptions()
     staticFileOptions.ContentTypeProvider <- provider
     app.UseStaticFiles(staticFileOptions) |> ignore
 
-    app.UseMiddleware<TailscaleAuthMiddleware>() |> ignore
+    // Use DevAuthMiddleware in dev mode, TailscaleAuthMiddleware otherwise
+    if isDevMode then
+        app.UseMiddleware<DevAuthMiddleware>() |> ignore
+    else
+        app.UseMiddleware<TailscaleAuthMiddleware>() |> ignore
 
     app.MapControllers() |> ignore
 

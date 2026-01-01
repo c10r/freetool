@@ -702,6 +702,75 @@ The API supports full CRUD operations:
 - `DELETE /user/{id}/profile-picture` - Remove user profile picture
 - `DELETE /user/{id}` - Delete user
 
+## 🧑‍💻 Local Development (Dev Mode)
+
+For local development without Tailscale, Freetool provides a **Dev Mode** that bypasses authentication and lets you impersonate different users to test permissions.
+
+### Production vs Dev Mode
+
+| Aspect | Production Mode | Dev Mode |
+|--------|----------------|----------|
+| **Authentication** | Tailscale identity headers | `X-Dev-User-Id` header |
+| **User identity** | Automatic from Tailscale | Manual selection via UI dropdown |
+| **Backend port** | 5001 | 5002 |
+| **Frontend port** | (served by backend) | 8081 |
+| **Database** | `freetool-db` volume | `freetool-dev-db` volume (isolated) |
+| **Docker command** | `docker-compose up` | `docker-compose -f docker-compose.dev.yml up` |
+
+### Starting Dev Mode
+
+From the project root, run:
+
+```bash
+docker-compose -f docker-compose.dev.yml up --build
+```
+
+This starts:
+- **Frontend** at http://localhost:8081
+- **Backend API** at http://localhost:5002
+- **OpenFGA** at http://localhost:8090
+- **Aspire Dashboard** (OTEL) at http://localhost:18888
+
+Open http://localhost:8081 and you'll see a yellow **"DEVELOPMENT MODE"** banner at the top of the page and a user switcher dropdown in the header.
+
+### Seeded Test Users
+
+Dev mode automatically creates 4 test users with different permission levels:
+
+| User | Email | Role | Permissions |
+|------|-------|------|-------------|
+| **Org Admin** | `admin@test.local` | Organization Admin | All permissions on all spaces |
+| **Space Moderator** | `moderator@test.local` | Space Moderator | All permissions on "Test Space" |
+| **Regular Member** | `member@test.local` | Space Member | Only `run_app` on "Test Space" |
+| **No Permissions** | `noperm@test.local` | Space Member | No permissions (member only) |
+
+### Seeded Test Data
+
+Dev mode also creates sample data to work with:
+
+- **Space**: "Test Space"
+- **Resource**: "Sample API" (GET https://httpbin.org/get)
+- **Folder**: "Sample Folder"
+- **App**: "Hello World" in Sample Folder
+
+### How User Switching Works
+
+1. Select a user from the dropdown in the header
+2. The page refreshes automatically
+3. All subsequent API requests include the `X-Dev-User-Id` header
+4. The backend uses this header to determine the current user's identity and permissions
+
+This lets you test the app from different users' perspectives - for example, verifying that a member without `create_app` permission can't create apps, while a moderator can.
+
+### Dev Mode API Endpoints
+
+Dev mode exposes additional endpoints:
+
+- `GET /dev/mode` - Returns `{ devMode: true }` (useful for frontend detection)
+- `GET /dev/users` - Returns list of all users for the switcher dropdown
+
+These endpoints return 404 in production mode.
+
 ### Database Migrations
 
 This project uses [DBUp](https://dbup.readthedocs.io/) for database migrations instead of Entity Framework migrations. This gives you full control over your SQL scripts.

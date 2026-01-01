@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { DevModeGate } from "@/components/DevModeGate";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,8 +15,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter basename="/freetool">
-        <Routes>
+      <DevModeGate>
+        <BrowserRouter basename="/freetool">
+          <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/spaces" element={<Index />} />
           <Route path="/spaces-list" element={<Index />} />
@@ -30,8 +32,9 @@ const App = () => (
           <Route path="/audit" element={<Index />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </DevModeGate>
     </TooltipProvider>
   </QueryClientProvider>
 );

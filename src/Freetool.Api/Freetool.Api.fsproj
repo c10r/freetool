@@ -30,6 +30,7 @@
     <Compile Include="src/Tracing/AutoTracing.fs" />
     <Compile Include="src/Tracing/TracingUserCommandHandlerDecorator.fs" />
     <Compile Include="src/Middleware/TailscaleAuthMiddleware.fs" />
+    <Compile Include="src/Middleware/DevAuthMiddleware.fs" />
     <Compile Include="src/OpenApi/FSharpSchemaFilter.fs" />
     <Compile Include="src/Controllers/AuthenticatedControllerBase.fs" />
     <Compile Include="src/Controllers/UserController.fs" />
@@ -40,6 +41,8 @@
     <Compile Include="src/Controllers/AuditController.fs" />
     <Compile Include="src/Controllers/TrashController.fs" />
     <Compile Include="src/Controllers/OpenFgaInitController.fs" />
+    <Compile Include="src/Controllers/DevController.fs" />
+    <Compile Include="src/Services/DevSeedingService.fs" />
     <Compile Include="src/Program.fs" />
   </ItemGroup>
 

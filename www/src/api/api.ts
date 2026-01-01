@@ -3,9 +3,88 @@ import type { KeyValuePair } from "@/features/space/types";
 import type { paths } from "../schema";
 import { handleApiError } from "./errorHandler";
 
+/**
+ * Dev Mode Support
+ */
+const DEV_USER_ID_KEY = "freetool_dev_user_id";
+
+export function isDevModeEnabled(): boolean {
+  const value = import.meta.env.VITE_DEV_MODE;
+  const result = value === "true";
+  console.log("[DEV] isDevModeEnabled:", { VITE_DEV_MODE: value, result });
+  return result;
+}
+
+export function getDevUserId(): string | null {
+  if (!isDevModeEnabled()) {
+    console.log("[DEV] getDevUserId: dev mode disabled, returning null");
+    return null;
+  }
+  const userId = localStorage.getItem(DEV_USER_ID_KEY);
+  console.log("[DEV] getDevUserId:", userId);
+  return userId;
+}
+
+export function setDevUserId(userId: string): void {
+  if (!isDevModeEnabled()) {
+    return;
+  }
+  localStorage.setItem(DEV_USER_ID_KEY, userId);
+}
+
+/**
+ * Dev User type for the user switcher
+ */
+export interface DevUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+/**
+ * Fetch dev users from the backend
+ * Note: We fetch directly from the backend to avoid Vite proxy chunked encoding issues
+ */
+export async function getDevUsers(): Promise<DevUser[]> {
+  // In Docker, use the internal network; locally, use localhost:5002
+  const backendUrl = typeof window !== "undefined" && window.location.port === "8081"
+    ? "http://localhost:5002"  // Direct to backend, bypassing proxy
+    : `${window.location.origin}/freetool`;
+  const url = `${backendUrl}/dev/users`;
+  console.log("[DEV] getDevUsers: fetching from", url);
+  const response = await fetch(url);
+  console.log("[DEV] getDevUsers: response status", response.status);
+  if (!response.ok) {
+    const text = await response.text();
+    console.log("[DEV] getDevUsers: error response", text);
+    throw new Error("Failed to fetch dev users");
+  }
+  const users = await response.json();
+  console.log("[DEV] getDevUsers: got users", users);
+  return users;
+}
+
 const client = createClient<paths>({
   baseUrl: `${typeof window !== "undefined" ? window.location.origin : "http://localhost:5000"}/freetool`,
 });
+
+// Dev mode middleware - adds X-Dev-User-Id header when in dev mode
+const devModeMiddleware: Middleware = {
+  onRequest({ request }) {
+    console.log("[DEV] middleware: processing request to", request.url);
+    if (isDevModeEnabled()) {
+      const devUserId = getDevUserId();
+      console.log("[DEV] middleware: dev mode enabled, userId =", devUserId);
+      if (devUserId) {
+        request.headers.set("X-Dev-User-Id", devUserId);
+        console.log("[DEV] middleware: added X-Dev-User-Id header");
+      } else {
+        console.log("[DEV] middleware: NO USER ID - request will fail!");
+      }
+    }
+    return request;
+  },
+};
 
 // Error handling middleware - shows toast notifications for API errors
 const errorMiddleware: Middleware = {
@@ -29,6 +108,7 @@ const errorMiddleware: Middleware = {
 };
 
 // Register middleware
+client.use(devModeMiddleware);
 client.use(errorMiddleware);
 
 /**

@@ -1,0 +1,75 @@
+services:
+  freetool-frontend:
+    build:
+      context: ./www
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8081:8081"
+    environment:
+      VITE_DEV_MODE: "true"
+      VITE_API_URL: "http://freetool-api:8080"
+    depends_on:
+      - freetool-api
+
+  freetool-api:
+    build:
+      context: .
+      dockerfile: ./src/Freetool.Api/Dockerfile
+    ports:
+      - "5002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18889
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      FREETOOL_DEV_MODE: "true"
+    volumes:
+      - freetool-dev-db:/app/data
+    depends_on:
+      - aspire-dashboard
+      - openfga
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
+    container_name: aspire-dashboard
+    ports:
+      - 18888:18888
+      - 4317:18889
+    environment:
+      - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
+
+  openfga-migrate:
+    image: openfga/openfga:latest
+    container_name: openfga-migrate
+    command: migrate
+    user: nonroot
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=sqlite
+      - OPENFGA_DATASTORE_URI=file:/home/nonroot/openfga.db
+    volumes:
+      - openfga:/home/nonroot
+
+  openfga:
+    image: openfga/openfga:latest
+    container_name: openfga
+    command: run
+    user: nonroot
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=sqlite
+      - OPENFGA_DATASTORE_URI=file:/home/nonroot/openfga.db
+      - OPENFGA_LOG_FORMAT=json
+      - OPENFGA_HTTP_ADDR=0.0.0.0:8090
+      - OPENFGA_GRPC_ADDR=0.0.0.0:8091
+      - OPENFGA_PLAYGROUND_PORT=3030
+    volumes:
+      - openfga:/home/nonroot
+    ports:
+      - "8090:8090"
+      - "8091:8091"
+      - "3030:3030"
+    depends_on:
+      openfga-migrate:
+        condition: service_completed_successfully
+
+volumes:
+  freetool-dev-db:
+  openfga:

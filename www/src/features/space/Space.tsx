@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { createApp as createAppAPI } from "@/api/api";
+import { DevModeBanner } from "@/components/DevModeBanner";
+import { DevUserSwitcher } from "@/components/DevUserSwitcher";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
@@ -441,76 +443,82 @@ function WorkspaceContent() {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      <SidebarTree
-        nodes={nodes}
-        rootId={rootId}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        spaceId={spaceId || ""}
-        spaces={spaces}
-      />
-      <div className="flex-1 flex flex-col">
-        <header className="flex items-center justify-between px-6 py-4 border-b bg-card/30">
-          <h1 className="text-xl font-semibold">Freetool</h1>
-          <nav
-            className="flex items-center gap-2 text-sm text-muted-foreground"
-            aria-label="Breadcrumb"
-          >
-            {breadcrumbs.map((b, i) => (
-              <span key={b.id} className="flex items-center gap-2">
-                {i > 0 && <span>/</span>}
-                <button
-                  type="button"
-                  className="hover:text-foreground"
-                  onClick={() => setSelectedId(b.id)}
-                >
-                  {b.name}
-                </button>
-              </span>
-            ))}
-          </nav>
-        </header>
-        {showNoSpacesState ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Card className="max-w-md">
-              <CardHeader>
-                <CardTitle>No Spaces Available</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  {isOrgAdmin
-                    ? "Get started by creating a space."
-                    : "Contact your administrator to get access to a space."}
-                </p>
-                {isOrgAdmin ? (
-                  <Button onClick={() => setSelectedId("spaces-list")}>
-                    Go to Spaces
-                  </Button>
-                ) : null}
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <SpaceMain
-            nodes={nodes}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            updateNode={updateNode}
-            insertFolderNode={insertFolderNode}
-            createFolder={addFolder}
-            createApp={addApp}
-            deleteNode={deleteNode}
-            endpoints={endpoints}
-            createEndpoint={createEndpoint}
-            updateEndpoint={updateEndpoint}
-            deleteEndpoint={deleteEndpoint}
-            spaceId={spaceId || ""}
-            spaceName={spaceName}
-          />
-        )}
+    <>
+      <DevModeBanner />
+      <div className="h-screen flex overflow-hidden">
+        <SidebarTree
+          nodes={nodes}
+          rootId={rootId}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          spaceId={spaceId || ""}
+          spaces={spaces}
+        />
+        <div className="flex-1 flex flex-col">
+          <header className="flex items-center justify-between px-6 py-4 border-b bg-card/30">
+            <h1 className="text-xl font-semibold">Freetool</h1>
+            <div className="flex items-center gap-4">
+              <nav
+                className="flex items-center gap-2 text-sm text-muted-foreground"
+                aria-label="Breadcrumb"
+              >
+                {breadcrumbs.map((b, i) => (
+                  <span key={b.id} className="flex items-center gap-2">
+                    {i > 0 && <span>/</span>}
+                    <button
+                      type="button"
+                      className="hover:text-foreground"
+                      onClick={() => setSelectedId(b.id)}
+                    >
+                      {b.name}
+                    </button>
+                  </span>
+                ))}
+              </nav>
+              <DevUserSwitcher />
+            </div>
+          </header>
+          {showNoSpacesState ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Card className="max-w-md">
+                <CardHeader>
+                  <CardTitle>No Spaces Available</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {isOrgAdmin
+                      ? "Get started by creating a space."
+                      : "Contact your administrator to get access to a space."}
+                  </p>
+                  {isOrgAdmin ? (
+                    <Button onClick={() => setSelectedId("spaces-list")}>
+                      Go to Spaces
+                    </Button>
+                  ) : null}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <SpaceMain
+              nodes={nodes}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              updateNode={updateNode}
+              insertFolderNode={insertFolderNode}
+              createFolder={addFolder}
+              createApp={addApp}
+              deleteNode={deleteNode}
+              endpoints={endpoints}
+              createEndpoint={createEndpoint}
+              updateEndpoint={updateEndpoint}
+              deleteEndpoint={deleteEndpoint}
+              spaceId={spaceId || ""}
+              spaceName={spaceName}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
