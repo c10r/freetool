@@ -8,6 +8,144 @@ open Freetool.Application.Interfaces
 
 module DevSeedingService =
 
+    /// Ensures OpenFGA relationships exist for dev mode users and spaces.
+    /// This is called after the authorization model is written to handle the case
+    /// where the OpenFGA store was recreated but the database still has users.
+    /// All relationship creation is idempotent - if the relationships already exist, this succeeds.
+    let ensureOpenFgaRelationshipsAsync
+        (userRepository: IUserRepository)
+        (spaceRepository: ISpaceRepository)
+        (authService: IAuthorizationService)
+        : Task<unit> =
+        task {
+            eprintfn "[DEV MODE] Ensuring OpenFGA relationships exist..."
+
+            // Parse emails for lookup
+            let adminEmailResult = Email.Create(Some "admin@test.local")
+            let moderatorEmailResult = Email.Create(Some "moderator@test.local")
+            let memberEmailResult = Email.Create(Some "member@test.local")
+            let nopermEmailResult = Email.Create(Some "noperm@test.local")
+
+            match adminEmailResult, moderatorEmailResult, memberEmailResult, nopermEmailResult with
+            | Ok adminEmail, Ok moderatorEmail, Ok memberEmail, Ok nopermEmail ->
+                // Look up users by email
+                let! adminUserOpt = userRepository.GetByEmailAsync adminEmail
+                let! moderatorUserOpt = userRepository.GetByEmailAsync moderatorEmail
+                let! memberUserOpt = userRepository.GetByEmailAsync memberEmail
+                let! nopermUserOpt = userRepository.GetByEmailAsync nopermEmail
+
+                match adminUserOpt with
+                | None ->
+                    eprintfn "[DEV MODE] Admin user not found, skipping relationship seeding"
+                | Some adminUser ->
+                    let adminUserId = adminUser.State.Id
+                    let adminUserIdStr = adminUserId.Value.ToString()
+
+                    // 1. Ensure org admin relationship
+                    try
+                        do! authService.InitializeOrganizationAsync "default" adminUserIdStr
+                        eprintfn "[DEV MODE] Ensured org admin relationship for user %s" adminUserIdStr
+                    with ex ->
+                        eprintfn "[DEV MODE] Warning: Failed to ensure org admin relationship: %s" ex.Message
+
+                    // 2. Look up the test space by name
+                    let! spaces = spaceRepository.GetAllAsync 0 100
+
+                    let testSpaceOpt =
+                        spaces
+                        |> List.tryFind (fun s -> s.State.Name = "Test Space")
+
+                    match testSpaceOpt with
+                    | None ->
+                        eprintfn "[DEV MODE] Test Space not found, skipping space relationship seeding"
+                    | Some space ->
+                        let spaceId = Space.getId space
+                        let spaceIdStr = spaceId.Value.ToString()
+
+                        // 3. Ensure organization relation for the space
+                        try
+                            let orgTuple =
+                                { Subject = Organization "default"
+                                  Relation = SpaceOrganization
+                                  Object = SpaceObject spaceIdStr }
+
+                            do! authService.CreateRelationshipsAsync [ orgTuple ]
+                            eprintfn "[DEV MODE] Ensured organization relation for space %s" spaceIdStr
+                        with ex ->
+                            eprintfn "[DEV MODE] Warning: Failed to ensure org relation for space: %s" ex.Message
+
+                        // 4. Ensure moderator relation
+                        match moderatorUserOpt with
+                        | None ->
+                            eprintfn "[DEV MODE] Moderator user not found, skipping moderator relation"
+                        | Some moderatorUser ->
+                            let moderatorUserId = moderatorUser.State.Id
+                            let moderatorUserIdStr = moderatorUserId.Value.ToString()
+
+                            try
+                                let moderatorTuple =
+                                    { Subject = User moderatorUserIdStr
+                                      Relation = SpaceModerator
+                                      Object = SpaceObject spaceIdStr }
+
+                                do! authService.CreateRelationshipsAsync [ moderatorTuple ]
+                                eprintfn "[DEV MODE] Ensured moderator relation for user %s" moderatorUserIdStr
+                            with ex ->
+                                eprintfn "[DEV MODE] Warning: Failed to ensure moderator relation: %s" ex.Message
+
+                        // 5. Ensure member relations
+                        let memberTuples = ResizeArray<RelationshipTuple>()
+
+                        match memberUserOpt with
+                        | Some memberUser ->
+                            let memberUserId = memberUser.State.Id
+                            let memberUserIdStr = memberUserId.Value.ToString()
+
+                            memberTuples.Add(
+                                { Subject = User memberUserIdStr
+                                  Relation = SpaceMember
+                                  Object = SpaceObject spaceIdStr }
+                            )
+
+                            // Also add run_app permission for member
+                            try
+                                let runAppTuple =
+                                    { Subject = User memberUserIdStr
+                                      Relation = AppRun
+                                      Object = SpaceObject spaceIdStr }
+
+                                do! authService.CreateRelationshipsAsync [ runAppTuple ]
+                                eprintfn "[DEV MODE] Ensured run_app permission for member user %s" memberUserIdStr
+                            with ex ->
+                                eprintfn "[DEV MODE] Warning: Failed to ensure run_app permission: %s" ex.Message
+                        | None ->
+                            eprintfn "[DEV MODE] Member user not found"
+
+                        match nopermUserOpt with
+                        | Some nopermUser ->
+                            let nopermUserId = nopermUser.State.Id
+                            let nopermUserIdStr = nopermUserId.Value.ToString()
+
+                            memberTuples.Add(
+                                { Subject = User nopermUserIdStr
+                                  Relation = SpaceMember
+                                  Object = SpaceObject spaceIdStr }
+                            )
+                        | None ->
+                            eprintfn "[DEV MODE] Noperm user not found"
+
+                        if memberTuples.Count > 0 then
+                            try
+                                do! authService.CreateRelationshipsAsync(memberTuples |> Seq.toList)
+                                eprintfn "[DEV MODE] Ensured member relations"
+                            with ex ->
+                                eprintfn "[DEV MODE] Warning: Failed to ensure member relations: %s" ex.Message
+
+                        eprintfn "[DEV MODE] OpenFGA relationship seeding complete!"
+            | _ ->
+                eprintfn "[DEV MODE] Failed to parse dev user emails"
+        }
+
     /// Seeds the dev database with test users, a space, resource, folder, and app
     /// Only runs when the database is empty (no users exist)
     let seedDataAsync

@@ -356,6 +356,7 @@ let main args =
                     let folderRepository = scope.ServiceProvider.GetRequiredService<IFolderRepository>()
                     let appRepository = scope.ServiceProvider.GetRequiredService<IAppRepository>()
 
+                    // First, seed database data if needed (only runs if database is empty)
                     let seedTask =
                         DevSeedingService.seedDataAsync
                             userRepository
@@ -366,6 +367,16 @@ let main args =
                             authService
 
                     seedTask |> Async.AwaitTask |> Async.RunSynchronously
+
+                    // Then, ensure OpenFGA relationships exist (always runs in dev mode)
+                    // This handles the case where OpenFGA store was recreated but database still has users
+                    let ensureRelationshipsTask =
+                        DevSeedingService.ensureOpenFgaRelationshipsAsync
+                            userRepository
+                            spaceRepository
+                            authService
+
+                    ensureRelationshipsTask |> Async.AwaitTask |> Async.RunSynchronously
                 with ex ->
                     eprintfn "[DEV MODE] Warning: Failed to seed dev data: %s" ex.Message
         with ex ->
