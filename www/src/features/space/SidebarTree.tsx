@@ -139,13 +139,7 @@ export default function SidebarTree({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      // Auto-expand when navigating to space
-                      if (!expandedSpaces.has(space.id)) {
-                        toggleSpace(space.id);
-                      }
-                      onSelect("root", space.id);
-                    }}
+                    onClick={() => onSelect("root", space.id)}
                     className="flex items-center gap-2 px-2 py-1.5 text-left font-semibold flex-1"
                   >
                     {isExpanded ? (
