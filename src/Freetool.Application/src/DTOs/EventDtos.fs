@@ -67,7 +67,7 @@ module EventFilterValidator =
                   FromDate = dto.FromDate
                   ToDate = dto.ToDate
                   Skip = dto.Skip |> Option.defaultValue 0
-                  Take = dto.Take |> Option.defaultValue 10 }
+                  Take = dto.Take |> Option.defaultValue 50 }
         else
             Error(List.rev errors)
 

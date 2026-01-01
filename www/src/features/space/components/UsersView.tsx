@@ -1,6 +1,7 @@
 import { Crown, GlobeLock, User as UserIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getSpaces, getUsers } from "@/api/api";
+import { PaginationControls } from "@/components/PaginationControls";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { usePagination } from "@/hooks/usePagination";
 import { compareUsersByName } from "@/lib/utils";
 
 interface User {
@@ -84,11 +86,21 @@ export default function UsersView() {
   const [spacesLoading, setSpacesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const {
+    currentPage,
+    pageSize,
+    skip,
+    totalPages,
+    totalCount,
+    goToPage,
+    setTotalCount,
+  } = usePagination();
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setUsersLoading(true);
-        const response = await getUsers();
+        const response = await getUsers(skip, pageSize);
         if (response.data) {
           const userData: User[] =
             response.data.items?.map((user) => ({
@@ -100,6 +112,7 @@ export default function UsersView() {
               isOrgAdmin: user.isOrgAdmin,
             })) || [];
           setUsers(userData);
+          setTotalCount(response.data.totalCount ?? 0);
         }
       } catch (_error) {
         setError("Failed to load users");
@@ -131,7 +144,7 @@ export default function UsersView() {
 
     fetchUsers();
     fetchSpaces();
-  }, []);
+  }, [skip, pageSize, setTotalCount]);
 
   const usersWithSpaces = useMemo(
     () => buildUserSpacesMap(users, spaces).sort(compareUsersByName),
@@ -190,7 +203,7 @@ export default function UsersView() {
     );
   }
 
-  if (users.length === 0) {
+  if (totalCount === 0) {
     return (
       <div className="p-6 space-y-6 overflow-y-auto flex-1">
         <header>
@@ -214,7 +227,7 @@ export default function UsersView() {
       <header>
         <div className="flex items-center gap-2 mb-2">
           <h1 className="text-2xl font-semibold">Users</h1>
-          <Badge variant="secondary">{users.length}</Badge>
+          <Badge variant="secondary">{totalCount}</Badge>
         </div>
         <p className="text-muted-foreground">
           View all users in your organization
@@ -338,6 +351,12 @@ export default function UsersView() {
               </TableBody>
             </Table>
           </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            className="pb-4"
+          />
         </CardContent>
       </Card>
     </div>

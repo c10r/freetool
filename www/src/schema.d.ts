@@ -2651,7 +2651,10 @@ export interface paths {
     };
     get: {
       parameters: {
-        query?: never;
+        query?: {
+          skip?: number;
+          take?: number;
+        };
         header?: never;
         path: {
           userId: string;
@@ -3043,7 +3046,10 @@ export interface paths {
     };
     get: {
       parameters: {
-        query?: never;
+        query?: {
+          skip?: number;
+          take?: number;
+        };
         header?: never;
         path: {
           id: string;
@@ -3187,7 +3193,10 @@ export interface paths {
     };
     get: {
       parameters: {
-        query?: never;
+        query?: {
+          skip?: number;
+          take?: number;
+        };
         header?: never;
         path: {
           spaceId: string;
@@ -3202,9 +3211,9 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "text/plain": components["schemas"]["TrashListDto"];
-            "application/json": components["schemas"]["TrashListDto"];
-            "text/json": components["schemas"]["TrashListDto"];
+            "text/plain": components["schemas"]["TrashItemDtoPagedResult"];
+            "application/json": components["schemas"]["TrashItemDtoPagedResult"];
+            "text/json": components["schemas"]["TrashItemDtoPagedResult"];
           };
         };
         /** @description Bad Request */
@@ -4561,10 +4570,21 @@ export interface components {
       isOrgAdmin?: boolean;
       permissions?: components["schemas"]["SpacePermissionsDto"] | null;
     };
+    SpaceMemberPermissionsDtoPagedResult: {
+      items?: components["schemas"]["SpaceMemberPermissionsDto"][] | null;
+      /** Format: int32 */
+      totalCount?: number;
+      /** Format: int32 */
+      skip?: number;
+      /** Format: int32 */
+      take?: number;
+    };
     SpaceMembersPermissionsResponseDto: {
       spaceId?: string | null;
       spaceName?: string | null;
-      members?: components["schemas"]["SpaceMemberPermissionsDto"][] | null;
+      members?:
+        | components["schemas"]["SpaceMemberPermissionsDtoPagedResult"]
+        | null;
     };
     SpacePermissionsDto: {
       createResource?: boolean;
@@ -4602,10 +4622,14 @@ export interface components {
       /** Format: date-time */
       deletedAt?: string;
     };
-    TrashListDto: {
+    TrashItemDtoPagedResult: {
       items?: components["schemas"]["TrashItemDto"][] | null;
       /** Format: int32 */
       totalCount?: number;
+      /** Format: int32 */
+      skip?: number;
+      /** Format: int32 */
+      take?: number;
     };
     UpdateAppBodyDto: {
       body?: components["schemas"]["KeyValuePairDto"][] | null;

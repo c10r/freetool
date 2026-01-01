@@ -6,6 +6,7 @@ import {
   getApps,
   getResources,
 } from "@/api/api";
+import { PaginationControls } from "@/components/PaginationControls";
 import { PermissionButton } from "@/components/PermissionButton";
 import { PermissionGate } from "@/components/PermissionGate";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { usePagination } from "@/hooks/usePagination";
 import { useHasPermission } from "@/hooks/usePermissions";
 import { useResourceForm } from "../hooks/useResourceForm";
 import type { KeyValuePair } from "../types";
@@ -77,6 +79,10 @@ export default function ResourcesView({
     null
   );
 
+  // Pagination
+  const { currentPage, pageSize, skip, totalPages, goToPage, setTotalCount } =
+    usePagination();
+
   // Permission checks
   const canEditResource = useHasPermission(spaceId, "edit_resource");
 
@@ -123,7 +129,7 @@ export default function ResourcesView({
     try {
       setLoading(true);
       setError(null);
-      const response = await getResources();
+      const response = await getResources(skip, pageSize);
       if (response.data?.items) {
         const mappedItems = response.data?.items.map((item) => {
           return {
@@ -138,6 +144,9 @@ export default function ResourcesView({
           } as Resource;
         });
         setResources(mappedItems);
+        if (response.data.totalCount !== undefined) {
+          setTotalCount(response.data.totalCount);
+        }
       }
       // Also fetch apps to check resource usage
       await fetchApps();
@@ -146,7 +155,7 @@ export default function ResourcesView({
     } finally {
       setLoading(false);
     }
-  }, [fetchApps]);
+  }, [fetchApps, skip, pageSize, setTotalCount]);
 
   const getAppsUsingResource = (resourceId: string) => {
     return apps.filter((app) => app.resourceId === resourceId);
@@ -330,90 +339,97 @@ export default function ResourcesView({
       )}
 
       {!(loading || error) && resources.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-          {resources.map((resource) => (
-            <Card
-              key={resource.id}
-              className="transition-transform hover:scale-[1.01]"
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{resource.name}</span>
-                  <div className="flex items-center gap-2">
-                    <HttpMethodBadge method={resource.httpMethod} />
-                    <PermissionGate
-                      spaceId={spaceId}
-                      permission="edit_resource"
-                      showTooltip={true}
-                    >
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleEditResource(resource)}
+        <>
+          <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+            {resources.map((resource) => (
+              <Card
+                key={resource.id}
+                className="transition-transform hover:scale-[1.01]"
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>{resource.name}</span>
+                    <div className="flex items-center gap-2">
+                      <HttpMethodBadge method={resource.httpMethod} />
+                      <PermissionGate
+                        spaceId={spaceId}
+                        permission="edit_resource"
+                        showTooltip={true}
                       >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </PermissionGate>
-                    <PermissionGate
-                      spaceId={spaceId}
-                      permission="delete_resource"
-                      showTooltip={true}
-                    >
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() =>
-                                  handleDeleteResource(resource.id)
-                                }
-                                disabled={
-                                  !canDeleteResource(resource.id) ||
-                                  deletingResourceId === resource.id
-                                }
-                              >
-                                <Trash2
-                                  className={`h-4 w-4 text-red-500 ${
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEditResource(resource)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate
+                        spaceId={spaceId}
+                        permission="delete_resource"
+                        showTooltip={true}
+                      >
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() =>
+                                    handleDeleteResource(resource.id)
+                                  }
+                                  disabled={
                                     !canDeleteResource(resource.id) ||
                                     deletingResourceId === resource.id
-                                      ? "opacity-50"
-                                      : ""
-                                  }`}
-                                />
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {canDeleteResource(resource.id) ? (
-                              <p>Delete resource</p>
-                            ) : (
-                              <p>
-                                There are still apps that use this resource.
-                                Please delete those first.
-                              </p>
-                            )}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </PermissionGate>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {resource.description}
-                </p>
-                <p className="text-xs font-mono bg-gray-50 p-2 rounded">
-                  {resource.baseUrl}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                                  }
+                                >
+                                  <Trash2
+                                    className={`h-4 w-4 text-red-500 ${
+                                      !canDeleteResource(resource.id) ||
+                                      deletingResourceId === resource.id
+                                        ? "opacity-50"
+                                        : ""
+                                    }`}
+                                  />
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {canDeleteResource(resource.id) ? (
+                                <p>Delete resource</p>
+                              ) : (
+                                <p>
+                                  There are still apps that use this resource.
+                                  Please delete those first.
+                                </p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </PermissionGate>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {resource.description}
+                  </p>
+                  <p className="text-xs font-mono bg-gray-50 p-2 rounded">
+                    {resource.baseUrl}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+          />
+        </>
       )}
 
       <Dialog open={!!editingResource} onOpenChange={() => handleCloseEdit()}>

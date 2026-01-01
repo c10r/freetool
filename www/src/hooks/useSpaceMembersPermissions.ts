@@ -80,9 +80,15 @@ function mapPermissionsToApi(permissions: SpacePermissions): {
  */
 const PERMISSION_CACHE_TTL = 5 * 60 * 1000;
 
+interface UseSpaceMembersPermissionsOptions {
+  skip?: number;
+  take?: number;
+}
+
 interface UseSpaceMembersPermissionsResult {
   members: SpaceMemberPermissions[];
   spaceName: string;
+  totalCount: number;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -97,12 +103,13 @@ interface UseSpaceMembersPermissionsResult {
  * Hook to fetch all members and their permissions for a space
  *
  * @param spaceId - The ID of the space to fetch permissions for
+ * @param options - Optional pagination parameters (skip, take)
  * @returns Object containing members, loading state, and update function
  *
  * @example
  * ```tsx
  * function PermissionsView({ spaceId }) {
- *   const { members, isLoading, updatePermissions } = useSpaceMembersPermissions(spaceId);
+ *   const { members, isLoading, updatePermissions, totalCount } = useSpaceMembersPermissions(spaceId, { skip: 0, take: 50 });
  *
  *   if (isLoading) return <Skeleton />;
  *
@@ -117,34 +124,41 @@ interface UseSpaceMembersPermissionsResult {
  * ```
  */
 export function useSpaceMembersPermissions(
-  spaceId: string
+  spaceId: string,
+  options?: UseSpaceMembersPermissionsOptions
 ): UseSpaceMembersPermissionsResult {
   const queryClient = useQueryClient();
+  const { skip, take } = options ?? {};
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["spaceMembersPermissions", spaceId],
+    queryKey: ["spaceMembersPermissions", spaceId, skip, take],
     queryFn: async () => {
-      const result = await getSpaceMembersPermissions(spaceId);
+      const result = await getSpaceMembersPermissions(spaceId, skip, take);
       if (result.error || !result.data) {
         throw new Error(
           result.error?.message || "Failed to fetch members permissions"
         );
       }
       // Map the API response to frontend format
-      const members: SpaceMemberPermissions[] = (result.data.members ?? []).map(
-        (member) => ({
-          userId: member.userId ?? "",
-          userName: member.userName ?? "",
-          userEmail: member.userEmail ?? "",
-          profilePicUrl: member.profilePicUrl ?? undefined,
-          isModerator: member.isModerator ?? false,
-          permissions: mapPermissionsFromApi(member.permissions),
-        })
-      );
+      // members is now a PagedResult with items and totalCount
+      const membersData = result.data.members;
+      const items = membersData?.items ?? [];
+      const totalCount = membersData?.totalCount ?? 0;
+
+      const members: SpaceMemberPermissions[] = items.map((member) => ({
+        userId: member.userId ?? "",
+        userName: member.userName ?? "",
+        userEmail: member.userEmail ?? "",
+        profilePicUrl: member.profilePicUrl ?? undefined,
+        isModerator: member.isModerator ?? false,
+        isOrgAdmin: member.isOrgAdmin ?? false,
+        permissions: mapPermissionsFromApi(member.permissions),
+      }));
       return {
         spaceId: result.data.spaceId ?? "",
         spaceName: result.data.spaceName ?? "",
         members,
+        totalCount,
       };
     },
     staleTime: PERMISSION_CACHE_TTL,
@@ -190,6 +204,7 @@ export function useSpaceMembersPermissions(
   return {
     members: data?.members || [],
     spaceName: data?.spaceName || "",
+    totalCount: data?.totalCount ?? 0,
     isLoading,
     error: error as Error | null,
     refetch,

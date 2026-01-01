@@ -7,6 +7,7 @@ import {
   restoreFolder,
   restoreResource,
 } from "@/api/api";
+import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePagination } from "@/hooks/usePagination";
 
 interface TrashItem {
   id: string;
@@ -45,11 +47,20 @@ export default function TrashView({
   const [items, setItems] = useState<TrashItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [restoring, setRestoring] = useState<string | null>(null);
+  const {
+    currentPage,
+    pageSize,
+    skip,
+    totalPages,
+    totalCount,
+    goToPage,
+    setTotalCount,
+  } = usePagination();
 
   const fetchTrash = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getTrashBySpace(spaceId);
+      const response = await getTrashBySpace(spaceId, skip, pageSize);
       if (response.data) {
         const trashItems = response.data.items || [];
         setItems(
@@ -61,13 +72,14 @@ export default function TrashView({
             deletedAt: item.deletedAt ?? "",
           }))
         );
+        setTotalCount(response.data.totalCount ?? 0);
       }
     } catch (_error) {
       toast.error("Failed to load trash");
     } finally {
       setLoading(false);
     }
-  }, [spaceId]);
+  }, [spaceId, skip, pageSize, setTotalCount]);
 
   useEffect(() => {
     fetchTrash();
@@ -184,7 +196,7 @@ export default function TrashView({
         folder will also restore all its contents.
       </p>
 
-      {items.length === 0 ? (
+      {totalCount === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Trash2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
           <h3 className="text-lg font-medium">Trash is empty</h3>
@@ -193,49 +205,56 @@ export default function TrashView({
           </p>
         </div>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Deleted</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {getItemIcon(item.itemType)}
-                      {item.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getItemBadgeVariant(item.itemType)}>
-                      {item.itemType}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(item.deletedAt)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRestore(item)}
-                      disabled={restoring === item.id}
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      {restoring === item.id ? "Restoring..." : "Restore"}
-                    </Button>
-                  </TableCell>
+        <>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Deleted</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {getItemIcon(item.itemType)}
+                        {item.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getItemBadgeVariant(item.itemType)}>
+                        {item.itemType}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(item.deletedAt)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRestore(item)}
+                        disabled={restoring === item.id}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        {restoring === item.id ? "Restoring..." : "Restore"}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+          />
+        </>
       )}
     </div>
   );

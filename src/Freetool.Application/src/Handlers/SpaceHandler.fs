@@ -255,7 +255,7 @@ module SpaceHandler =
                 | None -> return Error(NotFound "Space not found")
                 | Some space -> return Ok(SpaceResult(space.State))
 
-            | GetSpacesByUserId userId ->
+            | GetSpacesByUserId(userId, skip, take) ->
                 match Guid.TryParse userId with
                 | false, _ -> return Error(ValidationError "Invalid user ID format")
                 | true, guid ->
@@ -277,13 +277,16 @@ module SpaceHandler =
                             (memberSpaces @ moderatorSpaces)
                             |> List.distinctBy (fun space -> space.State.Id)
 
-                        let numSpaces = List.length allSpaces
+                        let totalCount = List.length allSpaces
+
+                        // Apply pagination
+                        let paginatedSpaces = allSpaces |> List.skip skip |> List.truncate take
 
                         let result =
-                            { Items = allSpaces |> List.map (fun space -> space.State)
-                              TotalCount = numSpaces
-                              Skip = 0
-                              Take = numSpaces }
+                            { Items = paginatedSpaces |> List.map (fun space -> space.State)
+                              TotalCount = totalCount
+                              Skip = skip
+                              Take = take }
 
                         return Ok(SpacesResult result)
 
@@ -304,7 +307,7 @@ module SpaceHandler =
 
                     return Ok(SpacesResult result)
 
-            | GetSpaceMembersWithPermissions spaceId ->
+            | GetSpaceMembersWithPermissions(spaceId, skip, take) ->
                 match Guid.TryParse spaceId with
                 | false, _ -> return Error(ValidationError "Invalid space ID format")
                 | true, guid ->
@@ -318,10 +321,14 @@ module SpaceHandler =
                         let moderatorId = space.State.ModeratorUserId
                         let memberIds = space.State.MemberIds
                         let allUserIds = moderatorId :: memberIds |> List.distinct
+                        let totalCount = List.length allUserIds
 
-                        // Fetch user details for all users
+                        // Apply pagination to user IDs
+                        let paginatedUserIds = allUserIds |> List.skip skip |> List.truncate take
+
+                        // Fetch user details for paginated users
                         let! userResults =
-                            allUserIds
+                            paginatedUserIds
                             |> List.map (fun userId -> userRepository.GetByIdAsync userId)
                             |> Task.WhenAll
 
@@ -334,7 +341,7 @@ module SpaceHandler =
 
                         // Build member permissions DTOs
                         let! memberPermissions =
-                            allUserIds
+                            paginatedUserIds
                             |> List.map (fun userId ->
                                 task {
                                     let userOption = userLookup |> Map.tryFind userId
@@ -387,10 +394,16 @@ module SpaceHandler =
                                 })
                             |> Task.WhenAll
 
+                        let pagedMembers: PagedResult<SpaceMemberPermissionsDto> =
+                            { Items = memberPermissions |> Array.toList
+                              TotalCount = totalCount
+                              Skip = skip
+                              Take = take }
+
                         let response: SpaceMembersPermissionsResponseDto =
                             { SpaceId = spaceId
                               SpaceName = space.State.Name
-                              Members = memberPermissions |> Array.toList }
+                              Members = pagedMembers }
 
                         return Ok(SpaceMembersPermissionsResult response)
 

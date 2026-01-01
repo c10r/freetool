@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createSpace, getSpaces, getUsers, inviteUser } from "@/api/api";
+import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { usePagination } from "@/hooks/usePagination";
 import { useIsOrgAdmin } from "@/hooks/usePermissions";
 
 interface User {
@@ -68,6 +70,17 @@ export default function SpacesView() {
   const [usersLoading, setUsersLoading] = useState(true);
   const [spacesLoading, setSpacesLoading] = useState(true);
   const [spacesError, setSpacesError] = useState<string | null>(null);
+
+  // Pagination
+  const {
+    currentPage,
+    pageSize,
+    skip,
+    totalPages,
+    totalCount,
+    goToPage,
+    setTotalCount,
+  } = usePagination();
 
   // Role checks
   const isOrgAdmin = useIsOrgAdmin();
@@ -109,7 +122,7 @@ export default function SpacesView() {
       try {
         setSpacesLoading(true);
         setSpacesError(null);
-        const response = await getSpaces();
+        const response = await getSpaces(skip, pageSize);
         if (response.data) {
           const spaceData: Space[] =
             response.data.items?.map((space) => ({
@@ -119,6 +132,7 @@ export default function SpacesView() {
               memberIds: space.memberIds || [],
             })) || [];
           setSpaces(spaceData);
+          setTotalCount(response.data.totalCount ?? 0);
         }
       } catch (_error) {
         setSpacesError("Failed to load spaces");
@@ -129,7 +143,7 @@ export default function SpacesView() {
 
     fetchUsers();
     fetchSpaces();
-  }, []);
+  }, [skip, pageSize, setTotalCount]);
 
   const handleCreateSpace = async () => {
     if (!(spaceName.trim() && selectedModeratorId)) {
@@ -149,7 +163,7 @@ export default function SpacesView() {
       setSelectedModeratorId("");
       setSelectedMemberIds([]);
 
-      const response = await getSpaces();
+      const response = await getSpaces(skip, pageSize);
       if (response.data) {
         const spaceData: Space[] =
           response.data.items?.map((space) => ({
@@ -159,6 +173,7 @@ export default function SpacesView() {
             memberIds: space.memberIds || [],
           })) || [];
         setSpaces(spaceData);
+        setTotalCount(response.data.totalCount ?? 0);
       }
 
       // Invalidate spaces list to refetch
@@ -221,7 +236,7 @@ export default function SpacesView() {
           <div className="flex items-center gap-2">
             <Building2 size={24} />
             <h1 className="text-2xl font-semibold">Spaces</h1>
-            {!isLoading && <Badge variant="secondary">{spaces.length}</Badge>}
+            {!isLoading && <Badge variant="secondary">{totalCount}</Badge>}
           </div>
           {isOrgAdmin ? (
             <Dialog open={createSpaceOpen} onOpenChange={setCreateSpaceOpen}>
@@ -450,66 +465,73 @@ export default function SpacesView() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {spaces.map((space) => {
-            const moderator = getUserById(space.moderatorUserId);
-            return (
-              <Card key={space.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      <CardTitle className="text-base font-medium">
-                        {space.name}
-                      </CardTitle>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {spaces.map((space) => {
+              const moderator = getUserById(space.moderatorUserId);
+              return (
+                <Card key={space.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        <CardTitle className="text-base font-medium">
+                          {space.name}
+                        </CardTitle>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  navigate(`/spaces/${space.id}/settings`)
+                                }
+                                className="h-8 w-8 p-0"
+                              >
+                                <Settings size={14} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Space Settings</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                navigate(`/spaces/${space.id}/settings`)
-                              }
-                              className="h-8 w-8 p-0"
-                            >
-                              <Settings size={14} />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Space Settings</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Crown className="h-4 w-4 text-amber-500" />
+                      <span className="text-muted-foreground">Moderator:</span>
+                      <span className="font-medium">
+                        {moderator
+                          ? isInvitedPlaceholder(moderator)
+                            ? moderator.email
+                            : moderator.name
+                          : "Unknown"}
+                      </span>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Crown className="h-4 w-4 text-amber-500" />
-                    <span className="text-muted-foreground">Moderator:</span>
-                    <span className="font-medium">
-                      {moderator
-                        ? isInvitedPlaceholder(moderator)
-                          ? moderator.email
-                          : moderator.name
-                        : "Unknown"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>
-                      {space.memberIds.length} member
-                      {space.memberIds.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>
+                        {space.memberIds.length} member
+                        {space.memberIds.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+          />
+        </>
       )}
     </div>
   );

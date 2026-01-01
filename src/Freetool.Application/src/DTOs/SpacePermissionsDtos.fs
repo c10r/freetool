@@ -29,7 +29,7 @@ type SpaceMemberPermissionsDto =
 type SpaceMembersPermissionsResponseDto =
     { SpaceId: string
       SpaceName: string
-      Members: SpaceMemberPermissionsDto list }
+      Members: PagedResult<SpaceMemberPermissionsDto> }
 
 /// DTO for updating a user's permissions in a space
 type UpdateUserPermissionsDto =

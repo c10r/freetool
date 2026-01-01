@@ -183,7 +183,7 @@ type SpaceController
             let skipValue = if skip < 0 then 0 else skip
 
             let takeValue =
-                if take <= 0 then 10
+                if take <= 0 then 50
                 elif take > 100 then 100
                 else take
 
@@ -200,17 +200,26 @@ type SpaceController
     [<ProducesResponseType(typeof<PagedResult<SpaceData>>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.GetSpacesByUserId(userId: string) : Task<IActionResult> =
+    member this.GetSpacesByUserId
+        (userId: string, [<FromQuery>] skip: int, [<FromQuery>] take: int)
+        : Task<IActionResult> =
         task {
+            let skipValue = if skip < 0 then 0 else skip
+
+            let takeValue =
+                if take <= 0 then 50
+                elif take > 100 then 100
+                else take
+
             let! isOrgAdmin = this.CheckIsOrgAdminAsync()
 
             let! result =
                 if isOrgAdmin then
                     // Org admins can see all spaces
-                    commandHandler.HandleCommand(GetAllSpaces(0, System.Int32.MaxValue))
+                    commandHandler.HandleCommand(GetAllSpaces(skipValue, takeValue))
                 else
                     // Regular users see only spaces they're members/moderators of
-                    commandHandler.HandleCommand(GetSpacesByUserId userId)
+                    commandHandler.HandleCommand(GetSpacesByUserId(userId, skipValue, takeValue))
 
             return
                 match result with
@@ -509,7 +518,9 @@ type SpaceController
     [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.GetSpacePermissions(id: string) : Task<IActionResult> =
+    member this.GetSpacePermissions
+        (id: string, [<FromQuery>] skip: int, [<FromQuery>] take: int)
+        : Task<IActionResult> =
         task {
             let userId = this.CurrentUserId
 
@@ -526,7 +537,14 @@ type SpaceController
 
                 return this.Forbidden("Only space members can view space permissions")
             else
-                let! result = commandHandler.HandleCommand(GetSpaceMembersWithPermissions id)
+                let skipValue = if skip < 0 then 0 else skip
+
+                let takeValue =
+                    if take <= 0 then 50
+                    elif take > 100 then 100
+                    else take
+
+                let! result = commandHandler.HandleCommand(GetSpaceMembersWithPermissions(id, skipValue, takeValue))
 
                 return
                     match result with

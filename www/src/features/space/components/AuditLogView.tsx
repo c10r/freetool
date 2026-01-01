@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { getAuditEvents } from "@/api/api";
+import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { usePagination } from "@/hooks/usePagination";
 
 // Safe JSON parsing helper
 const safeJsonParse = (
@@ -117,11 +119,21 @@ export default function AuditLogView() {
   const [error, setError] = useState<string | null>(null);
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
 
+  const {
+    currentPage,
+    pageSize,
+    skip,
+    totalPages,
+    totalCount,
+    goToPage,
+    setTotalCount,
+  } = usePagination();
+
   const fetchAuditEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getAuditEvents();
+      const response = await getAuditEvents(skip, pageSize);
       if (response.data?.items) {
         const mappedItems = response.data?.items?.map((item) => {
           return {
@@ -140,13 +152,16 @@ export default function AuditLogView() {
           };
         });
         setEvents(mappedItems);
+        if (response.data.totalCount !== undefined) {
+          setTotalCount(response.data.totalCount);
+        }
       }
     } catch (_err) {
       setError("Failed to load audit events");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [skip, pageSize, setTotalCount]);
 
   useEffect(() => {
     fetchAuditEvents();
@@ -159,7 +174,12 @@ export default function AuditLogView() {
   return (
     <section className="p-6 space-y-4 overflow-y-auto flex-1">
       <header className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Audit Log</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-semibold">Audit Log</h2>
+          {totalCount > 0 && (
+            <Badge variant="secondary">{totalCount} events</Badge>
+          )}
+        </div>
         <Button onClick={fetchAuditEvents}>Refresh</Button>
       </header>
       <Separator />
@@ -189,88 +209,95 @@ export default function AuditLogView() {
       )}
 
       {!(loading || error) && events.length > 0 && (
-        <div className="space-y-2">
-          {events.map((event) => (
-            <Card
-              key={event.id}
-              className="transition-transform hover:scale-[1.005]"
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <Badge className={getEventTypeColor(event.eventType)}>
-                      {event.eventType.replace("Event", "")}
-                    </Badge>
-                    <Badge className={getEntityTypeColor(event.entityType)}>
-                      {event.entityType}
-                    </Badge>
+        <>
+          <div className="space-y-2">
+            {events.map((event) => (
+              <Card
+                key={event.id}
+                className="transition-transform hover:scale-[1.005]"
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <Badge className={getEventTypeColor(event.eventType)}>
+                        {event.eventType.replace("Event", "")}
+                      </Badge>
+                      <Badge className={getEntityTypeColor(event.entityType)}>
+                        {event.entityType}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        {formatDate(event.occurredAt)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      {formatDate(event.occurredAt)}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="mb-3">
-                  <div className="text-sm font-medium">
-                    {event.eventSummary}
+                  <div className="mb-3">
+                    <div className="text-sm font-medium">
+                      {event.eventSummary}
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex justify-between items-center">
-                  <div className="text-xs text-muted-foreground">
-                    Event ID: {event.eventId.substring(0, 8)}...
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs text-muted-foreground">
+                      Event ID: {event.eventId.substring(0, 8)}...
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleEventDetails(event.id)}
+                    >
+                      {expandedEvent === event.id
+                        ? "Hide Details"
+                        : "Show Details"}
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleEventDetails(event.id)}
-                  >
-                    {expandedEvent === event.id
-                      ? "Hide Details"
-                      : "Show Details"}
-                  </Button>
-                </div>
 
-                {expandedEvent === event.id && (
-                  <div className="mt-4 pt-4 border-t space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Details:</h4>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <div>
-                          <strong>User:</strong> {event.userName} (
-                          {event.userId})
-                        </div>
-                        <div>
-                          <strong>Entity:</strong> {event.entityName} (
-                          {event.entityId})
-                        </div>
-                        <div>
-                          <strong>Event ID:</strong> {event.eventId}
-                        </div>
-                        <div>
-                          <strong>Created At:</strong>{" "}
-                          {formatDate(event.createdAt)}
+                  {expandedEvent === event.id && (
+                    <div className="mt-4 pt-4 border-t space-y-4">
+                      <div>
+                        <h4 className="font-medium mb-2">Details:</h4>
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <div>
+                            <strong>User:</strong> {event.userName} (
+                            {event.userId})
+                          </div>
+                          <div>
+                            <strong>Entity:</strong> {event.entityName} (
+                            {event.entityId})
+                          </div>
+                          <div>
+                            <strong>Event ID:</strong> {event.eventId}
+                          </div>
+                          <div>
+                            <strong>Created At:</strong>{" "}
+                            {formatDate(event.createdAt)}
+                          </div>
                         </div>
                       </div>
+                      <div>
+                        <h4 className="font-medium mb-2">Raw Event Data:</h4>
+                        <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto">
+                          {JSON.stringify(
+                            safeJsonParse(event.eventData),
+                            null,
+                            2
+                          )}
+                        </pre>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-medium mb-2">Raw Event Data:</h4>
-                      <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto">
-                        {JSON.stringify(
-                          safeJsonParse(event.eventData),
-                          null,
-                          2
-                        )}
-                      </pre>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+          />
+        </>
       )}
     </section>
   );

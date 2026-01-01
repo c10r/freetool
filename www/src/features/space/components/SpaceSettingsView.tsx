@@ -17,6 +17,7 @@ import {
   removeSpaceMember,
   updateSpaceName,
 } from "@/api/api";
+import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +47,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { usePagination } from "@/hooks/usePagination";
 import { useIsOrgAdmin, useIsSpaceModerator } from "@/hooks/usePermissions";
 import { useSpaceMembersPermissions } from "@/hooks/useSpaceMembersPermissions";
 import { compareUsersByName } from "@/lib/utils";
@@ -142,15 +144,32 @@ export default function SpaceSettingsView({
   >({});
   const [isSavingPermissions, setIsSavingPermissions] = useState(false);
 
+  // Pagination for members permissions
+  const {
+    currentPage,
+    pageSize,
+    skip,
+    totalPages,
+    totalCount: membersTotalCount,
+    goToPage,
+    setTotalCount,
+  } = usePagination();
+
   // Fetch members and their permissions
   const {
     members,
     spaceName: permissionsSpaceName,
+    totalCount,
     isLoading: permissionsLoading,
     error: permissionsError,
     updatePermissions,
     refetch: refetchPermissions,
-  } = useSpaceMembersPermissions(spaceId || "");
+  } = useSpaceMembersPermissions(spaceId || "", { skip, take: pageSize });
+
+  // Update pagination total count when data changes
+  useEffect(() => {
+    setTotalCount(totalCount);
+  }, [totalCount, setTotalCount]);
 
   // Fetch all users
   useEffect(() => {
@@ -637,7 +656,14 @@ export default function SpaceSettingsView({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-lg">Member Permissions</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              Member Permissions
+              {membersTotalCount > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {membersTotalCount}
+                </Badge>
+              )}
+            </CardTitle>
             {!canEdit && (
               <p className="text-sm text-muted-foreground mt-1">
                 You can view permissions but only moderators and administrators
@@ -657,7 +683,7 @@ export default function SpaceSettingsView({
           )}
         </CardHeader>
         <CardContent>
-          {members.length === 0 ? (
+          {membersTotalCount === 0 ? (
             <div className="py-10 text-center text-muted-foreground">
               No members found in this space.
             </div>
@@ -831,6 +857,13 @@ export default function SpaceSettingsView({
                   </div>
                 )}
               </div>
+
+              {/* Pagination */}
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={goToPage}
+              />
             </>
           )}
         </CardContent>

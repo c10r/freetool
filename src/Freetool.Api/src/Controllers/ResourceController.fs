@@ -85,7 +85,7 @@ type ResourceController
             let skipValue = if skip < 0 then 0 else skip
 
             let takeValue =
-                if take <= 0 then 10
+                if take <= 0 then 50
                 elif take > 100 then 100
                 else take
 

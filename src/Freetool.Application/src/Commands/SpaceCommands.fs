@@ -22,7 +22,7 @@ type SpaceCommand =
     /// Gets all Spaces with pagination
     | GetAllSpaces of skip: int * take: int
     /// Gets all Spaces that a user is a member of or moderator of
-    | GetSpacesByUserId of userId: string
+    | GetSpacesByUserId of userId: string * skip: int * take: int
     /// Deletes a Space
     | DeleteSpace of actorUserId: UserId * spaceId: string
     /// Updates a Space's name
@@ -34,6 +34,6 @@ type SpaceCommand =
     /// Removes a member from a Space
     | RemoveMember of actorUserId: UserId * spaceId: string * RemoveMemberDto
     /// Gets all space members with their permissions
-    | GetSpaceMembersWithPermissions of spaceId: string
+    | GetSpaceMembersWithPermissions of spaceId: string * skip: int * take: int
     /// Updates a user's permissions in a Space
     | UpdateUserPermissions of actorUserId: UserId * spaceId: string * UpdateUserPermissionsDto

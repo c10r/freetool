@@ -3892,6 +3892,22 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         ],
         "responses": {
@@ -4463,6 +4479,22 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         ],
         "responses": {
@@ -4679,6 +4711,22 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         ],
         "responses": {
@@ -4687,17 +4735,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/TrashListDto"
+                  "$ref": "#/components/schemas/TrashItemDtoPagedResult"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TrashListDto"
+                  "$ref": "#/components/schemas/TrashItemDtoPagedResult"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TrashListDto"
+                  "$ref": "#/components/schemas/TrashItemDtoPagedResult"
                 }
               }
             }
@@ -7480,6 +7528,31 @@
         },
         "additionalProperties": false
       },
+      "SpaceMemberPermissionsDtoPagedResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpaceMemberPermissionsDto"
+            },
+            "nullable": true
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
       "SpaceMembersPermissionsResponseDto": {
         "type": "object",
         "properties": {
@@ -7492,10 +7565,11 @@
             "nullable": true
           },
           "members": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SpaceMemberPermissionsDto"
-            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SpaceMemberPermissionsDtoPagedResult"
+              }
+            ],
             "nullable": true
           }
         },
@@ -7625,7 +7699,7 @@
         },
         "additionalProperties": false
       },
-      "TrashListDto": {
+      "TrashItemDtoPagedResult": {
         "type": "object",
         "properties": {
           "items": {
@@ -7636,6 +7710,14 @@
             "nullable": true
           },
           "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skip": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "take": {
             "type": "integer",
             "format": "int32"
           }

@@ -40,7 +40,7 @@ module TrashHandler =
         : Task<Result<TrashCommandResult, DomainError>> =
         task {
             match command with
-            | GetTrashBySpace spaceIdStr ->
+            | GetTrashBySpace(spaceIdStr, skip, take) ->
                 match Guid.TryParse spaceIdStr with
                 | false, _ -> return Error(ValidationError "Invalid space ID format")
                 | true, guid ->
@@ -97,9 +97,15 @@ module TrashHandler =
                         appItems @ folderItems @ resourceItems
                         |> List.sortByDescending (fun item -> item.DeletedAt)
 
+                    let totalCount = List.length allItems
+
+                    let pagedItems = allItems |> List.skip skip |> List.truncate take
+
                     let result =
-                        { Items = allItems
-                          TotalCount = List.length allItems }
+                        { Items = pagedItems
+                          TotalCount = totalCount
+                          Skip = skip
+                          Take = take }
 
                     return Ok(TrashListResult result)
 

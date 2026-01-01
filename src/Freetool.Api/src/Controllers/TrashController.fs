@@ -14,13 +14,22 @@ type TrashController(commandHandler: IMultiRepositoryCommandHandler<TrashCommand
     inherit AuthenticatedControllerBase()
 
     [<HttpGet("space/{spaceId}")>]
-    [<ProducesResponseType(typeof<TrashListDto>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(typeof<PagedResult<TrashItemDto>>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status404NotFound)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.GetTrashBySpace(spaceId: string) : Task<IActionResult> =
+    member this.GetTrashBySpace
+        (spaceId: string, [<FromQuery>] skip: int, [<FromQuery>] take: int)
+        : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand(GetTrashBySpace spaceId)
+            let skipValue = if skip < 0 then 0 else skip
+
+            let takeValue =
+                if take <= 0 then 50
+                elif take > 100 then 100
+                else take
+
+            let! result = commandHandler.HandleCommand(GetTrashBySpace(spaceId, skipValue, takeValue))
 
             return
                 match result with
