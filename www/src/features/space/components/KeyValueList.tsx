@@ -45,7 +45,8 @@ export default function KeyValueList({
         ) : (
           (items || []).map((kv, i) => (
             <div
-              key={`${kv.key}-${i}`}
+              // biome-ignore lint/suspicious/noArrayIndexKey: Items never reordered. Using kv.key causes focus loss.
+              key={`${i}-item`}
               className="grid grid-cols-12 gap-2 items-center"
             >
               <Input
@@ -72,7 +73,8 @@ export default function KeyValueList({
     <section className="space-y-2" aria-label={ariaLabel}>
       {(items || []).map((kv, i) => (
         <fieldset
-          key={`kv-${kv.key}-${i}`}
+          // biome-ignore lint/suspicious/noArrayIndexKey: Items never reordered. Using kv.key causes focus loss.
+          key={i}
           className="grid grid-cols-12 gap-2 items-center border-0 p-0 m-0 min-w-0"
           onBlur={(e) => {
             // Only trigger onBlur if focus is leaving this entire row

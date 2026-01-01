@@ -140,7 +140,7 @@ export function InputWithPlaceholders({
   );
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className={cn("relative", className)} ref={containerRef}>
       <LexicalComposer initialConfig={initialConfig}>
         <EditorRefPlugin editorRef={editorRef} />
         <Popover
@@ -161,8 +161,7 @@ export function InputWithPlaceholders({
                       "disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
                       "whitespace-pre-wrap break-words",
                       disabled && "cursor-not-allowed opacity-50",
-                      !value && placeholder && "text-muted-foreground",
-                      className
+                      !value && placeholder && "text-muted-foreground"
                     )}
                   />
                 }
