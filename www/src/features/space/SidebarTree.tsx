@@ -1,11 +1,12 @@
 import {
+  Building2,
   ChevronDown,
   ChevronRight,
   Database,
   FileType,
   FolderClosed,
   FolderOpen,
-  Shield,
+  ScrollText,
   Trash2,
   Users,
 } from "lucide-react";
@@ -215,18 +216,33 @@ export default function SidebarTree({
         {/* Global sections separator */}
         <div className="border-t my-4 pt-4" />
 
-        {/* Users & Spaces (global) */}
+        {/* Users (global) */}
         <div>
           <button
             type="button"
-            onClick={() => onSelect("users-&-spaces")}
+            onClick={() => onSelect("users")}
             className={cn(
               "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent font-semibold",
-              selectedId === "users-&-spaces" && "bg-accent"
+              selectedId === "users" && "bg-accent"
             )}
           >
             <Users size={16} />
-            <span>Users & Spaces</span>
+            <span>Users</span>
+          </button>
+        </div>
+
+        {/* Spaces (global) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => onSelect("spaces-list")}
+            className={cn(
+              "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left hover:bg-accent font-semibold",
+              selectedId === "spaces-list" && "bg-accent"
+            )}
+          >
+            <Building2 size={16} />
+            <span>Spaces</span>
           </button>
         </div>
 
@@ -240,7 +256,7 @@ export default function SidebarTree({
               selectedId === "audit-log" && "bg-accent"
             )}
           >
-            <Shield size={16} />
+            <ScrollText size={16} />
             <span>Audit Log</span>
           </button>
         </div>

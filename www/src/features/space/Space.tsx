@@ -30,8 +30,11 @@ function getPathFromSelectedId(
   nodes: Record<string, SpaceNode>,
   spaceId?: string
 ): string {
-  if (selectedId === "users-&-spaces") {
+  if (selectedId === "users") {
     return "/users";
+  }
+  if (selectedId === "spaces-list") {
+    return "/spaces-list";
   }
   if (selectedId === "audit-log") {
     return "/audit";
@@ -44,9 +47,9 @@ function getPathFromSelectedId(
     // Trash is space-specific
     return spaceId ? `/spaces/${spaceId}/trash` : "/spaces";
   }
-  if (selectedId === "permissions") {
-    // Permissions are space-specific
-    return spaceId ? `/spaces/${spaceId}/permissions` : "/spaces";
+  if (selectedId === "settings" || selectedId === "permissions") {
+    // Settings (formerly permissions) are space-specific
+    return spaceId ? `/spaces/${spaceId}/settings` : "/spaces";
   }
   if (selectedId === "root") {
     return spaceId ? `/spaces/${spaceId}` : "/spaces";
@@ -67,7 +70,10 @@ function getSelectedIdFromPath(
   rootId = "root"
 ): string {
   if (pathname === "/users") {
-    return "users-&-spaces";
+    return "users";
+  }
+  if (pathname === "/spaces-list") {
+    return "spaces-list";
   }
   if (pathname === "/audit") {
     return "audit-log";
@@ -78,6 +84,10 @@ function getSelectedIdFromPath(
   if (pathname === `/spaces/${spaceId}/trash`) {
     return "trash";
   }
+  if (pathname === `/spaces/${spaceId}/settings`) {
+    return "settings";
+  }
+  // Backwards compatibility: old permissions URL maps to settings
   if (pathname === `/spaces/${spaceId}/permissions`) {
     return "permissions";
   }
@@ -121,7 +131,9 @@ function WorkspaceContent() {
 
   // Redirect to first space if none selected
   const isStandaloneGlobalRoute =
-    location.pathname === "/users" || location.pathname === "/audit";
+    location.pathname === "/users" ||
+    location.pathname === "/spaces-list" ||
+    location.pathname === "/audit";
 
   useEffect(() => {
     if (
@@ -156,7 +168,15 @@ function WorkspaceContent() {
       return true; // Root path is always valid
     }
     if (
-      ["resources", "trash", "users-&-teams", "audit-log"].includes(selectedId)
+      [
+        "resources",
+        "trash",
+        "users",
+        "spaces-list",
+        "audit-log",
+        "settings",
+        "permissions",
+      ].includes(selectedId)
     ) {
       return true; // Special sections are valid
     }
@@ -317,7 +337,9 @@ function WorkspaceContent() {
   }
 
   // Check if we're on a global route that doesn't require spaces
-  const isGlobalRoute = ["users-&-spaces", "audit-log"].includes(selectedId);
+  const isGlobalRoute = ["users", "spaces-list", "audit-log"].includes(
+    selectedId
+  );
 
   const hasSpaces = spaces.length > 0;
 
@@ -459,8 +481,8 @@ function WorkspaceContent() {
                     : "Contact your administrator to get access to a space."}
                 </p>
                 {isOrgAdmin ? (
-                  <Button onClick={() => setSelectedId("users-&-spaces")}>
-                    Go to Users & Spaces
+                  <Button onClick={() => setSelectedId("spaces-list")}>
+                    Go to Spaces
                   </Button>
                 ) : null}
               </CardContent>
@@ -527,11 +549,22 @@ function buildBreadcrumb(
   if (id === "trash") {
     return [{ id: "trash", name: "Trash" }];
   }
-  if (id === "users-&-spaces") {
-    return [{ id: "users-&-spaces", name: "Users & Spaces" }];
+  if (id === "users") {
+    return [{ id: "users", name: "Users" }];
+  }
+  if (id === "spaces-list") {
+    return [{ id: "spaces-list", name: "Spaces" }];
   }
   if (id === "audit-log") {
     return [{ id: "audit-log", name: "Audit Log" }];
+  }
+  if ((id === "settings" || id === "permissions") && currentSpaceId) {
+    const space = spaces.find((s) => s.id === currentSpaceId);
+    const spaceName = space?.name || "Space";
+    return [
+      { id: "spaces-list", name: "Spaces" },
+      { id: "settings", name: `${spaceName} Settings` },
+    ];
   }
 
   const list: { id: string; name: string }[] = [];

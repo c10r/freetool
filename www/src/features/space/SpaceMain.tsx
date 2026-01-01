@@ -2,9 +2,10 @@ import AppView from "./components/AppView";
 import AuditLogView from "./components/AuditLogView";
 import FolderView from "./components/FolderView";
 import ResourcesView from "./components/ResourcesView";
-import SpacePermissionsView from "./components/SpacePermissionsView";
+import SpaceSettingsView from "./components/SpaceSettingsView";
+import SpacesView from "./components/SpacesView";
 import TrashView from "./components/TrashView";
-import UsersSpacesView from "./components/UsersSpacesView";
+import UsersView from "./components/UsersView";
 import type { SpaceMainProps } from "./types";
 
 export default function WorkspaceMain(props: SpaceMainProps) {
@@ -30,14 +31,21 @@ export default function WorkspaceMain(props: SpaceMainProps) {
     return <AuditLogView />;
   }
 
-  if (selectedId === "users-&-spaces") {
-    return <UsersSpacesView />;
+  if (selectedId === "users") {
+    return <UsersView />;
   }
 
+  if (selectedId === "spaces-list") {
+    return <SpacesView />;
+  }
+
+  if (selectedId === "settings") {
+    return <SpaceSettingsView onBackClick={() => onSelect("spaces-list")} />;
+  }
+
+  // Backwards compatibility: redirect old permissions route to settings
   if (selectedId === "permissions") {
-    return (
-      <SpacePermissionsView onBackClick={() => onSelect("users-&-spaces")} />
-    );
+    return <SpaceSettingsView onBackClick={() => onSelect("spaces-list")} />;
   }
 
   if (!selected) {
