@@ -52,6 +52,7 @@ export interface AppNode extends BaseNode {
   fields: AppField[];
   endpointId?: string; // selected endpoint to call on submit
   resourceId?: string; // selected resource to use for the app
+  httpMethod?: EndpointMethod; // HTTP method for the app (GET, POST, etc.)
   urlPath?: string; // custom URL path to append to resource's base URL
   urlParameters?: KeyValuePair[]; // query parameters for the app
   headers?: KeyValuePair[]; // headers for the app
@@ -77,6 +78,7 @@ export interface SpaceMainProps {
     parentId: string,
     name?: string,
     resourceId?: string,
+    httpMethod?: EndpointMethod,
     urlPath?: string,
     queryParameters?: KeyValuePair[],
     headers?: KeyValuePair[],

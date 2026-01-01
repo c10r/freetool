@@ -240,6 +240,23 @@ module AppHandler =
                             match! appRepository.UpdateAsync updatedApp with
                             | Error error -> return Error error
                             | Ok() -> return Ok(AppResult(updatedApp.State))
+
+            | UpdateAppHttpMethod(actorUserId, appId, dto) ->
+                match Guid.TryParse appId with
+                | false, _ -> return Error(ValidationError "Invalid app ID format")
+                | true, guid ->
+                    let appIdObj = AppId.FromGuid guid
+                    let! appOption = appRepository.GetByIdAsync appIdObj
+
+                    match appOption with
+                    | None -> return Error(NotFound "App not found")
+                    | Some app ->
+                        match App.updateHttpMethod actorUserId dto.HttpMethod app with
+                        | Error error -> return Error error
+                        | Ok updatedApp ->
+                            match! appRepository.UpdateAsync updatedApp with
+                            | Error error -> return Error error
+                            | Ok() -> return Ok(AppResult(updatedApp.State))
         }
 
     let handleCommandWithResourceRepository

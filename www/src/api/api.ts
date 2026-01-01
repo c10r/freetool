@@ -207,6 +207,17 @@ export const updateAppUrlPath = (appId: string, urlPath: string) => {
   });
 };
 
+export const updateAppHttpMethod = (appId: string, httpMethod: string) => {
+  return client.PUT("/app/{id}/http-method", {
+    params: {
+      path: { id: appId },
+    },
+    body: {
+      httpMethod,
+    },
+  });
+};
+
 /**
  * Audit Log
  */

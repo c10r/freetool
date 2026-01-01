@@ -18,7 +18,6 @@ import KeyValueList from "./KeyValueList";
 interface Resource {
   id: string;
   name: string;
-  httpMethod: string;
   baseUrl?: string;
   urlParameters?: KeyValuePair[];
   headers?: KeyValuePair[];
@@ -40,11 +39,13 @@ interface AppInput {
 interface AppConfigFormProps {
   resourceId?: string;
   urlPath?: string;
+  httpMethod?: EndpointMethod;
   queryParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
   onResourceChange: (resourceId: string | undefined) => void;
   onUrlPathChange?: (urlPath: string) => void;
+  onHttpMethodChange?: (method: EndpointMethod) => void;
   onQueryParametersChange: (urlParameters: KeyValuePair[]) => void;
   onHeadersChange: (headers: KeyValuePair[]) => void;
   onBodyChange: (body: KeyValuePair[]) => void;
@@ -54,6 +55,7 @@ interface AppConfigFormProps {
   mode?: "create" | "edit";
   fieldStates?: {
     urlPath?: FieldState;
+    httpMethod?: FieldState;
     urlParameters: FieldState;
     headers: FieldState;
     body: FieldState;
@@ -63,6 +65,7 @@ interface AppConfigFormProps {
     value: KeyValuePair[]
   ) => void;
   onUrlPathFieldBlur?: (value: string) => void;
+  onHttpMethodFieldBlur?: (value: EndpointMethod) => void;
   inputs?: AppInput[];
 }
 
@@ -84,11 +87,13 @@ const FieldIndicator = ({ state }: { state: FieldState }) => {
 export default function AppConfigForm({
   resourceId,
   urlPath = "",
+  httpMethod,
   queryParameters,
   headers,
   body,
   onResourceChange,
   onUrlPathChange,
+  onHttpMethodChange,
   onQueryParametersChange,
   onHeadersChange,
   onBodyChange,
@@ -99,6 +104,7 @@ export default function AppConfigForm({
   fieldStates,
   onKeyValueFieldBlur,
   onUrlPathFieldBlur,
+  onHttpMethodFieldBlur,
   inputs,
 }: AppConfigFormProps) {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -114,7 +120,7 @@ export default function AppConfigForm({
   const appInputs = inputs || [];
 
   const getFieldState = (
-    field: "urlPath" | "urlParameters" | "headers" | "body"
+    field: "urlPath" | "httpMethod" | "urlParameters" | "headers" | "body"
   ): FieldState => {
     const state = fieldStates?.[field] || {
       updating: false,
@@ -138,7 +144,6 @@ export default function AppConfigForm({
           const resourceList = response.data.items.map((item) => ({
             id: item.id ?? "",
             name: item.name,
-            httpMethod: item.httpMethod,
             baseUrl: item.baseUrl,
             urlParameters: (item.urlParameters || []).map((kvp) => ({
               key: kvp.key || "",
@@ -193,12 +198,7 @@ export default function AppConfigForm({
               {resources.length > 0 ? (
                 resources.map((resource) => (
                   <SelectItem key={resource.id} value={resource.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{resource.name}</span>
-                      <HttpMethodBadge
-                        method={resource.httpMethod as EndpointMethod}
-                      />
-                    </div>
+                    {resource.name}
                   </SelectItem>
                 ))
               ) : (
@@ -213,6 +213,46 @@ export default function AppConfigForm({
           </Select>
         </div>
       )}
+
+      {/* HTTP Method Selector */}
+      <div className="space-y-2">
+        <Label htmlFor="http-method">HTTP Method *</Label>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Select
+              value={httpMethod || ""}
+              onValueChange={(value) => {
+                const method = value as EndpointMethod;
+                onHttpMethodChange?.(method);
+                if (mode === "edit") {
+                  onHttpMethodFieldBlur?.(method);
+                }
+              }}
+              disabled={disabled || getFieldState("httpMethod").updating}
+            >
+              <SelectTrigger id="http-method">
+                <SelectValue placeholder="Select HTTP method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="GET">GET</SelectItem>
+                <SelectItem value="POST">POST</SelectItem>
+                <SelectItem value="PUT">PUT</SelectItem>
+                <SelectItem value="PATCH">PATCH</SelectItem>
+                <SelectItem value="DELETE">DELETE</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {httpMethod && <HttpMethodBadge method={httpMethod} />}
+          {mode === "edit" && (
+            <FieldIndicator state={getFieldState("httpMethod")} />
+          )}
+        </div>
+        {getFieldState("httpMethod").errorMessage && (
+          <div className="text-red-500 text-sm mt-1">
+            {getFieldState("httpMethod").errorMessage}
+          </div>
+        )}
+      </div>
 
       {selectedResource && (
         <div className="space-y-2">

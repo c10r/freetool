@@ -7,13 +7,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { EndpointMethod } from "../types";
-import HttpMethodBadge from "./HttpMethodBadge";
 
 interface Resource {
   id: string;
   name: string;
-  httpMethod: string;
 }
 
 interface ResourceSelectorProps {
@@ -48,7 +45,6 @@ export default function ResourceSelector({
           const resourceList = response.data.items.map((item) => ({
             id: item.id ?? "",
             name: item.name,
-            httpMethod: item.httpMethod,
           }));
           setResources(resourceList);
         } else {
@@ -90,12 +86,7 @@ export default function ResourceSelector({
         {resources.length > 0 ? (
           resources.map((resource) => (
             <SelectItem key={resource.id} value={resource.id}>
-              <div className="flex items-center gap-2">
-                <span>{resource.name}</span>
-                <HttpMethodBadge
-                  method={resource.httpMethod as EndpointMethod}
-                />
-              </div>
+              {resource.name}
             </SelectItem>
           ))
         ) : (

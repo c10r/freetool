@@ -40,7 +40,7 @@ let ``Resource creation should generate ResourceCreatedEvent`` () =
             urlParams
             headers
             body
-            "GET"
+
 
     // Assert
     match result with
@@ -67,7 +67,7 @@ let ``Resource name update should generate correct event`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let resource =
-        Resource.create actorUserId spaceId "Old API Name" "Description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "Old API Name" "Description" "https://api.example.com" [] [] []
         |> unwrapResult
 
     // Act
@@ -98,7 +98,7 @@ let ``Resource description update should generate correct event`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let resource =
-        Resource.create actorUserId spaceId "API Name" "Old description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "API Name" "Old description" "https://api.example.com" [] [] []
         |> unwrapResult
 
     // Act
@@ -130,7 +130,7 @@ let ``Resource base URL update should generate correct event`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let resource =
-        Resource.create actorUserId spaceId "API Name" "Description" "https://old-api.example.com" [] [] [] "POST"
+        Resource.create actorUserId spaceId "API Name" "Description" "https://old-api.example.com" [] [] []
         |> unwrapResult
 
     // Act
@@ -163,7 +163,7 @@ let ``Resource URL parameters update should generate correct event`` () =
     let initialParams = [ ("id", "1") ]
 
     let resource =
-        Resource.create actorUserId spaceId "API Name" "Description" "https://api.example.com" initialParams [] [] "PUT"
+        Resource.create actorUserId spaceId "API Name" "Description" "https://api.example.com" initialParams [] []
         |> unwrapResult
 
     let newParams = [ "userId", "123"; "format", "json"; "limit", "10" ]
@@ -201,16 +201,8 @@ let ``Resource headers update should generate correct event`` () =
     let initialHeaders = [ ("Accept", "application/json") ]
 
     let resource =
-        Resource.create
-            actorUserId
-            spaceId
-            "API Name"
-            "Description"
-            "https://api.example.com"
-            []
-            initialHeaders
-            []
-            "DELETE"
+        Resource.create actorUserId spaceId "API Name" "Description" "https://api.example.com" [] initialHeaders []
+
         |> unwrapResult
 
     let newHeaders =
@@ -247,7 +239,7 @@ let ``Resource body update should generate correct event`` () =
     let initialBody = [ ("name", "John") ]
 
     let resource =
-        Resource.create actorUserId spaceId "API Name" "Description" "https://api.example.com" [] [] initialBody "PATCH"
+        Resource.create actorUserId spaceId "API Name" "Description" "https://api.example.com" [] [] initialBody
         |> unwrapResult
 
     let newBody = [ "firstName", "Jane"; "lastName", "Doe"; "age", "30" ]
@@ -282,7 +274,7 @@ let ``Resource creation should reject empty name`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let result =
-        Resource.create actorUserId spaceId "" "Description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "" "Description" "https://api.example.com" [] [] []
 
     // Assert
     match result with
@@ -296,7 +288,7 @@ let ``Resource creation should reject empty description`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let result =
-        Resource.create actorUserId spaceId "API Name" "" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "API Name" "" "https://api.example.com" [] [] []
 
     // Assert
     match result with
@@ -310,7 +302,7 @@ let ``Resource creation should reject invalid URL`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let result =
-        Resource.create actorUserId spaceId "API Name" "Description" "not-a-valid-url" [] [] [] "GET"
+        Resource.create actorUserId spaceId "API Name" "Description" "not-a-valid-url" [] [] []
 
     // Assert
     match result with
@@ -326,7 +318,7 @@ let ``Resource creation should reject invalid key-value pairs`` () =
 
     // Act
     let result =
-        Resource.create actorUserId spaceId "API Name" "Description" "https://api.example.com" invalidParams [] [] "GET"
+        Resource.create actorUserId spaceId "API Name" "Description" "https://api.example.com" invalidParams [] []
 
     // Assert
     match result with
@@ -340,7 +332,7 @@ let ``Resource deletion should generate ResourceDeletedEvent`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let resource =
-        Resource.create actorUserId spaceId "Test API" "Description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "Test API" "Description" "https://api.example.com" [] [] []
         |> unwrapResult
 
     // Act
@@ -366,7 +358,7 @@ let ``Resource should store SpaceId correctly`` () =
 
     // Act
     let result =
-        Resource.create actorUserId spaceId "Test API" "Description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "Test API" "Description" "https://api.example.com" [] [] []
 
     // Assert
     match result with
@@ -380,7 +372,7 @@ let ``Resource.getSpaceId should return correct SpaceId`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let resource =
-        Resource.create actorUserId spaceId "Test API" "Description" "https://api.example.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "Test API" "Description" "https://api.example.com" [] [] []
         |> unwrapResult
 
     // Act

@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   updateAppBody,
   updateAppHeaders,
+  updateAppHttpMethod,
   updateAppQueryParams,
   updateAppUrlPath,
 } from "@/api/api";
-import type { KeyValuePair } from "../types";
+import type { EndpointMethod, KeyValuePair } from "../types";
 
 export interface AppFormData {
+  httpMethod?: EndpointMethod;
   urlPath: string;
   urlParameters: KeyValuePair[];
   headers: KeyValuePair[];
@@ -22,6 +24,7 @@ interface FieldState {
 }
 
 type FieldStates = {
+  httpMethod: FieldState;
   urlPath: FieldState;
   urlParameters: FieldState;
   headers: FieldState;
@@ -36,6 +39,7 @@ const initialFieldState: FieldState = {
 };
 
 const initialFieldStates: FieldStates = {
+  httpMethod: initialFieldState,
   urlPath: initialFieldState,
   urlParameters: initialFieldState,
   headers: initialFieldState,
@@ -71,7 +75,10 @@ export function useAppForm(
   );
 
   const updateFormData = useCallback(
-    (field: keyof AppFormData, value: string | KeyValuePair[]) => {
+    (
+      field: keyof AppFormData,
+      value: string | EndpointMethod | KeyValuePair[]
+    ) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
     },
     []
@@ -242,12 +249,86 @@ export function useAppForm(
     [appId, onUpdate, setFieldState, formData]
   );
 
+  const updateHttpMethodField = useCallback(
+    async (value: EndpointMethod) => {
+      if (!appId) {
+        return;
+      }
+
+      // Don't make network request if value hasn't changed
+      if (value === savedDataRef.current.httpMethod) {
+        return;
+      }
+
+      setFieldState("httpMethod", {
+        updating: true,
+        saved: false,
+        error: false,
+      });
+
+      try {
+        const response = await updateAppHttpMethod(appId, value);
+
+        if (response?.error) {
+          const errorMessage =
+            response.error.message || "Failed to save HTTP method";
+          setFieldState("httpMethod", {
+            updating: false,
+            error: true,
+            errorMessage,
+          });
+
+          // Reset the field value on error
+          setFormData((prev) => ({
+            ...prev,
+            httpMethod: savedDataRef.current.httpMethod,
+          }));
+
+          setTimeout(() => {
+            setFieldState("httpMethod", { error: false, errorMessage: "" });
+          }, 2000);
+
+          return;
+        }
+
+        // Update local state on success
+        const updatedData = { ...formData, httpMethod: value };
+        savedDataRef.current = { ...savedDataRef.current, httpMethod: value };
+        setFormData(updatedData);
+        onUpdate?.(updatedData);
+
+        setFieldState("httpMethod", { updating: false, saved: true });
+        setTimeout(() => {
+          setFieldState("httpMethod", { saved: false });
+        }, 2000);
+      } catch (_error) {
+        setFieldState("httpMethod", {
+          updating: false,
+          error: true,
+          errorMessage: "Network error occurred",
+        });
+
+        // Reset the field value on error
+        setFormData((prev) => ({
+          ...prev,
+          httpMethod: savedDataRef.current.httpMethod,
+        }));
+
+        setTimeout(() => {
+          setFieldState("httpMethod", { error: false, errorMessage: "" });
+        }, 2000);
+      }
+    },
+    [appId, onUpdate, setFieldState, formData]
+  );
+
   return {
     formData,
     fieldStates,
     updateFormData,
     updateKeyValueField,
     updateUrlPathField,
+    updateHttpMethodField,
     resetFieldStates,
     setFormData,
   };

@@ -14,15 +14,15 @@ let unwrapResult result =
     | Error error -> failwith $"Expected Ok but got Error: {error}"
 
 // Helper function to create apps for testing (uses empty resource to avoid conflicts)
-let createAppForTesting actorUserId name folderId inputs urlPath urlParameters headers body =
+let createAppForTesting actorUserId name folderId httpMethod inputs urlPath urlParameters headers body =
     // Create a dummy resource with no parameters to avoid conflicts
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let emptyResource =
-        Resource.create actorUserId spaceId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "Test Resource" "Test" "https://test.com" [] [] []
         |> unwrapResult
 
-    App.createWithResource actorUserId name folderId emptyResource inputs urlPath urlParameters headers body
+    App.createWithResource actorUserId name folderId emptyResource httpMethod inputs urlPath urlParameters headers body
 
 [<Fact>]
 let ``App creation should generate AppCreatedEvent`` () =
@@ -42,7 +42,7 @@ let ``App creation should generate AppCreatedEvent`` () =
     let resourceId = ResourceId.NewId()
 
     let result =
-        createAppForTesting actorUserId "User Management App" folderId inputs None [] [] []
+        createAppForTesting actorUserId "User Management App" folderId HttpMethod.Get inputs None [] [] []
 
     // Assert
     match result with
@@ -67,7 +67,7 @@ let ``App name update should generate correct event`` () =
     let folderId = FolderId.NewId()
 
     let app =
-        createAppForTesting actorUserId "Old App Name" folderId [] None [] [] []
+        createAppForTesting actorUserId "Old App Name" folderId HttpMethod.Get [] None [] [] []
         |> unwrapResult
 
     // Act
@@ -105,7 +105,7 @@ let ``App inputs update should generate correct event`` () =
     let resourceId = ResourceId.NewId()
 
     let app =
-        createAppForTesting actorUserId "Test App" folderId initialInputs None [] [] []
+        createAppForTesting actorUserId "Test App" folderId HttpMethod.Get initialInputs None [] [] []
         |> unwrapResult
 
     let newInputs =
@@ -152,7 +152,9 @@ let ``App creation should reject empty name`` () =
 
     // Act
     let resourceId = ResourceId.NewId()
-    let result = createAppForTesting actorUserId "" folderId [] None [] [] []
+
+    let result =
+        createAppForTesting actorUserId "" folderId HttpMethod.Get [] None [] [] []
 
     // Assert
     match result with
@@ -168,7 +170,9 @@ let ``App creation should reject name longer than 100 characters`` () =
 
     // Act
     let resourceId = ResourceId.NewId()
-    let result = createAppForTesting actorUserId longName folderId [] None [] [] []
+
+    let result =
+        createAppForTesting actorUserId longName folderId HttpMethod.Get [] None [] [] []
 
     // Assert
     match result with
@@ -182,7 +186,7 @@ let ``App deletion should generate AppDeletedEvent`` () =
     let folderId = FolderId.NewId()
 
     let app =
-        createAppForTesting actorUserId "Test App" folderId [] None [] [] []
+        createAppForTesting actorUserId "Test App" folderId HttpMethod.Get [] None [] [] []
         |> unwrapResult
 
     // Act
@@ -211,7 +215,7 @@ let ``App validation should reject invalid input title`` () =
     let resourceId = ResourceId.NewId()
 
     let result =
-        createAppForTesting actorUserId "Test App" folderId invalidInputs None [] [] []
+        createAppForTesting actorUserId "Test App" folderId HttpMethod.Get invalidInputs None [] [] []
 
     // Assert
     match result with
@@ -227,7 +231,7 @@ let ``App creation with URL parameters should work correctly`` () =
 
     // Act
     let result =
-        createAppForTesting actorUserId "Test App" folderId [] None urlParameters [] []
+        createAppForTesting actorUserId "Test App" folderId HttpMethod.Get [] None urlParameters [] []
 
     // Assert
     match result with
@@ -249,7 +253,7 @@ let ``App creation with headers should work correctly`` () =
 
     // Act
     let result =
-        createAppForTesting actorUserId "Test App" folderId [] None [] headers []
+        createAppForTesting actorUserId "Test App" folderId HttpMethod.Get [] None [] headers []
 
     // Assert
     match result with
@@ -268,7 +272,8 @@ let ``App creation with body should work correctly`` () =
     let body = [ "username", "john.doe"; "email", "john@example.com" ]
 
     // Act
-    let result = createAppForTesting actorUserId "Test App" folderId [] None [] [] body
+    let result =
+        createAppForTesting actorUserId "Test App" folderId HttpMethod.Get [] None [] [] body
 
     // Assert
     match result with
@@ -287,7 +292,8 @@ let ``App creation with URL path should work correctly`` () =
     let urlPath = Some "/users/profile"
 
     // Act
-    let result = createAppForTesting actorUserId "Test App" folderId [] urlPath [] [] []
+    let result =
+        createAppForTesting actorUserId "Test App" folderId HttpMethod.Get [] urlPath [] [] []
 
     // Assert
     match result with
@@ -303,7 +309,7 @@ let ``App update URL parameters should generate correct event`` () =
     let folderId = FolderId.NewId()
 
     let app =
-        createAppForTesting actorUserId "Test App" folderId [] None [] [] []
+        createAppForTesting actorUserId "Test App" folderId HttpMethod.Get [] None [] [] []
         |> unwrapResult
 
     let newUrlParams = [ "filter", "active"; "sort", "name" ]
@@ -312,7 +318,7 @@ let ``App update URL parameters should generate correct event`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let emptyResource =
-        Resource.create actorUserId spaceId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "Test Resource" "Test" "https://test.com" [] [] []
         |> unwrapResult
 
     let resourceConflictData = Resource.toConflictData emptyResource
@@ -345,7 +351,7 @@ let ``App update headers should generate correct event`` () =
     let folderId = FolderId.NewId()
 
     let app =
-        createAppForTesting actorUserId "Test App" folderId [] None [] [] []
+        createAppForTesting actorUserId "Test App" folderId HttpMethod.Get [] None [] [] []
         |> unwrapResult
 
     let newHeaders = [ ("X-API-Key", "secret123") ]
@@ -354,7 +360,7 @@ let ``App update headers should generate correct event`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let emptyResource =
-        Resource.create actorUserId spaceId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "Test Resource" "Test" "https://test.com" [] [] []
         |> unwrapResult
 
     let resourceConflictData = Resource.toConflictData emptyResource
@@ -386,7 +392,7 @@ let ``App update body should generate correct event`` () =
     let folderId = FolderId.NewId()
 
     let app =
-        createAppForTesting actorUserId "Test App" folderId [] None [] [] []
+        createAppForTesting actorUserId "Test App" folderId HttpMethod.Get [] None [] [] []
         |> unwrapResult
 
     let newBody = [ ("data", "test") ]
@@ -395,7 +401,7 @@ let ``App update body should generate correct event`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let emptyResource =
-        Resource.create actorUserId spaceId "Test Resource" "Test" "https://test.com" [] [] [] "GET"
+        Resource.create actorUserId spaceId "Test Resource" "Test" "https://test.com" [] [] []
         |> unwrapResult
 
     let resourceConflictData = Resource.toConflictData emptyResource
@@ -427,7 +433,7 @@ let ``App update URL path should generate correct event`` () =
     let folderId = FolderId.NewId()
 
     let app =
-        createAppForTesting actorUserId "Test App" folderId [] None [] [] []
+        createAppForTesting actorUserId "Test App" folderId HttpMethod.Get [] None [] [] []
         |> unwrapResult
 
     let newUrlPath = Some "/api/v2/users"
@@ -469,7 +475,6 @@ let ``App createWithResource should reject URL parameter conflicts`` () =
             [ "version", "v1"; "format", "json" ]
             []
             []
-            "GET"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
@@ -481,6 +486,7 @@ let ``App createWithResource should reject URL parameter conflicts`` () =
             "Test App"
             folderId
             resource
+            HttpMethod.Get
             []
             None
             [ ("format", "xml"); ("new_param", "value") ]
@@ -511,7 +517,6 @@ let ``App createWithResource should reject header conflicts`` () =
             []
             [ "Content-Type", "application/json"; "Accept", "application/json" ]
             []
-            "POST"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
@@ -523,6 +528,7 @@ let ``App createWithResource should reject header conflicts`` () =
             "Test App"
             folderId
             resource
+            HttpMethod.Post
             []
             None
             []
@@ -553,7 +559,6 @@ let ``App createWithResource should reject body parameter conflicts`` () =
             []
             []
             [ "client_id", "12345"; "scope", "read" ]
-            "PUT"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
@@ -565,6 +570,7 @@ let ``App createWithResource should reject body parameter conflicts`` () =
             "Test App"
             folderId
             resource
+            HttpMethod.Put
             []
             None
             []
@@ -595,7 +601,6 @@ let ``App createWithResource should reject multiple conflicts`` () =
             [ "version", "v1" ]
             [ "Content-Type", "application/json" ]
             [ "client_id", "12345" ]
-            "POST"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
@@ -607,6 +612,7 @@ let ``App createWithResource should reject multiple conflicts`` () =
             "Test App"
             folderId
             resource
+            HttpMethod.Post
             []
             None
             [ ("version", "v2") ]
@@ -639,7 +645,6 @@ let ``App createWithResource should allow extending with no conflicts`` () =
             [ "version", "v1" ]
             [ "Content-Type", "application/json" ]
             [ "client_id", "12345" ]
-            "GET"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
@@ -651,6 +656,7 @@ let ``App createWithResource should allow extending with no conflicts`` () =
             "Test App"
             folderId
             resource
+            HttpMethod.Get
             []
             None
             [ "page", "1"; "size", "10" ]
@@ -697,14 +703,13 @@ let ``App createWithResource should allow empty app parameters`` () =
             [ "version", "v1" ]
             [ "Content-Type", "application/json" ]
             [ "client_id", "12345" ]
-            "DELETE"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
 
     // Act - Create App with no additional parameters
     let result =
-        App.createWithResource actorUserId "Test App" folderId resource [] None [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Delete [] None [] [] []
 
     // Assert
     match result with
@@ -736,14 +741,13 @@ let ``App updateUrlParameters should reject resource parameter conflicts`` () =
             [ "version", "v1"; "format", "json" ]
             []
             []
-            "GET"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
 
     // Create app with no conflicts initially
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource [] None [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get [] None [] [] []
         |> unwrapResult
 
     // Act - Try to update with conflicting URL parameter "format"
@@ -776,14 +780,13 @@ let ``App updateHeaders should reject resource header conflicts`` () =
             []
             [ "Content-Type", "application/json"; "Accept", "application/json" ]
             []
-            "POST"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
 
     // Create app with no conflicts initially
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource [] None [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Post [] None [] [] []
         |> unwrapResult
 
     // Act - Try to update with conflicting header "Content-Type"
@@ -820,14 +823,13 @@ let ``App updateBody should reject resource body parameter conflicts`` () =
             []
             []
             [ "client_id", "12345"; "scope", "read" ]
-            "PUT"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
 
     // Create app with no conflicts initially
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource [] None [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Put [] None [] [] []
         |> unwrapResult
 
     // Act - Try to update with conflicting body parameter "client_id"
@@ -851,14 +853,14 @@ let ``App updateUrlParameters should allow new parameters with no conflicts`` ()
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
-        Resource.create actorUserId spaceId "API" "Test API" "https://api.test.com" [ "version", "v1" ] [] [] "GET"
+        Resource.create actorUserId spaceId "API" "Test API" "https://api.test.com" [ "version", "v1" ] [] []
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
 
     // Create app with no conflicts initially
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource [] None [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get [] None [] [] []
         |> unwrapResult
 
     // Act - Update with only new parameters (no conflicts)
@@ -892,14 +894,13 @@ let ``App updateHeaders should allow new headers with no conflicts`` () =
             []
             [ "Content-Type", "application/json" ]
             []
-            "POST"
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
 
     // Create app with no conflicts initially
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource [] None [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Post [] None [] [] []
         |> unwrapResult
 
     // Act - Update with only new headers (no conflicts)
@@ -928,14 +929,14 @@ let ``App updateBody should allow new body parameters with no conflicts`` () =
     let spaceId = SpaceId.FromGuid(Guid.NewGuid())
 
     let resourceResult =
-        Resource.create actorUserId spaceId "API" "Test API" "https://api.test.com" [] [] [ "client_id", "12345" ] "PUT"
+        Resource.create actorUserId spaceId "API" "Test API" "https://api.test.com" [] [] [ "client_id", "12345" ]
 
     let resource = unwrapResult resourceResult
     let folderId = FolderId.NewId()
 
     // Create app with no conflicts initially
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource [] None [] [] []
+        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Put [] None [] [] []
         |> unwrapResult
 
     // Act - Update with only new body parameters (no conflicts)

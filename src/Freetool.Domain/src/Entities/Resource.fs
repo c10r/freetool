@@ -29,10 +29,6 @@ type ResourceData =
       SpaceId: SpaceId
 
       [<Required>]
-      [<MaxLength(10)>]
-      HttpMethod: HttpMethod
-
-      [<Required>]
       [<MaxLength(1_000)>]
       BaseUrl: BaseUrl
 
@@ -86,7 +82,6 @@ module Resource =
         (urlParameters: (string * string) list)
         (headers: (string * string) list)
         (body: (string * string) list)
-        (httpMethod: string)
         : Result<ValidatedResource, DomainError> =
         // Validate name
         match ResourceName.Create(Some name) with
@@ -123,40 +118,34 @@ module Resource =
                             match validateKeyValuePairs body with
                             | Error err -> Error err
                             | Ok validBody ->
-                                // Validate HTTP method
-                                match HttpMethod.Create(httpMethod) with
-                                | Error err -> Error err
-                                | Ok validHttpMethod ->
-                                    let resourceData =
-                                        { Id = ResourceId.NewId()
-                                          Name = validName
-                                          Description = validDescription
-                                          SpaceId = spaceId
-                                          HttpMethod = validHttpMethod
-                                          BaseUrl = validBaseUrl
-                                          UrlParameters = validUrlParams
-                                          Headers = validHeaders
-                                          Body = validBody
-                                          CreatedAt = DateTime.UtcNow
-                                          UpdatedAt = DateTime.UtcNow
-                                          IsDeleted = false }
+                                let resourceData =
+                                    { Id = ResourceId.NewId()
+                                      Name = validName
+                                      Description = validDescription
+                                      SpaceId = spaceId
+                                      BaseUrl = validBaseUrl
+                                      UrlParameters = validUrlParams
+                                      Headers = validHeaders
+                                      Body = validBody
+                                      CreatedAt = DateTime.UtcNow
+                                      UpdatedAt = DateTime.UtcNow
+                                      IsDeleted = false }
 
-                                    let resourceCreatedEvent =
-                                        ResourceEvents.resourceCreated
-                                            actorUserId
-                                            resourceData.Id
-                                            validName
-                                            validDescription
-                                            spaceId
-                                            validBaseUrl
-                                            validUrlParams
-                                            validHeaders
-                                            validBody
-                                            validHttpMethod
+                                let resourceCreatedEvent =
+                                    ResourceEvents.resourceCreated
+                                        actorUserId
+                                        resourceData.Id
+                                        validName
+                                        validDescription
+                                        spaceId
+                                        validBaseUrl
+                                        validUrlParams
+                                        validHeaders
+                                        validBody
 
-                                    Ok
-                                        { State = resourceData
-                                          UncommittedEvents = [ resourceCreatedEvent :> IDomainEvent ] }
+                                Ok
+                                    { State = resourceData
+                                      UncommittedEvents = [ resourceCreatedEvent :> IDomainEvent ] }
 
     let updateName
         (actorUserId: UserId)
@@ -402,8 +391,6 @@ module Resource =
     let getSpaceId (resource: Resource) : SpaceId = resource.State.SpaceId
 
     let getBaseUrl (resource: Resource) : string = resource.State.BaseUrl.Value
-
-    let getHttpMethod (resource: Resource) : string = resource.State.HttpMethod.ToString()
 
     let getUrlParameters (resource: Resource) : (string * string) list =
         resource.State.UrlParameters |> List.map (fun kvp -> (kvp.Key, kvp.Value))

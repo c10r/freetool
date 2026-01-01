@@ -17,16 +17,7 @@ module ResourceMapper =
         | true, guid ->
             let spaceId = SpaceId.FromGuid guid
 
-            Resource.create
-                actorUserId
-                spaceId
-                dto.Name
-                dto.Description
-                dto.BaseUrl
-                urlParameters
-                headers
-                body
-                dto.HttpMethod
+            Resource.create actorUserId spaceId dto.Name dto.Description dto.BaseUrl urlParameters headers body
         | false, _ -> Error(ValidationError "Invalid space ID format")
 
     let fromUpdateNameDto

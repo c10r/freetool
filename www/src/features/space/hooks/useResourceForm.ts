@@ -9,13 +9,10 @@ import {
 } from "@/api/api";
 import type { KeyValuePair } from "../types";
 
-type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-
 export interface ResourceFormData {
   name: string;
   description: string;
   baseUrl: string;
-  httpMethod: HttpMethod;
   urlParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
@@ -82,10 +79,7 @@ export function useResourceForm(
   );
 
   const updateFormData = useCallback(
-    (
-      field: keyof ResourceFormData,
-      value: string | HttpMethod | KeyValuePair[]
-    ) => {
+    (field: keyof ResourceFormData, value: string | KeyValuePair[]) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
     },
     []

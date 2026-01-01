@@ -28,6 +28,10 @@ type AppData =
       ResourceId: ResourceId
 
       [<Required>]
+      [<MaxLength(10)>]
+      HttpMethod: HttpMethod
+
+      [<Required>]
       [<Column(TypeName = "TEXT")>] // JSON serialized list of inputs
       Inputs: Input list
 
@@ -172,6 +176,7 @@ module App =
         (name: string)
         (folderId: FolderId)
         (resourceId: ResourceId)
+        (httpMethod: HttpMethod)
         (inputs: Input list)
         (urlPath: string option)
         (urlParameters: (string * string) list)
@@ -206,6 +211,7 @@ module App =
                           Name = name
                           FolderId = folderId
                           ResourceId = resourceId
+                          HttpMethod = httpMethod
                           Inputs = inputs
                           UrlPath = urlPath
                           UrlParameters = validUrlParameters
@@ -225,7 +231,14 @@ module App =
                         let validName = AppName.Create(Some name) |> Result.defaultValue (AppName(""))
 
                         let appCreatedEvent =
-                            AppEvents.appCreated actorUserId appData.Id validName (Some folderId) resourceId inputs
+                            AppEvents.appCreated
+                                actorUserId
+                                appData.Id
+                                validName
+                                (Some folderId)
+                                resourceId
+                                httpMethod
+                                inputs
 
                         Ok
                             { validatedApp with
@@ -236,6 +249,7 @@ module App =
         (name: string)
         (folderId: FolderId)
         (resource: ValidatedResource)
+        (httpMethod: HttpMethod)
         (inputs: Input list)
         (urlPath: string option)
         (urlParameters: (string * string) list)
@@ -251,7 +265,7 @@ module App =
         | Ok() ->
             // No conflicts, proceed with normal creation
             let resourceId = Resource.getId resource
-            create actorUserId name folderId resourceId inputs urlPath urlParameters headers body
+            create actorUserId name folderId resourceId httpMethod inputs urlPath urlParameters headers body
 
     let markForDeletion (actorUserId: UserId) (app: ValidatedApp) : ValidatedApp =
         let appName =
@@ -286,6 +300,8 @@ module App =
     let getFolderId (app: App) : FolderId = app.State.FolderId
 
     let getResourceId (app: App) : ResourceId = app.State.ResourceId
+
+    let getHttpMethod (app: App) : string = app.State.HttpMethod.ToString()
 
     let getInputs (app: App) : Input list = app.State.Inputs
 
@@ -446,3 +462,28 @@ module App =
                 Ok
                     { State = updatedAppData
                       UncommittedEvents = app.UncommittedEvents @ [ bodyChangedEvent :> IDomainEvent ] }
+
+    let updateHttpMethod
+        (actorUserId: UserId)
+        (newHttpMethod: string)
+        (app: ValidatedApp)
+        : Result<ValidatedApp, DomainError> =
+        match HttpMethod.Create(newHttpMethod) with
+        | Error err -> Error err
+        | Ok validHttpMethod ->
+            let oldHttpMethod = app.State.HttpMethod
+
+            let updatedAppData =
+                { app.State with
+                    HttpMethod = validHttpMethod
+                    UpdatedAt = DateTime.UtcNow }
+
+            let httpMethodChangedEvent =
+                AppEvents.appUpdated
+                    actorUserId
+                    app.State.Id
+                    [ AppChange.HttpMethodChanged(oldHttpMethod, validHttpMethod) ]
+
+            Ok
+                { State = updatedAppData
+                  UncommittedEvents = app.UncommittedEvents @ [ httpMethodChangedEvent :> IDomainEvent ] }

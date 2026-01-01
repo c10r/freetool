@@ -41,6 +41,7 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.017_RemoveWorkspaceIdColumns.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.018_UpdateResourceUniqueIndexForSoftDelete.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.019_DropGroupWorkspaceTables.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.020_MoveHttpMethodFromResourceToApp.sql" />
   </ItemGroup>
 
   <ItemGroup>

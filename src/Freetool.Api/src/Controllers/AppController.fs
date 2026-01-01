@@ -158,31 +158,36 @@ type AppController
                         match resourceOption with
                         | None -> return this.HandleDomainError(NotFound "Resource not found")
                         | Some resource ->
-                            // Use Domain method that enforces no-override business rule
-                            match
-                                App.createWithResource
-                                    userId
-                                    createRequest.Name
-                                    folderId
-                                    resource
-                                    createRequest.Inputs
-                                    createRequest.UrlPath
-                                    createRequest.UrlParameters
-                                    createRequest.Headers
-                                    createRequest.Body
-                            with
-                            | Error domainError -> return this.HandleDomainError(domainError)
-                            | Ok validatedApp ->
-                                let! result =
-                                    commandHandler.HandleCommand appRepository (CreateApp(userId, validatedApp))
+                            // Parse and validate HTTP method
+                            match HttpMethod.Create(createRequest.HttpMethod) with
+                            | Error err -> return this.HandleDomainError(err)
+                            | Ok validHttpMethod ->
+                                // Use Domain method that enforces no-override business rule
+                                match
+                                    App.createWithResource
+                                        userId
+                                        createRequest.Name
+                                        folderId
+                                        resource
+                                        validHttpMethod
+                                        createRequest.Inputs
+                                        createRequest.UrlPath
+                                        createRequest.UrlParameters
+                                        createRequest.Headers
+                                        createRequest.Body
+                                with
+                                | Error domainError -> return this.HandleDomainError(domainError)
+                                | Ok validatedApp ->
+                                    let! result =
+                                        commandHandler.HandleCommand appRepository (CreateApp(userId, validatedApp))
 
-                                return
-                                    match result with
-                                    | Ok(AppResult appDto) ->
-                                        this.CreatedAtAction(nameof this.GetAppById, {| id = appDto.Id |}, appDto)
-                                        :> IActionResult
-                                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                                    | Error error -> this.HandleDomainError(error)
+                                    return
+                                        match result with
+                                        | Ok(AppResult appDto) ->
+                                            this.CreatedAtAction(nameof this.GetAppById, {| id = appDto.Id |}, appDto)
+                                            :> IActionResult
+                                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                                        | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpGet("{id}")>]
@@ -490,6 +495,37 @@ type AppController
                         | Ok(AppResult appDto) -> return this.Ok(appDto) :> IActionResult
                         | Ok _ -> return this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> return this.HandleDomainError(error)
+        }
+
+    [<HttpPut("{id}/http-method")>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.UpdateAppHttpMethod(id: string, [<FromBody>] updateDto: UpdateAppHttpMethodDto) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+
+            // Check authorization: user must have edit_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
+
+            match spaceIdResult with
+            | Error error -> return this.HandleDomainError(error)
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppEdit
+
+                match authResult with
+                | Error _ -> return this.HandleAuthorizationError()
+                | Ok() ->
+                    let! result =
+                        commandHandler.HandleCommand appRepository (UpdateAppHttpMethod(userId, id, updateDto))
+
+                    return
+                        match result with
+                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                        | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpDelete("{id}")>]

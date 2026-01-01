@@ -37,6 +37,7 @@ import { useResources } from "@/hooks/useResources";
 import type { components } from "@/schema";
 import type {
   AppField,
+  EndpointMethod,
   FolderNode,
   KeyValuePair,
   SpaceMainProps,
@@ -84,6 +85,7 @@ export default function FolderView({
     setAppFormData({
       name: "",
       resourceId: "",
+      httpMethod: undefined,
       urlPath: "",
       queryParameters: [],
       headers: [],
@@ -114,6 +116,7 @@ export default function FolderView({
   const [appFormData, setAppFormData] = useState({
     name: "",
     resourceId: "",
+    httpMethod: undefined as EndpointMethod | undefined,
     urlPath: "",
     queryParameters: [] as KeyValuePair[],
     headers: [] as KeyValuePair[],
@@ -279,6 +282,11 @@ export default function FolderView({
       return;
     }
 
+    if (!appFormData.httpMethod) {
+      setCreateAppError("HTTP method is required");
+      return;
+    }
+
     setIsCreatingApp(true);
     setCreateAppError(null);
 
@@ -288,6 +296,7 @@ export default function FolderView({
         folder.id,
         appFormData.name.trim(),
         appFormData.resourceId,
+        appFormData.httpMethod,
         appFormData.urlPath,
         appFormData.queryParameters,
         appFormData.headers,
@@ -299,6 +308,7 @@ export default function FolderView({
       setAppFormData({
         name: "",
         resourceId: "",
+        httpMethod: undefined,
         urlPath: "",
         queryParameters: [],
         headers: [],
@@ -328,6 +338,7 @@ export default function FolderView({
     setAppFormData({
       name: "",
       resourceId: "",
+      httpMethod: undefined,
       urlPath: "",
       queryParameters: [],
       headers: [],
@@ -555,12 +566,16 @@ export default function FolderView({
 
             <AppConfigForm
               resourceId={appFormData.resourceId}
+              httpMethod={appFormData.httpMethod}
               urlPath={appFormData.urlPath}
               queryParameters={appFormData.queryParameters}
               headers={appFormData.headers}
               body={appFormData.body}
               onResourceChange={(resourceId) =>
                 setAppFormData({ ...appFormData, resourceId })
+              }
+              onHttpMethodChange={(httpMethod) =>
+                setAppFormData({ ...appFormData, httpMethod })
               }
               onUrlPathChange={(urlPath) =>
                 setAppFormData({ ...appFormData, urlPath })
@@ -582,7 +597,11 @@ export default function FolderView({
             <div className="flex gap-2 pt-2">
               <Button
                 onClick={handleCreateApp}
-                disabled={isCreatingApp || !appFormData.name.trim()}
+                disabled={
+                  isCreatingApp ||
+                  !appFormData.name.trim() ||
+                  !appFormData.httpMethod
+                }
               >
                 {isCreatingApp ? "Creating..." : "Create App"}
               </Button>

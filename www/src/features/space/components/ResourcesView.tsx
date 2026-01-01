@@ -28,17 +28,13 @@ import { usePagination } from "@/hooks/usePagination";
 import { useHasPermission } from "@/hooks/usePermissions";
 import { useResourceForm } from "../hooks/useResourceForm";
 import type { KeyValuePair } from "../types";
-import HttpMethodBadge from "./HttpMethodBadge";
 import ResourceForm, { type ResourceFormData } from "./ResourceForm";
-
-type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 interface Resource {
   id: string;
   name: string;
   description: string;
   baseUrl: string;
-  httpMethod: HttpMethod;
   urlParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
@@ -48,7 +44,6 @@ const initialFormData: ResourceFormData = {
   name: "",
   description: "",
   baseUrl: "",
-  httpMethod: "GET",
   urlParameters: [],
   headers: [],
   body: [],
@@ -137,7 +132,6 @@ export default function ResourcesView({
             name: item.name,
             description: item.description,
             baseUrl: item.baseUrl,
-            httpMethod: item.httpMethod,
             urlParameters: item.urlParameters || [],
             headers: item.headers || [],
             body: item.body || [],
@@ -200,7 +194,6 @@ export default function ResourcesView({
         name: createFormData.name.trim(),
         description: createFormData.description.trim(),
         baseUrl: createFormData.baseUrl.trim(),
-        httpMethod: createFormData.httpMethod,
         urlParameters: createFormData.urlParameters,
         headers: createFormData.headers,
         body: createFormData.body,
@@ -228,7 +221,6 @@ export default function ResourcesView({
       name: resource.name,
       description: resource.description,
       baseUrl: resource.baseUrl,
-      httpMethod: resource.httpMethod,
       urlParameters: resource.urlParameters || [],
       headers: resource.headers || [],
       body: resource.body || [],
@@ -350,7 +342,6 @@ export default function ResourcesView({
                   <CardTitle className="flex items-center justify-between">
                     <span>{resource.name}</span>
                     <div className="flex items-center gap-2">
-                      <HttpMethodBadge method={resource.httpMethod} />
                       <PermissionGate
                         spaceId={spaceId}
                         permission="edit_resource"

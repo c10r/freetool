@@ -22,6 +22,10 @@ type CreateAppDto =
       [<Required>]
       ResourceId: string
 
+      [<Required>]
+      [<StringLength(10, MinimumLength = 1, ErrorMessage = "HTTP method must be between 1 and 10 characters")>]
+      HttpMethod: string
+
       Inputs: AppInputDto list
 
       // Intentionally not moved to SharedDtos yet - this is only the first usage
@@ -51,3 +55,8 @@ type UpdateAppBodyDto = { Body: KeyValuePairDto list }
 type UpdateAppHeadersDto = { Headers: KeyValuePairDto list }
 
 type UpdateAppUrlPathDto = { UrlPath: string option }
+
+type UpdateAppHttpMethodDto =
+    { [<Required>]
+      [<StringLength(10, MinimumLength = 1, ErrorMessage = "HTTP method must be between 1 and 10 characters")>]
+      HttpMethod: string }

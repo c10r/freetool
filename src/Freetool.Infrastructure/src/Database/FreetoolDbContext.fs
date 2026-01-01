@@ -313,15 +313,6 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                         | Error _ -> failwith $"Invalid BaseUrl in database: {str}")
                 )
 
-            let httpMethodConverter =
-                ValueConverter<Freetool.Domain.ValueObjects.HttpMethod, string>(
-                    (fun httpMethod -> httpMethod.ToString()),
-                    (fun str ->
-                        match Freetool.Domain.ValueObjects.HttpMethod.Create(str) with
-                        | Ok validMethod -> validMethod
-                        | Error _ -> failwith $"Invalid HttpMethod in database: {str}")
-                )
-
             entity.Property(fun r -> r.Id).HasConversion(resourceIdConverter) |> ignore
             entity.Property(fun r -> r.Name).HasConversion(resourceNameConverter) |> ignore
 
@@ -329,9 +320,6 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             |> ignore
 
             entity.Property(fun r -> r.SpaceId).HasConversion(spaceIdConverter) |> ignore
-
-            entity.Property(fun r -> r.HttpMethod).HasConversion(httpMethodConverter)
-            |> ignore
 
             entity.Property(fun r -> r.BaseUrl).HasConversion(baseUrlConverter) |> ignore
 
@@ -379,6 +367,18 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun a -> a.FolderId).HasConversion(folderIdConverter) |> ignore
 
             entity.Property(fun a -> a.ResourceId).HasColumnName("ResourceId").HasConversion(resourceIdConverter)
+            |> ignore
+
+            let httpMethodConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.HttpMethod, string>(
+                    (fun httpMethod -> httpMethod.ToString()),
+                    (fun str ->
+                        match Freetool.Domain.ValueObjects.HttpMethod.Create(str) with
+                        | Ok validMethod -> validMethod
+                        | Error _ -> failwith $"Invalid HttpMethod in database: {str}")
+                )
+
+            entity.Property(fun a -> a.HttpMethod).HasConversion(httpMethodConverter)
             |> ignore
 
             entity.Property(fun a -> a.CreatedAt).HasColumnName("CreatedAt") |> ignore

@@ -19,12 +19,14 @@ type AppChange =
     | UrlParametersChanged of oldUrlParams: KeyValuePair list * newUrlParams: KeyValuePair list
     | HeadersChanged of oldHeaders: KeyValuePair list * newHeaders: KeyValuePair list
     | BodyChanged of oldBody: KeyValuePair list * newBody: KeyValuePair list
+    | HttpMethodChanged of oldValue: HttpMethod * newValue: HttpMethod
 
 type AppCreatedEvent =
     { AppId: AppId
       Name: AppName
       FolderId: FolderId option
       ResourceId: ResourceId
+      HttpMethod: HttpMethod
       Inputs: Input list
       OccurredAt: DateTime
       EventId: Guid
@@ -78,12 +80,14 @@ module AppEvents =
         (name: AppName)
         (folderId: FolderId option)
         (resourceId: ResourceId)
+        (httpMethod: HttpMethod)
         (inputs: Input list)
         =
         { AppId = appId
           Name = name
           FolderId = folderId
           ResourceId = resourceId
+          HttpMethod = httpMethod
           Inputs = inputs
           OccurredAt = DateTime.UtcNow
           EventId = Guid.NewGuid()

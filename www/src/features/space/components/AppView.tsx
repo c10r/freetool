@@ -9,7 +9,12 @@ import { Separator } from "@/components/ui/separator";
 import { useHasPermission } from "@/hooks/usePermissions";
 import { useAppForm } from "../hooks/useAppForm";
 import { useAppInputs } from "../hooks/useAppInputs";
-import type { AppNode, KeyValuePair, SpaceMainProps } from "../types";
+import type {
+  AppNode,
+  EndpointMethod,
+  KeyValuePair,
+  SpaceMainProps,
+} from "../types";
 import AppConfigForm from "./AppConfigForm";
 import InputFieldEditor from "./InputFieldEditor";
 import ResourceSelector from "./ResourceSelector";
@@ -37,10 +42,12 @@ export default function AppView({
     updateFormData: updateAppFormData,
     updateKeyValueField,
     updateUrlPathField,
+    updateHttpMethodField,
     resetFieldStates,
     setFormData: setAppFormData,
   } = useAppForm(
     {
+      httpMethod: app.httpMethod,
       urlPath: app.urlPath || "",
       urlParameters: app.urlParameters || [],
       headers: app.headers || [],
@@ -52,6 +59,7 @@ export default function AppView({
       if (canEditApp) {
         updateNode({
           ...app,
+          httpMethod: updatedData.httpMethod,
           urlPath: updatedData.urlPath,
           urlParameters: updatedData.urlParameters,
           headers: updatedData.headers,
@@ -91,6 +99,7 @@ export default function AppView({
 
     // Update app form data when app changes
     setAppFormData({
+      httpMethod: app.httpMethod,
       urlPath: app.urlPath || "",
       urlParameters: app.urlParameters || [],
       headers: app.headers || [],
@@ -103,6 +112,7 @@ export default function AppView({
     resetInputsState();
   }, [
     app.name,
+    app.httpMethod,
     app.urlPath,
     app.urlParameters,
     app.headers,
@@ -113,6 +123,11 @@ export default function AppView({
     setFields,
     resetInputsState,
   ]);
+
+  const updateHttpMethod = (httpMethod: EndpointMethod) => {
+    updateAppFormData("httpMethod", httpMethod);
+    // Don't update the app node immediately - wait for autosave
+  };
 
   const updateUrlParameters = (urlParameters: KeyValuePair[]) => {
     updateAppFormData("urlParameters", urlParameters);
@@ -318,6 +333,7 @@ export default function AppView({
         <CardContent className="py-4">
           <AppConfigForm
             resourceId={app.resourceId}
+            httpMethod={appFormData.httpMethod}
             urlPath={appFormData.urlPath}
             queryParameters={appFormData.urlParameters}
             headers={appFormData.headers}
@@ -325,6 +341,7 @@ export default function AppView({
             onResourceChange={(resourceId) =>
               updateNode({ ...app, resourceId })
             }
+            onHttpMethodChange={updateHttpMethod}
             onUrlPathChange={updateUrlPath}
             onQueryParametersChange={updateUrlParameters}
             onHeadersChange={updateHeaders}
@@ -337,6 +354,9 @@ export default function AppView({
             }}
             onUrlPathFieldBlur={(value) => {
               updateUrlPathField(value);
+            }}
+            onHttpMethodFieldBlur={(value) => {
+              updateHttpMethodField(value);
             }}
             disabled={!canEditApp}
             inputs={fields.map((f) => ({

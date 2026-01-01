@@ -91,6 +91,7 @@ let ``AppData with complex JSON properties can be persisted and retrieved`` () =
           Name = "Test App"
           FolderId = FolderId.NewId()
           ResourceId = ResourceId.NewId()
+          HttpMethod = HttpMethod.Get
           Inputs = [ testInput ]
           UrlPath = Some "/test"
           UrlParameters = [ testKeyValuePair ]
@@ -154,7 +155,6 @@ let ``ResourceData with complex JSON properties can be persisted and retrieved``
           SpaceId = SpaceId.FromGuid(Guid.NewGuid())
           Name = resourceName
           Description = resourceDescription
-          HttpMethod = HttpMethod.Get
           BaseUrl = baseUrl
           UrlParameters = [ testKeyValuePair ]
           Headers = [ testKeyValuePair ]

@@ -84,6 +84,7 @@ module AppMapper =
         { Name: string
           FolderId: string
           ResourceId: string
+          HttpMethod: string
           Inputs: Input list
           UrlPath: string option
           UrlParameters: (string * string) list
@@ -99,6 +100,7 @@ module AppMapper =
         { Name = dto.Name
           FolderId = dto.FolderId
           ResourceId = dto.ResourceId
+          HttpMethod = dto.HttpMethod
           Inputs = inputs
           UrlPath = dto.UrlPath
           UrlParameters = urlParameters

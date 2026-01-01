@@ -36,11 +36,6 @@ type CreateResourceDto =
       [<Url(ErrorMessage = "Base URL must be a valid URL")>]
       BaseUrl: string
 
-      // Intentionally not moved to SharedDtos yet - this is only the first usage
-      [<Required>]
-      [<StringLength(10, MinimumLength = 1, ErrorMessage = "HTTP method must be between 1 and 10 characters")>]
-      HttpMethod: string
-
       UrlParameters: KeyValuePairDto list
 
       Headers: KeyValuePairDto list

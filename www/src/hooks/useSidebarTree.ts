@@ -1,6 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllFolders, getApps, getSpaces, getUsers } from "@/api/api";
-import type { AppNode, FolderNode, SpaceNode } from "@/features/space/types";
+import type {
+  AppNode,
+  EndpointMethod,
+  FolderNode,
+  SpaceNode,
+} from "@/features/space/types";
 import { fromBackendInputType } from "@/lib/inputTypeMapper";
 import type { components } from "@/schema";
 import type { Space, SpaceUser, SpaceWithDetails } from "@/types/space";
@@ -69,6 +74,7 @@ interface ApiAppData {
   name?: string;
   folderId?: string | null;
   resourceId?: string;
+  httpMethod?: string;
   urlPath?: string;
   urlParameters?: { key?: string; value?: string }[];
   headers?: { key?: string; value?: string }[];
@@ -155,6 +161,7 @@ export function useSidebarTree() {
               required: input.required ?? false,
             })),
             resourceId: app.resourceId || undefined,
+            httpMethod: (app.httpMethod as EndpointMethod) || undefined,
             urlPath: app.urlPath || "",
             urlParameters: (app.urlParameters || []).map((kvp) => ({
               key: kvp.key || "",

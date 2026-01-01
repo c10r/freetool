@@ -19,6 +19,7 @@ import SpaceMain from "./SpaceMain";
 import type {
   AppField,
   Endpoint,
+  EndpointMethod,
   FolderNode,
   KeyValuePair,
   SpaceNode,
@@ -216,6 +217,7 @@ function WorkspaceContent() {
     parentId: string,
     name = "New App",
     resourceId = "",
+    httpMethod?: EndpointMethod,
     urlPath = "",
     urlParameters: KeyValuePair[] = [],
     headers: KeyValuePair[] = [],
@@ -237,6 +239,7 @@ function WorkspaceContent() {
       folderId: parentId === "root" ? null : parentId,
       inputs: backendInputs,
       resourceId: resourceId || "",
+      httpMethod: httpMethod || "GET",
       urlPath: urlPath || "",
       body: body,
       headers: headers,

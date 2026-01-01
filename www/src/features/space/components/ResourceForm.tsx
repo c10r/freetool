@@ -2,28 +2,17 @@ import { Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { getCurrentUserInputs } from "@/components/ui/input-with-placeholders/current-user";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { KeyValuePair } from "../types";
-import HttpMethodBadge from "./HttpMethodBadge";
 import KeyValueList from "./KeyValueList";
 
 // Get current_user inputs for Resources (always available)
 const currentUserInputs = getCurrentUserInputs();
 
-type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-
 export interface ResourceFormData {
   name: string;
   description: string;
   baseUrl: string;
-  httpMethod: HttpMethod;
   urlParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
@@ -85,7 +74,7 @@ export default function ResourceForm({
 }: ResourceFormProps) {
   const updateData = (
     field: keyof ResourceFormData,
-    value: string | HttpMethod | KeyValuePair[]
+    value: string | KeyValuePair[]
   ) => {
     onChange({ ...data, [field]: value });
   };
@@ -102,69 +91,36 @@ export default function ResourceForm({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Name *</Label>
-          <div className="relative">
-            <Input
-              id="name"
-              placeholder="Enter resource name"
-              value={data.name}
-              onChange={(e) => {
-                updateData("name", e.target.value);
-              }}
-              onBlur={(e) => onFieldBlur?.("name", e.target.value)}
-              disabled={disabled || getFieldState("name").updating}
-              style={{
-                backgroundColor:
-                  disabled || getFieldState("name").updating
-                    ? "#f3f4f6"
-                    : "white",
-              }}
-            />
-            {mode === "edit" && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <FieldIndicator state={getFieldState("name")} />
-              </div>
-            )}
+      <div className="space-y-2">
+        <Label htmlFor="name">Name *</Label>
+        <div className="relative">
+          <Input
+            id="name"
+            placeholder="Enter resource name"
+            value={data.name}
+            onChange={(e) => {
+              updateData("name", e.target.value);
+            }}
+            onBlur={(e) => onFieldBlur?.("name", e.target.value)}
+            disabled={disabled || getFieldState("name").updating}
+            style={{
+              backgroundColor:
+                disabled || getFieldState("name").updating
+                  ? "#f3f4f6"
+                  : "white",
+            }}
+          />
+          {mode === "edit" && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <FieldIndicator state={getFieldState("name")} />
+            </div>
+          )}
+        </div>
+        {getFieldState("name").errorMessage && (
+          <div className="text-red-500 text-sm mt-1">
+            {getFieldState("name").errorMessage}
           </div>
-          {getFieldState("name").errorMessage && (
-            <div className="text-red-500 text-sm mt-1">
-              {getFieldState("name").errorMessage}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="httpMethod">HTTP Method</Label>
-          {mode === "create" ? (
-            <Select
-              value={data.httpMethod}
-              onValueChange={(value) =>
-                updateData("httpMethod", value as HttpMethod)
-              }
-              disabled={disabled}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="GET">GET</SelectItem>
-                <SelectItem value="POST">POST</SelectItem>
-                <SelectItem value="PUT">PUT</SelectItem>
-                <SelectItem value="PATCH">PATCH</SelectItem>
-                <SelectItem value="DELETE">DELETE</SelectItem>
-              </SelectContent>
-            </Select>
-          ) : (
-            <div className="flex items-center gap-2">
-              <HttpMethodBadge method={data.httpMethod} />
-              <span className="text-sm text-muted-foreground">
-                (HTTP method cannot be changed after creation)
-              </span>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       <div className="space-y-2">

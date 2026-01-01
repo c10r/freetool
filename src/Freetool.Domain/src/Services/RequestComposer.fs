@@ -24,9 +24,9 @@ module RequestComposer =
             let resourceUrlParams = Resource.getUrlParameters resource
             let resourceHeaders = Resource.getHeaders resource
             let resourceBody = Resource.getBody resource
-            let httpMethod = Resource.getHttpMethod resource
 
             // Get app data
+            let httpMethod = App.getHttpMethod app
             let appUrlPath = App.getUrlPath app
             let appUrlParameters = App.getUrlParameters app
             let appHeaders = App.getHeaders app
