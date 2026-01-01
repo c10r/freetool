@@ -1,5 +1,6 @@
 import { Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { getCurrentUserInputs } from "@/components/ui/input-with-placeholders/current-user";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -12,6 +13,9 @@ import { Textarea } from "@/components/ui/textarea";
 import type { KeyValuePair } from "../types";
 import HttpMethodBadge from "./HttpMethodBadge";
 import KeyValueList from "./KeyValueList";
+
+// Get current_user inputs for Resources (always available)
+const currentUserInputs = getCurrentUserInputs();
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -221,6 +225,7 @@ export default function ResourceForm({
             onBlur={(items) => onKeyValueFieldBlur?.("urlParameters", items)}
             ariaLabel="URL parameters"
             disabled={disabled || getFieldState("urlParameters").updating}
+            availableInputs={currentUserInputs}
           />
           {mode === "edit" && (
             <div className="absolute right-3 top-3">
@@ -244,6 +249,7 @@ export default function ResourceForm({
             onBlur={(items) => onKeyValueFieldBlur?.("headers", items)}
             ariaLabel="HTTP headers"
             disabled={disabled || getFieldState("headers").updating}
+            availableInputs={currentUserInputs}
           />
           {mode === "edit" && (
             <div className="absolute right-3 top-3">
@@ -267,6 +273,7 @@ export default function ResourceForm({
             onBlur={(items) => onKeyValueFieldBlur?.("body", items)}
             ariaLabel="JSON body"
             disabled={disabled || getFieldState("body").updating}
+            availableInputs={currentUserInputs}
           />
           {mode === "edit" && (
             <div className="absolute right-3 top-3">

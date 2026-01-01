@@ -13,6 +13,7 @@ import { $applyNodeReplacement, DecoratorNode } from "lexical";
 import type { JSX } from "react";
 import { cn } from "@/lib/utils";
 import { OPEN_PLACEHOLDER_POPOVER_COMMAND } from "./commands";
+import { isCurrentUserPlaceholder } from "./current-user";
 
 export type SerializedPlaceholderNode = Spread<
   {
@@ -45,6 +46,8 @@ function PlaceholderPill({
     });
   };
 
+  const isCurrentUser = isCurrentUserPlaceholder(inputTitle);
+
   return (
     <span
       onClick={handleClick}
@@ -57,7 +60,9 @@ function PlaceholderPill({
         "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
         "cursor-pointer select-none mx-0.5 align-baseline",
         isValid
-          ? "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20"
+          ? isCurrentUser
+            ? "bg-green-100 text-green-800 border border-green-300 hover:bg-green-200"
+            : "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20"
           : "bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 line-through"
       )}
     >

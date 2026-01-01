@@ -7,9 +7,7 @@
   "paths": {
     "/app": {
       "post": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -128,9 +126,7 @@
         }
       },
       "get": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "parameters": [
           {
             "name": "skip",
@@ -218,9 +214,7 @@
     },
     "/app/{id}": {
       "get": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "parameters": [
           {
             "name": "id",
@@ -318,9 +312,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "parameters": [
           {
             "name": "id",
@@ -403,9 +395,7 @@
     },
     "/app/folder/{folderId}": {
       "get": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "parameters": [
           {
             "name": "folderId",
@@ -501,9 +491,7 @@
     },
     "/app/{id}/name": {
       "put": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "parameters": [
           {
             "name": "id",
@@ -634,9 +622,7 @@
     },
     "/app/{id}/inputs": {
       "put": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "parameters": [
           {
             "name": "id",
@@ -767,9 +753,7 @@
     },
     "/app/{id}/query-parameters": {
       "put": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "parameters": [
           {
             "name": "id",
@@ -900,9 +884,7 @@
     },
     "/app/{id}/body": {
       "put": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "parameters": [
           {
             "name": "id",
@@ -1033,9 +1015,7 @@
     },
     "/app/{id}/headers": {
       "put": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "parameters": [
           {
             "name": "id",
@@ -1166,9 +1146,7 @@
     },
     "/app/{id}/url-path": {
       "put": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "parameters": [
           {
             "name": "id",
@@ -1299,9 +1277,7 @@
     },
     "/app/{id}/run": {
       "post": {
-        "tags": [
-          "App"
-        ],
+        "tags": ["App"],
         "parameters": [
           {
             "name": "id",
@@ -1432,9 +1408,7 @@
     },
     "/audit/events": {
       "get": {
-        "tags": [
-          "Audit"
-        ],
+        "tags": ["Audit"],
         "parameters": [
           {
             "name": "userId",
@@ -1536,9 +1510,7 @@
     },
     "/folder": {
       "post": {
-        "tags": [
-          "Folder"
-        ],
+        "tags": ["Folder"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1637,9 +1609,7 @@
         }
       },
       "get": {
-        "tags": [
-          "Folder"
-        ],
+        "tags": ["Folder"],
         "parameters": [
           {
             "name": "spaceId",
@@ -1714,9 +1684,7 @@
     },
     "/folder/{id}": {
       "get": {
-        "tags": [
-          "Folder"
-        ],
+        "tags": ["Folder"],
         "parameters": [
           {
             "name": "id",
@@ -1794,9 +1762,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Folder"
-        ],
+        "tags": ["Folder"],
         "parameters": [
           {
             "name": "id",
@@ -1879,9 +1845,7 @@
     },
     "/folder/{id}/children": {
       "get": {
-        "tags": [
-          "Folder"
-        ],
+        "tags": ["Folder"],
         "parameters": [
           {
             "name": "id",
@@ -1961,9 +1925,7 @@
     },
     "/folder/root": {
       "get": {
-        "tags": [
-          "Folder"
-        ],
+        "tags": ["Folder"],
         "parameters": [
           {
             "name": "skip",
@@ -2031,9 +1993,7 @@
     },
     "/folder/{id}/name": {
       "put": {
-        "tags": [
-          "Folder"
-        ],
+        "tags": ["Folder"],
         "parameters": [
           {
             "name": "id",
@@ -2164,9 +2124,7 @@
     },
     "/folder/{id}/move": {
       "put": {
-        "tags": [
-          "Folder"
-        ],
+        "tags": ["Folder"],
         "parameters": [
           {
             "name": "id",
@@ -2297,9 +2255,7 @@
     },
     "/admin/openfga/write-model": {
       "post": {
-        "tags": [
-          "OpenFgaInit"
-        ],
+        "tags": ["OpenFgaInit"],
         "responses": {
           "200": {
             "description": "OK",
@@ -2329,9 +2285,7 @@
     },
     "/resource": {
       "post": {
-        "tags": [
-          "Resource"
-        ],
+        "tags": ["Resource"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2430,9 +2384,7 @@
         }
       },
       "get": {
-        "tags": [
-          "Resource"
-        ],
+        "tags": ["Resource"],
         "parameters": [
           {
             "name": "skip",
@@ -2500,9 +2452,7 @@
     },
     "/resource/{id}": {
       "get": {
-        "tags": [
-          "Resource"
-        ],
+        "tags": ["Resource"],
         "parameters": [
           {
             "name": "id",
@@ -2580,9 +2530,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Resource"
-        ],
+        "tags": ["Resource"],
         "parameters": [
           {
             "name": "id",
@@ -2665,9 +2613,7 @@
     },
     "/resource/{id}/name": {
       "put": {
-        "tags": [
-          "Resource"
-        ],
+        "tags": ["Resource"],
         "parameters": [
           {
             "name": "id",
@@ -2798,9 +2744,7 @@
     },
     "/resource/{id}/description": {
       "put": {
-        "tags": [
-          "Resource"
-        ],
+        "tags": ["Resource"],
         "parameters": [
           {
             "name": "id",
@@ -2931,9 +2875,7 @@
     },
     "/resource/{id}/base-url": {
       "put": {
-        "tags": [
-          "Resource"
-        ],
+        "tags": ["Resource"],
         "parameters": [
           {
             "name": "id",
@@ -3064,9 +3006,7 @@
     },
     "/resource/{id}/url-parameters": {
       "put": {
-        "tags": [
-          "Resource"
-        ],
+        "tags": ["Resource"],
         "parameters": [
           {
             "name": "id",
@@ -3197,9 +3137,7 @@
     },
     "/resource/{id}/headers": {
       "put": {
-        "tags": [
-          "Resource"
-        ],
+        "tags": ["Resource"],
         "parameters": [
           {
             "name": "id",
@@ -3330,9 +3268,7 @@
     },
     "/resource/{id}/body": {
       "put": {
-        "tags": [
-          "Resource"
-        ],
+        "tags": ["Resource"],
         "parameters": [
           {
             "name": "id",
@@ -3463,9 +3399,7 @@
     },
     "/space": {
       "post": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3564,9 +3498,7 @@
         }
       },
       "get": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "parameters": [
           {
             "name": "skip",
@@ -3634,9 +3566,7 @@
     },
     "/space/{id}": {
       "get": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "parameters": [
           {
             "name": "id",
@@ -3714,9 +3644,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "parameters": [
           {
             "name": "id",
@@ -3799,9 +3727,7 @@
     },
     "/space/name/{name}": {
       "get": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "parameters": [
           {
             "name": "name",
@@ -3881,9 +3807,7 @@
     },
     "/space/user/{userId}": {
       "get": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "parameters": [
           {
             "name": "userId",
@@ -3943,9 +3867,7 @@
     },
     "/space/{id}/name": {
       "put": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "parameters": [
           {
             "name": "id",
@@ -4076,9 +3998,7 @@
     },
     "/space/{id}/moderator": {
       "put": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "parameters": [
           {
             "name": "id",
@@ -4209,9 +4129,7 @@
     },
     "/space/{id}/members": {
       "post": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "parameters": [
           {
             "name": "id",
@@ -4342,9 +4260,7 @@
     },
     "/space/{id}/members/{memberId}": {
       "delete": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "parameters": [
           {
             "name": "id",
@@ -4452,9 +4368,7 @@
     },
     "/space/{id}/permissions": {
       "get": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "parameters": [
           {
             "name": "id",
@@ -4552,9 +4466,7 @@
         }
       },
       "put": {
-        "tags": [
-          "Space"
-        ],
+        "tags": ["Space"],
         "parameters": [
           {
             "name": "id",
@@ -4668,9 +4580,7 @@
     },
     "/trash/space/{spaceId}": {
       "get": {
-        "tags": [
-          "Trash"
-        ],
+        "tags": ["Trash"],
         "parameters": [
           {
             "name": "spaceId",
@@ -4750,9 +4660,7 @@
     },
     "/trash/app/{appId}/restore": {
       "post": {
-        "tags": [
-          "Trash"
-        ],
+        "tags": ["Trash"],
         "parameters": [
           {
             "name": "appId",
@@ -4852,9 +4760,7 @@
     },
     "/trash/folder/{folderId}/restore": {
       "post": {
-        "tags": [
-          "Trash"
-        ],
+        "tags": ["Trash"],
         "parameters": [
           {
             "name": "folderId",
@@ -4954,9 +4860,7 @@
     },
     "/trash/resource/{resourceId}/restore": {
       "post": {
-        "tags": [
-          "Trash"
-        ],
+        "tags": ["Trash"],
         "parameters": [
           {
             "name": "resourceId",
@@ -5056,9 +4960,7 @@
     },
     "/user/{id}": {
       "get": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "parameters": [
           {
             "name": "id",
@@ -5136,9 +5038,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "parameters": [
           {
             "name": "id",
@@ -5221,9 +5121,7 @@
     },
     "/user/email/{email}": {
       "get": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "parameters": [
           {
             "name": "email",
@@ -5303,9 +5201,7 @@
     },
     "/user": {
       "get": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "parameters": [
           {
             "name": "skip",
@@ -5373,9 +5269,7 @@
     },
     "/user/me": {
       "get": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "responses": {
           "200": {
             "description": "OK",
@@ -5425,9 +5319,7 @@
     },
     "/user/invite": {
       "post": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "requestBody": {
           "content": {
             "application/json": {
@@ -5548,9 +5440,7 @@
     },
     "/user/{id}/name": {
       "put": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "parameters": [
           {
             "name": "id",
@@ -5681,9 +5571,7 @@
     },
     "/user/{id}/email": {
       "put": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "parameters": [
           {
             "name": "id",
@@ -5814,9 +5702,7 @@
     },
     "/user/{id}/profile-picture": {
       "put": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "parameters": [
           {
             "name": "id",
@@ -5945,9 +5831,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "parameters": [
           {
             "name": "id",
@@ -6049,9 +5933,7 @@
   "components": {
     "schemas": {
       "AddMemberDto": {
-        "required": [
-          "userId"
-        ],
+        "required": ["userId"],
         "type": "object",
         "properties": {
           "userId": {
@@ -6183,10 +6065,7 @@
         "format": "uuid"
       },
       "AppInputDto": {
-        "required": [
-          "input",
-          "required"
-        ],
+        "required": ["input", "required"],
         "type": "object",
         "properties": {
           "input": {
@@ -6207,9 +6086,7 @@
         "additionalProperties": false
       },
       "ChangeModeratorDto": {
-        "required": [
-          "newModeratorUserId"
-        ],
+        "required": ["newModeratorUserId"],
         "type": "object",
         "properties": {
           "newModeratorUserId": {
@@ -6220,11 +6097,7 @@
         "additionalProperties": false
       },
       "CreateAppDto": {
-        "required": [
-          "folderId",
-          "name",
-          "resourceId"
-        ],
+        "required": ["folderId", "name", "resourceId"],
         "type": "object",
         "properties": {
           "name": {
@@ -6281,10 +6154,7 @@
         "additionalProperties": false
       },
       "CreateFolderDto": {
-        "required": [
-          "name",
-          "spaceId"
-        ],
+        "required": ["name", "spaceId"],
         "type": "object",
         "properties": {
           "name": {
@@ -6309,13 +6179,7 @@
         "additionalProperties": false
       },
       "CreateResourceDto": {
-        "required": [
-          "baseUrl",
-          "description",
-          "httpMethod",
-          "name",
-          "spaceId"
-        ],
+        "required": ["baseUrl", "description", "httpMethod", "name", "spaceId"],
         "type": "object",
         "properties": {
           "name": {
@@ -6368,9 +6232,7 @@
         "additionalProperties": false
       },
       "CreateRunDto": {
-        "required": [
-          "inputValues"
-        ],
+        "required": ["inputValues"],
         "type": "object",
         "properties": {
           "inputValues": {
@@ -6383,10 +6245,7 @@
         "additionalProperties": false
       },
       "CreateSpaceDto": {
-        "required": [
-          "moderatorUserId",
-          "name"
-        ],
+        "required": ["moderatorUserId", "name"],
         "type": "object",
         "properties": {
           "name": {
@@ -6496,14 +6355,7 @@
             "nullable": true
           },
           "entityType": {
-            "enum": [
-              "User",
-              "App",
-              "Resource",
-              "Folder",
-              "Run",
-              "Space"
-            ],
+            "enum": ["User", "App", "Resource", "Folder", "Run", "Space"],
             "type": "string",
             "allOf": [
               {
@@ -6578,14 +6430,7 @@
         "additionalProperties": false
       },
       "EntityType": {
-        "enum": [
-          "User",
-          "App",
-          "Resource",
-          "Folder",
-          "Run",
-          "Space"
-        ],
+        "enum": ["User", "App", "Resource", "Folder", "Run", "Space"],
         "type": "string",
         "additionalProperties": false
       },
@@ -6662,10 +6507,7 @@
         "additionalProperties": false
       },
       "FolderData": {
-        "required": [
-          "name",
-          "spaceId"
-        ],
+        "required": ["name", "spaceId"],
         "type": "object",
         "properties": {
           "id": {
@@ -6766,13 +6608,7 @@
         "additionalProperties": false
       },
       "HttpMethod": {
-        "enum": [
-          "DELETE",
-          "GET",
-          "PATCH",
-          "POST",
-          "PUT"
-        ],
+        "enum": ["DELETE", "GET", "PATCH", "POST", "PUT"],
         "type": "string",
         "additionalProperties": false
       },
@@ -6797,10 +6633,7 @@
         "additionalProperties": false
       },
       "InputDto": {
-        "required": [
-          "title",
-          "type"
-        ],
+        "required": ["title", "type"],
         "type": "object",
         "properties": {
           "title": {
@@ -6942,9 +6775,7 @@
         "additionalProperties": false
       },
       "InviteUserDto": {
-        "required": [
-          "email"
-        ],
+        "required": ["email"],
         "type": "object",
         "properties": {
           "email": {
@@ -6973,10 +6804,7 @@
         "additionalProperties": false
       },
       "KeyValuePairDto": {
-        "required": [
-          "key",
-          "value"
-        ],
+        "required": ["key", "value"],
         "type": "object",
         "properties": {
           "key": {
@@ -7032,7 +6860,7 @@
             "nullable": true
           }
         },
-        "additionalProperties": { }
+        "additionalProperties": {}
       },
       "ResourceData": {
         "required": [
@@ -7085,13 +6913,7 @@
           },
           "httpMethod": {
             "maxLength": 10,
-            "enum": [
-              "DELETE",
-              "GET",
-              "PATCH",
-              "POST",
-              "PUT"
-            ],
+            "enum": ["DELETE", "GET", "PATCH", "POST", "PUT"],
             "type": "string",
             "allOf": [
               {
@@ -7196,11 +7018,7 @@
         "additionalProperties": false
       },
       "RunData": {
-        "required": [
-          "appId",
-          "inputValues",
-          "status"
-        ],
+        "required": ["appId", "inputValues", "status"],
         "type": "object",
         "properties": {
           "id": {
@@ -7290,10 +7108,7 @@
         "format": "uuid"
       },
       "RunInputDto": {
-        "required": [
-          "title",
-          "value"
-        ],
+        "required": ["title", "value"],
         "type": "object",
         "properties": {
           "title": {
@@ -7355,9 +7170,7 @@
         "additionalProperties": false
       },
       "SetProfilePictureDto": {
-        "required": [
-          "profilePicUrl"
-        ],
+        "required": ["profilePicUrl"],
         "type": "object",
         "properties": {
           "profilePicUrl": {
@@ -7370,10 +7183,7 @@
         "additionalProperties": false
       },
       "SpaceData": {
-        "required": [
-          "moderatorUserId",
-          "name"
-        ],
+        "required": ["moderatorUserId", "name"],
         "type": "object",
         "properties": {
           "id": {
@@ -7669,9 +7479,7 @@
         "additionalProperties": false
       },
       "UpdateAppInputsDto": {
-        "required": [
-          "inputs"
-        ],
+        "required": ["inputs"],
         "type": "object",
         "properties": {
           "inputs": {
@@ -7684,9 +7492,7 @@
         "additionalProperties": false
       },
       "UpdateAppNameDto": {
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "type": "object",
         "properties": {
           "name": {
@@ -7726,9 +7532,7 @@
         "additionalProperties": false
       },
       "UpdateFolderNameDto": {
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "type": "object",
         "properties": {
           "name": {
@@ -7740,9 +7544,7 @@
         "additionalProperties": false
       },
       "UpdateResourceBaseUrlDto": {
-        "required": [
-          "baseUrl"
-        ],
+        "required": ["baseUrl"],
         "type": "object",
         "properties": {
           "baseUrl": {
@@ -7768,9 +7570,7 @@
         "additionalProperties": false
       },
       "UpdateResourceDescriptionDto": {
-        "required": [
-          "description"
-        ],
+        "required": ["description"],
         "type": "object",
         "properties": {
           "description": {
@@ -7795,9 +7595,7 @@
         "additionalProperties": false
       },
       "UpdateResourceNameDto": {
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "type": "object",
         "properties": {
           "name": {
@@ -7822,9 +7620,7 @@
         "additionalProperties": false
       },
       "UpdateSpaceNameDto": {
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "type": "object",
         "properties": {
           "name": {
@@ -7836,9 +7632,7 @@
         "additionalProperties": false
       },
       "UpdateUserEmailDto": {
-        "required": [
-          "email"
-        ],
+        "required": ["email"],
         "type": "object",
         "properties": {
           "email": {
@@ -7851,9 +7645,7 @@
         "additionalProperties": false
       },
       "UpdateUserNameDto": {
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "type": "object",
         "properties": {
           "name": {
@@ -7865,10 +7657,7 @@
         "additionalProperties": false
       },
       "UpdateUserPermissionsDto": {
-        "required": [
-          "permissions",
-          "userId"
-        ],
+        "required": ["permissions", "userId"],
         "type": "object",
         "properties": {
           "userId": {
@@ -7886,10 +7675,7 @@
         "additionalProperties": false
       },
       "UserData": {
-        "required": [
-          "email",
-          "name"
-        ],
+        "required": ["email", "name"],
         "type": "object",
         "properties": {
           "id": {

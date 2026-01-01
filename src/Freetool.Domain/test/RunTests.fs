@@ -242,8 +242,16 @@ let ``Run executable request composition should substitute input values`` () =
 
     let run = Run.createWithValidation actorUserId app inputValues |> unwrapResult
 
+    // Create a test current user for substitution
+    let testCurrentUser: CurrentUser =
+        { Id = "test-user-id"
+          Email = "test@example.com"
+          FirstName = "Test"
+          LastName = "User" }
+
     // Act
-    let result = Run.composeExecutableRequestFromAppAndResource run app resource
+    let result =
+        Run.composeExecutableRequestFromAppAndResource run app resource testCurrentUser
 
     // Assert
     match result with

@@ -21,7 +21,7 @@ module RunHandler =
         : Task<Result<RunCommandResult, DomainError>> =
         task {
             match command with
-            | CreateRun(actorUserId, appId, dto) ->
+            | CreateRun(actorUserId, appId, currentUser, dto) ->
                 match Guid.TryParse appId with
                 | false, _ -> return Error(ValidationError "Invalid app ID format")
                 | true, guid ->
@@ -53,7 +53,9 @@ module RunHandler =
                                 | Ok() -> return Ok(RunResult(runWithError.State))
                             | Some resource ->
                                 // Compose executable request with input substitution
-                                match Run.composeExecutableRequestFromAppAndResource validatedRun app resource with
+                                match
+                                    Run.composeExecutableRequestFromAppAndResource validatedRun app resource currentUser
+                                with
                                 | Error err ->
                                     let runWithError =
                                         Run.markAsInvalidConfiguration actorUserId (err.ToString()) validatedRun

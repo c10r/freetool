@@ -5,6 +5,10 @@ import {
   $isTextNode,
 } from "lexical";
 import type { AppInput } from "../input-with-placeholders.types";
+import {
+  isCurrentUserPlaceholder,
+  isValidCurrentUserPlaceholder,
+} from "./current-user";
 import { $createPlaceholderNode, $isPlaceholderNode } from "./PlaceholderNode";
 
 /**
@@ -31,7 +35,10 @@ export function parseValueToEditorState(
 
     // Add placeholder node
     const inputTitle = match[1];
-    const isValid = availableInputs.some((i) => i.title === inputTitle);
+    // Check if it's a current_user placeholder or a regular app input
+    const isValid = isCurrentUserPlaceholder(inputTitle)
+      ? isValidCurrentUserPlaceholder(inputTitle)
+      : availableInputs.some((i) => i.title === inputTitle);
     paragraph.append($createPlaceholderNode(inputTitle, isValid));
 
     if (match.index !== undefined) {

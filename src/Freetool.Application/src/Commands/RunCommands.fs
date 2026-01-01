@@ -10,7 +10,7 @@ type RunCommandResult =
     | RunUnitResult of unit
 
 type RunCommand =
-    | CreateRun of actorUserId: UserId * appId: string * CreateRunDto
+    | CreateRun of actorUserId: UserId * appId: string * currentUser: CurrentUser * CreateRunDto
     | GetRunById of runId: string
     | GetRunsByAppId of appId: string * skip: int * take: int
     | GetRunsByStatus of status: string * skip: int * take: int

@@ -109,6 +109,10 @@ export default function AppConfigForm({
     ? resources.find((r) => r.id === resourceId)
     : undefined;
 
+  // App inputs for the "App Fields" section
+  // (InputWithPlaceholders always shows current_user in "User Context" section)
+  const appInputs = inputs || [];
+
   const getFieldState = (
     field: "urlPath" | "urlParameters" | "headers" | "body"
   ): FieldState => {
@@ -238,26 +242,15 @@ export default function AppConfigForm({
                 Custom Path
               </Label>
               <div className="relative">
-                {inputs && inputs.length > 0 ? (
-                  <InputWithPlaceholders
-                    id="url-path"
-                    value={urlPath}
-                    onChange={(value) => onUrlPathChange?.(value)}
-                    onBlur={() => onUrlPathFieldBlur?.(urlPath)}
-                    availableInputs={inputs}
-                    placeholder="Example: /api/users/{id}"
-                    disabled={disabled || getFieldState("urlPath").updating}
-                  />
-                ) : (
-                  <Input
-                    id="url-path"
-                    value={urlPath}
-                    onChange={(e) => onUrlPathChange?.(e.target.value)}
-                    onBlur={(e) => onUrlPathFieldBlur?.(e.target.value)}
-                    placeholder="Example: /api/users"
-                    disabled={disabled || getFieldState("urlPath").updating}
-                  />
-                )}
+                <InputWithPlaceholders
+                  id="url-path"
+                  value={urlPath}
+                  onChange={(value) => onUrlPathChange?.(value)}
+                  onBlur={() => onUrlPathFieldBlur?.(urlPath)}
+                  availableInputs={appInputs}
+                  placeholder="Example: /api/users/{id}"
+                  disabled={disabled || getFieldState("urlPath").updating}
+                />
                 {mode === "edit" && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                     <FieldIndicator state={getFieldState("urlPath")} />
@@ -294,7 +287,7 @@ export default function AppConfigForm({
             }}
             ariaLabel="Query parameters"
             disabled={disabled || getFieldState("urlParameters").updating}
-            availableInputs={inputs}
+            availableInputs={appInputs}
           />
           {mode === "edit" && (
             <div className="absolute right-3 top-3">
@@ -328,7 +321,7 @@ export default function AppConfigForm({
             }}
             ariaLabel="Headers"
             disabled={disabled || getFieldState("headers").updating}
-            availableInputs={inputs}
+            availableInputs={appInputs}
           />
           {mode === "edit" && (
             <div className="absolute right-3 top-3">
@@ -362,7 +355,7 @@ export default function AppConfigForm({
             }}
             ariaLabel="JSON body"
             disabled={disabled || getFieldState("body").updating}
-            availableInputs={inputs}
+            availableInputs={appInputs}
           />
           {mode === "edit" && (
             <div className="absolute right-3 top-3">

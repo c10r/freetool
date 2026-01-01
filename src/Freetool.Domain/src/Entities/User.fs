@@ -301,3 +301,30 @@ module User =
     /// Returns true if the user is an invited placeholder that hasn't been activated yet.
     let isInvitedPlaceholder (user: User) : bool =
         user.State.InvitedAt.IsSome && String.IsNullOrEmpty(user.State.Name)
+
+    /// Extracts the first name from the user's full name.
+    /// If the name is a single word, returns the entire name.
+    let getFirstName (user: User) : string =
+        let name = user.State.Name
+
+        if String.IsNullOrWhiteSpace(name) then
+            ""
+        else
+            let parts = name.Trim().Split(' ')
+
+            if parts.Length > 0 then parts.[0] else name
+
+    /// Extracts the last name from the user's full name.
+    /// If the name is a single word, returns an empty string.
+    let getLastName (user: User) : string =
+        let name = user.State.Name
+
+        if String.IsNullOrWhiteSpace(name) then
+            ""
+        else
+            let parts = name.Trim().Split(' ')
+
+            if parts.Length > 1 then
+                String.Join(" ", parts |> Array.skip 1)
+            else
+                ""

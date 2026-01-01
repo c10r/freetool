@@ -2,6 +2,10 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { $getRoot } from "lexical";
 import { useEffect } from "react";
 import type { AppInput } from "../input-with-placeholders.types";
+import {
+  isCurrentUserPlaceholder,
+  isValidCurrentUserPlaceholder,
+} from "./current-user";
 import { $isPlaceholderNode } from "./PlaceholderNode";
 
 interface ValidityUpdatePluginProps {
@@ -25,7 +29,10 @@ export function ValidityUpdatePlugin({
       for (const child of children) {
         if ($isPlaceholderNode(child)) {
           const inputTitle = child.getInputTitle();
-          const isValid = availableInputs.some((i) => i.title === inputTitle);
+          // Check if it's a current_user placeholder or a regular app input
+          const isValid = isCurrentUserPlaceholder(inputTitle)
+            ? isValidCurrentUserPlaceholder(inputTitle)
+            : availableInputs.some((i) => i.title === inputTitle);
           if (child.getIsValid() !== isValid) {
             child.setIsValid(isValid);
           }

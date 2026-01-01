@@ -60,6 +60,13 @@ module RunAggregateHelpers =
 type UnvalidatedRun = Run // From DTOs - potentially unsafe
 type ValidatedRun = Run // Validated domain model and database data
 
+/// Represents the current user for variable substitution in templates
+type CurrentUser =
+    { Id: string
+      Email: string
+      FirstName: string
+      LastName: string }
+
 module Run =
     let fromData (runData: RunData) : ValidatedRun =
         { State = runData
@@ -231,6 +238,7 @@ module Run =
         (run: ValidatedRun)
         (app: ValidatedApp)
         (resource: ValidatedResource)
+        (currentUser: CurrentUser)
         : Result<ValidatedRun, DomainError> =
 
         // Use existing RequestComposer to create the base ExecutableHttpRequest
@@ -244,9 +252,16 @@ module Run =
             let substituteTemplate (template: string) : string =
                 let mutable result = template
 
+                // Substitute app input values
                 for kvp in inputValuesMap do
                     let placeholder = $"{{{kvp.Key}}}"
                     result <- result.Replace(placeholder, kvp.Value)
+
+                // Substitute current_user placeholders
+                result <- result.Replace("{current_user.email}", currentUser.Email)
+                result <- result.Replace("{current_user.id}", currentUser.Id)
+                result <- result.Replace("{current_user.firstName}", currentUser.FirstName)
+                result <- result.Replace("{current_user.lastName}", currentUser.LastName)
 
                 result
 

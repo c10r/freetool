@@ -23,6 +23,7 @@ import {
   RESTORE_CURSOR_AFTER_BRACE_COMMAND,
   SELECT_PLACEHOLDER_INPUT_COMMAND,
 } from "./commands";
+import { CURRENT_USER_PREFIX, CURRENT_USER_PROPERTIES } from "./current-user";
 import { DisabledPlugin } from "./DisabledPlugin";
 import { OnBlurPlugin } from "./OnBlurPlugin";
 import { PlaceholderNode } from "./PlaceholderNode";
@@ -121,8 +122,21 @@ export function InputWithPlaceholders({
     setPopoverState((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
-  const filteredInputs = availableInputs.filter((input) =>
-    input.title?.toLowerCase().includes(searchFilter.toLowerCase())
+  // Filter current_user properties based on search
+  const filteredCurrentUserProps = CURRENT_USER_PROPERTIES.filter((prop) => {
+    const fullTitle = `${CURRENT_USER_PREFIX}.${prop.key}`;
+    return (
+      fullTitle.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      prop.displayName.toLowerCase().includes(searchFilter.toLowerCase())
+    );
+  });
+
+  // Filter regular app inputs based on search, excluding current_user inputs
+  // (current_user inputs are shown in "User Context" section, not "App Fields")
+  const filteredInputs = availableInputs.filter(
+    (input) =>
+      input.title?.toLowerCase().includes(searchFilter.toLowerCase()) &&
+      !input.title?.startsWith(`${CURRENT_USER_PREFIX}.`)
   );
 
   return (
@@ -177,26 +191,47 @@ export function InputWithPlaceholders({
               />
               <CommandList>
                 <CommandEmpty>No inputs found.</CommandEmpty>
-                <CommandGroup heading="Available Inputs">
-                  {filteredInputs.map((input) => (
-                    <CommandItem
-                      key={input.title}
-                      value={input.title || ""}
-                      onSelect={() => {
-                        if (input.title) {
-                          handleSelectInput(input.title);
-                        }
-                      }}
-                    >
-                      <span>{input.title}</span>
-                      {input.required && (
-                        <Badge variant="outline" className="ml-auto text-xs">
-                          Required
-                        </Badge>
-                      )}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                {filteredCurrentUserProps.length > 0 && (
+                  <CommandGroup heading="User Context">
+                    {filteredCurrentUserProps.map((prop) => {
+                      const fullTitle = `${CURRENT_USER_PREFIX}.${prop.key}`;
+                      return (
+                        <CommandItem
+                          key={fullTitle}
+                          value={fullTitle}
+                          onSelect={() => handleSelectInput(fullTitle)}
+                        >
+                          <span>{fullTitle}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            {prop.type}
+                          </span>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                )}
+                {filteredInputs.length > 0 && (
+                  <CommandGroup heading="App Fields">
+                    {filteredInputs.map((input) => (
+                      <CommandItem
+                        key={input.title}
+                        value={input.title || ""}
+                        onSelect={() => {
+                          if (input.title) {
+                            handleSelectInput(input.title);
+                          }
+                        }}
+                      >
+                        <span>{input.title}</span>
+                        {input.required && (
+                          <Badge variant="outline" className="ml-auto text-xs">
+                            Required
+                          </Badge>
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
               </CommandList>
             </Command>
           </PopoverContent>

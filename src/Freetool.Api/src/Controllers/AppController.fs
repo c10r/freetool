@@ -21,6 +21,7 @@ type AppController
         runRepository: IRunRepository,
         folderRepository: IFolderRepository,
         spaceRepository: ISpaceRepository,
+        userRepository: IUserRepository,
         authorizationService: IAuthorizationService,
         commandHandler: IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>
     ) =
@@ -542,18 +543,30 @@ type AppController
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
                 | Ok() ->
-                    let! result =
-                        RunHandler.handleCommand
-                            runRepository
-                            appRepository
-                            resourceRepository
-                            (CreateRun(userId, id, createRunDto))
+                    // Fetch the full user to build CurrentUser for variable substitution
+                    let! userOption = userRepository.GetByIdAsync userId
 
-                    return
-                        match result with
-                        | Ok(RunResult runDto) -> this.Ok(runDto) :> IActionResult
-                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                        | Error error -> this.HandleDomainError(error)
+                    match userOption with
+                    | None -> return this.HandleDomainError(NotFound "User not found")
+                    | Some user ->
+                        let currentUser: CurrentUser =
+                            { Id = userId.Value.ToString()
+                              Email = User.getEmail user
+                              FirstName = User.getFirstName user
+                              LastName = User.getLastName user }
+
+                        let! result =
+                            RunHandler.handleCommand
+                                runRepository
+                                appRepository
+                                resourceRepository
+                                (CreateRun(userId, id, currentUser, createRunDto))
+
+                        return
+                            match result with
+                            | Ok(RunResult runDto) -> this.Ok(runDto) :> IActionResult
+                            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                            | Error error -> this.HandleDomainError(error)
         }
 
     member private this.HandleDomainError(error: DomainError) : IActionResult =
