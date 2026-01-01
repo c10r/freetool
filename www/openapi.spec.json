@@ -5330,17 +5330,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserWithRoleDtoPagedResult"
+                  "$ref": "#/components/schemas/UserDataPagedResult"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserWithRoleDtoPagedResult"
+                  "$ref": "#/components/schemas/UserDataPagedResult"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserWithRoleDtoPagedResult"
+                  "$ref": "#/components/schemas/UserDataPagedResult"
                 }
               }
             }
@@ -7934,58 +7934,13 @@
         },
         "additionalProperties": false
       },
-      "UserId": {
-        "type": "string",
-        "additionalProperties": false,
-        "format": "uuid"
-      },
-      "UserWithRoleDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "nullable": true
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "email": {
-            "type": "string",
-            "nullable": true
-          },
-          "profilePicUrl": {
-            "type": "string",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/StringFSharpOption"
-              }
-            ],
-            "nullable": true
-          },
-          "invitedAt": {
-            "type": "string",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DateTimeFSharpOption"
-              }
-            ],
-            "format": "date-time",
-            "nullable": true
-          },
-          "isOrgAdmin": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false
-      },
-      "UserWithRoleDtoPagedResult": {
+      "UserDataPagedResult": {
         "type": "object",
         "properties": {
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/UserWithRoleDto"
+              "$ref": "#/components/schemas/UserData"
             },
             "nullable": true
           },
@@ -8003,6 +7958,11 @@
           }
         },
         "additionalProperties": false
+      },
+      "UserId": {
+        "type": "string",
+        "additionalProperties": false,
+        "format": "uuid"
       }
     }
   }

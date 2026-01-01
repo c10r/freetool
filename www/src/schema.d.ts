@@ -3703,9 +3703,9 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "text/plain": components["schemas"]["UserDataPagedResult"];
-            "application/json": components["schemas"]["UserDataPagedResult"];
-            "text/json": components["schemas"]["UserDataPagedResult"];
+            "text/plain": components["schemas"]["UserWithRoleDtoPagedResult"];
+            "application/json": components["schemas"]["UserWithRoleDtoPagedResult"];
+            "text/json": components["schemas"]["UserWithRoleDtoPagedResult"];
           };
         };
         /** @description Bad Request */
@@ -4558,6 +4558,7 @@ export interface components {
         | (string & components["schemas"]["StringFSharpOption"])
         | null;
       isModerator?: boolean;
+      isOrgAdmin?: boolean;
       permissions?: components["schemas"]["SpacePermissionsDto"] | null;
     };
     SpaceMembersPermissionsResponseDto: {
@@ -4673,8 +4674,23 @@ export interface components {
         | (string & components["schemas"]["DateTimeFSharpOption"])
         | null;
     };
-    UserDataPagedResult: {
-      items?: components["schemas"]["UserData"][] | null;
+    /** Format: uuid */
+    UserId: string;
+    UserWithRoleDto: {
+      id?: string | null;
+      name?: string | null;
+      email?: string | null;
+      profilePicUrl?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
+      /** Format: date-time */
+      invitedAt?:
+        | (string & components["schemas"]["DateTimeFSharpOption"])
+        | null;
+      isOrgAdmin?: boolean;
+    };
+    UserWithRoleDtoPagedResult: {
+      items?: components["schemas"]["UserWithRoleDto"][] | null;
       /** Format: int32 */
       totalCount?: number;
       /** Format: int32 */
@@ -4682,8 +4698,6 @@ export interface components {
       /** Format: int32 */
       take?: number;
     };
-    /** Format: uuid */
-    UserId: string;
   };
   responses: never;
   parameters: never;

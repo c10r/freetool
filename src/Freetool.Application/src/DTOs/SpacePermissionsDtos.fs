@@ -22,6 +22,7 @@ type SpaceMemberPermissionsDto =
       UserEmail: string
       ProfilePicUrl: string option
       IsModerator: bool
+      IsOrgAdmin: bool
       Permissions: SpacePermissionsDto }
 
 /// Response DTO containing all space members with their permissions

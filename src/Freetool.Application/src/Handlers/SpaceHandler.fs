@@ -357,6 +357,13 @@ module SpaceHandler =
                                                 return permissionsMapToDto permMap
                                             }
 
+                                    // Check if user is an organization admin
+                                    let! isOrgAdmin =
+                                        authService.CheckPermissionAsync
+                                            (User userIdStr)
+                                            OrganizationAdmin
+                                            (OrganizationObject "default")
+
                                     let userName =
                                         userOption
                                         |> Option.map (fun u -> u.State.Name)
@@ -373,6 +380,7 @@ module SpaceHandler =
                                           UserEmail = userEmail
                                           ProfilePicUrl = profilePicUrl
                                           IsModerator = isModerator
+                                          IsOrgAdmin = isOrgAdmin
                                           Permissions = permissions }
 
                                     return memberDto

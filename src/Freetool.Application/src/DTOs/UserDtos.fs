@@ -63,3 +63,14 @@ type CurrentUserDto =
       ProfilePicUrl: string option
       IsOrgAdmin: bool
       Teams: TeamMembershipDto list }
+
+/// User DTO with role information for list views
+type UserWithRoleDto =
+    { Id: string
+      Name: string
+      Email: string
+
+      [<JsonConverter(typeof<StringOptionConverter>)>]
+      ProfilePicUrl: string option
+      InvitedAt: System.DateTime option
+      IsOrgAdmin: bool }

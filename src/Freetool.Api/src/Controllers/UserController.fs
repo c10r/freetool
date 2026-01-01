@@ -78,7 +78,7 @@ type UserController
         }
 
     [<HttpGet>]
-    [<ProducesResponseType(typeof<PagedResult<UserData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(typeof<PagedResult<UserWithRoleDto>>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetUsers([<FromQuery>] skip: int, [<FromQuery>] take: int) : Task<IActionResult> =
@@ -92,11 +92,42 @@ type UserController
 
             let! result = commandHandler.HandleCommand userRepository (GetAllUsers(skipValue, takeValue))
 
-            return
-                match result with
-                | Ok(UsersResult pagedUsers) -> this.Ok(pagedUsers) :> IActionResult
-                | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                | Error error -> this.HandleDomainError(error)
+            match result with
+            | Ok(UsersResult pagedUsers) ->
+                // Enrich each user with org admin status
+                let! enrichedUsers =
+                    pagedUsers.Items
+                    |> List.map (fun userData ->
+                        task {
+                            let userIdStr = userData.Id.Value.ToString()
+
+                            let! isOrgAdmin =
+                                authService.CheckPermissionAsync
+                                    (User userIdStr)
+                                    OrganizationAdmin
+                                    (OrganizationObject "default")
+
+                            let enrichedUser: UserWithRoleDto =
+                                { Id = userIdStr
+                                  Name = userData.Name
+                                  Email = userData.Email
+                                  ProfilePicUrl = userData.ProfilePicUrl
+                                  InvitedAt = userData.InvitedAt
+                                  IsOrgAdmin = isOrgAdmin }
+
+                            return enrichedUser
+                        })
+                    |> Task.WhenAll
+
+                let enrichedResult: PagedResult<UserWithRoleDto> =
+                    { Items = enrichedUsers |> Array.toList
+                      TotalCount = pagedUsers.TotalCount
+                      Skip = pagedUsers.Skip
+                      Take = pagedUsers.Take }
+
+                return this.Ok(enrichedResult) :> IActionResult
+            | Ok _ -> return this.StatusCode(500, "Unexpected result type") :> IActionResult
+            | Error error -> return this.HandleDomainError(error)
         }
 
     [<HttpGet("me")>]

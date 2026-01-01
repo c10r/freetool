@@ -1,4 +1,10 @@
-import { ChevronLeft, Crown, Save, User as UserIcon } from "lucide-react";
+import {
+  ChevronLeft,
+  Crown,
+  GlobeLock,
+  Save,
+  User as UserIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -317,6 +323,18 @@ export default function SpacePermissionsView({
                                     </Tooltip>
                                   </TooltipProvider>
                                 )}
+                                {member.isOrgAdmin && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <GlobeLock className="h-4 w-4 text-blue-500" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Organization Admin</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 {member.userEmail}
@@ -373,6 +391,10 @@ export default function SpacePermissionsView({
               <div className="flex items-center gap-2">
                 <Crown className="h-4 w-4 text-amber-500" />
                 <span>Moderator (all permissions, cannot be changed)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <GlobeLock className="h-4 w-4 text-blue-500" />
+                <span>Organization Admin</span>
               </div>
               {hasPendingChanges && (
                 <div className="flex items-center gap-2">

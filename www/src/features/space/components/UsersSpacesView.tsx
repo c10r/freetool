@@ -3,6 +3,7 @@ import {
   Building2,
   Crown,
   Edit,
+  GlobeLock,
   Plus,
   Shield,
   User as UserIcon,
@@ -58,6 +59,7 @@ interface User {
   email: string;
   profilePicUrl?: string;
   invitedAt?: string; // ISO date string, present if user is invited placeholder
+  isOrgAdmin?: boolean;
 }
 
 interface Space {
@@ -119,6 +121,7 @@ export default function UsersSpacesView() {
                 email: user.email,
                 profilePicUrl: user.profilePicUrl,
                 invitedAt: user.invitedAt,
+                isOrgAdmin: user.isOrgAdmin,
               };
             }) || [];
           setUsers(userData);
@@ -425,6 +428,18 @@ export default function UsersSpacesView() {
                     <CardTitle className="text-base font-medium">
                       {isInvitedPlaceholder(user) ? user.email : user.name}
                     </CardTitle>
+                    {user.isOrgAdmin && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <GlobeLock className="h-4 w-4 text-blue-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Organization Admin</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                     {isInvitedPlaceholder(user) && (
                       <Badge variant="secondary" className="text-xs">
                         Pending

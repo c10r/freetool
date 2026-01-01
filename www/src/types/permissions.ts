@@ -89,6 +89,7 @@ export interface SpaceMemberPermissions {
   userEmail: string;
   profilePicUrl?: string;
   isModerator: boolean;
+  isOrgAdmin: boolean;
   permissions: SpacePermissions;
 }
 
