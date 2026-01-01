@@ -28,6 +28,11 @@ import { usePagination } from "@/hooks/usePagination";
 import { useHasPermission } from "@/hooks/usePermissions";
 import { useResourceForm } from "../hooks/useResourceForm";
 import type { KeyValuePair } from "../types";
+import {
+  injectAuthIntoHeaders,
+  parseAuthFromHeaders,
+  removeAuthFromHeaders,
+} from "../utils/authUtils";
 import ResourceForm, { type ResourceFormData } from "./ResourceForm";
 
 interface Resource {
@@ -47,6 +52,7 @@ const initialFormData: ResourceFormData = {
   urlParameters: [],
   headers: [],
   body: [],
+  authConfig: { type: "none" },
 };
 
 interface ResourcesViewProps {
@@ -91,6 +97,7 @@ export default function ResourcesView({
     fieldStates: editFieldStates,
     updateTextField,
     updateKeyValueField,
+    updateAuthField,
     resetFieldStates,
     setFormData: setEditFormData,
   } = useResourceForm(initialFormData, editingResource?.id, (updatedData) => {
@@ -189,13 +196,19 @@ export default function ResourcesView({
       setCreating(true);
       setCreateError(null);
 
+      // Inject auth into headers before sending
+      const headersWithAuth = injectAuthIntoHeaders(
+        createFormData.headers,
+        createFormData.authConfig
+      );
+
       await createResource({
         spaceId,
         name: createFormData.name.trim(),
         description: createFormData.description.trim(),
         baseUrl: createFormData.baseUrl.trim(),
         urlParameters: createFormData.urlParameters,
-        headers: createFormData.headers,
+        headers: headersWithAuth,
         body: createFormData.body,
       });
 
@@ -217,13 +230,19 @@ export default function ResourcesView({
 
   const handleEditResource = (resource: Resource) => {
     setEditingResource(resource);
+
+    // Parse auth from headers and remove Authorization header from display
+    const authConfig = parseAuthFromHeaders(resource.headers || []);
+    const displayHeaders = removeAuthFromHeaders(resource.headers || []);
+
     setEditFormData({
       name: resource.name,
       description: resource.description,
       baseUrl: resource.baseUrl,
       urlParameters: resource.urlParameters || [],
-      headers: resource.headers || [],
+      headers: displayHeaders,
       body: resource.body || [],
+      authConfig,
     });
   };
 
@@ -445,6 +464,7 @@ export default function ResourcesView({
                 fieldStates={editFieldStates}
                 onFieldBlur={updateTextField}
                 onKeyValueFieldBlur={updateKeyValueField}
+                onAuthBlur={updateAuthField}
                 disabled={!canEditResource}
               />
             </div>

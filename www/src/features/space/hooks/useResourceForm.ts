@@ -7,7 +7,8 @@ import {
   updateResourceName,
   updateResourceUrlParameters,
 } from "@/api/api";
-import type { KeyValuePair } from "../types";
+import type { AuthConfig, KeyValuePair } from "../types";
+import { injectAuthIntoHeaders } from "../utils/authUtils";
 
 export interface ResourceFormData {
   name: string;
@@ -16,6 +17,7 @@ export interface ResourceFormData {
   urlParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
+  authConfig: AuthConfig;
 }
 
 interface FieldState {
@@ -32,6 +34,7 @@ type FieldStates = {
   urlParameters: FieldState;
   headers: FieldState;
   body: FieldState;
+  authConfig: FieldState;
 };
 
 const initialFieldState: FieldState = {
@@ -48,6 +51,7 @@ const initialFieldStates: FieldStates = {
   urlParameters: initialFieldState,
   headers: initialFieldState,
   body: initialFieldState,
+  authConfig: initialFieldState,
 };
 
 export function useResourceForm(
@@ -279,12 +283,110 @@ export function useResourceForm(
     [resourceId, onUpdate, setFieldState, formData]
   );
 
+  const updateAuthField = useCallback(
+    async (authConfig: AuthConfig) => {
+      if (!resourceId) {
+        return;
+      }
+
+      // Inject auth into current headers to create the full headers array
+      const headersWithAuth = injectAuthIntoHeaders(
+        formData.headers,
+        authConfig
+      );
+
+      // Filter out empty key-value pairs for comparison
+      const filteredHeaders = headersWithAuth.filter(
+        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
+      );
+
+      // Don't make network request if headers haven't changed
+      const currentHeaders = (savedDataRef.current.headers || []).filter(
+        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
+      );
+      if (JSON.stringify(filteredHeaders) === JSON.stringify(currentHeaders)) {
+        return;
+      }
+
+      setFieldState("authConfig", {
+        updating: true,
+        saved: false,
+        error: false,
+      });
+
+      try {
+        const response = await updateResourceHeaders({
+          id: resourceId,
+          headers: filteredHeaders,
+        });
+
+        if (response?.error) {
+          const errorMessage = response.error.message || "Failed to save";
+          setFieldState("authConfig", {
+            updating: false,
+            error: true,
+            errorMessage,
+          });
+
+          // Reset auth config on error
+          setFormData((prev) => ({
+            ...prev,
+            authConfig: savedDataRef.current.authConfig,
+          }));
+
+          setTimeout(() => {
+            setFieldState("authConfig", { error: false, errorMessage: "" });
+          }, 2000);
+
+          return;
+        }
+
+        // Update local state on success
+        const updatedData = {
+          ...formData,
+          headers: formData.headers, // Keep displayed headers (without auth)
+          authConfig,
+        };
+        savedDataRef.current = {
+          ...savedDataRef.current,
+          headers: filteredHeaders, // Save the full headers with auth
+          authConfig,
+        };
+        setFormData(updatedData);
+        onUpdate?.(updatedData);
+
+        setFieldState("authConfig", { updating: false, saved: true });
+        setTimeout(() => {
+          setFieldState("authConfig", { saved: false });
+        }, 2000);
+      } catch (_error) {
+        setFieldState("authConfig", {
+          updating: false,
+          error: true,
+          errorMessage: "Network error occurred",
+        });
+
+        // Reset auth config on error
+        setFormData((prev) => ({
+          ...prev,
+          authConfig: savedDataRef.current.authConfig,
+        }));
+
+        setTimeout(() => {
+          setFieldState("authConfig", { error: false, errorMessage: "" });
+        }, 2000);
+      }
+    },
+    [resourceId, onUpdate, setFieldState, formData]
+  );
+
   return {
     formData,
     fieldStates,
     updateFormData,
     updateTextField,
     updateKeyValueField,
+    updateAuthField,
     resetFieldStates,
     setFormData,
   };

@@ -3,7 +3,8 @@ import { Input } from "@/components/ui/input";
 import { getCurrentUserInputs } from "@/components/ui/input-with-placeholders/current-user";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { KeyValuePair } from "../types";
+import type { AuthConfig, KeyValuePair } from "../types";
+import AuthorizationSection from "./AuthorizationSection";
 import KeyValueList from "./KeyValueList";
 
 // Get current_user inputs for Resources (always available)
@@ -16,6 +17,7 @@ export interface ResourceFormData {
   urlParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
+  authConfig: AuthConfig;
 }
 
 interface FieldState {
@@ -37,6 +39,7 @@ interface ResourceFormProps {
     urlParameters: FieldState;
     headers: FieldState;
     body: FieldState;
+    authConfig: FieldState;
   };
   onFieldBlur?: (
     field: keyof ResourceFormData,
@@ -46,6 +49,7 @@ interface ResourceFormProps {
     field: "urlParameters" | "headers" | "body",
     value: KeyValuePair[]
   ) => void;
+  onAuthBlur?: (authConfig: AuthConfig) => void;
 }
 
 const FieldIndicator = ({ state }: { state: FieldState }) => {
@@ -71,6 +75,7 @@ export default function ResourceForm({
   fieldStates,
   onFieldBlur,
   onKeyValueFieldBlur,
+  onAuthBlur,
 }: ResourceFormProps) {
   const updateData = (
     field: keyof ResourceFormData,
@@ -206,6 +211,7 @@ export default function ResourceForm({
             ariaLabel="HTTP headers"
             disabled={disabled || getFieldState("headers").updating}
             availableInputs={currentUserInputs}
+            blockedKeys={["Authorization"]}
           />
           {mode === "edit" && (
             <div className="absolute right-3 top-3">
@@ -240,6 +246,27 @@ export default function ResourceForm({
         {getFieldState("body").errorMessage && (
           <div className="text-red-500 text-sm mt-1">
             {getFieldState("body").errorMessage}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <div className="relative">
+          <AuthorizationSection
+            authConfig={data.authConfig}
+            onChange={(authConfig) => onChange({ ...data, authConfig })}
+            onBlur={() => onAuthBlur?.(data.authConfig)}
+            disabled={disabled || getFieldState("authConfig").updating}
+          />
+          {mode === "edit" && (
+            <div className="absolute right-3 top-3">
+              <FieldIndicator state={getFieldState("authConfig")} />
+            </div>
+          )}
+        </div>
+        {getFieldState("authConfig").errorMessage && (
+          <div className="text-red-500 text-sm mt-1">
+            {getFieldState("authConfig").errorMessage}
           </div>
         )}
       </div>

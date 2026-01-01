@@ -37,6 +37,14 @@ export interface KeyValuePair {
   value: string;
 }
 
+// Authorization configuration types
+export type AuthType = "none" | "basic" | "bearer";
+
+export type AuthConfig =
+  | { type: "none" }
+  | { type: "basic"; username: string; password: string }
+  | { type: "bearer"; token: string };
+
 export interface Endpoint {
   id: string;
   name: string;
