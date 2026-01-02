@@ -35,8 +35,7 @@ module DevSeedingService =
                 let! nopermUserOpt = userRepository.GetByEmailAsync nopermEmail
 
                 match adminUserOpt with
-                | None ->
-                    eprintfn "[DEV MODE] Admin user not found, skipping relationship seeding"
+                | None -> eprintfn "[DEV MODE] Admin user not found, skipping relationship seeding"
                 | Some adminUser ->
                     let adminUserId = adminUser.State.Id
                     let adminUserIdStr = adminUserId.Value.ToString()
@@ -51,13 +50,10 @@ module DevSeedingService =
                     // 2. Look up the test space by name
                     let! spaces = spaceRepository.GetAllAsync 0 100
 
-                    let testSpaceOpt =
-                        spaces
-                        |> List.tryFind (fun s -> s.State.Name = "Test Space")
+                    let testSpaceOpt = spaces |> List.tryFind (fun s -> s.State.Name = "Test Space")
 
                     match testSpaceOpt with
-                    | None ->
-                        eprintfn "[DEV MODE] Test Space not found, skipping space relationship seeding"
+                    | None -> eprintfn "[DEV MODE] Test Space not found, skipping space relationship seeding"
                     | Some space ->
                         let spaceId = Space.getId space
                         let spaceIdStr = spaceId.Value.ToString()
@@ -76,8 +72,7 @@ module DevSeedingService =
 
                         // 4. Ensure moderator relation
                         match moderatorUserOpt with
-                        | None ->
-                            eprintfn "[DEV MODE] Moderator user not found, skipping moderator relation"
+                        | None -> eprintfn "[DEV MODE] Moderator user not found, skipping moderator relation"
                         | Some moderatorUser ->
                             let moderatorUserId = moderatorUser.State.Id
                             let moderatorUserIdStr = moderatorUserId.Value.ToString()
@@ -118,8 +113,7 @@ module DevSeedingService =
                                 eprintfn "[DEV MODE] Ensured run_app permission for member user %s" memberUserIdStr
                             with ex ->
                                 eprintfn "[DEV MODE] Warning: Failed to ensure run_app permission: %s" ex.Message
-                        | None ->
-                            eprintfn "[DEV MODE] Member user not found"
+                        | None -> eprintfn "[DEV MODE] Member user not found"
 
                         match nopermUserOpt with
                         | Some nopermUser ->
@@ -131,8 +125,7 @@ module DevSeedingService =
                                   Relation = SpaceMember
                                   Object = SpaceObject spaceIdStr }
                             )
-                        | None ->
-                            eprintfn "[DEV MODE] Noperm user not found"
+                        | None -> eprintfn "[DEV MODE] Noperm user not found"
 
                         if memberTuples.Count > 0 then
                             try
@@ -142,8 +135,7 @@ module DevSeedingService =
                                 eprintfn "[DEV MODE] Warning: Failed to ensure member relations: %s" ex.Message
 
                         eprintfn "[DEV MODE] OpenFGA relationship seeding complete!"
-            | _ ->
-                eprintfn "[DEV MODE] Failed to parse dev user emails"
+            | _ -> eprintfn "[DEV MODE] Failed to parse dev user emails"
         }
 
     /// Seeds the dev database with test users, a space, resource, folder, and app
@@ -229,6 +221,26 @@ module DevSeedingService =
                             | Ok savedNopermUser ->
                                 let nopermUserId = savedNopermUser.State.Id
                                 eprintfn "[DEV MODE] Created noperm user: %s" (nopermUserId.Value.ToString())
+
+                                // 5. Not a member user - exists but is not a member of any space
+                                let notamemberEmail =
+                                    match Email.Create(Some "notamember@test.local") with
+                                    | Ok e -> e
+                                    | Error _ -> failwith "Invalid notamember email"
+
+                                let notamemberUser = User.create "Not a Member" notamemberEmail None
+
+                                match! userRepository.AddAsync notamemberUser with
+                                | Error err -> eprintfn "[DEV MODE] Failed to create notamember user: %A" err
+                                | Ok savedNotamemberUser ->
+                                    let notamemberUserId = savedNotamemberUser.State.Id
+
+                                    eprintfn
+                                        "[DEV MODE] Created notamember user: %s"
+                                        (notamemberUserId.Value.ToString())
+
+                                    // Suppress unused variable warning - this user intentionally has no space membership
+                                    ignore notamemberUserId
 
                                 // Create test space with moderator and members
                                 match
