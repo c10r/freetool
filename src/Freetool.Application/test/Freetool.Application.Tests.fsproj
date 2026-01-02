@@ -28,7 +28,12 @@
     <Compile Include="SpaceMapperTests.fs" />
     <Compile Include="RunMapperTests.fs" />
     <Compile Include="FolderHandlerTests.fs" />
+    <Compile Include="SpaceHandlerTests.fs" />
     <Compile Include="ResourceHandlerTests.fs" />
+    <Compile Include="AppHandlerTests.fs" />
+    <Compile Include="UserHandlerTests.fs" />
+    <Compile Include="RunHandlerTests.fs" />
+    <Compile Include="TrashHandlerTests.fs" />
     <Compile Include="EventEnhancementServiceTests.fs" />
   </ItemGroup>
 

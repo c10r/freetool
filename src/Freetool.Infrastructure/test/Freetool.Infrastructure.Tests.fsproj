@@ -12,6 +12,10 @@
     <Compile Include="SpaceControllerTests.fs" />
     <Compile Include="UserControllerTests.fs" />
     <Compile Include="FolderControllerTests.fs" />
+    <Compile Include="AutoTracingTests.fs" />
+    <Compile Include="TailscaleAuthMiddlewareTests.fs" />
+    <Compile Include="DevAuthMiddlewareTests.fs" />
+    <Compile Include="AppControllerIntegrationTests.fs" />
     <Compile Include="../../Freetool.Api/test/AppControllerAuthTests.fs" />
   </ItemGroup>
   <ItemGroup>
