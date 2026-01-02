@@ -116,7 +116,8 @@ module User =
                               UncommittedEvents = user.UncommittedEvents }
 
     let markForDeletion (actorUserId: UserId) (user: ValidatedUser) : ValidatedUser =
-        let userDeletedEvent = UserEvents.userDeleted actorUserId user.State.Id
+        let userDeletedEvent =
+            UserEvents.userDeleted actorUserId user.State.Id user.State.Name
 
         { user with
             UncommittedEvents = user.UncommittedEvents @ [ userDeletedEvent :> IDomainEvent ] }

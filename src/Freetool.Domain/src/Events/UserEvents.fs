@@ -38,6 +38,7 @@ type UserUpdatedEvent =
 
 type UserDeletedEvent =
     { UserId: UserId
+      Name: string // For audit log display (entity is deleted, can't look up)
       OccurredAt: DateTime
       EventId: Guid
       ActorUserId: UserId }
@@ -89,8 +90,9 @@ module UserEvents =
           ActorUserId = actorUserId }
         : UserUpdatedEvent
 
-    let userDeleted (actorUserId: UserId) (userId: UserId) =
+    let userDeleted (actorUserId: UserId) (userId: UserId) (name: string) =
         { UserId = userId
+          Name = name
           OccurredAt = DateTime.UtcNow
           EventId = Guid.NewGuid()
           ActorUserId = actorUserId }

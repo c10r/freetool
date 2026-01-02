@@ -57,16 +57,21 @@ type EventEnhancementService
                             )
 
                         return userEventData.Name
-                    | _ ->
-                        // For update/delete events, try to get name from data or fallback
-                        let jsonDocument = JsonDocument.Parse(eventData)
-                        let root = jsonDocument.RootElement
-                        let mutable nameElement = Unchecked.defaultof<JsonElement>
+                    | UserDeletedEvent ->
+                        let userEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.UserDeletedEvent>(eventData, jsonOptions)
 
-                        if root.TryGetProperty("Name", &nameElement) then
-                            return nameElement.GetString()
-                        else
-                            return "User (Unknown)"
+                        return userEventData.Name
+                    | UserUpdatedEvent ->
+                        // For update events, look up current name from repository
+                        let userEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.UserUpdatedEvent>(eventData, jsonOptions)
+
+                        let! user = userRepository.GetByIdAsync userEventData.UserId
+
+                        match user with
+                        | Some u -> return User.getName u
+                        | None -> return $"User {userEventData.UserId.Value}"
                 | AppEvents appEvent ->
                     match appEvent with
                     | AppCreatedEvent ->
