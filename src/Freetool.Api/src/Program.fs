@@ -19,6 +19,7 @@ open Freetool.Application.DTOs
 open Freetool.Application.Services
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
+open Freetool.Api
 open Freetool.Api.Tracing
 open Freetool.Api.Middleware
 open Freetool.Api.OpenApi
@@ -36,7 +37,7 @@ let private createAndSaveNewStore (connectionString: string) (apiUrl: string) : 
     eprintfn "Created new OpenFGA store with ID: %s" newStoreId
 
     // Save to database for future restarts
-    SettingsStore.set connectionString "OpenFGA:StoreId" newStoreId
+    SettingsStore.set connectionString ConfigurationKeys.OpenFGA.StoreId newStoreId
     eprintfn "Saved OpenFGA store ID to database"
 
     newStoreId
@@ -54,7 +55,7 @@ let private storeExists (apiUrl: string) (storeId: string) : bool =
 /// Returns the store ID to use for the application
 let ensureOpenFgaStore (connectionString: string) (apiUrl: string) (configuredStoreId: string) : string =
     // First, check if we have a store ID saved in the database
-    let dbStoreId = SettingsStore.get connectionString "OpenFGA:StoreId"
+    let dbStoreId = SettingsStore.get connectionString ConfigurationKeys.OpenFGA.StoreId
 
     match dbStoreId with
     | Some storeId when not (System.String.IsNullOrEmpty(storeId)) ->
@@ -81,7 +82,7 @@ let ensureOpenFgaStore (connectionString: string) (apiUrl: string) (configuredSt
             if storeExists apiUrl configuredStoreId then
                 eprintfn "OpenFGA store %s exists, using it and saving to database." configuredStoreId
                 // Save the config store ID to database for future restarts
-                SettingsStore.set connectionString "OpenFGA:StoreId" configuredStoreId
+                SettingsStore.set connectionString ConfigurationKeys.OpenFGA.StoreId configuredStoreId
                 configuredStoreId
             else
                 // Configured store doesn't exist, create a new one
@@ -94,7 +95,7 @@ let main args =
 
     // Detect dev mode from environment variable
     let isDevMode =
-        System.Environment.GetEnvironmentVariable("FREETOOL_DEV_MODE") = "true"
+        System.Environment.GetEnvironmentVariable(ConfigurationKeys.Environment.DevMode) = "true"
 
     if isDevMode then
         eprintfn "[DEV MODE] Running in development mode with user impersonation"
@@ -102,18 +103,16 @@ let main args =
     // Add CORS for dev mode (allows frontend on different port)
     if isDevMode then
         builder.Services.AddCors(fun options ->
-            options.AddPolicy("DevCors", fun policy ->
-                policy
-                    .AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                |> ignore))
+            options.AddPolicy(
+                "DevCors",
+                fun policy -> policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader() |> ignore
+            ))
         |> ignore
 
     // Run database migrations early (before OpenFGA store check)
     // This ensures the Settings table exists for storing the store ID
     let connectionString =
-        builder.Configuration.GetConnectionString("DefaultConnection")
+        builder.Configuration.GetConnectionString(ConfigurationKeys.DefaultConnection)
 
     Persistence.upgradeDatabase connectionString
 
@@ -147,7 +146,7 @@ let main args =
     |> ignore
 
     builder.Services.AddDbContext<FreetoolDbContext>(fun options ->
-        options.UseSqlite(builder.Configuration.GetConnectionString "DefaultConnection")
+        options.UseSqlite(builder.Configuration.GetConnectionString ConfigurationKeys.DefaultConnection)
         |> ignore)
     |> ignore
 
@@ -172,8 +171,8 @@ let main args =
 
     // Ensure OpenFGA store exists before registering the service
     // The store ID is persisted to the database to survive restarts
-    let openFgaApiUrl = builder.Configuration["OpenFGA:ApiUrl"]
-    let configuredStoreId = builder.Configuration["OpenFGA:StoreId"]
+    let openFgaApiUrl = builder.Configuration[ConfigurationKeys.OpenFGA.ApiUrl]
+    let configuredStoreId = builder.Configuration[ConfigurationKeys.OpenFGA.StoreId]
 
     let actualStoreId =
         try
@@ -279,7 +278,7 @@ let main args =
                 .AddAspNetCoreInstrumentation()
                 .AddEntityFrameworkCoreInstrumentation()
                 .AddOtlpExporter(fun options ->
-                    let endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]
+                    let endpoint = builder.Configuration[ConfigurationKeys.Environment.OtlpEndpoint]
 
                     if not (System.String.IsNullOrEmpty(endpoint)) then
                         options.Endpoint <- System.Uri(endpoint)
@@ -339,7 +338,7 @@ let main args =
 
             // Note: Organization admin is now set automatically when the user first logs in
             // via TailscaleAuthMiddleware if their email matches OpenFGA:OrgAdminEmail config
-            let orgAdminEmail = builder.Configuration["OpenFGA:OrgAdminEmail"]
+            let orgAdminEmail = builder.Configuration[ConfigurationKeys.OpenFGA.OrgAdminEmail]
 
             if not (System.String.IsNullOrEmpty(orgAdminEmail)) then
                 eprintfn "Organization admin email configured: %s (will be set when user first logs in)" orgAdminEmail
@@ -371,10 +370,7 @@ let main args =
                     // Then, ensure OpenFGA relationships exist (always runs in dev mode)
                     // This handles the case where OpenFGA store was recreated but database still has users
                     let ensureRelationshipsTask =
-                        DevSeedingService.ensureOpenFgaRelationshipsAsync
-                            userRepository
-                            spaceRepository
-                            authService
+                        DevSeedingService.ensureOpenFgaRelationshipsAsync userRepository spaceRepository authService
 
                     ensureRelationshipsTask |> Async.AwaitTask |> Async.RunSynchronously
                 with ex ->
