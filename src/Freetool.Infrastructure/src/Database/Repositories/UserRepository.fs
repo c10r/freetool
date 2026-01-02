@@ -35,7 +35,7 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
                 return userDatas |> Seq.map (fun data -> User.fromData data) |> Seq.toList
             }
 
-        member _.AddAsync(user: ValidatedUser) : Task<Result<ValidatedUser, DomainError>> =
+        member _.AddAsync(user: ValidatedUser) : Task<Result<unit, DomainError>> =
             task {
                 try
                     // 1. Save user to database
@@ -49,13 +49,13 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
 
                     // 3. Commit everything atomically
                     let! _ = context.SaveChangesAsync()
-                    return Ok user
+                    return Ok()
                 with
                 | :? DbUpdateException as ex -> return Error(Conflict $"Failed to add user: {ex.Message}")
                 | ex -> return Error(InvalidOperation $"Transaction failed: {ex.Message}")
             }
 
-        member _.UpdateAsync(user: ValidatedUser) : Task<Result<ValidatedUser, DomainError>> =
+        member _.UpdateAsync(user: ValidatedUser) : Task<Result<unit, DomainError>> =
             task {
                 try
                     let userId = User.getId user
@@ -74,7 +74,7 @@ type UserRepository(context: FreetoolDbContext, eventRepository: IEventRepositor
                             do! eventRepository.SaveEventAsync event
 
                         let! _ = context.SaveChangesAsync()
-                        return Ok user
+                        return Ok()
                 with
                 | :? DbUpdateException as ex -> return Error(Conflict $"Failed to update user: {ex.Message}")
                 | ex -> return Error(InvalidOperation $"Update transaction failed: {ex.Message}")

@@ -169,8 +169,8 @@ module DevSeedingService =
 
                 match! userRepository.AddAsync adminUser with
                 | Error err -> eprintfn "[DEV MODE] Failed to create admin user: %A" err
-                | Ok savedAdminUser ->
-                    let adminUserId = savedAdminUser.State.Id
+                | Ok() ->
+                    let adminUserId = adminUser.State.Id
                     eprintfn "[DEV MODE] Created admin user: %s" (adminUserId.Value.ToString())
 
                     // Set admin as org admin
@@ -190,8 +190,8 @@ module DevSeedingService =
 
                     match! userRepository.AddAsync moderatorUser with
                     | Error err -> eprintfn "[DEV MODE] Failed to create moderator user: %A" err
-                    | Ok savedModeratorUser ->
-                        let moderatorUserId = savedModeratorUser.State.Id
+                    | Ok() ->
+                        let moderatorUserId = moderatorUser.State.Id
                         eprintfn "[DEV MODE] Created moderator user: %s" (moderatorUserId.Value.ToString())
 
                         // 3. Member user
@@ -204,8 +204,8 @@ module DevSeedingService =
 
                         match! userRepository.AddAsync memberUser with
                         | Error err -> eprintfn "[DEV MODE] Failed to create member user: %A" err
-                        | Ok savedMemberUser ->
-                            let memberUserId = savedMemberUser.State.Id
+                        | Ok() ->
+                            let memberUserId = memberUser.State.Id
                             eprintfn "[DEV MODE] Created member user: %s" (memberUserId.Value.ToString())
 
                             // 4. No permissions user
@@ -218,8 +218,8 @@ module DevSeedingService =
 
                             match! userRepository.AddAsync nopermUser with
                             | Error err -> eprintfn "[DEV MODE] Failed to create noperm user: %A" err
-                            | Ok savedNopermUser ->
-                                let nopermUserId = savedNopermUser.State.Id
+                            | Ok() ->
+                                let nopermUserId = nopermUser.State.Id
                                 eprintfn "[DEV MODE] Created noperm user: %s" (nopermUserId.Value.ToString())
 
                                 // 5. Not a member user - exists but is not a member of any space
@@ -232,8 +232,8 @@ module DevSeedingService =
 
                                 match! userRepository.AddAsync notamemberUser with
                                 | Error err -> eprintfn "[DEV MODE] Failed to create notamember user: %A" err
-                                | Ok savedNotamemberUser ->
-                                    let notamemberUserId = savedNotamemberUser.State.Id
+                                | Ok() ->
+                                    let notamemberUserId = notamemberUser.State.Id
 
                                     eprintfn
                                         "[DEV MODE] Created notamember user: %s"

@@ -84,11 +84,11 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                                     $"Internal Server Error: Failed to create user - {errorMessage}"
 
                             return ()
-                        | Ok user ->
-                            context.Items.["UserId"] <- user.State.Id
+                        | Ok() ->
+                            context.Items.["UserId"] <- newUser.State.Id
                             Tracing.addAttribute currentActivity "tailscale.auth.user_created" "true"
                             Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
-                            Tracing.addAttribute currentActivity "user.id" (user.State.Id.Value.ToString())
+                            Tracing.addAttribute currentActivity "user.id" (newUser.State.Id.Value.ToString())
 
                             // Check if this user should be made org admin
                             let configuration = context.RequestServices.GetRequiredService<IConfiguration>()
@@ -101,7 +101,7 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                                 let authService =
                                     context.RequestServices.GetRequiredService<IAuthorizationService>()
 
-                                let userId = user.State.Id.ToString()
+                                let userId = newUser.State.Id.ToString()
 
                                 try
                                     do! authService.InitializeOrganizationAsync "default" userId
@@ -161,11 +161,11 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                                         $"Internal Server Error: Failed to save activated user - {errorMessage}"
 
                                 return ()
-                            | Ok savedUser ->
-                                context.Items.["UserId"] <- savedUser.State.Id
+                            | Ok() ->
+                                context.Items.["UserId"] <- activatedUser.State.Id
                                 Tracing.addAttribute currentActivity "tailscale.auth.user_activated" "true"
                                 Tracing.addAttribute currentActivity "tailscale.auth.user_email" userEmail
-                                Tracing.addAttribute currentActivity "user.id" (savedUser.State.Id.Value.ToString())
+                                Tracing.addAttribute currentActivity "user.id" (activatedUser.State.Id.Value.ToString())
 
                                 // Check if this user should be made org admin (same as new user flow)
                                 let configuration = context.RequestServices.GetRequiredService<IConfiguration>()
@@ -178,7 +178,7 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                                     let authService =
                                         context.RequestServices.GetRequiredService<IAuthorizationService>()
 
-                                    let userId = savedUser.State.Id.ToString()
+                                    let userId = activatedUser.State.Id.ToString()
 
                                     try
                                         do! authService.InitializeOrganizationAsync "default" userId

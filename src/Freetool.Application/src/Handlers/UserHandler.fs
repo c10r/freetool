@@ -38,7 +38,7 @@ module UserHandler =
                     // Save user and events atomically
                     match! userRepository.AddAsync eventAwareUser with
                     | Error error -> return Error error
-                    | Ok(user) -> return Ok(UserResult(user.State))
+                    | Ok() -> return Ok(UserResult(eventAwareUser.State))
 
             | DeleteUser(actorUserId, userId) ->
                 match Guid.TryParse userId with
@@ -75,7 +75,7 @@ module UserHandler =
                             // Save user and events atomically
                             match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok(user) -> return Ok(UserResult(user.State))
+                            | Ok() -> return Ok(UserResult(updatedUser.State))
 
             | UpdateUserEmail(actorUserId, userId, dto) ->
                 match Guid.TryParse userId with
@@ -94,7 +94,7 @@ module UserHandler =
                             // Save user and events atomically
                             match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok(user) -> return Ok(UserResult(user.State))
+                            | Ok() -> return Ok(UserResult(updatedUser.State))
 
             | SetProfilePicture(actorUserId, userId, dto) ->
                 match Guid.TryParse userId with
@@ -113,7 +113,7 @@ module UserHandler =
                             // Save user and events atomically
                             match! userRepository.UpdateAsync updatedUser with
                             | Error error -> return Error error
-                            | Ok(user) -> return Ok(UserResult(user.State))
+                            | Ok() -> return Ok(UserResult(updatedUser.State))
 
             | RemoveProfilePicture(actorUserId, userId) ->
                 match Guid.TryParse userId with
@@ -131,7 +131,7 @@ module UserHandler =
                         // Save user and events atomically
                         match! userRepository.UpdateAsync updatedUser with
                         | Error error -> return Error error
-                        | Ok(user) -> return Ok(UserResult(user.State))
+                        | Ok() -> return Ok(UserResult(updatedUser.State))
 
             | GetUserById userId ->
                 match Guid.TryParse userId with
@@ -192,7 +192,7 @@ module UserHandler =
 
                         match! userRepository.AddAsync invitedUser with
                         | Error error -> return Error error
-                        | Ok(user) -> return Ok(UserResult(user.State))
+                        | Ok() -> return Ok(UserResult(invitedUser.State))
         }
 
 type UserHandler(userRepository: IUserRepository) =
