@@ -25,6 +25,69 @@ open Freetool.Api.Middleware
 open Freetool.Api.OpenApi
 open Freetool.Api.Services
 
+/// Validates that all EventType cases can be serialized and deserialized consistently.
+/// This catches bugs where a new event type is added to the DU but not to fromString.
+let private validateEventTypeRegistry () =
+    // List all known event types that should be registered
+    let allEventTypes =
+        [ // User events
+          EventType.UserEvents UserCreatedEvent
+          EventType.UserEvents UserUpdatedEvent
+          EventType.UserEvents UserDeletedEvent
+          EventType.UserEvents UserInvitedEvent
+          EventType.UserEvents UserActivatedEvent
+          // App events
+          EventType.AppEvents AppCreatedEvent
+          EventType.AppEvents AppUpdatedEvent
+          EventType.AppEvents AppDeletedEvent
+          EventType.AppEvents AppRestoredEvent
+          // Resource events
+          EventType.ResourceEvents ResourceCreatedEvent
+          EventType.ResourceEvents ResourceUpdatedEvent
+          EventType.ResourceEvents ResourceDeletedEvent
+          EventType.ResourceEvents ResourceRestoredEvent
+          // Folder events
+          EventType.FolderEvents FolderCreatedEvent
+          EventType.FolderEvents FolderUpdatedEvent
+          EventType.FolderEvents FolderDeletedEvent
+          EventType.FolderEvents FolderRestoredEvent
+          // Run events
+          EventType.RunEvents RunCreatedEvent
+          EventType.RunEvents RunStatusChangedEvent
+          // Space events
+          EventType.SpaceEvents SpaceCreatedEvent
+          EventType.SpaceEvents SpaceUpdatedEvent
+          EventType.SpaceEvents SpaceDeletedEvent ]
+
+    let mutable hasErrors = false
+
+    for eventType in allEventTypes do
+        let serialized = EventTypeConverter.toString eventType
+        let deserialized = EventTypeConverter.fromString serialized
+
+        match deserialized with
+        | None ->
+            eprintfn
+                "ERROR: EventTypeConverter.fromString cannot parse '%s' (from %A). Add it to EventTypeConverter.fromString."
+                serialized
+                eventType
+
+            hasErrors <- true
+        | Some parsed when parsed <> eventType ->
+            eprintfn
+                "ERROR: EventTypeConverter round-trip failed for %A: serialized='%s', deserialized=%A"
+                eventType
+                serialized
+                parsed
+
+            hasErrors <- true
+        | Some _ -> ()
+
+    if hasErrors then
+        failwith "EventType registry validation failed. See errors above."
+    else
+        eprintfn "EventType registry validation passed (%d event types)." allEventTypes.Length
+
 /// Creates a new OpenFGA store and saves the ID to the database
 let private createAndSaveNewStore (connectionString: string) (apiUrl: string) : string =
     let tempService = OpenFgaService(apiUrl)
@@ -115,6 +178,9 @@ let main args =
         builder.Configuration.GetConnectionString(ConfigurationKeys.DefaultConnection)
 
     Persistence.upgradeDatabase connectionString
+
+    // Validate that all EventType cases are properly registered
+    validateEventTypeRegistry ()
 
     // Add services to the container
     builder.Services

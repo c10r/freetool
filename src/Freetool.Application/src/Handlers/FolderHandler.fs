@@ -24,7 +24,8 @@ module FolderHandler =
                     FolderName.Create(Some(Folder.getName validatedFolder))
                     |> function
                         | Ok n -> n
-                        | Error _ -> failwith "ValidatedFolder should have valid name"
+                        | Error err ->
+                            failwith $"Invariant violation: ValidatedFolder should have valid name, but got: {err}"
 
                 let parentId = Folder.getParentId validatedFolder
                 let! existsByNameInParent = folderRepository.ExistsByNameInParentAsync folderName parentId
@@ -146,7 +147,9 @@ module FolderHandler =
                                         FolderName.Create(Some(Folder.getName folder))
                                         |> function
                                             | Ok n -> n
-                                            | Error _ -> failwith "Folder should have valid name"
+                                            | Error err ->
+                                                failwith
+                                                    $"Invariant violation: Folder from repository should have valid name, but got: {err}"
 
                                     let! existsByNameInParent =
                                         folderRepository.ExistsByNameInParentAsync folderName newParentId
@@ -169,7 +172,9 @@ module FolderHandler =
                                     FolderName.Create(Some(Folder.getName folder))
                                     |> function
                                         | Ok n -> n
-                                        | Error _ -> failwith "Folder should have valid name"
+                                        | Error err ->
+                                            failwith
+                                                $"Invariant violation: Folder from repository should have valid name, but got: {err}"
 
                                 let! existsByNameInParent = folderRepository.ExistsByNameInParentAsync folderName None
 

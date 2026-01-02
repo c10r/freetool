@@ -118,75 +118,83 @@ type AppController
     member this.CreateApp([<FromBody>] createDto: CreateAppDto) : Task<IActionResult> =
         task {
             let userId = this.CurrentUserId
-            let createRequest = AppMapper.fromCreateDto createDto
 
-            let urlPathValidation =
-                match createDto.UrlPath with
-                | Some urlPath when urlPath.Length > 500 ->
-                    Error(ValidationError "URL path cannot exceed 500 characters")
-                | _ -> Ok()
+            // Parse and validate the DTO (including input types)
+            match AppMapper.fromCreateDto createDto with
+            | Error error -> return this.HandleDomainError(error)
+            | Ok createRequest ->
 
-            let folderIdResult =
-                match System.Guid.TryParse createRequest.FolderId with
-                | true, guid -> Ok(FolderId.FromGuid(guid))
-                | false, _ -> Error(ValidationError "Invalid folder ID format")
+                let urlPathValidation =
+                    match createDto.UrlPath with
+                    | Some urlPath when urlPath.Length > 500 ->
+                        Error(ValidationError "URL path cannot exceed 500 characters")
+                    | _ -> Ok()
 
-            let resourceIdResult =
-                match System.Guid.TryParse createRequest.ResourceId with
-                | true, guid -> Ok(ResourceId.FromGuid(guid))
-                | false, _ -> Error(ValidationError "Invalid resource ID format")
+                let folderIdResult =
+                    match System.Guid.TryParse createRequest.FolderId with
+                    | true, guid -> Ok(FolderId.FromGuid(guid))
+                    | false, _ -> Error(ValidationError "Invalid folder ID format")
 
-            match folderIdResult, resourceIdResult, urlPathValidation with
-            | Error error, _, _ -> return this.HandleDomainError(error)
-            | _, Error error, _ -> return this.HandleDomainError(error)
-            | _, _, Error error -> return this.HandleDomainError(error)
-            | Ok folderId, Ok resourceId, Ok _ ->
-                // Check authorization: user must have create_app permission on the space
-                let! spaceIdResult = this.GetSpaceIdFromFolder folderId
+                let resourceIdResult =
+                    match System.Guid.TryParse createRequest.ResourceId with
+                    | true, guid -> Ok(ResourceId.FromGuid(guid))
+                    | false, _ -> Error(ValidationError "Invalid resource ID format")
 
-                match spaceIdResult with
-                | Error error -> return this.HandleDomainError(error)
-                | Ok spaceId ->
-                    let! authResult = this.CheckAuthorization spaceId AppCreate
+                match folderIdResult, resourceIdResult, urlPathValidation with
+                | Error error, _, _ -> return this.HandleDomainError(error)
+                | _, Error error, _ -> return this.HandleDomainError(error)
+                | _, _, Error error -> return this.HandleDomainError(error)
+                | Ok folderId, Ok resourceId, Ok _ ->
+                    // Check authorization: user must have create_app permission on the space
+                    let! spaceIdResult = this.GetSpaceIdFromFolder folderId
 
-                    match authResult with
-                    | Error _ -> return this.HandleAuthorizationError()
-                    | Ok() ->
-                        // Fetch the resource to validate against
-                        let! resourceOption = resourceRepository.GetByIdAsync resourceId
+                    match spaceIdResult with
+                    | Error error -> return this.HandleDomainError(error)
+                    | Ok spaceId ->
+                        let! authResult = this.CheckAuthorization spaceId AppCreate
 
-                        match resourceOption with
-                        | None -> return this.HandleDomainError(NotFound "Resource not found")
-                        | Some resource ->
-                            // Parse and validate HTTP method
-                            match HttpMethod.Create(createRequest.HttpMethod) with
-                            | Error err -> return this.HandleDomainError(err)
-                            | Ok validHttpMethod ->
-                                // Use Domain method that enforces no-override business rule
-                                match
-                                    App.createWithResource
-                                        userId
-                                        createRequest.Name
-                                        folderId
-                                        resource
-                                        validHttpMethod
-                                        createRequest.Inputs
-                                        createRequest.UrlPath
-                                        createRequest.UrlParameters
-                                        createRequest.Headers
-                                        createRequest.Body
-                                with
-                                | Error domainError -> return this.HandleDomainError(domainError)
-                                | Ok validatedApp ->
-                                    let! result = commandHandler.HandleCommand(CreateApp(userId, validatedApp))
+                        match authResult with
+                        | Error _ -> return this.HandleAuthorizationError()
+                        | Ok() ->
+                            // Fetch the resource to validate against
+                            let! resourceOption = resourceRepository.GetByIdAsync resourceId
 
-                                    return
-                                        match result with
-                                        | Ok(AppResult appDto) ->
-                                            this.CreatedAtAction(nameof this.GetAppById, {| id = appDto.Id |}, appDto)
-                                            :> IActionResult
-                                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                                        | Error error -> this.HandleDomainError(error)
+                            match resourceOption with
+                            | None -> return this.HandleDomainError(NotFound "Resource not found")
+                            | Some resource ->
+                                // Parse and validate HTTP method
+                                match HttpMethod.Create(createRequest.HttpMethod) with
+                                | Error err -> return this.HandleDomainError(err)
+                                | Ok validHttpMethod ->
+                                    // Use Domain method that enforces no-override business rule
+                                    match
+                                        App.createWithResource
+                                            userId
+                                            createRequest.Name
+                                            folderId
+                                            resource
+                                            validHttpMethod
+                                            createRequest.Inputs
+                                            createRequest.UrlPath
+                                            createRequest.UrlParameters
+                                            createRequest.Headers
+                                            createRequest.Body
+                                    with
+                                    | Error domainError -> return this.HandleDomainError(domainError)
+                                    | Ok validatedApp ->
+                                        let! result = commandHandler.HandleCommand(CreateApp(userId, validatedApp))
+
+                                        return
+                                            match result with
+                                            | Ok(AppResult appDto) ->
+                                                this.CreatedAtAction(
+                                                    nameof this.GetAppById,
+                                                    {| id = appDto.Id |},
+                                                    appDto
+                                                )
+                                                :> IActionResult
+                                            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                                            | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpGet("{id}")>]

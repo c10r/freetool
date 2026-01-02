@@ -24,7 +24,8 @@ module AppHandler =
                     AppName.Create(Some(App.getName validatedApp))
                     |> function
                         | Ok name -> name
-                        | Error _ -> failwith "ValidatedApp should have valid name"
+                        | Error err ->
+                            failwith $"Invariant violation: ValidatedApp should have valid name, but got: {err}"
 
                 let folderId = App.getFolderId validatedApp
 
@@ -91,16 +92,20 @@ module AppHandler =
                     match appOption with
                     | None -> return Error(NotFound "App not found")
                     | Some app ->
-                        let inputs = dto.Inputs |> List.map AppMapper.inputFromDto
-
-                        // Update inputs using domain method (automatically creates event)
-                        match App.updateInputs actorUserId inputs app with
+                        // Parse and validate inputs from DTO
+                        match AppMapper.fromUpdateInputsDto dto app with
                         | Error error -> return Error error
-                        | Ok updatedApp ->
-                            // Save app and events atomically
-                            match! appRepository.UpdateAsync updatedApp with
+                        | Ok unvalidatedApp ->
+                            let inputs = unvalidatedApp.State.Inputs
+
+                            // Update inputs using domain method (automatically creates event)
+                            match App.updateInputs actorUserId inputs app with
                             | Error error -> return Error error
-                            | Ok() -> return Ok(AppResult(updatedApp.State))
+                            | Ok updatedApp ->
+                                // Save app and events atomically
+                                match! appRepository.UpdateAsync updatedApp with
+                                | Error error -> return Error error
+                                | Ok() -> return Ok(AppResult(updatedApp.State))
 
             | GetAppById appId ->
                 match Guid.TryParse appId with

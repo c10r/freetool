@@ -25,7 +25,8 @@ module ResourceHandler =
                     ResourceName.Create(Some(Resource.getName validatedResource))
                     |> function
                         | Ok n -> n
-                        | Error _ -> failwith "ValidatedResource should have valid name"
+                        | Error err ->
+                            failwith $"Invariant violation: ValidatedResource should have valid name, but got: {err}"
 
                 let spaceId = Resource.getSpaceId validatedResource
                 let! existsByName = resourceRepository.CheckNameConflictAsync resourceName spaceId

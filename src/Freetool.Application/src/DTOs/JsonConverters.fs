@@ -47,7 +47,7 @@ type HttpMethodConverter() =
 
         match HttpMethod.Create(methodStr) with
         | Ok httpMethod -> httpMethod
-        | Error _ -> failwith $"Invalid HTTP method: {methodStr}"
+        | Error _ -> raise (JsonException($"Invalid HTTP method: {methodStr}"))
 
     override _.Write(writer: Utf8JsonWriter, value: HttpMethod, _options: JsonSerializerOptions) =
         writer.WriteStringValue(value.ToString())
@@ -60,7 +60,7 @@ type EventTypeConverter() =
 
         match Freetool.Domain.Entities.EventTypeConverter.fromString (eventTypeStr) with
         | Some eventType -> eventType
-        | None -> failwith $"Invalid event type: {eventTypeStr}"
+        | None -> raise (JsonException($"Invalid event type: {eventTypeStr}"))
 
     override _.Write(writer: Utf8JsonWriter, value: EventType, _options: JsonSerializerOptions) =
         writer.WriteStringValue(Freetool.Domain.Entities.EventTypeConverter.toString (value))
@@ -73,7 +73,7 @@ type EntityTypeConverter() =
 
         match Freetool.Domain.Entities.EntityTypeConverter.fromString (entityTypeStr) with
         | Some entityType -> entityType
-        | None -> failwith $"Invalid entity type: {entityTypeStr}"
+        | None -> raise (JsonException($"Invalid entity type: {entityTypeStr}"))
 
     override _.Write(writer: Utf8JsonWriter, value: EntityType, _options: JsonSerializerOptions) =
         writer.WriteStringValue(Freetool.Domain.Entities.EntityTypeConverter.toString (value))
@@ -83,7 +83,7 @@ type KeyValuePairConverter() =
 
     override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
         if reader.TokenType <> JsonTokenType.StartObject then
-            failwith "Expected start of object for KeyValuePair"
+            raise (JsonException("Expected start of object for KeyValuePair"))
 
         let mutable key = ""
         let mutable value = ""
@@ -103,7 +103,7 @@ type KeyValuePairConverter() =
 
         match KeyValuePair.Create(key, value) with
         | Ok kvp -> kvp
-        | Error err -> failwith $"Failed to create KeyValuePair: {err}"
+        | Error err -> raise (JsonException($"Failed to create KeyValuePair: {err}"))
 
     override _.Write(writer: Utf8JsonWriter, value: KeyValuePair, _options: JsonSerializerOptions) =
         writer.WriteStartObject()

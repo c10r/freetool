@@ -23,7 +23,8 @@ module UserHandler =
                     Email.Create(Some(User.getEmail validatedUser))
                     |> function
                         | Ok e -> e
-                        | Error _ -> failwith "ValidatedUser should have valid email"
+                        | Error err ->
+                            failwith $"Invariant violation: ValidatedUser should have valid email, but got: {err}"
 
                 let! existsByEmail = userRepository.ExistsByEmailAsync email
 

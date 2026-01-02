@@ -5,8 +5,19 @@ open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
 open Freetool.Application.DTOs
+open Freetool.Domain
 
 module AppMapper =
+    /// Combine a list of Results into a Result containing a list
+    let private sequenceResults (results: Result<'T, DomainError> list) : Result<'T list, DomainError> =
+        let folder acc item =
+            match acc, item with
+            | Ok items, Ok item -> Ok(item :: items)
+            | Error e, _ -> Error e
+            | _, Error e -> Error e
+
+        results |> List.fold folder (Ok []) |> Result.map List.rev
+
     let rec inputTypeToDtoType (inputType: InputType) : InputTypeDto =
         match inputType.Value with
         | InputTypeValue.Email -> Email
@@ -24,46 +35,46 @@ module AppMapper =
             MultiText(MaxLength = maxLength, AllowedValues = allowedValues)
         | InputTypeValue.MultiInteger allowedIntegers -> MultiInteger(AllowedIntegers = allowedIntegers)
 
-    let rec inputTypeFromDtoType (inputTypeDto: InputTypeDto) : InputType =
+    let rec inputTypeFromDtoType (inputTypeDto: InputTypeDto) : Result<InputType, DomainError> =
         match inputTypeDto with
-        | Email -> InputType.Email()
-        | Date -> InputType.Date()
+        | Email -> Ok(InputType.Email())
+        | Date -> Ok(InputType.Date())
         | Text maxLength ->
-            match InputType.Text(maxLength) with
-            | Ok inputType -> inputType
-            | Error _ -> failwith (sprintf "Invalid text max length: %d" maxLength)
-        | Integer -> InputType.Integer()
-        | Boolean -> InputType.Boolean()
+            InputType.Text(maxLength)
+            |> Result.mapError (fun _ -> ValidationError $"Invalid text max length: {maxLength}")
+        | Integer -> Ok(InputType.Integer())
+        | Boolean -> Ok(InputType.Boolean())
         | MultiEmail emailStrings ->
-            let emails =
+            let emailResults =
                 emailStrings
                 |> List.map (fun emailStr ->
-                    match Email.Create(Some emailStr) with
-                    | Ok email -> email
-                    | Error _ -> failwith (sprintf "Invalid email: %s" emailStr))
+                    Email.Create(Some emailStr)
+                    |> Result.mapError (fun _ -> ValidationError $"Invalid email: {emailStr}"))
 
-            match InputType.MultiEmail(emails) with
-            | Ok inputType -> inputType
-            | Error _ -> failwith "Invalid MultiEmail configuration"
+            emailResults
+            |> sequenceResults
+            |> Result.bind (fun emails ->
+                InputType.MultiEmail(emails)
+                |> Result.mapError (fun _ -> ValidationError "Invalid MultiEmail configuration"))
         | MultiDate dateStrings ->
-            let dates =
+            let dateResults =
                 dateStrings
                 |> List.map (fun dateStr ->
                     match DateTime.TryParse(dateStr) with
-                    | (true, date) -> date
-                    | (false, _) -> failwith (sprintf "Invalid date: %s" dateStr))
+                    | (true, date) -> Ok date
+                    | (false, _) -> Error(ValidationError $"Invalid date: {dateStr}"))
 
-            match InputType.MultiDate(dates) with
-            | Ok inputType -> inputType
-            | Error _ -> failwith "Invalid MultiDate configuration"
+            dateResults
+            |> sequenceResults
+            |> Result.bind (fun dates ->
+                InputType.MultiDate(dates)
+                |> Result.mapError (fun _ -> ValidationError "Invalid MultiDate configuration"))
         | MultiText(maxLength, allowedValues) ->
-            match InputType.MultiText(maxLength, allowedValues) with
-            | Ok inputType -> inputType
-            | Error _ -> failwith "Invalid MultiText configuration"
+            InputType.MultiText(maxLength, allowedValues)
+            |> Result.mapError (fun _ -> ValidationError "Invalid MultiText configuration")
         | MultiInteger allowedIntegers ->
-            match InputType.MultiInteger(allowedIntegers) with
-            | Ok inputType -> inputType
-            | Error _ -> failwith "Invalid MultiInteger configuration"
+            InputType.MultiInteger(allowedIntegers)
+            |> Result.mapError (fun _ -> ValidationError "Invalid MultiInteger configuration")
 
     let inputToDto (input: Input) : AppInputDto =
         { Input =
@@ -71,10 +82,12 @@ module AppMapper =
               Type = inputTypeToDtoType input.Type }
           Required = input.Required }
 
-    let inputFromDto (inputDto: AppInputDto) : Input =
-        { Title = inputDto.Input.Title
-          Type = inputTypeFromDtoType inputDto.Input.Type
-          Required = inputDto.Required }
+    let inputFromDto (inputDto: AppInputDto) : Result<Input, DomainError> =
+        inputTypeFromDtoType inputDto.Input.Type
+        |> Result.map (fun inputType ->
+            { Title = inputDto.Input.Title
+              Type = inputType
+              Required = inputDto.Required })
 
     let keyValuePairToDto (kvp: KeyValuePair) : KeyValuePairDto = { Key = kvp.Key; Value = kvp.Value }
 
@@ -91,21 +104,24 @@ module AppMapper =
           Headers: (string * string) list
           Body: (string * string) list }
 
-    let fromCreateDto (dto: CreateAppDto) : CreateAppRequest =
-        let inputs = dto.Inputs |> List.map inputFromDto
-        let urlParameters = dto.UrlParameters |> List.map keyValuePairFromDto
-        let headers = dto.Headers |> List.map keyValuePairFromDto
-        let body = dto.Body |> List.map keyValuePairFromDto
+    let fromCreateDto (dto: CreateAppDto) : Result<CreateAppRequest, DomainError> =
+        dto.Inputs
+        |> List.map inputFromDto
+        |> sequenceResults
+        |> Result.map (fun inputs ->
+            let urlParameters = dto.UrlParameters |> List.map keyValuePairFromDto
+            let headers = dto.Headers |> List.map keyValuePairFromDto
+            let body = dto.Body |> List.map keyValuePairFromDto
 
-        { Name = dto.Name
-          FolderId = dto.FolderId
-          ResourceId = dto.ResourceId
-          HttpMethod = dto.HttpMethod
-          Inputs = inputs
-          UrlPath = dto.UrlPath
-          UrlParameters = urlParameters
-          Headers = headers
-          Body = body }
+            { Name = dto.Name
+              FolderId = dto.FolderId
+              ResourceId = dto.ResourceId
+              HttpMethod = dto.HttpMethod
+              Inputs = inputs
+              UrlPath = dto.UrlPath
+              UrlParameters = urlParameters
+              Headers = headers
+              Body = body })
 
     let fromUpdateNameDto (dto: UpdateAppNameDto) (app: ValidatedApp) : UnvalidatedApp =
         { State =
@@ -114,11 +130,13 @@ module AppMapper =
                 UpdatedAt = DateTime.UtcNow }
           UncommittedEvents = app.UncommittedEvents }
 
-    let fromUpdateInputsDto (dto: UpdateAppInputsDto) (app: ValidatedApp) : UnvalidatedApp =
-        let inputs = dto.Inputs |> List.map inputFromDto
-
-        { State =
-            { app.State with
-                Inputs = inputs
-                UpdatedAt = DateTime.UtcNow }
-          UncommittedEvents = app.UncommittedEvents }
+    let fromUpdateInputsDto (dto: UpdateAppInputsDto) (app: ValidatedApp) : Result<UnvalidatedApp, DomainError> =
+        dto.Inputs
+        |> List.map inputFromDto
+        |> sequenceResults
+        |> Result.map (fun inputs ->
+            { State =
+                { app.State with
+                    Inputs = inputs
+                    UpdatedAt = DateTime.UtcNow }
+              UncommittedEvents = app.UncommittedEvents })

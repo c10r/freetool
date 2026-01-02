@@ -10,7 +10,9 @@ type AuthenticatedControllerBase() =
     member this.CurrentUserId: UserId =
         match this.HttpContext.Items.TryGetValue "UserId" with
         | true, userIdObj when userIdObj <> null -> userIdObj :?> UserId
-        | _ -> failwith "User not authenticated"
+        | _ ->
+            invalidOp
+                "User not authenticated. This indicates a middleware configuration error - authentication middleware should have rejected unauthenticated requests."
 
     [<NonAction>]
     member this.TryGetCurrentUserId() : UserId option =
