@@ -53,51 +53,68 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
             task {
                 let! spaceDatas = context.Spaces.OrderBy(fun s -> s.CreatedAt).Skip(skip).Take(take).ToListAsync()
 
-                let! spacesWithMembers =
-                    spaceDatas
-                    |> Seq.map (fun data ->
-                        task {
-                            let spaceId = data.Id
+                if spaceDatas.Count = 0 then
+                    return []
+                else
+                    // Batch load ALL SpaceMembers for these spaces in ONE query
+                    let spaceIds = spaceDatas |> Seq.map (fun s -> s.Id) |> Seq.toList
 
-                            let! spaceMemberEntities =
-                                context.SpaceMembers.Where(fun sm -> sm.SpaceId = spaceId).ToListAsync()
+                    let! allSpaceMembers =
+                        context.SpaceMembers.Where(fun sm -> spaceIds.Contains(sm.SpaceId)).ToListAsync()
 
-                            let memberIds = spaceMemberEntities |> Seq.map (fun sm -> sm.UserId) |> Seq.toList
-                            data.MemberIds <- memberIds
-                            return Space.fromData data
-                        })
-                    |> Task.WhenAll
+                    // Group by SpaceId for O(1) lookup
+                    let membersBySpaceId =
+                        allSpaceMembers
+                        |> Seq.groupBy (fun sm -> sm.SpaceId)
+                        |> Seq.map (fun (spaceId, members) ->
+                            (spaceId, members |> Seq.map (fun sm -> sm.UserId) |> Seq.toList))
+                        |> Map.ofSeq
 
-                return spacesWithMembers |> Array.toList
+                    return
+                        spaceDatas
+                        |> Seq.map (fun data ->
+                            data.MemberIds <- membersBySpaceId |> Map.tryFind data.Id |> Option.defaultValue []
+
+                            Space.fromData data)
+                        |> Seq.toList
             }
 
         member _.GetByUserIdAsync(userId: UserId) : Task<ValidatedSpace list> =
             task {
-                // Find all spaces where the user is a member
-                let! spaceMemberEntities = context.SpaceMembers.Where(fun sm -> sm.UserId = userId).ToListAsync()
+                // Find all space IDs where the user is a member
+                let! userSpaceMemberEntities = context.SpaceMembers.Where(fun sm -> sm.UserId = userId).ToListAsync()
 
-                let! spacesWithMembers =
-                    spaceMemberEntities
-                    |> Seq.map (fun spaceMember ->
-                        task {
-                            let spaceId = spaceMember.SpaceId
-                            let! spaceData = context.Spaces.FirstOrDefaultAsync(fun s -> s.Id = spaceId)
+                if userSpaceMemberEntities.Count = 0 then
+                    return []
+                else
+                    let spaceIds =
+                        userSpaceMemberEntities |> Seq.map (fun sm -> sm.SpaceId) |> Seq.toList
 
-                            match Option.ofObj spaceData with
-                            | Some data ->
-                                let! allSpaceMembersForSpace =
-                                    context.SpaceMembers.Where(fun sm -> sm.SpaceId = data.Id).ToListAsync()
+                    // Batch load Spaces and SpaceMembers (run in parallel)
+                    let spacesTask =
+                        context.Spaces.Where(fun s -> spaceIds.Contains(s.Id)).ToListAsync()
 
-                                let memberIds =
-                                    allSpaceMembersForSpace |> Seq.map (fun sm -> sm.UserId) |> Seq.toList
+                    let allMembersTask =
+                        context.SpaceMembers.Where(fun sm -> spaceIds.Contains(sm.SpaceId)).ToListAsync()
 
-                                data.MemberIds <- memberIds
-                                return Some(Space.fromData data)
-                            | None -> return None
-                        })
-                    |> Task.WhenAll
+                    let! spaceDatas = spacesTask
+                    let! allSpaceMembers = allMembersTask
 
-                return spacesWithMembers |> Array.choose id |> Array.toList
+                    // Group by SpaceId for O(1) lookup
+                    let membersBySpaceId =
+                        allSpaceMembers
+                        |> Seq.groupBy (fun sm -> sm.SpaceId)
+                        |> Seq.map (fun (spaceId, members) ->
+                            (spaceId, members |> Seq.map (fun sm -> sm.UserId) |> Seq.toList))
+                        |> Map.ofSeq
+
+                    return
+                        spaceDatas
+                        |> Seq.map (fun data ->
+                            data.MemberIds <- membersBySpaceId |> Map.tryFind data.Id |> Option.defaultValue []
+
+                            Space.fromData data)
+                        |> Seq.toList
             }
 
         member _.GetByModeratorUserIdAsync(moderatorUserId: UserId) : Task<ValidatedSpace list> =
@@ -108,22 +125,30 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                         .OrderBy(fun s -> s.CreatedAt)
                         .ToListAsync()
 
-                let! spacesWithMembers =
-                    spaceDatas
-                    |> Seq.map (fun data ->
-                        task {
-                            let spaceId = data.Id
+                if spaceDatas.Count = 0 then
+                    return []
+                else
+                    // Batch load ALL SpaceMembers for these spaces in ONE query
+                    let spaceIds = spaceDatas |> Seq.map (fun s -> s.Id) |> Seq.toList
 
-                            let! spaceMemberEntities =
-                                context.SpaceMembers.Where(fun sm -> sm.SpaceId = spaceId).ToListAsync()
+                    let! allSpaceMembers =
+                        context.SpaceMembers.Where(fun sm -> spaceIds.Contains(sm.SpaceId)).ToListAsync()
 
-                            let memberIds = spaceMemberEntities |> Seq.map (fun sm -> sm.UserId) |> Seq.toList
-                            data.MemberIds <- memberIds
-                            return Space.fromData data
-                        })
-                    |> Task.WhenAll
+                    // Group by SpaceId for O(1) lookup
+                    let membersBySpaceId =
+                        allSpaceMembers
+                        |> Seq.groupBy (fun sm -> sm.SpaceId)
+                        |> Seq.map (fun (spaceId, members) ->
+                            (spaceId, members |> Seq.map (fun sm -> sm.UserId) |> Seq.toList))
+                        |> Map.ofSeq
 
-                return spacesWithMembers |> Array.toList
+                    return
+                        spaceDatas
+                        |> Seq.map (fun data ->
+                            data.MemberIds <- membersBySpaceId |> Map.tryFind data.Id |> Option.defaultValue []
+
+                            Space.fromData data)
+                        |> Seq.toList
             }
 
         member _.AddAsync(space: ValidatedSpace) : Task<Result<unit, DomainError>> =
