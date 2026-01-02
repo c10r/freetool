@@ -1,9 +1,9 @@
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import {
+  getDevUserId,
   getDevUsers,
   isDevModeEnabled,
-  getDevUserId,
   setDevUserId,
 } from "@/api/api";
 
@@ -55,16 +55,23 @@ function DevUserSelector() {
     queryFn: getDevUsers,
   });
 
-  console.log("[DEV] DevUserSelector: query state", { isLoading, error, users });
+  console.log("[DEV] DevUserSelector: query state", {
+    isLoading,
+    error,
+    users,
+  });
 
   // Auto-select first user when users are loaded
   useEffect(() => {
     console.log("[DEV] DevUserSelector useEffect: users =", users);
     if (users && users.length > 0) {
-      console.log("[DEV] DevUserSelector: auto-selecting first user:", users[0]);
+      console.log(
+        "[DEV] DevUserSelector: auto-selecting first user:",
+        users[0]
+      );
       setDevUserId(users[0].id);
-      console.log("[DEV] DevUserSelector: reloading page...");
-      window.location.reload();
+      console.log("[DEV] DevUserSelector: navigating to /freetool...");
+      window.location.href = "/freetool";
     }
   }, [users]);
 

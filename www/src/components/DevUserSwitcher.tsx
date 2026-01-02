@@ -38,13 +38,13 @@ function DevUserSwitcherContent() {
   useEffect(() => {
     if (users && users.length > 0 && !currentUserId) {
       setDevUserId(users[0].id);
-      window.location.reload();
+      window.location.href = "/freetool";
     }
   }, [users, currentUserId]);
 
   const handleUserChange = (userId: string) => {
     setDevUserId(userId);
-    window.location.reload();
+    window.location.href = "/freetool";
   };
 
   if (isLoading || (!currentUserId && users)) {
