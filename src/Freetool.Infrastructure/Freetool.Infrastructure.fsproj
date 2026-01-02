@@ -55,7 +55,6 @@
     <Compile Include="src/Database/Repositories/AppRepository.fs" />
     <Compile Include="src/Database/Repositories/EventRepository.fs" />
     <Compile Include="src/Database/Repositories/RunRepository.fs" />
-    <Compile Include="src/Services/EventPublisher.fs" />
     <Compile Include="src/Services/OpenFgaService.fs" />
   </ItemGroup>
 

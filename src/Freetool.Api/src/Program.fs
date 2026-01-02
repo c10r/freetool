@@ -255,8 +255,6 @@ let main args =
     builder.Services.AddScoped<IAppRepository, AppRepository>() |> ignore
     builder.Services.AddScoped<IRunRepository, RunRepository>() |> ignore
     builder.Services.AddScoped<IEventRepository, EventRepository>() |> ignore
-    builder.Services.AddScoped<IEventPublisher, EventPublisher>() |> ignore
-
     // Ensure OpenFGA store exists before registering the service
     // The store ID is persisted to the database to survive restarts
     let openFgaApiUrl = builder.Configuration[ConfigurationKeys.OpenFGA.ApiUrl]

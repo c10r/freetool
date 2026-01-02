@@ -33,7 +33,6 @@
     <Compile Include="src/Interfaces/IFolderRepository.fs" />
     <Compile Include="src/Interfaces/IAppRepository.fs" />
     <Compile Include="src/Interfaces/IEventRepository.fs" />
-    <Compile Include="src/Interfaces/IEventPublisher.fs" />
     <Compile Include="src/Interfaces/IRunRepository.fs" />
     <Compile Include="src/Interfaces/IAuthorizationService.fs" />
     <Compile Include="src/Interfaces/IGenericCommandHandler.fs" />
