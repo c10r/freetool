@@ -3,6 +3,7 @@ namespace Freetool.Domain.ValueObjects
 open System.Text.RegularExpressions
 open Freetool.Domain
 
+[<Struct>]
 type Url =
     private
     | Url of string
