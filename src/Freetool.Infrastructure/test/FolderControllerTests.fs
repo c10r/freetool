@@ -64,17 +64,15 @@ type MockFolderRepository(getByIdFn: FolderId -> Task<ValidatedFolder option>) =
         member _.CheckNameConflictAsync _ _ _ = Task.FromResult(false)
 
 // Mock command handler for testing
-type MockFolderCommandHandler
-    (handleCommandFn: IFolderRepository -> FolderCommand -> Task<Result<FolderCommandResult, DomainError>>) =
-    interface IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult> with
-        member _.HandleCommand (repository: IFolderRepository) (command: FolderCommand) =
-            handleCommandFn repository command
+type MockFolderCommandHandler(handleCommandFn: FolderCommand -> Task<Result<FolderCommandResult, DomainError>>) =
+    interface ICommandHandler<FolderCommand, FolderCommandResult> with
+        member _.HandleCommand(command: FolderCommand) = handleCommandFn command
 
 // Helper to create a test controller with mocked dependencies
 let createTestController
     (checkPermissionFn: AuthSubject -> AuthRelation -> AuthObject -> bool)
     (getByIdFn: FolderId -> Task<ValidatedFolder option>)
-    (handleCommandFn: IFolderRepository -> FolderCommand -> Task<Result<FolderCommandResult, DomainError>>)
+    (handleCommandFn: FolderCommand -> Task<Result<FolderCommandResult, DomainError>>)
     (userId: UserId)
     =
     let authService =
@@ -83,8 +81,7 @@ let createTestController
     let folderRepository = MockFolderRepository(getByIdFn) :> IFolderRepository
 
     let commandHandler =
-        MockFolderCommandHandler(handleCommandFn)
-        :> IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>
+        MockFolderCommandHandler(handleCommandFn) :> ICommandHandler<FolderCommand, FolderCommandResult>
 
     let controller = FolderController(folderRepository, commandHandler, authService)
 
@@ -125,7 +122,7 @@ let ``CreateFolder returns 403 when user does not have create_folder permission`
 
         let getById _ = Task.FromResult(None)
 
-        let handleCommand _ _ =
+        let handleCommand _ =
             Task.FromResult(Error(NotFound "Should not be called"))
 
         let controller = createTestController checkPermission getById handleCommand userId
@@ -159,7 +156,7 @@ let ``CreateFolder succeeds when user has create_folder permission`` () : Task =
 
         let getById _ = Task.FromResult(None)
 
-        let handleCommand _ cmd =
+        let handleCommand cmd =
             match cmd with
             | CreateFolder _ ->
                 let folderData =
@@ -210,7 +207,7 @@ let ``UpdateFolderName returns 403 when user does not have edit_folder permissio
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
 
-        let handleCommand _ _ =
+        let handleCommand _ =
             Task.FromResult(Error(NotFound "Should not be called"))
 
         let controller = createTestController checkPermission getById handleCommand userId
@@ -245,7 +242,7 @@ let ``UpdateFolderName succeeds when user has edit_folder permission`` () : Task
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
 
-        let handleCommand _ cmd =
+        let handleCommand cmd =
             match cmd with
             | UpdateFolderName _ ->
                 let updatedFolder = folder.State
@@ -284,7 +281,7 @@ let ``MoveFolder returns 403 when user does not have edit_folder permission`` ()
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
 
-        let handleCommand _ _ =
+        let handleCommand _ =
             Task.FromResult(Error(NotFound "Should not be called"))
 
         let controller = createTestController checkPermission getById handleCommand userId
@@ -319,7 +316,7 @@ let ``MoveFolder succeeds when user has edit_folder permission`` () : Task =
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
 
-        let handleCommand _ cmd =
+        let handleCommand cmd =
             match cmd with
             | MoveFolder _ ->
                 let movedFolder = folder.State
@@ -358,7 +355,7 @@ let ``DeleteFolder returns 403 when user does not have delete_folder permission`
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
 
-        let handleCommand _ _ =
+        let handleCommand _ =
             Task.FromResult(Error(NotFound "Should not be called"))
 
         let controller = createTestController checkPermission getById handleCommand userId
@@ -391,7 +388,7 @@ let ``DeleteFolder succeeds when user has delete_folder permission`` () : Task =
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
 
-        let handleCommand _ cmd =
+        let handleCommand cmd =
             match cmd with
             | DeleteFolder _ -> Task.FromResult(Ok(FolderUnitResult()))
             | _ -> Task.FromResult(Error(NotFound "Command not supported"))
@@ -426,7 +423,7 @@ let ``GetFolderById allows any authenticated user`` () : Task =
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
 
-        let handleCommand _ cmd =
+        let handleCommand cmd =
             match cmd with
             | GetFolderById _ -> Task.FromResult(Ok(FolderResult folder.State))
             | _ -> Task.FromResult(Error(NotFound "Command not supported"))
@@ -456,7 +453,7 @@ let ``GetFolderWithChildren allows any authenticated user`` () : Task =
         let getById id =
             Task.FromResult(if id = folderId then Some folder else None)
 
-        let handleCommand _ cmd =
+        let handleCommand cmd =
             match cmd with
             | GetFolderWithChildren _ -> Task.FromResult(Ok(FolderResult folder.State))
             | _ -> Task.FromResult(Error(NotFound "Command not supported"))
@@ -487,7 +484,7 @@ let ``GetRootFolders allows any authenticated user`` () : Task =
 
         let getById _ = Task.FromResult(None)
 
-        let handleCommand _ cmd =
+        let handleCommand cmd =
             match cmd with
             | GetRootFolders _ -> Task.FromResult(Ok(FoldersResult pagedResult))
             | _ -> Task.FromResult(Error(NotFound "Command not supported"))
@@ -518,7 +515,7 @@ let ``GetAllFolders allows any authenticated user`` () : Task =
 
         let getById _ = Task.FromResult(None)
 
-        let handleCommand _ cmd =
+        let handleCommand cmd =
             match cmd with
             | GetAllFolders _ -> Task.FromResult(Ok(FoldersResult pagedResult))
             | _ -> Task.FromResult(Error(NotFound "Command not supported"))

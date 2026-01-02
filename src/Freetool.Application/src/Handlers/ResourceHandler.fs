@@ -237,6 +237,6 @@ module ResourceHandler =
         }
 
 type ResourceHandler(resourceRepository: IResourceRepository, appRepository: IAppRepository) =
-    interface IMultiRepositoryCommandHandler<ResourceCommand, ResourceCommandResult> with
+    interface ICommandHandler<ResourceCommand, ResourceCommandResult> with
         member this.HandleCommand command =
             ResourceHandler.handleCommand resourceRepository appRepository command

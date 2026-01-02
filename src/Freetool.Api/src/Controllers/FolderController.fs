@@ -17,7 +17,7 @@ open Freetool.Application.Mappers
 type FolderController
     (
         folderRepository: IFolderRepository,
-        commandHandler: IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>,
+        commandHandler: ICommandHandler<FolderCommand, FolderCommandResult>,
         authorizationService: IAuthorizationService
     ) =
     inherit AuthenticatedControllerBase()
@@ -57,8 +57,7 @@ type FolderController
                     match FolderMapper.fromCreateDto userId createDto with
                     | Error domainError -> return this.HandleDomainError(domainError)
                     | Ok validatedFolder ->
-                        let! result =
-                            commandHandler.HandleCommand folderRepository (CreateFolder(userId, validatedFolder))
+                        let! result = commandHandler.HandleCommand(CreateFolder(userId, validatedFolder))
 
                         return
                             match result with
@@ -76,7 +75,7 @@ type FolderController
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetFolderById(id: string) : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand folderRepository (GetFolderById id)
+            let! result = commandHandler.HandleCommand(GetFolderById id)
 
             return
                 match result with
@@ -92,7 +91,7 @@ type FolderController
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetFolderWithChildren(id: string) : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand folderRepository (GetFolderWithChildren id)
+            let! result = commandHandler.HandleCommand(GetFolderWithChildren id)
 
             return
                 match result with
@@ -114,7 +113,7 @@ type FolderController
                 elif take > 100 then 100
                 else take
 
-            let! result = commandHandler.HandleCommand folderRepository (GetRootFolders(skipValue, takeValue))
+            let! result = commandHandler.HandleCommand(GetRootFolders(skipValue, takeValue))
 
             return
                 match result with
@@ -141,7 +140,7 @@ type FolderController
             // Parse optional spaceId
             if System.String.IsNullOrWhiteSpace(spaceId) then
                 // No space filter - backward compatibility
-                let! result = commandHandler.HandleCommand folderRepository (GetAllFolders(None, skipValue, takeValue))
+                let! result = commandHandler.HandleCommand(GetAllFolders(None, skipValue, takeValue))
 
                 return
                     match result with
@@ -155,10 +154,7 @@ type FolderController
                 | true, guid ->
                     let spaceIdObj = SpaceId.FromGuid(guid)
 
-                    let! result =
-                        commandHandler.HandleCommand
-                            folderRepository
-                            (GetAllFolders(Some spaceIdObj, skipValue, takeValue))
+                    let! result = commandHandler.HandleCommand(GetAllFolders(Some spaceIdObj, skipValue, takeValue))
 
                     return
                         match result with
@@ -208,8 +204,7 @@ type FolderController
                             )
                             :> IActionResult
                     else
-                        let! result =
-                            commandHandler.HandleCommand folderRepository (UpdateFolderName(userId, id, updateDto))
+                        let! result = commandHandler.HandleCommand(UpdateFolderName(userId, id, updateDto))
 
                         return
                             match result with
@@ -259,7 +254,7 @@ type FolderController
                             )
                             :> IActionResult
                     else
-                        let! result = commandHandler.HandleCommand folderRepository (MoveFolder(userId, id, moveDto))
+                        let! result = commandHandler.HandleCommand(MoveFolder(userId, id, moveDto))
 
                         return
                             match result with
@@ -309,7 +304,7 @@ type FolderController
                             )
                             :> IActionResult
                     else
-                        let! result = commandHandler.HandleCommand folderRepository (DeleteFolder(userId, id))
+                        let! result = commandHandler.HandleCommand(DeleteFolder(userId, id))
 
                         return
                             match result with

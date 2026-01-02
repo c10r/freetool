@@ -13,9 +13,8 @@ open Freetool.Application.Interfaces
 [<Route("user")>]
 type UserController
     (
-        userRepository: IUserRepository,
         spaceRepository: ISpaceRepository,
-        commandHandler: ICommandHandler,
+        commandHandler: ICommandHandler<UserCommand, UserCommandResult>,
         authService: IAuthorizationService
     ) =
     inherit AuthenticatedControllerBase()
@@ -52,7 +51,7 @@ type UserController
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetUserById(id: string) : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand userRepository (GetUserById id)
+            let! result = commandHandler.HandleCommand(GetUserById id)
 
             return
                 match result with
@@ -68,7 +67,7 @@ type UserController
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
     member this.GetUserByEmail(email: string) : Task<IActionResult> =
         task {
-            let! result = commandHandler.HandleCommand userRepository (GetUserByEmail email)
+            let! result = commandHandler.HandleCommand(GetUserByEmail email)
 
             return
                 match result with
@@ -90,7 +89,7 @@ type UserController
                 elif take > 100 then 100
                 else take
 
-            let! result = commandHandler.HandleCommand userRepository (GetAllUsers(skipValue, takeValue))
+            let! result = commandHandler.HandleCommand(GetAllUsers(skipValue, takeValue))
 
             match result with
             | Ok(UsersResult pagedUsers) ->
@@ -140,7 +139,7 @@ type UserController
             let userIdStr = userId.Value.ToString()
 
             // Get user details
-            let! result = commandHandler.HandleCommand userRepository (GetUserById userIdStr)
+            let! result = commandHandler.HandleCommand(GetUserById userIdStr)
 
             match result with
             | Error error -> return this.HandleDomainError(error)
@@ -212,7 +211,7 @@ type UserController
                     :> IActionResult
             else
                 let userId = this.CurrentUserId
-                let! result = commandHandler.HandleCommand userRepository (InviteUser(userId, inviteDto))
+                let! result = commandHandler.HandleCommand(InviteUser(userId, inviteDto))
 
                 return
                     match result with
@@ -242,7 +241,7 @@ type UserController
                     :> IActionResult
             else
                 let userId = this.CurrentUserId
-                let! result = commandHandler.HandleCommand userRepository (UpdateUserName(userId, id, updateDto))
+                let! result = commandHandler.HandleCommand(UpdateUserName(userId, id, updateDto))
 
                 return
                     match result with
@@ -272,7 +271,7 @@ type UserController
                     :> IActionResult
             else
                 let userId = this.CurrentUserId
-                let! result = commandHandler.HandleCommand userRepository (UpdateUserEmail(userId, id, updateDto))
+                let! result = commandHandler.HandleCommand(UpdateUserEmail(userId, id, updateDto))
 
                 return
                     match result with
@@ -303,7 +302,7 @@ type UserController
             else
                 let userId = this.CurrentUserId
 
-                let! result = commandHandler.HandleCommand userRepository (SetProfilePicture(userId, id, setDto))
+                let! result = commandHandler.HandleCommand(SetProfilePicture(userId, id, setDto))
 
                 return
                     match result with
@@ -334,7 +333,7 @@ type UserController
             else
                 let userId = this.CurrentUserId
 
-                let! result = commandHandler.HandleCommand userRepository (RemoveProfilePicture(userId, id))
+                let! result = commandHandler.HandleCommand(RemoveProfilePicture(userId, id))
 
                 return
                     match result with
@@ -365,7 +364,7 @@ type UserController
             else
                 let userId = this.CurrentUserId
 
-                let! result = commandHandler.HandleCommand userRepository (DeleteUser(userId, id))
+                let! result = commandHandler.HandleCommand(DeleteUser(userId, id))
 
                 return
                     match result with

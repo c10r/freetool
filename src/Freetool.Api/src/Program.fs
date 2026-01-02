@@ -219,37 +219,34 @@ let main args =
     builder.Services.AddScoped<FolderHandler>() |> ignore
     builder.Services.AddScoped<AppHandler>() |> ignore
 
-    builder.Services.AddScoped<ICommandHandler>(fun serviceProvider ->
+    builder.Services.AddScoped<ICommandHandler<UserCommand, UserCommandResult>>(fun serviceProvider ->
         let userHandler = serviceProvider.GetRequiredService<UserHandler>()
         let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-        TracingUserCommandHandlerDecorator(userHandler, activitySource))
+        AutoTracing.createTracingDecorator "user" userHandler activitySource)
     |> ignore
 
-    builder.Services.AddScoped<IMultiRepositoryCommandHandler<ResourceCommand, ResourceCommandResult>>
-        (fun serviceProvider ->
-            let resourceHandler = serviceProvider.GetRequiredService<ResourceHandler>()
-            let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-            AutoTracing.createMultiRepositoryTracingDecorator "resource" resourceHandler activitySource)
+    builder.Services.AddScoped<ICommandHandler<ResourceCommand, ResourceCommandResult>>(fun serviceProvider ->
+        let resourceHandler = serviceProvider.GetRequiredService<ResourceHandler>()
+        let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
+        AutoTracing.createTracingDecorator "resource" resourceHandler activitySource)
     |> ignore
 
-    builder.Services.AddScoped<IMultiRepositoryCommandHandler<SpaceCommand, SpaceCommandResult>>(fun serviceProvider ->
+    builder.Services.AddScoped<ICommandHandler<SpaceCommand, SpaceCommandResult>>(fun serviceProvider ->
         let spaceHandler = serviceProvider.GetRequiredService<SpaceHandler>()
         let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-        AutoTracing.createMultiRepositoryTracingDecorator "space" spaceHandler activitySource)
+        AutoTracing.createTracingDecorator "space" spaceHandler activitySource)
     |> ignore
 
-    builder.Services.AddScoped<IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult>>
-        (fun serviceProvider ->
-            let folderHandler = serviceProvider.GetRequiredService<FolderHandler>()
-            let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-            AutoTracing.createTracingDecorator "folder" folderHandler activitySource)
+    builder.Services.AddScoped<ICommandHandler<FolderCommand, FolderCommandResult>>(fun serviceProvider ->
+        let folderHandler = serviceProvider.GetRequiredService<FolderHandler>()
+        let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
+        AutoTracing.createTracingDecorator "folder" folderHandler activitySource)
     |> ignore
 
-    builder.Services.AddScoped<IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>>
-        (fun serviceProvider ->
-            let appHandler = serviceProvider.GetRequiredService<AppHandler>()
-            let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-            AutoTracing.createTracingDecorator "app" appHandler activitySource)
+    builder.Services.AddScoped<ICommandHandler<AppCommand, AppCommandResult>>(fun serviceProvider ->
+        let appHandler = serviceProvider.GetRequiredService<AppHandler>()
+        let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
+        AutoTracing.createTracingDecorator "app" appHandler activitySource)
     |> ignore
 
     builder.Services.AddScoped<TrashHandler>(fun serviceProvider ->
@@ -259,10 +256,10 @@ let main args =
         TrashHandler(appRepository, folderRepository, resourceRepository))
     |> ignore
 
-    builder.Services.AddScoped<IMultiRepositoryCommandHandler<TrashCommand, TrashCommandResult>>(fun serviceProvider ->
+    builder.Services.AddScoped<ICommandHandler<TrashCommand, TrashCommandResult>>(fun serviceProvider ->
         let trashHandler = serviceProvider.GetRequiredService<TrashHandler>()
         let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
-        AutoTracing.createMultiRepositoryTracingDecorator "trash" trashHandler activitySource)
+        AutoTracing.createTracingDecorator "trash" trashHandler activitySource)
     |> ignore
 
     // Configure OpenTelemetry

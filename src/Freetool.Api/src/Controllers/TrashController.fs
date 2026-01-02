@@ -10,7 +10,7 @@ open Freetool.Application.Interfaces
 
 [<ApiController>]
 [<Route("trash")>]
-type TrashController(commandHandler: IMultiRepositoryCommandHandler<TrashCommand, TrashCommandResult>) =
+type TrashController(commandHandler: ICommandHandler<TrashCommand, TrashCommandResult>) =
     inherit AuthenticatedControllerBase()
 
     [<HttpGet("space/{spaceId}")>]

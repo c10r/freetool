@@ -46,19 +46,20 @@ type MockAuthorizationService(permissions: Map<AuthSubject * AuthRelation * Auth
 
 // Mock command handler for testing - returns NotFound for all commands
 type MockUserCommandHandler() =
-    interface ICommandHandler with
-        member _.HandleCommand (repository: IUserRepository) (command: UserCommand) =
+    interface ICommandHandler<UserCommand, UserCommandResult> with
+        member _.HandleCommand(command: UserCommand) =
             Task.FromResult(Error(NotFound "Mock: Command not found in test setup"))
 
 // Helper to create a test controller with mocked dependencies
 let createTestController (permissions: Map<AuthSubject * AuthRelation * AuthObject, bool>) (userId: UserId option) =
     let authService = MockAuthorizationService(permissions) :> IAuthorizationService
-    let commandHandler = MockUserCommandHandler() :> ICommandHandler
-    let userRepository = Unchecked.defaultof<IUserRepository> // Not used in these tests
+
+    let commandHandler =
+        MockUserCommandHandler() :> ICommandHandler<UserCommand, UserCommandResult>
+
     let spaceRepository = Unchecked.defaultof<ISpaceRepository> // Not used in these tests
 
-    let controller =
-        UserController(userRepository, spaceRepository, commandHandler, authService)
+    let controller = UserController(spaceRepository, commandHandler, authService)
 
     // Setup HttpContext with a fake UserId
     let httpContext = DefaultHttpContext()

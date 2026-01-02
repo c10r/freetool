@@ -15,7 +15,7 @@ open Freetool.Application.Mappers
 [<Route("resource")>]
 type ResourceController
     (
-        commandHandler: IMultiRepositoryCommandHandler<ResourceCommand, ResourceCommandResult>,
+        commandHandler: ICommandHandler<ResourceCommand, ResourceCommandResult>,
         authorizationService: IAuthorizationService,
         resourceRepository: IResourceRepository
     ) =

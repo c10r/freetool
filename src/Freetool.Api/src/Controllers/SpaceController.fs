@@ -14,7 +14,7 @@ open Freetool.Application.Interfaces
 [<Route("space")>]
 type SpaceController
     (
-        commandHandler: IMultiRepositoryCommandHandler<SpaceCommand, SpaceCommandResult>,
+        commandHandler: ICommandHandler<SpaceCommand, SpaceCommandResult>,
         authService: IAuthorizationService,
         logger: ILogger<SpaceController>
     ) =

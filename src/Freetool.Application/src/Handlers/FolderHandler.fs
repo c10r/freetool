@@ -257,7 +257,7 @@ module FolderHandler =
                         return Ok(FoldersResult result)
         }
 
-type FolderHandler() =
-    interface IGenericCommandHandler<IFolderRepository, FolderCommand, FolderCommandResult> with
-        member this.HandleCommand repository command =
-            FolderHandler.handleCommand repository command
+type FolderHandler(folderRepository: IFolderRepository) =
+    interface ICommandHandler<FolderCommand, FolderCommandResult> with
+        member this.HandleCommand command =
+            FolderHandler.handleCommand folderRepository command

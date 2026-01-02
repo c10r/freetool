@@ -286,6 +286,6 @@ module TrashHandler =
 
 type TrashHandler
     (appRepository: IAppRepository, folderRepository: IFolderRepository, resourceRepository: IResourceRepository) =
-    interface IMultiRepositoryCommandHandler<TrashCommand, TrashCommandResult> with
+    interface ICommandHandler<TrashCommand, TrashCommandResult> with
         member this.HandleCommand command =
             TrashHandler.handleCommand appRepository folderRepository resourceRepository command

@@ -493,9 +493,9 @@ module SpaceHandler =
                             return Ok(SpaceCommandResult.UnitResult())
         }
 
-/// SpaceHandler class that implements IMultiRepositoryCommandHandler
+/// SpaceHandler class that implements ICommandHandler
 type SpaceHandler
     (spaceRepository: ISpaceRepository, userRepository: IUserRepository, authService: IAuthorizationService) =
-    interface IMultiRepositoryCommandHandler<SpaceCommand, SpaceCommandResult> with
+    interface ICommandHandler<SpaceCommand, SpaceCommandResult> with
         member this.HandleCommand command =
             SpaceHandler.handleCommand spaceRepository userRepository authService command

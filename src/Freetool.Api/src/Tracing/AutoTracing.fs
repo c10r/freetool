@@ -181,42 +181,15 @@ module AutoTracing =
                             | _ -> ())
                 | _ -> ()
 
-    let createTracingDecorator<'TRepository, 'TCommand, 'TResult>
+    /// Creates a tracing decorator for any command handler.
+    /// Automatically extracts span names from command types and adds attributes via reflection.
+    let createTracingDecorator<'TCommand, 'TResult>
         (entityName: string)
-        (inner: IGenericCommandHandler<'TRepository, 'TCommand, 'TResult>)
+        (inner: ICommandHandler<'TCommand, 'TResult>)
         (activitySource: ActivitySource)
         =
 
-        { new IGenericCommandHandler<'TRepository, 'TCommand, 'TResult> with
-            member this.HandleCommand repository command =
-                let spanName = getSpanName entityName (box command)
-
-                Tracing.withSpan activitySource spanName (fun activity ->
-                    // Add command attributes automatically using reflection
-                    addObjectAttributes activity entityName (box command)
-
-                    task {
-                        let! result = inner.HandleCommand repository command
-
-                        match result with
-                        | Ok commandResult ->
-                            // Add result attributes automatically using reflection
-                            addResultAttributes activity (box commandResult)
-                            Tracing.setSpanStatus activity true None
-                            return result
-                        | Error error ->
-                            Tracing.addDomainErrorEvent activity error
-                            Tracing.setSpanStatus activity false None
-                            return result
-                    }) }
-
-    let createMultiRepositoryTracingDecorator<'TCommand, 'TResult>
-        (entityName: string)
-        (inner: IMultiRepositoryCommandHandler<'TCommand, 'TResult>)
-        (activitySource: ActivitySource)
-        =
-
-        { new IMultiRepositoryCommandHandler<'TCommand, 'TResult> with
+        { new ICommandHandler<'TCommand, 'TResult> with
             member this.HandleCommand command =
                 let spanName = getSpanName entityName (box command)
 

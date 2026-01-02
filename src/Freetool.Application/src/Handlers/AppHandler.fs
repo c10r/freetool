@@ -344,7 +344,7 @@ module AppHandler =
             | _ -> return! handleCommand appRepository command
         }
 
-type AppHandler() =
-    interface IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult> with
-        member this.HandleCommand repository command =
-            AppHandler.handleCommand repository command
+type AppHandler(appRepository: IAppRepository) =
+    interface ICommandHandler<AppCommand, AppCommandResult> with
+        member this.HandleCommand command =
+            AppHandler.handleCommand appRepository command

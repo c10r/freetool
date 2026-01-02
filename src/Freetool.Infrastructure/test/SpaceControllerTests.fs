@@ -45,7 +45,7 @@ type MockAuthorizationService(checkPermissionFn: AuthSubject -> AuthRelation -> 
 
 // Mock command handler for testing
 type MockSpaceCommandHandler(handleCommandFn: SpaceCommand -> Task<Result<SpaceCommandResult, DomainError>>) =
-    interface IMultiRepositoryCommandHandler<SpaceCommand, SpaceCommandResult> with
+    interface ICommandHandler<SpaceCommand, SpaceCommandResult> with
         member _.HandleCommand(command: SpaceCommand) = handleCommandFn command
 
 // Helper to create a test controller with mocked dependencies
@@ -58,7 +58,7 @@ let createTestController
         MockAuthorizationService(checkPermissionFn) :> IAuthorizationService
 
     let commandHandler =
-        MockSpaceCommandHandler(handleCommandFn) :> IMultiRepositoryCommandHandler<SpaceCommand, SpaceCommandResult>
+        MockSpaceCommandHandler(handleCommandFn) :> ICommandHandler<SpaceCommand, SpaceCommandResult>
 
     let logger = NullLogger<SpaceController>.Instance :> ILogger<SpaceController>
 

@@ -23,7 +23,7 @@ type AppController
         spaceRepository: ISpaceRepository,
         userRepository: IUserRepository,
         authorizationService: IAuthorizationService,
-        commandHandler: IGenericCommandHandler<IAppRepository, AppCommand, AppCommandResult>
+        commandHandler: ICommandHandler<AppCommand, AppCommandResult>
     ) =
     inherit AuthenticatedControllerBase()
 
@@ -178,8 +178,7 @@ type AppController
                                 with
                                 | Error domainError -> return this.HandleDomainError(domainError)
                                 | Ok validatedApp ->
-                                    let! result =
-                                        commandHandler.HandleCommand appRepository (CreateApp(userId, validatedApp))
+                                    let! result = commandHandler.HandleCommand(CreateApp(userId, validatedApp))
 
                                     return
                                         match result with
@@ -209,7 +208,7 @@ type AppController
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
                 | Ok() ->
-                    let! result = commandHandler.HandleCommand appRepository (GetAppById id)
+                    let! result = commandHandler.HandleCommand(GetAppById id)
 
                     return
                         match result with
@@ -251,10 +250,7 @@ type AppController
                     match authResult with
                     | Error _ -> return this.HandleAuthorizationError()
                     | Ok() ->
-                        let! result =
-                            commandHandler.HandleCommand
-                                appRepository
-                                (GetAppsByFolderId(folderId, skipValue, takeValue))
+                        let! result = commandHandler.HandleCommand(GetAppsByFolderId(folderId, skipValue, takeValue))
 
                         return
                             match result with
@@ -288,8 +284,7 @@ type AppController
 
                 return this.Ok(emptyResult) :> IActionResult
             else
-                let! result =
-                    commandHandler.HandleCommand appRepository (GetAppsBySpaceIds(spaceIds, skipValue, takeValue))
+                let! result = commandHandler.HandleCommand(GetAppsBySpaceIds(spaceIds, skipValue, takeValue))
 
                 return
                     match result with
@@ -319,7 +314,7 @@ type AppController
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
                 | Ok() ->
-                    let! result = commandHandler.HandleCommand appRepository (UpdateAppName(userId, id, updateDto))
+                    let! result = commandHandler.HandleCommand(UpdateAppName(userId, id, updateDto))
 
                     return
                         match result with
@@ -349,7 +344,7 @@ type AppController
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
                 | Ok() ->
-                    let! result = commandHandler.HandleCommand appRepository (UpdateAppInputs(userId, id, updateDto))
+                    let! result = commandHandler.HandleCommand(UpdateAppInputs(userId, id, updateDto))
 
                     return
                         match result with
@@ -488,8 +483,7 @@ type AppController
                     match authResult with
                     | Error _ -> return this.HandleAuthorizationError()
                     | Ok() ->
-                        let! result =
-                            commandHandler.HandleCommand appRepository (UpdateAppUrlPath(userId, id, updateDto))
+                        let! result = commandHandler.HandleCommand(UpdateAppUrlPath(userId, id, updateDto))
 
                         match result with
                         | Ok(AppResult appDto) -> return this.Ok(appDto) :> IActionResult
@@ -518,8 +512,7 @@ type AppController
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
                 | Ok() ->
-                    let! result =
-                        commandHandler.HandleCommand appRepository (UpdateAppHttpMethod(userId, id, updateDto))
+                    let! result = commandHandler.HandleCommand(UpdateAppHttpMethod(userId, id, updateDto))
 
                     return
                         match result with
@@ -549,7 +542,7 @@ type AppController
                 match authResult with
                 | Error _ -> return this.HandleAuthorizationError()
                 | Ok() ->
-                    let! result = commandHandler.HandleCommand appRepository (DeleteApp(userId, id))
+                    let! result = commandHandler.HandleCommand(DeleteApp(userId, id))
 
                     return
                         match result with

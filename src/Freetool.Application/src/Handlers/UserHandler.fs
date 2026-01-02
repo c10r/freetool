@@ -194,10 +194,7 @@ module UserHandler =
                         | Ok(user) -> return Ok(UserResult(user.State))
         }
 
-type UserHandler() =
-    interface ICommandHandler with
-        member this.HandleCommand
-            (repository: IUserRepository)
-            (command: UserCommand)
-            : Task<Result<UserCommandResult, DomainError>> =
-            UserHandler.handleCommand repository command
+type UserHandler(userRepository: IUserRepository) =
+    interface ICommandHandler<UserCommand, UserCommandResult> with
+        member this.HandleCommand command =
+            UserHandler.handleCommand userRepository command
