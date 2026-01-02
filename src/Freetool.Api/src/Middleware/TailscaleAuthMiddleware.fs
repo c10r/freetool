@@ -3,6 +3,7 @@ namespace Freetool.Api.Middleware
 open Microsoft.AspNetCore.Http
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
+open Microsoft.Extensions.Logging
 open System.Threading.Tasks
 open System.Diagnostics
 open Freetool.Application.Interfaces
@@ -11,7 +12,7 @@ open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
 open Freetool.Api.Tracing
 
-type TailscaleAuthMiddleware(next: RequestDelegate) =
+type TailscaleAuthMiddleware(next: RequestDelegate, logger: ILogger<TailscaleAuthMiddleware>) =
 
     let TAILSCALE_USER_LOGIN = "Tailscale-User-Login"
     let TAILSCALE_USER_NAME = "Tailscale-User-Name"
@@ -106,7 +107,11 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                                 try
                                     do! authService.InitializeOrganizationAsync "default" userId
                                 with ex ->
-                                    eprintfn "[WARNING] Failed to set user %s as org admin: %s" userEmail ex.Message
+                                    logger.LogWarning(
+                                        "Failed to set user {Email} as org admin: {Error}",
+                                        userEmail,
+                                        ex.Message
+                                    )
 
                             Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
                             Tracing.setSpanStatus currentActivity true None
@@ -183,7 +188,11 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                                     try
                                         do! authService.InitializeOrganizationAsync "default" userId
                                     with ex ->
-                                        eprintfn "[WARNING] Failed to set user %s as org admin: %s" userEmail ex.Message
+                                        logger.LogWarning(
+                                            "Failed to set user {Email} as org admin: {Error}",
+                                            userEmail,
+                                            ex.Message
+                                        )
 
                                 Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
                                 Tracing.setSpanStatus currentActivity true None
@@ -214,7 +223,12 @@ type TailscaleAuthMiddleware(next: RequestDelegate) =
                                 Tracing.addAttribute currentActivity "tailscale.auth.org_admin_ensured" "true"
                             with ex ->
                                 Tracing.addAttribute currentActivity "tailscale.auth.org_admin_error" ex.Message
-                                eprintfn "[WARNING] Failed to ensure org admin for %s: %s" userEmail ex.Message
+
+                                logger.LogWarning(
+                                    "Failed to ensure org admin for {Email}: {Error}",
+                                    userEmail,
+                                    ex.Message
+                                )
 
                         Tracing.addAttribute currentActivity "tailscale.auth.success" "true"
                         Tracing.setSpanStatus currentActivity true None

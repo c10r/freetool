@@ -1,6 +1,7 @@
 namespace Freetool.Api.Services
 
 open System.Threading.Tasks
+open Microsoft.Extensions.Logging
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
@@ -13,12 +14,13 @@ module DevSeedingService =
     /// where the OpenFGA store was recreated but the database still has users.
     /// All relationship creation is idempotent - if the relationships already exist, this succeeds.
     let ensureOpenFgaRelationshipsAsync
+        (logger: ILogger)
         (userRepository: IUserRepository)
         (spaceRepository: ISpaceRepository)
         (authService: IAuthorizationService)
         : Task<unit> =
         task {
-            eprintfn "[DEV MODE] Ensuring OpenFGA relationships exist..."
+            logger.LogInformation("[DEV MODE] Ensuring OpenFGA relationships exist...")
 
             // Parse emails for lookup
             let adminEmailResult = Email.Create(Some "admin@test.local")
@@ -35,7 +37,7 @@ module DevSeedingService =
                 let! nopermUserOpt = userRepository.GetByEmailAsync nopermEmail
 
                 match adminUserOpt with
-                | None -> eprintfn "[DEV MODE] Admin user not found, skipping relationship seeding"
+                | None -> logger.LogInformation("[DEV MODE] Admin user not found, skipping relationship seeding")
                 | Some adminUser ->
                     let adminUserId = adminUser.State.Id
                     let adminUserIdStr = adminUserId.Value.ToString()
@@ -43,9 +45,13 @@ module DevSeedingService =
                     // 1. Ensure org admin relationship
                     try
                         do! authService.InitializeOrganizationAsync "default" adminUserIdStr
-                        eprintfn "[DEV MODE] Ensured org admin relationship for user %s" adminUserIdStr
+
+                        logger.LogInformation(
+                            "[DEV MODE] Ensured org admin relationship for user {UserId}",
+                            adminUserIdStr
+                        )
                     with ex ->
-                        eprintfn "[DEV MODE] Warning: Failed to ensure org admin relationship: %s" ex.Message
+                        logger.LogWarning("[DEV MODE] Failed to ensure org admin relationship: {Error}", ex.Message)
 
                     // 2. Look up the test space by name
                     let! spaces = spaceRepository.GetAllAsync 0 100
@@ -53,7 +59,8 @@ module DevSeedingService =
                     let testSpaceOpt = spaces |> List.tryFind (fun s -> s.State.Name = "Test Space")
 
                     match testSpaceOpt with
-                    | None -> eprintfn "[DEV MODE] Test Space not found, skipping space relationship seeding"
+                    | None ->
+                        logger.LogInformation("[DEV MODE] Test Space not found, skipping space relationship seeding")
                     | Some space ->
                         let spaceId = Space.getId space
                         let spaceIdStr = spaceId.Value.ToString()
@@ -66,13 +73,18 @@ module DevSeedingService =
                                   Object = SpaceObject spaceIdStr }
 
                             do! authService.CreateRelationshipsAsync [ orgTuple ]
-                            eprintfn "[DEV MODE] Ensured organization relation for space %s" spaceIdStr
+
+                            logger.LogInformation(
+                                "[DEV MODE] Ensured organization relation for space {SpaceId}",
+                                spaceIdStr
+                            )
                         with ex ->
-                            eprintfn "[DEV MODE] Warning: Failed to ensure org relation for space: %s" ex.Message
+                            logger.LogWarning("[DEV MODE] Failed to ensure org relation for space: {Error}", ex.Message)
 
                         // 4. Ensure moderator relation
                         match moderatorUserOpt with
-                        | None -> eprintfn "[DEV MODE] Moderator user not found, skipping moderator relation"
+                        | None ->
+                            logger.LogInformation("[DEV MODE] Moderator user not found, skipping moderator relation")
                         | Some moderatorUser ->
                             let moderatorUserId = moderatorUser.State.Id
                             let moderatorUserIdStr = moderatorUserId.Value.ToString()
@@ -84,9 +96,13 @@ module DevSeedingService =
                                       Object = SpaceObject spaceIdStr }
 
                                 do! authService.CreateRelationshipsAsync [ moderatorTuple ]
-                                eprintfn "[DEV MODE] Ensured moderator relation for user %s" moderatorUserIdStr
+
+                                logger.LogInformation(
+                                    "[DEV MODE] Ensured moderator relation for user {UserId}",
+                                    moderatorUserIdStr
+                                )
                             with ex ->
-                                eprintfn "[DEV MODE] Warning: Failed to ensure moderator relation: %s" ex.Message
+                                logger.LogWarning("[DEV MODE] Failed to ensure moderator relation: {Error}", ex.Message)
 
                         // 5. Ensure member relations
                         let memberTuples = ResizeArray<RelationshipTuple>()
@@ -110,10 +126,14 @@ module DevSeedingService =
                                       Object = SpaceObject spaceIdStr }
 
                                 do! authService.CreateRelationshipsAsync [ runAppTuple ]
-                                eprintfn "[DEV MODE] Ensured run_app permission for member user %s" memberUserIdStr
+
+                                logger.LogInformation(
+                                    "[DEV MODE] Ensured run_app permission for member user {UserId}",
+                                    memberUserIdStr
+                                )
                             with ex ->
-                                eprintfn "[DEV MODE] Warning: Failed to ensure run_app permission: %s" ex.Message
-                        | None -> eprintfn "[DEV MODE] Member user not found"
+                                logger.LogWarning("[DEV MODE] Failed to ensure run_app permission: {Error}", ex.Message)
+                        | None -> logger.LogInformation("[DEV MODE] Member user not found")
 
                         match nopermUserOpt with
                         | Some nopermUser ->
@@ -125,22 +145,23 @@ module DevSeedingService =
                                   Relation = SpaceMember
                                   Object = SpaceObject spaceIdStr }
                             )
-                        | None -> eprintfn "[DEV MODE] Noperm user not found"
+                        | None -> logger.LogInformation("[DEV MODE] Noperm user not found")
 
                         if memberTuples.Count > 0 then
                             try
                                 do! authService.CreateRelationshipsAsync(memberTuples |> Seq.toList)
-                                eprintfn "[DEV MODE] Ensured member relations"
+                                logger.LogInformation("[DEV MODE] Ensured member relations")
                             with ex ->
-                                eprintfn "[DEV MODE] Warning: Failed to ensure member relations: %s" ex.Message
+                                logger.LogWarning("[DEV MODE] Failed to ensure member relations: {Error}", ex.Message)
 
-                        eprintfn "[DEV MODE] OpenFGA relationship seeding complete!"
-            | _ -> eprintfn "[DEV MODE] Failed to parse dev user emails"
+                        logger.LogInformation("[DEV MODE] OpenFGA relationship seeding complete!")
+            | _ -> logger.LogWarning("[DEV MODE] Failed to parse dev user emails")
         }
 
     /// Seeds the dev database with test users, a space, resource, folder, and app
     /// Only runs when the database is empty (no users exist)
     let seedDataAsync
+        (logger: ILogger)
         (userRepository: IUserRepository)
         (spaceRepository: ISpaceRepository)
         (resourceRepository: IResourceRepository)
@@ -153,10 +174,10 @@ module DevSeedingService =
             let! userCount = userRepository.GetCountAsync()
 
             if userCount > 0 then
-                eprintfn "[DEV MODE] Database already has users, skipping seed data"
+                logger.LogInformation("[DEV MODE] Database already has users, skipping seed data")
                 return ()
             else
-                eprintfn "[DEV MODE] Seeding dev database with test data..."
+                logger.LogInformation("[DEV MODE] Seeding dev database with test data...")
 
                 // Create test users
                 // 1. Admin user - will become org admin
@@ -168,17 +189,17 @@ module DevSeedingService =
                 let adminUser = User.create "Org Admin" adminEmail None
 
                 match! userRepository.AddAsync adminUser with
-                | Error err -> eprintfn "[DEV MODE] Failed to create admin user: %A" err
+                | Error err -> logger.LogWarning("[DEV MODE] Failed to create admin user: {Error}", err)
                 | Ok() ->
                     let adminUserId = adminUser.State.Id
-                    eprintfn "[DEV MODE] Created admin user: %s" (adminUserId.Value.ToString())
+                    logger.LogInformation("[DEV MODE] Created admin user: {UserId}", adminUserId.Value.ToString())
 
                     // Set admin as org admin
                     try
                         do! authService.InitializeOrganizationAsync "default" (adminUserId.Value.ToString())
-                        eprintfn "[DEV MODE] Set admin user as organization admin"
+                        logger.LogInformation("[DEV MODE] Set admin user as organization admin")
                     with ex ->
-                        eprintfn "[DEV MODE] Warning: Failed to set org admin: %s" ex.Message
+                        logger.LogWarning("[DEV MODE] Failed to set org admin: {Error}", ex.Message)
 
                     // 2. Moderator user
                     let moderatorEmail =
@@ -189,10 +210,14 @@ module DevSeedingService =
                     let moderatorUser = User.create "Space Moderator" moderatorEmail None
 
                     match! userRepository.AddAsync moderatorUser with
-                    | Error err -> eprintfn "[DEV MODE] Failed to create moderator user: %A" err
+                    | Error err -> logger.LogWarning("[DEV MODE] Failed to create moderator user: {Error}", err)
                     | Ok() ->
                         let moderatorUserId = moderatorUser.State.Id
-                        eprintfn "[DEV MODE] Created moderator user: %s" (moderatorUserId.Value.ToString())
+
+                        logger.LogInformation(
+                            "[DEV MODE] Created moderator user: {UserId}",
+                            moderatorUserId.Value.ToString()
+                        )
 
                         // 3. Member user
                         let memberEmail =
@@ -203,10 +228,14 @@ module DevSeedingService =
                         let memberUser = User.create "Regular Member" memberEmail None
 
                         match! userRepository.AddAsync memberUser with
-                        | Error err -> eprintfn "[DEV MODE] Failed to create member user: %A" err
+                        | Error err -> logger.LogWarning("[DEV MODE] Failed to create member user: {Error}", err)
                         | Ok() ->
                             let memberUserId = memberUser.State.Id
-                            eprintfn "[DEV MODE] Created member user: %s" (memberUserId.Value.ToString())
+
+                            logger.LogInformation(
+                                "[DEV MODE] Created member user: {UserId}",
+                                memberUserId.Value.ToString()
+                            )
 
                             // 4. No permissions user
                             let nopermEmail =
@@ -217,10 +246,14 @@ module DevSeedingService =
                             let nopermUser = User.create "No Permissions" nopermEmail None
 
                             match! userRepository.AddAsync nopermUser with
-                            | Error err -> eprintfn "[DEV MODE] Failed to create noperm user: %A" err
+                            | Error err -> logger.LogWarning("[DEV MODE] Failed to create noperm user: {Error}", err)
                             | Ok() ->
                                 let nopermUserId = nopermUser.State.Id
-                                eprintfn "[DEV MODE] Created noperm user: %s" (nopermUserId.Value.ToString())
+
+                                logger.LogInformation(
+                                    "[DEV MODE] Created noperm user: {UserId}",
+                                    nopermUserId.Value.ToString()
+                                )
 
                                 // 5. Not a member user - exists but is not a member of any space
                                 let notamemberEmail =
@@ -231,13 +264,15 @@ module DevSeedingService =
                                 let notamemberUser = User.create "Not a Member" notamemberEmail None
 
                                 match! userRepository.AddAsync notamemberUser with
-                                | Error err -> eprintfn "[DEV MODE] Failed to create notamember user: %A" err
+                                | Error err ->
+                                    logger.LogWarning("[DEV MODE] Failed to create notamember user: {Error}", err)
                                 | Ok() ->
                                     let notamemberUserId = notamemberUser.State.Id
 
-                                    eprintfn
-                                        "[DEV MODE] Created notamember user: %s"
-                                        (notamemberUserId.Value.ToString())
+                                    logger.LogInformation(
+                                        "[DEV MODE] Created notamember user: {UserId}",
+                                        notamemberUserId.Value.ToString()
+                                    )
 
                                     // Suppress unused variable warning - this user intentionally has no space membership
                                     ignore notamemberUserId
@@ -250,14 +285,14 @@ module DevSeedingService =
                                         moderatorUserId
                                         (Some [ memberUserId; nopermUserId ])
                                 with
-                                | Error err -> eprintfn "[DEV MODE] Failed to create space: %A" err
+                                | Error err -> logger.LogWarning("[DEV MODE] Failed to create space: {Error}", err)
                                 | Ok space ->
                                     match! spaceRepository.AddAsync space with
-                                    | Error err -> eprintfn "[DEV MODE] Failed to save space: %A" err
+                                    | Error err -> logger.LogWarning("[DEV MODE] Failed to save space: {Error}", err)
                                     | Ok() ->
                                         let spaceId = Space.getId space
                                         let spaceIdStr = spaceId.Value.ToString()
-                                        eprintfn "[DEV MODE] Created Test Space: %s" spaceIdStr
+                                        logger.LogInformation("[DEV MODE] Created Test Space: {SpaceId}", spaceIdStr)
 
                                         // Set up organization relation for the space
                                         try
@@ -267,11 +302,12 @@ module DevSeedingService =
                                                   Object = SpaceObject spaceIdStr }
 
                                             do! authService.CreateRelationshipsAsync [ orgTuple ]
-                                            eprintfn "[DEV MODE] Set up organization relation for space"
+                                            logger.LogInformation("[DEV MODE] Set up organization relation for space")
                                         with ex ->
-                                            eprintfn
-                                                "[DEV MODE] Warning: Failed to set org relation for space: %s"
+                                            logger.LogWarning(
+                                                "[DEV MODE] Failed to set org relation for space: {Error}",
                                                 ex.Message
+                                            )
 
                                         // Set up moderator relation in OpenFGA
                                         try
@@ -281,11 +317,12 @@ module DevSeedingService =
                                                   Object = SpaceObject spaceIdStr }
 
                                             do! authService.CreateRelationshipsAsync [ moderatorTuple ]
-                                            eprintfn "[DEV MODE] Set up moderator relation"
+                                            logger.LogInformation("[DEV MODE] Set up moderator relation")
                                         with ex ->
-                                            eprintfn
-                                                "[DEV MODE] Warning: Failed to set moderator relation: %s"
+                                            logger.LogWarning(
+                                                "[DEV MODE] Failed to set moderator relation: {Error}",
                                                 ex.Message
+                                            )
 
                                         // Set up member relations in OpenFGA
                                         try
@@ -298,9 +335,12 @@ module DevSeedingService =
                                                     Object = SpaceObject spaceIdStr } ]
 
                                             do! authService.CreateRelationshipsAsync memberTuples
-                                            eprintfn "[DEV MODE] Set up member relations"
+                                            logger.LogInformation("[DEV MODE] Set up member relations")
                                         with ex ->
-                                            eprintfn "[DEV MODE] Warning: Failed to set member relations: %s" ex.Message
+                                            logger.LogWarning(
+                                                "[DEV MODE] Failed to set member relations: {Error}",
+                                                ex.Message
+                                            )
 
                                         // Give member user run_app permission
                                         try
@@ -310,11 +350,12 @@ module DevSeedingService =
                                                   Object = SpaceObject spaceIdStr }
 
                                             do! authService.CreateRelationshipsAsync [ runAppTuple ]
-                                            eprintfn "[DEV MODE] Set up run_app permission for member"
+                                            logger.LogInformation("[DEV MODE] Set up run_app permission for member")
                                         with ex ->
-                                            eprintfn
-                                                "[DEV MODE] Warning: Failed to set run_app permission: %s"
+                                            logger.LogWarning(
+                                                "[DEV MODE] Failed to set run_app permission: {Error}",
                                                 ex.Message
+                                            )
 
                                         // Create a resource in the space
                                         match
@@ -328,29 +369,41 @@ module DevSeedingService =
                                                 []
                                                 []
                                         with
-                                        | Error err -> eprintfn "[DEV MODE] Failed to create resource: %A" err
+                                        | Error err ->
+                                            logger.LogWarning("[DEV MODE] Failed to create resource: {Error}", err)
                                         | Ok resource ->
                                             match! resourceRepository.AddAsync resource with
-                                            | Error err -> eprintfn "[DEV MODE] Failed to save resource: %A" err
+                                            | Error err ->
+                                                logger.LogWarning("[DEV MODE] Failed to save resource: {Error}", err)
                                             | Ok() ->
                                                 let resourceId = Resource.getId resource
 
-                                                eprintfn
-                                                    "[DEV MODE] Created Sample API resource: %s"
-                                                    (resourceId.Value.ToString())
+                                                logger.LogInformation(
+                                                    "[DEV MODE] Created Sample API resource: {ResourceId}",
+                                                    resourceId.Value.ToString()
+                                                )
 
                                                 // Create a folder in the space
                                                 match Folder.create adminUserId "Sample Folder" None spaceId with
-                                                | Error err -> eprintfn "[DEV MODE] Failed to create folder: %A" err
+                                                | Error err ->
+                                                    logger.LogWarning(
+                                                        "[DEV MODE] Failed to create folder: {Error}",
+                                                        err
+                                                    )
                                                 | Ok folder ->
                                                     match! folderRepository.AddAsync folder with
-                                                    | Error err -> eprintfn "[DEV MODE] Failed to save folder: %A" err
+                                                    | Error err ->
+                                                        logger.LogWarning(
+                                                            "[DEV MODE] Failed to save folder: {Error}",
+                                                            err
+                                                        )
                                                     | Ok() ->
                                                         let folderId = Folder.getId folder
 
-                                                        eprintfn
-                                                            "[DEV MODE] Created Sample Folder: %s"
-                                                            (folderId.Value.ToString())
+                                                        logger.LogInformation(
+                                                            "[DEV MODE] Created Sample Folder: {FolderId}",
+                                                            folderId.Value.ToString()
+                                                        )
 
                                                         // Create an app in the folder
                                                         match
@@ -367,19 +420,28 @@ module DevSeedingService =
                                                                 []
                                                         with
                                                         | Error err ->
-                                                            eprintfn "[DEV MODE] Failed to create app: %A" err
+                                                            logger.LogWarning(
+                                                                "[DEV MODE] Failed to create app: {Error}",
+                                                                err
+                                                            )
                                                         | Ok app ->
                                                             match! appRepository.AddAsync app with
                                                             | Error err ->
-                                                                eprintfn "[DEV MODE] Failed to save app: %A" err
+                                                                logger.LogWarning(
+                                                                    "[DEV MODE] Failed to save app: {Error}",
+                                                                    err
+                                                                )
                                                             | Ok() ->
                                                                 let appId = App.getId app
 
-                                                                eprintfn
-                                                                    "[DEV MODE] Created Hello World app: %s"
-                                                                    (appId.Value.ToString())
+                                                                logger.LogInformation(
+                                                                    "[DEV MODE] Created Hello World app: {AppId}",
+                                                                    appId.Value.ToString()
+                                                                )
 
-                                                                eprintfn "[DEV MODE] Dev database seeding complete!"
+                                                                logger.LogInformation(
+                                                                    "[DEV MODE] Dev database seeding complete!"
+                                                                )
 
                 return ()
         }

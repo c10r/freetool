@@ -2,6 +2,7 @@ module Freetool.Api.Tests.AppControllerAuthTests
 
 open System
 open System.Threading.Tasks
+open Microsoft.Extensions.Logging.Abstractions
 open Xunit
 open Freetool.Application.Interfaces
 open Freetool.Infrastructure.Services
@@ -13,11 +14,11 @@ let openFgaApiUrl = "http://localhost:8090"
 
 // Helper to create a test service without a store ID (for store creation)
 let createServiceWithoutStore () =
-    OpenFgaService(openFgaApiUrl) :> IAuthorizationService
+    OpenFgaService(openFgaApiUrl, NullLogger<OpenFgaService>.Instance) :> IAuthorizationService
 
 // Helper to create a test service with a store ID
 let createServiceWithStore storeId =
-    OpenFgaService(openFgaApiUrl, storeId) :> IAuthorizationService
+    OpenFgaService(openFgaApiUrl, NullLogger<OpenFgaService>.Instance, storeId) :> IAuthorizationService
 
 // Test setup helper to create a space with proper permissions
 let setupSpaceWithPermissions (authService: IAuthorizationService) (userId: string) (permission: AuthRelation) =

@@ -7,6 +7,7 @@ open Xunit
 open Microsoft.AspNetCore.Http
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
+open Microsoft.Extensions.Logging.Abstractions
 open Microsoft.Extensions.Primitives
 open Freetool.Domain
 open Freetool.Domain.Entities
@@ -140,7 +141,9 @@ let createMiddleware () =
             nextCalled <- true
             Task.CompletedTask)
 
-    let middleware = TailscaleAuthMiddleware(nextDelegate)
+    let middleware =
+        TailscaleAuthMiddleware(nextDelegate, NullLogger<TailscaleAuthMiddleware>.Instance)
+
     (middleware, fun () -> nextCalled)
 
 let createValidUser (email: string) (name: string) : ValidatedUser =

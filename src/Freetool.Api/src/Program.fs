@@ -2,6 +2,8 @@ open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Configuration
+open Microsoft.Extensions.Logging
+open Microsoft.Extensions.Logging.Abstractions
 open Microsoft.EntityFrameworkCore
 open Microsoft.AspNetCore.StaticFiles
 open System.Text.Json.Serialization
@@ -27,7 +29,7 @@ open Freetool.Api.Services
 
 /// Validates that all EventType cases can be serialized and deserialized consistently.
 /// This catches bugs where a new event type is added to the DU but not to fromString.
-let private validateEventTypeRegistry () =
+let private validateEventTypeRegistry (logger: ILogger) =
     // List all known event types that should be registered
     let allEventTypes =
         [ // User events
@@ -67,18 +69,20 @@ let private validateEventTypeRegistry () =
 
         match deserialized with
         | None ->
-            eprintfn
-                "ERROR: EventTypeConverter.fromString cannot parse '%s' (from %A). Add it to EventTypeConverter.fromString."
-                serialized
+            logger.LogError(
+                "EventTypeConverter.fromString cannot parse '{Serialized}' (from {EventType}). Add it to EventTypeConverter.fromString.",
+                serialized,
                 eventType
+            )
 
             hasErrors <- true
         | Some parsed when parsed <> eventType ->
-            eprintfn
-                "ERROR: EventTypeConverter round-trip failed for %A: serialized='%s', deserialized=%A"
-                eventType
-                serialized
+            logger.LogError(
+                "EventTypeConverter round-trip failed for {EventType}: serialized='{Serialized}', deserialized={Deserialized}",
+                eventType,
+                serialized,
                 parsed
+            )
 
             hasErrors <- true
         | Some _ -> ()
@@ -86,28 +90,28 @@ let private validateEventTypeRegistry () =
     if hasErrors then
         failwith "EventType registry validation failed. See errors above."
     else
-        eprintfn "EventType registry validation passed (%d event types)." allEventTypes.Length
+        logger.LogInformation("EventType registry validation passed ({Count} event types)", allEventTypes.Length)
 
 /// Creates a new OpenFGA store and saves the ID to the database
-let private createAndSaveNewStore (connectionString: string) (apiUrl: string) : string =
-    let tempService = OpenFgaService(apiUrl)
+let private createAndSaveNewStore (logger: ILogger) (connectionString: string) (apiUrl: string) : string =
+    let tempService = OpenFgaService(apiUrl, NullLogger<OpenFgaService>.Instance)
     let authService = tempService :> IAuthorizationService
 
-    eprintfn "Creating new OpenFGA store..."
+    logger.LogInformation("Creating new OpenFGA store...")
     let storeTask = authService.CreateStoreAsync({ Name = "freetool-authorization" })
     storeTask.Wait()
     let newStoreId = storeTask.Result.Id
-    eprintfn "Created new OpenFGA store with ID: %s" newStoreId
+    logger.LogInformation("Created new OpenFGA store with ID: {StoreId}", newStoreId)
 
     // Save to database for future restarts
     SettingsStore.set connectionString ConfigurationKeys.OpenFGA.StoreId newStoreId
-    eprintfn "Saved OpenFGA store ID to database"
+    logger.LogInformation("Saved OpenFGA store ID to database")
 
     newStoreId
 
 /// Checks if a store exists in OpenFGA
 let private storeExists (apiUrl: string) (storeId: string) : bool =
-    let tempService = OpenFgaService(apiUrl)
+    let tempService = OpenFgaService(apiUrl, NullLogger<OpenFgaService>.Instance)
     let authService = tempService :> IAuthorizationService
     let existsTask = authService.StoreExistsAsync(storeId)
     existsTask.Wait()
@@ -116,52 +120,70 @@ let private storeExists (apiUrl: string) (storeId: string) : bool =
 /// Ensures an OpenFGA store exists, creating one if necessary
 /// Persists the store ID to the database to survive restarts
 /// Returns the store ID to use for the application
-let ensureOpenFgaStore (connectionString: string) (apiUrl: string) (configuredStoreId: string) : string =
+let ensureOpenFgaStore
+    (logger: ILogger)
+    (connectionString: string)
+    (apiUrl: string)
+    (configuredStoreId: string)
+    : string =
     // First, check if we have a store ID saved in the database
     let dbStoreId = SettingsStore.get connectionString ConfigurationKeys.OpenFGA.StoreId
 
     match dbStoreId with
     | Some storeId when not (System.String.IsNullOrEmpty(storeId)) ->
         // We have a store ID in the database, verify it exists in OpenFGA
-        eprintfn "Found OpenFGA store ID in database: %s" storeId
+        logger.LogInformation("Found OpenFGA store ID in database: {StoreId}", storeId)
 
         if storeExists apiUrl storeId then
-            eprintfn "OpenFGA store %s exists, using it." storeId
+            logger.LogInformation("OpenFGA store {StoreId} exists, using it", storeId)
             storeId
         else
             // Store was deleted from OpenFGA, create a new one
-            eprintfn "OpenFGA store %s no longer exists. Creating new store..." storeId
-            createAndSaveNewStore connectionString apiUrl
+            logger.LogInformation("OpenFGA store {StoreId} no longer exists. Creating new store...", storeId)
+            createAndSaveNewStore logger connectionString apiUrl
     | _ ->
         // No store ID in database, check config
         if System.String.IsNullOrEmpty(configuredStoreId) then
             // No store configured anywhere, create a new one
-            eprintfn "No OpenFGA store ID configured. Creating new store..."
-            createAndSaveNewStore connectionString apiUrl
+            logger.LogInformation("No OpenFGA store ID configured. Creating new store...")
+            createAndSaveNewStore logger connectionString apiUrl
         else
             // Check if configured store exists
-            eprintfn "Checking if configured OpenFGA store %s exists..." configuredStoreId
+            logger.LogInformation("Checking if configured OpenFGA store {StoreId} exists...", configuredStoreId)
 
             if storeExists apiUrl configuredStoreId then
-                eprintfn "OpenFGA store %s exists, using it and saving to database." configuredStoreId
+                logger.LogInformation(
+                    "OpenFGA store {StoreId} exists, using it and saving to database",
+                    configuredStoreId
+                )
                 // Save the config store ID to database for future restarts
                 SettingsStore.set connectionString ConfigurationKeys.OpenFGA.StoreId configuredStoreId
                 configuredStoreId
             else
                 // Configured store doesn't exist, create a new one
-                eprintfn "OpenFGA store %s does not exist. Creating new store..." configuredStoreId
-                createAndSaveNewStore connectionString apiUrl
+                logger.LogInformation(
+                    "OpenFGA store {StoreId} does not exist. Creating new store...",
+                    configuredStoreId
+                )
+
+                createAndSaveNewStore logger connectionString apiUrl
 
 [<EntryPoint>]
 let main args =
     let builder = WebApplication.CreateBuilder(args)
+
+    // Create a startup logger for logging before app is built
+    use startupLoggerFactory =
+        LoggerFactory.Create(fun logging -> logging.AddConsole() |> ignore)
+
+    let startupLogger = startupLoggerFactory.CreateLogger("Freetool.Startup")
 
     // Detect dev mode from environment variable
     let isDevMode =
         System.Environment.GetEnvironmentVariable(ConfigurationKeys.Environment.DevMode) = "true"
 
     if isDevMode then
-        eprintfn "[DEV MODE] Running in development mode with user impersonation"
+        startupLogger.LogInformation("[DEV MODE] Running in development mode with user impersonation")
 
     // Add CORS for dev mode (allows frontend on different port)
     if isDevMode then
@@ -180,7 +202,7 @@ let main args =
     Persistence.upgradeDatabase connectionString
 
     // Validate that all EventType cases are properly registered
-    validateEventTypeRegistry ()
+    validateEventTypeRegistry startupLogger
 
     // Add services to the container
     builder.Services
@@ -242,18 +264,24 @@ let main args =
 
     let actualStoreId =
         try
-            ensureOpenFgaStore connectionString openFgaApiUrl configuredStoreId
+            ensureOpenFgaStore startupLogger connectionString openFgaApiUrl configuredStoreId
         with ex ->
-            eprintfn "Warning: Could not ensure OpenFGA store exists: %s" ex.Message
-            eprintfn "Using configured store ID (if any). Authorization may fail."
+            startupLogger.LogWarning(
+                "Could not ensure OpenFGA store exists: {Error}. Using configured store ID (if any). Authorization may fail.",
+                ex.Message
+            )
+
             configuredStoreId
 
-    builder.Services.AddScoped<IAuthorizationService>(fun _ ->
+    builder.Services.AddScoped<IAuthorizationService>(fun serviceProvider ->
         // Always create with the actual store ID (which may have been created)
+        let loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>()
+        let logger = loggerFactory.CreateLogger<OpenFgaService>()
+
         if System.String.IsNullOrEmpty(actualStoreId) then
-            OpenFgaService(openFgaApiUrl) :> IAuthorizationService
+            OpenFgaService(openFgaApiUrl, logger) :> IAuthorizationService
         else
-            OpenFgaService(openFgaApiUrl, actualStoreId) :> IAuthorizationService)
+            OpenFgaService(openFgaApiUrl, logger, actualStoreId) :> IAuthorizationService)
     |> ignore
 
     builder.Services.AddScoped<IEventEnhancementService>(fun serviceProvider ->
@@ -347,16 +375,16 @@ let main args =
                         options.Endpoint <- System.Uri(endpoint)
                         options.Protocol <- OtlpExportProtocol.Grpc
                     else
-                        eprintfn "No OTLP endpoint configured, using default")
+                        startupLogger.LogInformation("No OTLP endpoint configured, using default"))
             |> ignore)
     |> ignore
 
     let app = builder.Build()
 
     // Debug logging for paths
-    eprintfn "Content root: %s" builder.Environment.ContentRootPath
-    eprintfn "Web root: %s" builder.Environment.WebRootPath
-    eprintfn "Current directory: %s" (System.IO.Directory.GetCurrentDirectory())
+    startupLogger.LogInformation("Content root: {ContentRoot}", builder.Environment.ContentRootPath)
+    startupLogger.LogInformation("Web root: {WebRoot}", builder.Environment.WebRootPath)
+    startupLogger.LogInformation("Current directory: {CurrentDirectory}", System.IO.Directory.GetCurrentDirectory())
 
     // Note: Database migrations were already run at startup (before OpenFGA store check)
 
@@ -364,17 +392,17 @@ let main args =
     // Note: actualStoreId was set during DI registration (store was created if needed)
     if not (System.String.IsNullOrEmpty(actualStoreId)) then
         try
-            eprintfn "Initializing OpenFGA authorization model..."
+            startupLogger.LogInformation("Initializing OpenFGA authorization model...")
             use scope = app.Services.CreateScope()
             let authService = scope.ServiceProvider.GetRequiredService<IAuthorizationService>()
             let modelTask = authService.WriteAuthorizationModelAsync()
             modelTask.Wait()
-            eprintfn "OpenFGA authorization model initialized successfully"
+            startupLogger.LogInformation("OpenFGA authorization model initialized successfully")
 
             // Set up organization relations for all existing spaces
             // This ensures org admins inherit permissions on all spaces
             try
-                eprintfn "Setting up organization relations for existing spaces..."
+                startupLogger.LogInformation("Setting up organization relations for existing spaces...")
 
                 let spaceRepository = scope.ServiceProvider.GetRequiredService<ISpaceRepository>()
 
@@ -394,17 +422,22 @@ let main args =
                     let relationTask = authService.CreateRelationshipsAsync([ tuple ])
                     relationTask.Wait()
 
-                eprintfn "Organization relations set up for %d spaces" (List.length spaces)
+                startupLogger.LogInformation("Organization relations set up for {Count} spaces", List.length spaces)
             with ex ->
-                eprintfn "Warning: Could not set up organization relations for spaces: %s" ex.Message
-                eprintfn "Org admins may not have permissions on existing spaces."
+                startupLogger.LogWarning(
+                    "Could not set up organization relations for spaces: {Error}. Org admins may not have permissions on existing spaces.",
+                    ex.Message
+                )
 
             // Note: Organization admin is now set automatically when the user first logs in
             // via TailscaleAuthMiddleware if their email matches OpenFGA:OrgAdminEmail config
             let orgAdminEmail = builder.Configuration[ConfigurationKeys.OpenFGA.OrgAdminEmail]
 
             if not (System.String.IsNullOrEmpty(orgAdminEmail)) then
-                eprintfn "Organization admin email configured: %s (will be set when user first logs in)" orgAdminEmail
+                startupLogger.LogInformation(
+                    "Organization admin email configured: {Email} (will be set when user first logs in)",
+                    orgAdminEmail
+                )
 
             // Run dev seeding after OpenFGA is initialized (only in dev mode)
             if isDevMode then
@@ -421,6 +454,7 @@ let main args =
                     // First, seed database data if needed (only runs if database is empty)
                     let seedTask =
                         DevSeedingService.seedDataAsync
+                            startupLogger
                             userRepository
                             spaceRepository
                             resourceRepository
@@ -433,15 +467,20 @@ let main args =
                     // Then, ensure OpenFGA relationships exist (always runs in dev mode)
                     // This handles the case where OpenFGA store was recreated but database still has users
                     let ensureRelationshipsTask =
-                        DevSeedingService.ensureOpenFgaRelationshipsAsync userRepository spaceRepository authService
+                        DevSeedingService.ensureOpenFgaRelationshipsAsync
+                            startupLogger
+                            userRepository
+                            spaceRepository
+                            authService
 
                     ensureRelationshipsTask |> Async.AwaitTask |> Async.RunSynchronously
                 with ex ->
-                    eprintfn "[DEV MODE] Warning: Failed to seed dev data: %s" ex.Message
+                    startupLogger.LogWarning("[DEV MODE] Failed to seed dev data: {Error}", ex.Message)
         with ex ->
-            eprintfn "Warning: Could not initialize OpenFGA authorization model: %s" ex.Message
-            eprintfn "The application will continue, but authorization checks may fail."
-            eprintfn "You can manually initialize by calling POST /admin/openfga/write-model"
+            startupLogger.LogWarning(
+                "Could not initialize OpenFGA authorization model: {Error}. The application will continue, but authorization checks may fail. You can manually initialize by calling POST /admin/openfga/write-model",
+                ex.Message
+            )
 
     app.UseSwagger() |> ignore
     app.UseSwaggerUI() |> ignore

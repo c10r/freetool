@@ -1,13 +1,14 @@
 namespace Freetool.Infrastructure.Services
 
 open System.Threading.Tasks
+open Microsoft.Extensions.Logging
 open OpenFga.Sdk.Client
 open OpenFga.Sdk.Client.Model
 open OpenFga.Sdk.Model
 open Freetool.Application.Interfaces
 
 /// OpenFGA service implementation for fine-grained authorization
-type OpenFgaService(apiUrl: string, ?storeId: string) =
+type OpenFgaService(apiUrl: string, logger: ILogger<OpenFgaService>, ?storeId: string) =
 
     /// Creates a new OpenFGA client instance without store ID (for store creation)
     let createClientWithoutStore () =
@@ -42,10 +43,11 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
         /// This method is idempotent - if the tuple already exists, it succeeds silently
         member this.InitializeOrganizationAsync (organizationId: string) (adminUserId: string) : Task<unit> =
             task {
-                eprintfn
-                    "[DEBUG OpenFGA] InitializeOrganizationAsync called with orgId=%s, userId=%s"
-                    organizationId
+                logger.LogDebug(
+                    "InitializeOrganizationAsync called with orgId={OrganizationId}, userId={UserId}",
+                    organizationId,
                     adminUserId
+                )
 
                 // Create the organization admin relationship tuple
                 let tuple =
@@ -57,15 +59,15 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                 let relationStr = AuthTypes.relationToString tuple.Relation
                 let objectStr = AuthTypes.objectToString tuple.Object
 
-                eprintfn "[DEBUG OpenFGA] Creating relationship: %s#%s@%s" objectStr relationStr userStr
+                logger.LogDebug("Creating relationship: {Object}#{Relation}@{User}", objectStr, relationStr, userStr)
 
                 try
                     do! (this :> IAuthorizationService).CreateRelationshipsAsync([ tuple ])
-                    eprintfn "[DEBUG OpenFGA] Relationship created successfully"
+                    logger.LogDebug("Relationship created successfully")
                 with :? OpenFga.Sdk.Exceptions.FgaApiValidationError as ex when
                     ex.Message.Contains("cannot write a tuple which already exists") ->
                     // Tuple already exists, that's fine - we're idempotent
-                    eprintfn "[DEBUG OpenFGA] Relationship already exists (idempotent success)"
+                    logger.LogDebug("Relationship already exists (idempotent success)")
             }
 
         /// Writes the authorization model to the store
@@ -296,7 +298,7 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                 let relationStr = AuthTypes.relationToString relation
                 let objectStr = AuthTypes.objectToString object
 
-                eprintfn "[DEBUG OpenFGA] Checking permission: %s#%s@%s" objectStr relationStr user
+                logger.LogDebug("Checking permission: {Object}#{Relation}@{User}", objectStr, relationStr, user)
 
                 let body =
                     ClientCheckRequest(User = user, Relation = relationStr, Object = objectStr)
@@ -304,7 +306,7 @@ type OpenFgaService(apiUrl: string, ?storeId: string) =
                 let! response = client.Check(body)
                 let allowed = response.Allowed.GetValueOrDefault(false)
 
-                eprintfn "[DEBUG OpenFGA] Permission check response: Allowed=%b" allowed
+                logger.LogDebug("Permission check response: Allowed={Allowed}", allowed)
                 return allowed
             }
 
