@@ -53,24 +53,22 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
             task {
                 let! spaceDatas = context.Spaces.OrderBy(fun s -> s.CreatedAt).Skip(skip).Take(take).ToListAsync()
 
-                let spaces = []
-                let mutable spaceList = spaces
+                let! spacesWithMembers =
+                    spaceDatas
+                    |> Seq.map (fun data ->
+                        task {
+                            let spaceId = data.Id
 
-                for data in spaceDatas do
-                    let spaceId = data.Id
+                            let! spaceMemberEntities =
+                                context.SpaceMembers.Where(fun sm -> sm.SpaceId = spaceId).ToListAsync()
 
-                    // Use direct value object comparison - EF value converters should handle this
-                    let! spaceMemberEntities = context.SpaceMembers.Where(fun sm -> sm.SpaceId = spaceId).ToListAsync()
+                            let memberIds = spaceMemberEntities |> Seq.map (fun sm -> sm.UserId) |> Seq.toList
+                            data.MemberIds <- memberIds
+                            return Space.fromData data
+                        })
+                    |> Task.WhenAll
 
-                    // Convert SpaceMember entities to UserIds
-                    let memberIds = spaceMemberEntities |> Seq.map (fun sm -> sm.UserId) |> Seq.toList
-
-                    // Create SpaceData with MemberIds populated from relationships
-                    data.MemberIds <- memberIds
-                    let space = Space.fromData data
-                    spaceList <- space :: spaceList
-
-                return List.rev spaceList
+                return spacesWithMembers |> Array.toList
             }
 
         member _.GetByUserIdAsync(userId: UserId) : Task<ValidatedSpace list> =
@@ -78,32 +76,28 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                 // Find all spaces where the user is a member
                 let! spaceMemberEntities = context.SpaceMembers.Where(fun sm -> sm.UserId = userId).ToListAsync()
 
-                let spaces = []
-                let mutable spaceList = spaces
+                let! spacesWithMembers =
+                    spaceMemberEntities
+                    |> Seq.map (fun spaceMember ->
+                        task {
+                            let spaceId = spaceMember.SpaceId
+                            let! spaceData = context.Spaces.FirstOrDefaultAsync(fun s -> s.Id = spaceId)
 
-                for spaceMember in spaceMemberEntities do
-                    let spaceId = spaceMember.SpaceId
-                    let! spaceData = context.Spaces.FirstOrDefaultAsync(fun s -> s.Id = spaceId)
+                            match Option.ofObj spaceData with
+                            | Some data ->
+                                let! allSpaceMembersForSpace =
+                                    context.SpaceMembers.Where(fun sm -> sm.SpaceId = data.Id).ToListAsync()
 
-                    match Option.ofObj spaceData with
-                    | Some data ->
-                        let dataSpaceId = data.Id
+                                let memberIds =
+                                    allSpaceMembersForSpace |> Seq.map (fun sm -> sm.UserId) |> Seq.toList
 
-                        let! allSpaceMembersForSpace =
-                            context.SpaceMembers.Where(fun sm -> sm.SpaceId = dataSpaceId).ToListAsync()
+                                data.MemberIds <- memberIds
+                                return Some(Space.fromData data)
+                            | None -> return None
+                        })
+                    |> Task.WhenAll
 
-                        // Convert SpaceMember entities to UserIds
-                        let memberIds =
-                            allSpaceMembersForSpace |> Seq.map (fun sm -> sm.UserId) |> Seq.toList
-
-                        // Set the MemberIds for this space
-                        data.MemberIds <- memberIds
-                        let space = Space.fromData data
-
-                        spaceList <- space :: spaceList
-                    | None -> ()
-
-                return List.rev spaceList
+                return spacesWithMembers |> Array.choose id |> Array.toList
             }
 
         member _.GetByModeratorUserIdAsync(moderatorUserId: UserId) : Task<ValidatedSpace list> =
@@ -114,22 +108,22 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                         .OrderBy(fun s -> s.CreatedAt)
                         .ToListAsync()
 
-                let spaces = []
-                let mutable spaceList = spaces
+                let! spacesWithMembers =
+                    spaceDatas
+                    |> Seq.map (fun data ->
+                        task {
+                            let spaceId = data.Id
 
-                for data in spaceDatas do
-                    let spaceId = data.Id
-                    let! spaceMemberEntities = context.SpaceMembers.Where(fun sm -> sm.SpaceId = spaceId).ToListAsync()
+                            let! spaceMemberEntities =
+                                context.SpaceMembers.Where(fun sm -> sm.SpaceId = spaceId).ToListAsync()
 
-                    // Convert SpaceMember entities to UserIds
-                    let memberIds = spaceMemberEntities |> Seq.map (fun sm -> sm.UserId) |> Seq.toList
+                            let memberIds = spaceMemberEntities |> Seq.map (fun sm -> sm.UserId) |> Seq.toList
+                            data.MemberIds <- memberIds
+                            return Space.fromData data
+                        })
+                    |> Task.WhenAll
 
-                    // Create SpaceData with MemberIds populated from relationships
-                    data.MemberIds <- memberIds
-                    let space = Space.fromData data
-                    spaceList <- space :: spaceList
-
-                return List.rev spaceList
+                return spacesWithMembers |> Array.toList
             }
 
         member _.AddAsync(space: ValidatedSpace) : Task<Result<unit, DomainError>> =

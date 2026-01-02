@@ -61,25 +61,25 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
                 // Initialize Children for all retrieved folders
                 folderDatas |> Seq.iter (fun data -> data.Children <- [])
 
-                // Load children for each root folder
-                let folders = []
-                let mutable folderList = folders
+                let! foldersWithChildren =
+                    folderDatas
+                    |> Seq.map (fun data ->
+                        task {
+                            let dataId = data.Id
 
-                for data in folderDatas do
-                    // Load children for this folder
-                    let dataId = data.Id
+                            let! childrenData =
+                                context.Folders
+                                    .Where(fun f -> f.ParentId = Some(dataId))
+                                    .OrderBy(fun f -> f.Name)
+                                    .ToListAsync()
 
-                    let! childrenData =
-                        context.Folders.Where(fun f -> f.ParentId = Some(dataId)).OrderBy(fun f -> f.Name).ToListAsync()
+                            childrenData |> Seq.iter (fun childData -> childData.Children <- [])
+                            data.Children <- childrenData |> Seq.toList
+                            return Folder.fromData data
+                        })
+                    |> Task.WhenAll
 
-                    // Initialize children for retrieved child data
-                    childrenData |> Seq.iter (fun childData -> childData.Children <- [])
-                    // Populate children field
-                    data.Children <- childrenData |> Seq.toList
-                    let folder = Folder.fromData data
-                    folderList <- folder :: folderList
-
-                return List.rev folderList
+                return foldersWithChildren |> Array.toList
             }
 
         member _.GetAllAsync (skip: int) (take: int) : Task<ValidatedFolder list> =
@@ -89,25 +89,25 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
                 // Initialize Children for all retrieved folders
                 folderDatas |> Seq.iter (fun data -> data.Children <- [])
 
-                // Load children for each folder
-                let folders = []
-                let mutable folderList = folders
+                let! foldersWithChildren =
+                    folderDatas
+                    |> Seq.map (fun data ->
+                        task {
+                            let dataId = data.Id
 
-                for data in folderDatas do
-                    // Load children for this folder
-                    let dataId = data.Id
+                            let! childrenData =
+                                context.Folders
+                                    .Where(fun f -> f.ParentId = Some(dataId))
+                                    .OrderBy(fun f -> f.Name)
+                                    .ToListAsync()
 
-                    let! childrenData =
-                        context.Folders.Where(fun f -> f.ParentId = Some(dataId)).OrderBy(fun f -> f.Name).ToListAsync()
+                            childrenData |> Seq.iter (fun childData -> childData.Children <- [])
+                            data.Children <- childrenData |> Seq.toList
+                            return Folder.fromData data
+                        })
+                    |> Task.WhenAll
 
-                    // Initialize children for retrieved child data
-                    childrenData |> Seq.iter (fun childData -> childData.Children <- [])
-                    // Populate children field
-                    data.Children <- childrenData |> Seq.toList
-                    let folder = Folder.fromData data
-                    folderList <- folder :: folderList
-
-                return List.rev folderList
+                return foldersWithChildren |> Array.toList
             }
 
         member _.GetBySpaceAsync (spaceId: SpaceId) (skip: int) (take: int) : Task<ValidatedFolder list> =
@@ -123,25 +123,25 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
                 // Initialize Children for all retrieved folders
                 folderDatas |> Seq.iter (fun data -> data.Children <- [])
 
-                // Load children for each folder
-                let folders = []
-                let mutable folderList = folders
+                let! foldersWithChildren =
+                    folderDatas
+                    |> Seq.map (fun data ->
+                        task {
+                            let dataId = data.Id
 
-                for data in folderDatas do
-                    // Load children for this folder
-                    let dataId = data.Id
+                            let! childrenData =
+                                context.Folders
+                                    .Where(fun f -> f.ParentId = Some(dataId))
+                                    .OrderBy(fun f -> f.Name)
+                                    .ToListAsync()
 
-                    let! childrenData =
-                        context.Folders.Where(fun f -> f.ParentId = Some(dataId)).OrderBy(fun f -> f.Name).ToListAsync()
+                            childrenData |> Seq.iter (fun childData -> childData.Children <- [])
+                            data.Children <- childrenData |> Seq.toList
+                            return Folder.fromData data
+                        })
+                    |> Task.WhenAll
 
-                    // Initialize children for retrieved child data
-                    childrenData |> Seq.iter (fun childData -> childData.Children <- [])
-                    // Populate children field
-                    data.Children <- childrenData |> Seq.toList
-                    let folder = Folder.fromData data
-                    folderList <- folder :: folderList
-
-                return List.rev folderList
+                return foldersWithChildren |> Array.toList
             }
 
         member _.AddAsync(folder: ValidatedFolder) : Task<Result<unit, DomainError>> =
