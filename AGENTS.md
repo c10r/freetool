@@ -21,3 +21,29 @@ Match the current history: imperative, single-line subjects (`Add authz checks f
 
 ## Security & Configuration Tips
 Keep secrets out of source control; use `appsettings.Development.json`, user secrets, or environment variables. The API expects OTEL and OpenFGA settings (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OPENFGA_HTTP_ADDR`) defined in `docker-compose.yml`, so reuse those key names elsewhere. Filter sensitive payloads before emitting tracing data and prefer the Docker stack so SQLite/OpenFGA defaults stay aligned.
+
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd sync
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
