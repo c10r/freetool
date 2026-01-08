@@ -271,7 +271,7 @@ export default function SpaceSettingsView({
   };
 
   const handleInviteUser = async () => {
-    if (!inviteEmail.trim()) {
+    if (!(inviteEmail.trim() && spaceId)) {
       return;
     }
 
@@ -288,9 +288,28 @@ export default function SpaceSettingsView({
           invitedAt: response.data.invitedAt,
         };
 
+        // Add to space immediately (persist to backend)
+        await addSpaceMember({ spaceId, userId: newUser.id });
+
+        // Update local state
         setAllUsers((prev) => [...prev, newUser]);
         setEditMemberIds((prev) => [...prev, newUser.id]);
+
+        // Also update the space object to reflect the new member
+        setSpace((prev) =>
+          prev
+            ? {
+                ...prev,
+                memberIds: [...prev.memberIds, newUser.id],
+              }
+            : null
+        );
+
         setInviteEmail("");
+
+        // Invalidate queries to refresh permissions table
+        queryClient.invalidateQueries({ queryKey: ["spaces"] });
+        refetchPermissions();
       }
     } finally {
       setIsInviting(false);
