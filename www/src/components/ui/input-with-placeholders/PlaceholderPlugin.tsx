@@ -36,12 +36,12 @@ export function PlaceholderPlugin({
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    // Listen for "{" key and Backspace
+    // Listen for "@" key and Backspace
     const unregisterKeyDown = editor.registerCommand(
       KEY_DOWN_COMMAND,
       (event: KeyboardEvent) => {
-        if (event.key === "{" && availableInputs.length > 0) {
-          // Let the character be inserted first, then open popover
+        if (event.key === "@" && availableInputs.length > 0) {
+          // Open popover immediately when @ is typed
           setTimeout(() => {
             onOpenPopover({
               mode: "insert",
@@ -49,7 +49,7 @@ export function PlaceholderPlugin({
           }, 0);
         }
 
-        // Close popover if backspace deletes the opening brace
+        // Close popover if backspace deletes the @ symbol
         if (
           event.key === "Backspace" &&
           isPopoverOpen &&
@@ -65,8 +65,8 @@ export function PlaceholderPlugin({
               const anchorNode = selection.anchor.getNode();
               if ($isTextNode(anchorNode)) {
                 const text = anchorNode.getTextContent();
-                // If there's no trailing "{", close the popover
-                if (!text.endsWith("{")) {
+                // If there's no trailing "@", close the popover
+                if (!text.endsWith("@")) {
                   onClosePopover();
                 }
               } else {
@@ -92,7 +92,7 @@ export function PlaceholderPlugin({
       COMMAND_PRIORITY_HIGH
     );
 
-    // Listen for cursor restoration after brace
+    // Listen for cursor restoration after @
     const unregisterRestoreCursor = editor.registerCommand(
       RESTORE_CURSOR_AFTER_BRACE_COMMAND,
       () => {
@@ -102,7 +102,7 @@ export function PlaceholderPlugin({
             return;
           }
 
-          // Find the text node with trailing "{"
+          // Find the text node with trailing "@"
           const root = selection.anchor.getTopLevelElement();
           if (!root) {
             return;
@@ -112,10 +112,10 @@ export function PlaceholderPlugin({
           for (const child of children) {
             if ($isTextNode(child)) {
               const text = child.getTextContent();
-              const braceIndex = text.lastIndexOf("{");
-              if (braceIndex !== -1) {
-                // Position cursor right after the "{"
-                child.select(braceIndex + 1, braceIndex + 1);
+              const atIndex = text.lastIndexOf("@");
+              if (atIndex !== -1) {
+                // Position cursor right after the "@"
+                child.select(atIndex + 1, atIndex + 1);
                 return;
               }
             }
@@ -141,7 +141,7 @@ export function PlaceholderPlugin({
               node.setIsValid(true);
             }
           } else {
-            // Insert mode - find and remove trailing "{"
+            // Insert mode - find and remove trailing "@"
             const selection = $getSelection();
             if (!$isRangeSelection(selection)) {
               return;
@@ -150,13 +150,13 @@ export function PlaceholderPlugin({
             const anchorNode = selection.anchor.getNode();
             if ($isTextNode(anchorNode)) {
               const text = anchorNode.getTextContent();
-              const lastBraceIndex = text.lastIndexOf("{");
+              const lastAtIndex = text.lastIndexOf("@");
 
-              if (lastBraceIndex !== -1) {
-                const before = text.slice(0, lastBraceIndex);
-                const after = text.slice(lastBraceIndex + 1);
+              if (lastAtIndex !== -1) {
+                const before = text.slice(0, lastAtIndex);
+                const after = text.slice(lastAtIndex + 1);
 
-                // Set text before the brace
+                // Set text before the @
                 anchorNode.setTextContent(before);
 
                 // Create placeholder node

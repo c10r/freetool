@@ -126,7 +126,7 @@ export function InputWithPlaceholders({
           );
           if (editorElement instanceof HTMLElement) {
             editorElement.focus();
-            // Restore cursor to after the "{" if we were in insert mode
+            // Restore cursor to after the "@" if we were in insert mode
             if (wasInsertMode && editorRef.current) {
               editorRef.current.restoreCursorAfterBrace();
             }
@@ -312,6 +312,7 @@ export function InputWithPlaceholders({
         <ExpressionPlugin
           availableInputs={availableInputs}
           onOpenExpressionEditor={handleOpenExpressionEditor}
+          onClosePlaceholderPopover={handleClosePopover}
         />
         <OnBlurPlugin onBlur={onBlur} />
         <DisabledPlugin disabled={disabled} />

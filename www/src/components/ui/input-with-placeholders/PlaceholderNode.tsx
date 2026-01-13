@@ -65,9 +65,7 @@ function PlaceholderPill({
           : "text-destructive bg-destructive/10 line-through"
       )}
     >
-      {"{"}
-      {inputTitle}
-      {"}"}
+      @{inputTitle}
     </span>
   );
 }

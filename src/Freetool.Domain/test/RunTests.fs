@@ -35,10 +35,10 @@ let createTestAppWithResource () =
             spaceId
             "Test API"
             "Test endpoint"
-            "https://api.test.com/users/{userId}"
+            "https://api.test.com/users/@userId"
             [ "limit", "10" ]
-            [ "Authorization", "Bearer {token}" ]
-            [ "email", "{email}" ]
+            [ "Authorization", "Bearer @token" ]
+            [ "email", "@email" ]
 
         |> unwrapResult
 
@@ -50,7 +50,7 @@ let createTestAppWithResource () =
             resource
             HttpMethod.Get
             inputs
-            (Some "/{userId}/profile")
+            (Some "/@userId/profile")
             []
             []
             []
@@ -270,13 +270,13 @@ let ``Run executable request composition should substitute input values`` () =
         | Some execRequest ->
             // Base URL should have userId substituted
             Assert.Contains("123", execRequest.BaseUrl)
-            Assert.DoesNotContain("{userId}", execRequest.BaseUrl)
+            Assert.DoesNotContain("@userId", execRequest.BaseUrl)
 
             // Headers should have token placeholder (not substituted since no token input provided)
             let authHeader =
                 execRequest.Headers |> List.find (fun (k, _) -> k = "Authorization")
 
-            Assert.Equal(("Authorization", "Bearer {token}"), authHeader)
+            Assert.Equal(("Authorization", "Bearer @token"), authHeader)
 
             // Body should have email substituted
             let emailBody = execRequest.Body |> List.find (fun (k, _) -> k = "email")

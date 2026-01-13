@@ -23,11 +23,13 @@ interface ExpressionPluginProps {
   onOpenExpressionEditor: (
     payload: ExpressionEditorPayload & { expression?: string }
   ) => void;
+  onClosePlaceholderPopover?: () => void;
 }
 
 export function ExpressionPlugin({
   availableInputs,
   onOpenExpressionEditor,
+  onClosePlaceholderPopover,
 }: ExpressionPluginProps): null {
   const [editor] = useLexicalComposerContext();
   // Track consecutive "{" key presses
@@ -52,6 +54,9 @@ export function ExpressionPlugin({
           ) {
             // This is "{{" - open expression editor
             event.preventDefault();
+
+            // Close placeholder popover if it opened (due to 150ms delay race)
+            onClosePlaceholderPopover?.();
 
             // Remove the first "{" and open expression editor
             editor.update(() => {
@@ -201,7 +206,12 @@ export function ExpressionPlugin({
       unregisterOpenEditor();
       unregisterSetExpression();
     };
-  }, [editor, availableInputs, onOpenExpressionEditor]);
+  }, [
+    editor,
+    availableInputs,
+    onOpenExpressionEditor,
+    onClosePlaceholderPopover,
+  ]);
 
   return null;
 }

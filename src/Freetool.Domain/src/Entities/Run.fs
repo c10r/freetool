@@ -252,16 +252,16 @@ module Run =
             let substituteTemplate (template: string) : string =
                 let mutable result = template
 
-                // Substitute app input values
+                // Substitute app input values (@variableName syntax)
                 for kvp in inputValuesMap do
-                    let placeholder = $"{{{kvp.Key}}}"
+                    let placeholder = $"@{kvp.Key}"
                     result <- result.Replace(placeholder, kvp.Value)
 
-                // Substitute current_user placeholders
-                result <- result.Replace("{current_user.email}", currentUser.Email)
-                result <- result.Replace("{current_user.id}", currentUser.Id)
-                result <- result.Replace("{current_user.firstName}", currentUser.FirstName)
-                result <- result.Replace("{current_user.lastName}", currentUser.LastName)
+                // Substitute current_user placeholders (@current_user.* syntax)
+                result <- result.Replace("@current_user.email", currentUser.Email)
+                result <- result.Replace("@current_user.id", currentUser.Id)
+                result <- result.Replace("@current_user.firstName", currentUser.FirstName)
+                result <- result.Replace("@current_user.lastName", currentUser.LastName)
 
                 result
 

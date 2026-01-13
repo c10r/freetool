@@ -13,10 +13,12 @@ import {
 import { $createExpressionNode, $isExpressionNode } from "./ExpressionNode";
 import { $createPlaceholderNode, $isPlaceholderNode } from "./PlaceholderNode";
 
-// Match both {{ expression }} and { placeholder } patterns
+// Match both {{ expression }} and @placeholder patterns
 // Expressions first (longer pattern takes priority)
 const EXPRESSION_REGEX = /\{\{([^{}]+)\}\}/g;
-const PLACEHOLDER_REGEX = /\{([^{}]+)\}/g;
+// Match @variableName or @current_user.property (identifier with optional dot notation)
+const PLACEHOLDER_REGEX =
+  /@([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?)/g;
 
 interface ParsedToken {
   type: "text" | "placeholder" | "expression";
@@ -49,7 +51,7 @@ function tokenize(value: string): ParsedToken[] {
     }
   }
 
-  // Find all placeholders ({ ... }) that don't overlap with expressions
+  // Find all placeholders (@variable) that don't overlap with expressions
   for (const match of value.matchAll(PLACEHOLDER_REGEX)) {
     if (match.index !== undefined) {
       const start = match.index;
@@ -122,7 +124,7 @@ function isExpressionValid(
 }
 
 /**
- * Parse a string value with {placeholder} and {{ expression }} syntax into Lexical editor state.
+ * Parse a string value with @placeholder and {{ expression }} syntax into Lexical editor state.
  * Call this within an editor.update() callback.
  */
 export function parseValueToEditorState(
@@ -154,7 +156,7 @@ export function parseValueToEditorState(
 }
 
 /**
- * Serialize Lexical editor state back to a string with {placeholder} and {{ expression }} syntax.
+ * Serialize Lexical editor state back to a string with @placeholder and {{ expression }} syntax.
  * Call this within an editorState.read() callback.
  */
 export function serializeEditorStateToString(): string {
@@ -169,7 +171,7 @@ export function serializeEditorStateToString(): string {
   const children = paragraph.getChildren();
   for (const child of children) {
     if ($isPlaceholderNode(child)) {
-      result += `{${child.getInputTitle()}}`;
+      result += `@${child.getInputTitle()}`;
     } else if ($isExpressionNode(child)) {
       result += `{{ ${child.getExpression()} }}`;
     } else if ($isTextNode(child)) {
