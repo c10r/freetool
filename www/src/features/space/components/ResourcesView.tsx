@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, Edit, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -66,6 +67,7 @@ export default function ResourcesView({
   spaceName,
   onBackClick,
 }: ResourcesViewProps) {
+  const queryClient = useQueryClient();
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,6 +177,7 @@ export default function ResourcesView({
       setDeletingResourceId(resourceId);
       await deleteResource(resourceId);
       await fetchResources();
+      queryClient.invalidateQueries({ queryKey: ["resources", spaceId] });
     } catch (_err) {
       setError("Failed to delete resource. Please try again.");
     } finally {
@@ -215,6 +218,7 @@ export default function ResourcesView({
       setCreateFormData(initialFormData);
       setShowCreateForm(false);
       await fetchResources();
+      queryClient.invalidateQueries({ queryKey: ["resources", spaceId] });
     } catch (_err) {
       setCreateError("Failed to create resource. Please try again.");
     } finally {
