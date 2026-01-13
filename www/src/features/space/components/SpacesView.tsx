@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/tooltip";
 import { usePagination } from "@/hooks/usePagination";
 import { useIsOrgAdmin } from "@/hooks/usePermissions";
+import { sidebarQueryKeys } from "@/hooks/useSidebarTree";
 
 interface User {
   id: string;
@@ -176,8 +177,9 @@ export default function SpacesView() {
         setTotalCount(response.data.totalCount ?? 0);
       }
 
-      // Invalidate spaces list to refetch
+      // Invalidate spaces list and sidebar to refetch
       queryClient.invalidateQueries({ queryKey: ["spaces"] });
+      queryClient.invalidateQueries({ queryKey: sidebarQueryKeys.tree() });
     } finally {
       setIsCreatingSpace(false);
     }
