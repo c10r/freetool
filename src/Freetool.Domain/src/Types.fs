@@ -16,7 +16,8 @@ type ExecutableHttpRequest =
       UrlParameters: (string * string) list
       Headers: (string * string) list
       Body: (string * string) list
-      HttpMethod: string }
+      HttpMethod: string
+      UseJsonBody: bool }
 
 // CLIMutable for EntityFramework
 [<CLIMutable>]

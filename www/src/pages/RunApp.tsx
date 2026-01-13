@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import DynamicBodyEditor from "@/features/space/components/DynamicBodyEditor";
 import { useHasPermission } from "@/hooks/usePermissions";
 import { fromBackendInputType } from "@/lib/inputTypeMapper";
 import type { components } from "@/schema";
@@ -68,11 +69,18 @@ const RunApp = () => {
   const [spaceLoading, setSpaceLoading] = useState(false);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [dynamicBody, setDynamicBody] = useState<
+    { key: string; value: string }[]
+  >([{ key: "", value: "" }]);
+  const [dynamicBodyError, setDynamicBodyError] = useState<string | null>(null);
 
   const canRunApp = useHasPermission(spaceId, "run_app");
 
   // Check if app has inputs that need to be filled
   const hasInputs = app?.inputs && app.inputs.length > 0;
+
+  // Check if app uses dynamic JSON body
+  const usesDynamicBody = app?.useDynamicJsonBody ?? false;
 
   // Load app details
   useEffect(() => {
@@ -170,7 +178,39 @@ const RunApp = () => {
       }
     }
 
+    // Validate dynamic body if app uses it
+    if (usesDynamicBody) {
+      // Filter out empty key-value pairs
+      const nonEmptyPairs = dynamicBody.filter(
+        (pair) => pair.key.trim() !== "" || pair.value.trim() !== ""
+      );
+
+      // Check for empty keys (but non-empty values)
+      const hasEmptyKey = nonEmptyPairs.some(
+        (pair) => pair.key.trim() === "" && pair.value.trim() !== ""
+      );
+      if (hasEmptyKey) {
+        setDynamicBodyError("All keys must have a value");
+        return;
+      }
+
+      // Check for duplicate keys
+      const keys = nonEmptyPairs.map((pair) => pair.key.trim()).filter(Boolean);
+      const uniqueKeys = new Set(keys);
+      if (keys.length !== uniqueKeys.size) {
+        setDynamicBodyError("Duplicate keys are not allowed");
+        return;
+      }
+
+      // Check max items
+      if (nonEmptyPairs.length > 10) {
+        setDynamicBodyError("Maximum 10 key-value pairs allowed");
+        return;
+      }
+    }
+
     setFormErrors({});
+    setDynamicBodyError(null);
     setRunning(true);
     setRunError(null);
     setResult(null);
@@ -184,7 +224,18 @@ const RunApp = () => {
         })
       );
 
-      const response = await runApp(nodeId, inputValuesArray);
+      // Prepare dynamic body if app uses it
+      const dynamicBodyForApi = usesDynamicBody
+        ? dynamicBody.filter(
+            (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
+          )
+        : undefined;
+
+      const response = await runApp(
+        nodeId,
+        inputValuesArray,
+        dynamicBodyForApi
+      );
       if (response.error) {
         setRunError((response.error?.message as string) || "Failed to run app");
       } else {
@@ -195,7 +246,14 @@ const RunApp = () => {
     } finally {
       setRunning(false);
     }
-  }, [nodeId, hasInputs, inputValues, app?.inputs]);
+  }, [
+    nodeId,
+    hasInputs,
+    inputValues,
+    app?.inputs,
+    usesDynamicBody,
+    dynamicBody,
+  ]);
 
   // Handle input value changes
   const handleInputChange = (title: string, value: string) => {
@@ -410,7 +468,9 @@ const RunApp = () => {
         {!result && (
           <Card>
             <CardHeader>
-              <CardTitle>{hasInputs ? "App Inputs" : "Run App"}</CardTitle>
+              <CardTitle>
+                {hasInputs || usesDynamicBody ? "App Inputs" : "Run App"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -430,6 +490,31 @@ const RunApp = () => {
                     )}
                   </div>
                 ))}
+
+                {/* Dynamic Body Editor */}
+                {usesDynamicBody && (
+                  <div className="space-y-2">
+                    <Label>JSON Body Parameters</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Define the key-value pairs for the request body (max 10
+                      pairs)
+                    </p>
+                    <DynamicBodyEditor
+                      items={dynamicBody}
+                      onChange={(items) => {
+                        setDynamicBody(items);
+                        if (dynamicBodyError) {
+                          setDynamicBodyError(null);
+                        }
+                      }}
+                      disabled={running}
+                    />
+                    {dynamicBodyError && (
+                      <p className="text-sm text-red-500">{dynamicBodyError}</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="pt-4">
                   {spaceReady ? (
                     <PermissionButton

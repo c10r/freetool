@@ -72,6 +72,34 @@ module Run =
         { State = runData
           UncommittedEvents = [] }
 
+    /// Validate dynamic body key-value pairs
+    let validateDynamicBody (body: (string * string) list) : Result<(string * string) list, DomainError> =
+        // Check max 10 keys
+        if body.Length > 10 then
+            Error(ValidationError "Dynamic body cannot have more than 10 key-value pairs")
+        else
+            // Check for empty keys
+            let emptyKeys = body |> List.filter (fun (k, _) -> String.IsNullOrWhiteSpace k)
+
+            if not emptyKeys.IsEmpty then
+                Error(ValidationError "Dynamic body keys cannot be empty")
+            else
+                // Check for duplicate keys
+                let keys = body |> List.map fst
+                let uniqueKeys = keys |> Set.ofList
+
+                if keys.Length <> uniqueKeys.Count then
+                    let duplicates =
+                        keys
+                        |> List.groupBy id
+                        |> List.filter (fun (_, group) -> group.Length > 1)
+                        |> List.map fst
+
+                    let duplicateList = String.concat ", " duplicates
+                    Error(ValidationError $"Dynamic body cannot have duplicate keys: {duplicateList}")
+                else
+                    Ok body
+
     // Validate input values against app's input schema
     let private validateInputValues
         (appInputs: Input list)
@@ -239,7 +267,10 @@ module Run =
         (app: ValidatedApp)
         (resource: ValidatedResource)
         (currentUser: CurrentUser)
+        (dynamicBody: (string * string) list option)
         : Result<ValidatedRun, DomainError> =
+
+        let useDynamicJsonBody = App.getUseDynamicJsonBody app
 
         // Use existing RequestComposer to create the base ExecutableHttpRequest
         match RequestComposer.composeExecutableRequest resource app with
@@ -274,18 +305,36 @@ module Run =
                 baseRequest.Headers
                 |> List.map (fun (key, value) -> (substituteTemplate key, substituteTemplate value))
 
-            let substitutedBody =
-                baseRequest.Body
-                |> List.map (fun (key, value) -> (substituteTemplate key, substituteTemplate value))
+            // Handle body based on dynamic body mode
+            let bodyResult =
+                if useDynamicJsonBody then
+                    // When dynamic body mode is enabled, use the provided dynamic body
+                    match dynamicBody with
+                    | None -> Error(ValidationError "Dynamic body is required when UseDynamicJsonBody is enabled")
+                    | Some body ->
+                        match validateDynamicBody body with
+                        | Error err -> Error err
+                        | Ok validBody -> Ok validBody
+                else
+                    // Use the composed body with substitutions
+                    let substitutedBody =
+                        baseRequest.Body
+                        |> List.map (fun (key, value) -> (substituteTemplate key, substituteTemplate value))
 
-            let executableRequest =
-                { BaseUrl = substituteTemplate baseRequest.BaseUrl
-                  UrlParameters = substitutedUrlParams
-                  Headers = substitutedHeaders
-                  Body = substitutedBody
-                  HttpMethod = baseRequest.HttpMethod }
+                    Ok substitutedBody
 
-            Ok(setExecutableRequest executableRequest run)
+            match bodyResult with
+            | Error err -> Error err
+            | Ok finalBody ->
+                let executableRequest =
+                    { BaseUrl = substituteTemplate baseRequest.BaseUrl
+                      UrlParameters = substitutedUrlParams
+                      Headers = substitutedHeaders
+                      Body = finalBody
+                      HttpMethod = baseRequest.HttpMethod
+                      UseJsonBody = useDynamicJsonBody }
+
+                Ok(setExecutableRequest executableRequest run)
 
     let markAsRunning (actorUserId: UserId) (run: ValidatedRun) : ValidatedRun =
         let updatedRunData =

@@ -285,6 +285,7 @@ let createTestApp (name: string) (folderId: FolderId) (resourceId: ResourceId) :
           UrlParameters = []
           Headers = []
           Body = []
+          UseDynamicJsonBody = false
           CreatedAt = DateTime.UtcNow
           UpdatedAt = DateTime.UtcNow
           IsDeleted = false }

@@ -117,9 +117,12 @@ module RequestComposer =
                     | Error error -> Error error
                     | Ok body ->
                         // Return composed ExecutableHttpRequest
+                        // UseJsonBody is set to false by default; it will be overridden
+                        // in Run.composeExecutableRequestFromAppAndResource if needed
                         Ok
                             { BaseUrl = composedBaseUrl
                               UrlParameters = urlParams
                               Headers = headers
                               Body = body
-                              HttpMethod = httpMethod }
+                              HttpMethod = httpMethod
+                              UseJsonBody = false }

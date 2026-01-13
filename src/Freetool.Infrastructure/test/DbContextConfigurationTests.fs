@@ -97,6 +97,7 @@ let ``AppData with complex JSON properties can be persisted and retrieved`` () =
           UrlParameters = [ testKeyValuePair ]
           Headers = [ testKeyValuePair ]
           Body = [ testKeyValuePair ]
+          UseDynamicJsonBody = false
           CreatedAt = DateTime.UtcNow
           UpdatedAt = DateTime.UtcNow
           IsDeleted = false }

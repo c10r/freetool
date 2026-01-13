@@ -175,6 +175,7 @@ export function useSidebarTree() {
               key: kvp.key || "",
               value: kvp.value || "",
             })),
+            useDynamicJsonBody: app.useDynamicJsonBody ?? false,
           };
           nodes[app.id] = appNode;
         }

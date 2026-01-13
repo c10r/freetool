@@ -16,7 +16,8 @@ module RunMapper =
           UrlParameters = request.UrlParameters |> List.map (fun (k, v) -> { Key = k; Value = v })
           Headers = request.Headers |> List.map (fun (k, v) -> { Key = k; Value = v })
           Body = request.Body |> List.map (fun (k, v) -> { Key = k; Value = v })
-          HttpMethod = request.HttpMethod }
+          HttpMethod = request.HttpMethod
+          UseJsonBody = request.UseJsonBody }
 
     let fromCreateDto (dto: CreateRunDto) : RunInputValue list =
         dto.InputValues |> List.map runInputValueFromDto

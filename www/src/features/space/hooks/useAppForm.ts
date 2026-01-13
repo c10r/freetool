@@ -5,6 +5,7 @@ import {
   updateAppHttpMethod,
   updateAppQueryParams,
   updateAppUrlPath,
+  updateAppUseDynamicJsonBody,
 } from "@/api/api";
 import type { EndpointMethod, KeyValuePair } from "../types";
 
@@ -14,6 +15,7 @@ export interface AppFormData {
   urlParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
+  useDynamicJsonBody?: boolean;
 }
 
 interface FieldState {
@@ -29,6 +31,7 @@ type FieldStates = {
   urlParameters: FieldState;
   headers: FieldState;
   body: FieldState;
+  useDynamicJsonBody: FieldState;
 };
 
 const initialFieldState: FieldState = {
@@ -44,6 +47,7 @@ const initialFieldStates: FieldStates = {
   urlParameters: initialFieldState,
   headers: initialFieldState,
   body: initialFieldState,
+  useDynamicJsonBody: initialFieldState,
 };
 
 export function useAppForm(
@@ -322,6 +326,89 @@ export function useAppForm(
     [appId, onUpdate, setFieldState, formData]
   );
 
+  const updateUseDynamicJsonBodyField = useCallback(
+    async (value: boolean) => {
+      if (!appId) {
+        return;
+      }
+
+      // Don't make network request if value hasn't changed
+      if (value === savedDataRef.current.useDynamicJsonBody) {
+        return;
+      }
+
+      setFieldState("useDynamicJsonBody", {
+        updating: true,
+        saved: false,
+        error: false,
+      });
+
+      try {
+        const response = await updateAppUseDynamicJsonBody(appId, value);
+
+        if (response?.error) {
+          const errorMessage =
+            response.error.message ||
+            "Failed to save dynamic JSON body setting";
+          setFieldState("useDynamicJsonBody", {
+            updating: false,
+            error: true,
+            errorMessage,
+          });
+
+          // Reset the field value on error
+          setFormData((prev) => ({
+            ...prev,
+            useDynamicJsonBody: savedDataRef.current.useDynamicJsonBody,
+          }));
+
+          setTimeout(() => {
+            setFieldState("useDynamicJsonBody", {
+              error: false,
+              errorMessage: "",
+            });
+          }, 2000);
+
+          return;
+        }
+
+        // Update local state on success
+        const updatedData = { ...formData, useDynamicJsonBody: value };
+        savedDataRef.current = {
+          ...savedDataRef.current,
+          useDynamicJsonBody: value,
+        };
+        setFormData(updatedData);
+        onUpdate?.(updatedData);
+
+        setFieldState("useDynamicJsonBody", { updating: false, saved: true });
+        setTimeout(() => {
+          setFieldState("useDynamicJsonBody", { saved: false });
+        }, 2000);
+      } catch (_error) {
+        setFieldState("useDynamicJsonBody", {
+          updating: false,
+          error: true,
+          errorMessage: "Network error occurred",
+        });
+
+        // Reset the field value on error
+        setFormData((prev) => ({
+          ...prev,
+          useDynamicJsonBody: savedDataRef.current.useDynamicJsonBody,
+        }));
+
+        setTimeout(() => {
+          setFieldState("useDynamicJsonBody", {
+            error: false,
+            errorMessage: "",
+          });
+        }, 2000);
+      }
+    },
+    [appId, onUpdate, setFieldState, formData]
+  );
+
   return {
     formData,
     fieldStates,
@@ -329,6 +416,7 @@ export function useAppForm(
     updateKeyValueField,
     updateUrlPathField,
     updateHttpMethodField,
+    updateUseDynamicJsonBodyField,
     resetFieldStates,
     setFormData,
   };

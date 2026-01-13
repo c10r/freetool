@@ -418,6 +418,7 @@ module DevSeedingService =
                                                                 []
                                                                 []
                                                                 []
+                                                                false
                                                         with
                                                         | Error err ->
                                                             logger.LogWarning(

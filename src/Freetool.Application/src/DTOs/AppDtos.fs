@@ -35,7 +35,9 @@ type CreateAppDto =
 
       Headers: KeyValuePairDto list
 
-      Body: KeyValuePairDto list }
+      Body: KeyValuePairDto list
+
+      UseDynamicJsonBody: bool }
 
 type UpdateAppNameDto =
     { [<Required>]
@@ -60,3 +62,5 @@ type UpdateAppHttpMethodDto =
     { [<Required>]
       [<StringLength(10, MinimumLength = 1, ErrorMessage = "HTTP method must be between 1 and 10 characters")>]
       HttpMethod: string }
+
+type UpdateAppUseDynamicJsonBodyDto = { UseDynamicJsonBody: bool }

@@ -3,6 +3,7 @@ namespace Freetool.Domain.Services
 open System
 open System.Net.Http
 open System.Text
+open System.Text.Json
 open System.Threading.Tasks
 open Freetool.Domain
 
@@ -21,24 +22,42 @@ module HttpExecutionService =
             let separator = if baseUrl.Contains("?") then "&" else "?"
             $"{baseUrl}{separator}{queryString}"
 
-    /// Build request body content based on HTTP method and body parameters
-    let private buildRequestContent (httpMethod: string) (bodyParameters: (string * string) list) : HttpContent option =
+    /// Build request body content based on HTTP method, body parameters, and content type preference
+    let private buildRequestContent
+        (httpMethod: string)
+        (bodyParameters: (string * string) list)
+        (useJsonBody: bool)
+        : HttpContent option =
         match httpMethod.ToUpperInvariant() with
         | "GET"
         | "DELETE"
         | "HEAD" -> None // These methods typically don't have request bodies
         | _ when List.isEmpty bodyParameters -> None // No body parameters provided
         | _ ->
-            // Build form-encoded content for POST/PUT/PATCH requests
-            let formContent =
-                bodyParameters
-                |> List.map (fun (key, value) -> $"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(value)}")
-                |> String.concat "&"
+            if useJsonBody then
+                // Build JSON object from key-value pairs
+                let jsonObject =
+                    bodyParameters
+                    |> List.fold
+                        (fun (dict: System.Collections.Generic.Dictionary<string, string>) (key, value) ->
+                            dict.[key] <- value
+                            dict)
+                        (System.Collections.Generic.Dictionary<string, string>())
 
-            let content =
-                new StringContent(formContent, Encoding.UTF8, "application/x-www-form-urlencoded")
+                let jsonString = JsonSerializer.Serialize(jsonObject)
+                let content = new StringContent(jsonString, Encoding.UTF8, "application/json")
+                Some(content :> HttpContent)
+            else
+                // Build form-encoded content for POST/PUT/PATCH requests
+                let formContent =
+                    bodyParameters
+                    |> List.map (fun (key, value) -> $"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(value)}")
+                    |> String.concat "&"
 
-            Some(content :> HttpContent)
+                let content =
+                    new StringContent(formContent, Encoding.UTF8, "application/x-www-form-urlencoded")
+
+                Some(content :> HttpContent)
 
     /// Execute an ExecutableHttpRequest using provided HttpClient and return the response or error
     let executeRequestWithClient
@@ -65,7 +84,7 @@ module HttpExecutionService =
                         () // Ignore invalid headers
 
                 // Add body content if applicable
-                match buildRequestContent request.HttpMethod request.Body with
+                match buildRequestContent request.HttpMethod request.Body request.UseJsonBody with
                 | Some content ->
                     requestMessage.Content <- content
 

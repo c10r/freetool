@@ -185,6 +185,7 @@ let createTestApp (name: string) (folderId: FolderId) (resourceId: ResourceId) :
           UrlParameters = []
           Headers = []
           Body = []
+          UseDynamicJsonBody = false
           CreatedAt = DateTime.UtcNow
           UpdatedAt = DateTime.UtcNow
           IsDeleted = false }
@@ -232,7 +233,7 @@ let ``CreateRun succeeds with valid app and inputs`` () =
         let appRepository = MockAppRepository([ app ]) :> IAppRepository
         let resourceRepository = MockResourceRepository([ resource ]) :> IResourceRepository
 
-        let createRunDto: CreateRunDto = { InputValues = [] }
+        let createRunDto: CreateRunDto = { InputValues = []; DynamicBody = None }
         let actorUserId = UserId.NewId()
 
         let command =
@@ -257,7 +258,7 @@ let ``CreateRun fails for nonexistent app`` () =
         let appRepository = MockAppRepository([]) :> IAppRepository
         let resourceRepository = MockResourceRepository([]) :> IResourceRepository
 
-        let createRunDto: CreateRunDto = { InputValues = [] }
+        let createRunDto: CreateRunDto = { InputValues = []; DynamicBody = None }
         let actorUserId = UserId.NewId()
         let nonExistentAppId = Guid.NewGuid().ToString()
 
@@ -287,7 +288,7 @@ let ``CreateRun fails when resource not found`` () =
         let appRepository = MockAppRepository([ app ]) :> IAppRepository
         let resourceRepository = MockResourceRepository([]) :> IResourceRepository // No resource
 
-        let createRunDto: CreateRunDto = { InputValues = [] }
+        let createRunDto: CreateRunDto = { InputValues = []; DynamicBody = None }
         let actorUserId = UserId.NewId()
 
         let command =
@@ -340,6 +341,7 @@ let ``CreateRun marks as invalid when input validation fails`` () =
               UrlParameters = []
               Headers = []
               Body = []
+              UseDynamicJsonBody = false
               CreatedAt = DateTime.UtcNow
               UpdatedAt = DateTime.UtcNow
               IsDeleted = false }
@@ -355,7 +357,7 @@ let ``CreateRun marks as invalid when input validation fails`` () =
         let resourceRepository = MockResourceRepository([ resource ]) :> IResourceRepository
 
         // Create run without the required input
-        let createRunDto: CreateRunDto = { InputValues = [] }
+        let createRunDto: CreateRunDto = { InputValues = []; DynamicBody = None }
         let actorUserId = UserId.NewId()
 
         let command =

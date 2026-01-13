@@ -224,7 +224,8 @@ function WorkspaceContent() {
     urlParameters: KeyValuePair[] = [],
     headers: KeyValuePair[] = [],
     body: KeyValuePair[] = [],
-    inputs: AppField[] = []
+    inputs: AppField[] = [],
+    useDynamicJsonBody = false
   ) => {
     // Map frontend AppField[] to backend AppInputDto[] format
     const backendInputs = inputs.map((f) => ({
@@ -246,6 +247,7 @@ function WorkspaceContent() {
       body: body,
       headers: headers,
       urlParameters: urlParameters,
+      useDynamicJsonBody: useDynamicJsonBody,
     });
 
     if (response.error) {

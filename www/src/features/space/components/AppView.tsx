@@ -43,6 +43,7 @@ export default function AppView({
     updateKeyValueField,
     updateUrlPathField,
     updateHttpMethodField,
+    updateUseDynamicJsonBodyField,
     resetFieldStates,
     setFormData: setAppFormData,
   } = useAppForm(
@@ -52,6 +53,7 @@ export default function AppView({
       urlParameters: app.urlParameters || [],
       headers: app.headers || [],
       body: app.body || [],
+      useDynamicJsonBody: app.useDynamicJsonBody ?? false,
     },
     app.id,
     (updatedData) => {
@@ -104,25 +106,14 @@ export default function AppView({
       urlParameters: app.urlParameters || [],
       headers: app.headers || [],
       body: app.body || [],
+      useDynamicJsonBody: app.useDynamicJsonBody ?? false,
     });
     resetFieldStates();
 
     // Update app inputs when app changes
     setFields(app.fields);
     resetInputsState();
-  }, [
-    app.name,
-    app.httpMethod,
-    app.urlPath,
-    app.urlParameters,
-    app.headers,
-    app.body,
-    app.fields,
-    setAppFormData,
-    resetFieldStates,
-    setFields,
-    resetInputsState,
-  ]);
+  }, [app, setAppFormData, resetFieldStates, setFields, resetInputsState]);
 
   const updateHttpMethod = (httpMethod: EndpointMethod) => {
     updateAppFormData("httpMethod", httpMethod);
@@ -146,6 +137,11 @@ export default function AppView({
 
   const updateUrlPath = (urlPath: string) => {
     updateAppFormData("urlPath", urlPath);
+    // Don't update the app node immediately - wait for autosave
+  };
+
+  const updateUseDynamicJsonBody = (useDynamicJsonBody: boolean) => {
+    updateAppFormData("useDynamicJsonBody", useDynamicJsonBody);
     // Don't update the app node immediately - wait for autosave
   };
 
@@ -340,6 +336,7 @@ export default function AppView({
             queryParameters={appFormData.urlParameters}
             headers={appFormData.headers}
             body={appFormData.body}
+            useDynamicJsonBody={appFormData.useDynamicJsonBody}
             onResourceChange={(resourceId) =>
               updateNode({ ...app, resourceId })
             }
@@ -348,6 +345,7 @@ export default function AppView({
             onQueryParametersChange={updateUrlParameters}
             onHeadersChange={updateHeaders}
             onBodyChange={updateBody}
+            onUseDynamicJsonBodyChange={updateUseDynamicJsonBody}
             showResourceSelector={false}
             mode="edit"
             fieldStates={appFieldStates}
@@ -359,6 +357,9 @@ export default function AppView({
             }}
             onHttpMethodFieldBlur={(value) => {
               updateHttpMethodField(value);
+            }}
+            onUseDynamicJsonBodyFieldBlur={(value) => {
+              updateUseDynamicJsonBodyField(value);
             }}
             disabled={!canEditApp}
             inputs={fields.map((f) => ({

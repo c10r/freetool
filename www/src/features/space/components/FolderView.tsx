@@ -92,6 +92,7 @@ export default function FolderView({
       headers: [],
       body: [],
       inputs: [],
+      useDynamicJsonBody: false,
     });
   }, []);
   const [newFolderName, setNewFolderName] = useState("");
@@ -123,6 +124,7 @@ export default function FolderView({
     headers: [] as KeyValuePair[],
     body: [] as KeyValuePair[],
     inputs: [] as AppField[],
+    useDynamicJsonBody: false,
   });
 
   // App running state
@@ -310,7 +312,8 @@ export default function FolderView({
         appFormData.queryParameters,
         appFormData.headers,
         appFormData.body,
-        appFormData.inputs
+        appFormData.inputs,
+        appFormData.useDynamicJsonBody
       );
 
       // Reset form and close on success
@@ -323,6 +326,7 @@ export default function FolderView({
         headers: [],
         body: [],
         inputs: [],
+        useDynamicJsonBody: false,
       });
       setShowCreateAppForm(false);
     } catch (error) {
@@ -353,6 +357,7 @@ export default function FolderView({
       headers: [],
       body: [],
       inputs: [],
+      useDynamicJsonBody: false,
     });
   };
 
@@ -581,6 +586,7 @@ export default function FolderView({
               queryParameters={appFormData.queryParameters}
               headers={appFormData.headers}
               body={appFormData.body}
+              useDynamicJsonBody={appFormData.useDynamicJsonBody}
               onResourceChange={(resourceId) =>
                 setAppFormData({ ...appFormData, resourceId })
               }
@@ -597,6 +603,9 @@ export default function FolderView({
                 setAppFormData({ ...appFormData, headers })
               }
               onBodyChange={(body) => setAppFormData({ ...appFormData, body })}
+              onUseDynamicJsonBodyChange={(useDynamicJsonBody) =>
+                setAppFormData({ ...appFormData, useDynamicJsonBody })
+              }
               disabled={isCreatingApp}
               inputs={appFormData.inputs.map((f) => ({
                 title: f.label,

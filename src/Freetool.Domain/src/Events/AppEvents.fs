@@ -20,6 +20,7 @@ type AppChange =
     | HeadersChanged of oldHeaders: KeyValuePair list * newHeaders: KeyValuePair list
     | BodyChanged of oldBody: KeyValuePair list * newBody: KeyValuePair list
     | HttpMethodChanged of oldValue: HttpMethod * newValue: HttpMethod
+    | UseDynamicJsonBodyChanged of oldValue: bool * newValue: bool
 
 type AppCreatedEvent =
     { AppId: AppId

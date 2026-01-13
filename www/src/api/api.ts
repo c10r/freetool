@@ -47,9 +47,10 @@ export interface DevUser {
  */
 export async function getDevUsers(): Promise<DevUser[]> {
   // In Docker, use the internal network; locally, use localhost:5002
-  const backendUrl = typeof window !== "undefined" && window.location.port === "8081"
-    ? "http://localhost:5002"  // Direct to backend, bypassing proxy
-    : `${window.location.origin}/freetool`;
+  const backendUrl =
+    typeof window !== "undefined" && window.location.port === "8081"
+      ? "http://localhost:5002" // Direct to backend, bypassing proxy
+      : `${window.location.origin}/freetool`;
   const url = `${backendUrl}/dev/users`;
   console.log("[DEV] getDevUsers: fetching from", url);
   const response = await fetch(url);
@@ -132,6 +133,7 @@ type AppCreateInput = {
   body: KeyValuePair[];
   headers: KeyValuePair[];
   urlParameters: KeyValuePair[];
+  useDynamicJsonBody?: boolean;
 };
 
 export const getApps = (skip?: number, take?: number) => {
@@ -189,7 +191,8 @@ export const deleteApp = (appId: string) => {
 
 export const runApp = (
   appId: string,
-  inputValues?: { title: string; value: string }[]
+  inputValues?: { title: string; value: string }[],
+  dynamicBody?: { key: string; value: string }[]
 ) => {
   return client.POST("/app/{id}/run", {
     params: {
@@ -197,6 +200,21 @@ export const runApp = (
     },
     body: {
       inputValues: inputValues ?? [],
+      dynamicBody: dynamicBody,
+    },
+  });
+};
+
+export const updateAppUseDynamicJsonBody = (
+  appId: string,
+  useDynamicJsonBody: boolean
+) => {
+  return client.PUT("/app/{id}/use-dynamic-json-body", {
+    params: {
+      path: { id: appId },
+    },
+    body: {
+      useDynamicJsonBody,
     },
   });
 };

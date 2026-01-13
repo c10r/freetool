@@ -34,7 +34,8 @@ let ``HttpExecutionService executeRequestWithClient should build correct URL wit
               UrlParameters = [ ("limit", "10"); ("offset", "5") ]
               Headers = [ ("Authorization", "Bearer token123") ]
               Body = [ ("email", "test@example.com") ]
-              HttpMethod = "GET" }
+              HttpMethod = "GET"
+              UseJsonBody = false }
 
         // Act
         let! result = HttpExecutionService.executeRequestWithClient httpClient request
@@ -62,7 +63,8 @@ let ``HttpExecutionService executeRequestWithClient should handle different HTTP
                   UrlParameters = []
                   Headers = []
                   Body = []
-                  HttpMethod = httpMethod }
+                  HttpMethod = httpMethod
+                  UseJsonBody = false }
 
             // Act
             let! result = HttpExecutionService.executeRequestWithClient httpClient request
@@ -85,7 +87,8 @@ let ``HttpExecutionService executeRequestWithClient should handle HTTP error res
               UrlParameters = []
               Headers = []
               Body = []
-              HttpMethod = "GET" }
+              HttpMethod = "GET"
+              UseJsonBody = false }
 
         // Act
         let! result = HttpExecutionService.executeRequestWithClient httpClient request
@@ -111,7 +114,8 @@ let ``HttpExecutionService executeRequestWithClient should handle POST with body
               UrlParameters = []
               Headers = [ ("Content-Type", "application/x-www-form-urlencoded") ]
               Body = [ ("name", "John Doe"); ("email", "john@example.com") ]
-              HttpMethod = "POST" }
+              HttpMethod = "POST"
+              UseJsonBody = false }
 
         // Act
         let! result = HttpExecutionService.executeRequestWithClient httpClient request

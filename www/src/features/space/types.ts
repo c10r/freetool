@@ -65,6 +65,7 @@ export interface AppNode extends BaseNode {
   urlParameters?: KeyValuePair[]; // query parameters for the app
   headers?: KeyValuePair[]; // headers for the app
   body?: KeyValuePair[]; // JSON body for the app
+  useDynamicJsonBody?: boolean; // when true, body is provided at runtime
 }
 
 export type SpaceNode = FolderNode | AppNode;
@@ -91,7 +92,8 @@ export interface SpaceMainProps {
     queryParameters?: KeyValuePair[],
     headers?: KeyValuePair[],
     body?: KeyValuePair[],
-    inputs?: AppField[]
+    inputs?: AppField[],
+    useDynamicJsonBody?: boolean
   ) => Promise<void>;
   deleteNode: (id: string) => void;
   endpoints: Record<string, Endpoint>;

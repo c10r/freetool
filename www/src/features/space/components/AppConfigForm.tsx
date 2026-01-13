@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import type { EndpointMethod, KeyValuePair } from "../types";
 import HttpMethodBadge from "./HttpMethodBadge";
 import KeyValueList from "./KeyValueList";
@@ -44,12 +45,14 @@ interface AppConfigFormProps {
   queryParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
+  useDynamicJsonBody?: boolean;
   onResourceChange: (resourceId: string | undefined) => void;
   onUrlPathChange?: (urlPath: string) => void;
   onHttpMethodChange?: (method: EndpointMethod) => void;
   onQueryParametersChange: (urlParameters: KeyValuePair[]) => void;
   onHeadersChange: (headers: KeyValuePair[]) => void;
   onBodyChange: (body: KeyValuePair[]) => void;
+  onUseDynamicJsonBodyChange?: (useDynamicJsonBody: boolean) => void;
   disabled?: boolean;
   showResourceSelector?: boolean;
   resourceSelectorLabel?: string;
@@ -60,6 +63,7 @@ interface AppConfigFormProps {
     urlParameters: FieldState;
     headers: FieldState;
     body: FieldState;
+    useDynamicJsonBody?: FieldState;
   };
   onKeyValueFieldBlur?: (
     field: "urlParameters" | "headers" | "body",
@@ -67,6 +71,7 @@ interface AppConfigFormProps {
   ) => void;
   onUrlPathFieldBlur?: (value: string) => void;
   onHttpMethodFieldBlur?: (value: EndpointMethod) => void;
+  onUseDynamicJsonBodyFieldBlur?: (value: boolean) => void;
   inputs?: AppInput[];
 }
 
@@ -93,12 +98,14 @@ export default function AppConfigForm({
   queryParameters,
   headers,
   body,
+  useDynamicJsonBody = false,
   onResourceChange,
   onUrlPathChange,
   onHttpMethodChange,
   onQueryParametersChange,
   onHeadersChange,
   onBodyChange,
+  onUseDynamicJsonBodyChange,
   disabled = false,
   showResourceSelector = true,
   resourceSelectorLabel = "Resource",
@@ -107,6 +114,7 @@ export default function AppConfigForm({
   onKeyValueFieldBlur,
   onUrlPathFieldBlur,
   onHttpMethodFieldBlur,
+  onUseDynamicJsonBodyFieldBlur,
   inputs,
 }: AppConfigFormProps) {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -122,7 +130,13 @@ export default function AppConfigForm({
   const appInputs = inputs || [];
 
   const getFieldState = (
-    field: "urlPath" | "httpMethod" | "urlParameters" | "headers" | "body"
+    field:
+      | "urlPath"
+      | "httpMethod"
+      | "urlParameters"
+      | "headers"
+      | "body"
+      | "useDynamicJsonBody"
   ): FieldState => {
     const state = fieldStates?.[field] || {
       updating: false,
@@ -394,35 +408,87 @@ export default function AppConfigForm({
 
       <div className="space-y-2">
         <Label>JSON Body</Label>
-        {selectedResource?.body && selectedResource.body.length > 0 && (
-          <KeyValueList
-            items={selectedResource.body}
-            ariaLabel="JSON body"
-            readOnly
-            readOnlyLabel="From selected resource (read-only):"
-          />
-        )}
-        <div className="relative">
-          <KeyValueList
-            items={body}
-            onChange={onBodyChange}
-            onBlur={(items) => {
-              onKeyValueFieldBlur?.("body", items);
-            }}
-            ariaLabel="JSON body"
-            disabled={disabled || getFieldState("body").updating}
-            availableInputs={appInputs}
-          />
-          {mode === "edit" && (
-            <div className="absolute right-3 top-3">
-              <FieldIndicator state={getFieldState("body")} />
-            </div>
-          )}
-        </div>
-        {getFieldState("body").errorMessage && (
-          <div className="text-red-500 text-sm mt-1">
-            {getFieldState("body").errorMessage}
+
+        {/* Dynamic JSON Body Toggle */}
+        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+          <div className="space-y-0.5">
+            <Label
+              htmlFor="dynamic-body-toggle"
+              className="text-sm font-medium cursor-pointer"
+            >
+              Dynamic JSON Body
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Users provide body key-value pairs at runtime instead of
+              predefined values
+            </p>
           </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="dynamic-body-toggle"
+              checked={useDynamicJsonBody}
+              onCheckedChange={(checked) => {
+                onUseDynamicJsonBodyChange?.(checked);
+                if (mode === "edit") {
+                  onUseDynamicJsonBodyFieldBlur?.(checked);
+                }
+              }}
+              disabled={
+                disabled || getFieldState("useDynamicJsonBody").updating
+              }
+            />
+            {mode === "edit" && (
+              <FieldIndicator state={getFieldState("useDynamicJsonBody")} />
+            )}
+          </div>
+        </div>
+        {getFieldState("useDynamicJsonBody").errorMessage && (
+          <div className="text-red-500 text-sm mt-1">
+            {getFieldState("useDynamicJsonBody").errorMessage}
+          </div>
+        )}
+
+        {/* Static body editor - only shown when dynamic body is disabled */}
+        {!useDynamicJsonBody && (
+          <>
+            {selectedResource?.body && selectedResource.body.length > 0 && (
+              <KeyValueList
+                items={selectedResource.body}
+                ariaLabel="JSON body"
+                readOnly
+                readOnlyLabel="From selected resource (read-only):"
+              />
+            )}
+            <div className="relative">
+              <KeyValueList
+                items={body}
+                onChange={onBodyChange}
+                onBlur={(items) => {
+                  onKeyValueFieldBlur?.("body", items);
+                }}
+                ariaLabel="JSON body"
+                disabled={disabled || getFieldState("body").updating}
+                availableInputs={appInputs}
+              />
+              {mode === "edit" && (
+                <div className="absolute right-3 top-3">
+                  <FieldIndicator state={getFieldState("body")} />
+                </div>
+              )}
+            </div>
+            {getFieldState("body").errorMessage && (
+              <div className="text-red-500 text-sm mt-1">
+                {getFieldState("body").errorMessage}
+              </div>
+            )}
+          </>
+        )}
+
+        {useDynamicJsonBody && (
+          <p className="text-sm text-muted-foreground italic">
+            Body parameters will be provided by users when running this app (max
+            10 key-value pairs).
+          </p>
         )}
       </div>
     </div>

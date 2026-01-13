@@ -179,6 +179,7 @@ type AppController
                                             createRequest.UrlParameters
                                             createRequest.Headers
                                             createRequest.Body
+                                            createRequest.UseDynamicJsonBody
                                     with
                                     | Error domainError -> return this.HandleDomainError(domainError)
                                     | Ok validatedApp ->
@@ -521,6 +522,38 @@ type AppController
                 | Error _ -> return this.HandleAuthorizationError()
                 | Ok() ->
                     let! result = commandHandler.HandleCommand(UpdateAppHttpMethod(userId, id, updateDto))
+
+                    return
+                        match result with
+                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                        | Error error -> this.HandleDomainError(error)
+        }
+
+    [<HttpPut("{id}/use-dynamic-json-body")>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.UpdateAppUseDynamicJsonBody
+        (id: string, [<FromBody>] updateDto: UpdateAppUseDynamicJsonBodyDto)
+        : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+
+            // Check authorization: user must have edit_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
+
+            match spaceIdResult with
+            | Error error -> return this.HandleDomainError(error)
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppEdit
+
+                match authResult with
+                | Error _ -> return this.HandleAuthorizationError()
+                | Ok() ->
+                    let! result = commandHandler.HandleCommand(UpdateAppUseDynamicJsonBody(userId, id, updateDto))
 
                     return
                         match result with

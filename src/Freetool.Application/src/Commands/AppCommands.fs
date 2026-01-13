@@ -23,3 +23,4 @@ type AppCommand =
     | UpdateAppHeaders of actorUserId: UserId * appId: string * UpdateAppHeadersDto
     | UpdateAppUrlPath of actorUserId: UserId * appId: string * UpdateAppUrlPathDto
     | UpdateAppHttpMethod of actorUserId: UserId * appId: string * UpdateAppHttpMethodDto
+    | UpdateAppUseDynamicJsonBody of actorUserId: UserId * appId: string * UpdateAppUseDynamicJsonBodyDto

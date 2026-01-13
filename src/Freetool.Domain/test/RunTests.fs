@@ -54,6 +54,7 @@ let createTestAppWithResource () =
             []
             []
             []
+            false
         |> unwrapResult
 
     app, resource
@@ -261,7 +262,7 @@ let ``Run executable request composition should substitute input values`` () =
 
     // Act
     let result =
-        Run.composeExecutableRequestFromAppAndResource run app resource testCurrentUser
+        Run.composeExecutableRequestFromAppAndResource run app resource testCurrentUser None
 
     // Assert
     match result with
@@ -313,7 +314,18 @@ let ``Run creation should validate Email input type with valid email`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues =
@@ -354,7 +366,18 @@ let ``Run creation should reject Email input type with invalid email`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues =
@@ -395,7 +418,18 @@ let ``Run creation should validate Integer input type with valid integer`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues = [ { Title = "age"; Value = "25" } ]
@@ -434,7 +468,18 @@ let ``Run creation should reject Integer input type with invalid integer`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues =
@@ -477,7 +522,18 @@ let ``Run creation should validate Boolean input type with valid boolean`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues = [ { Title = "isActive"; Value = "true" } ]
@@ -516,7 +572,18 @@ let ``Run creation should reject Boolean input type with invalid boolean`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues = [ { Title = "isActive"; Value = "maybe" } ]
@@ -557,7 +624,18 @@ let ``Run creation should validate Date input type with valid date`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues =
@@ -598,7 +676,18 @@ let ``Run creation should reject Date input type with invalid date`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues =
@@ -641,7 +730,18 @@ let ``Run creation should validate Text input type within length limit`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues =
@@ -682,7 +782,18 @@ let ``Run creation should reject Text input type exceeding length limit`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues =
@@ -726,7 +837,18 @@ let ``Run creation should validate MultiText input type with valid choice`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues = [ { Title = "priority"; Value = "high" } ] // Valid text choice
@@ -765,7 +887,18 @@ let ``Run creation should reject MultiText input type with invalid choice`` () =
         |> unwrapResult
 
     let app =
-        App.createWithResource actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] []
+        App.createWithResource
+            actorUserId
+            "Test App"
+            folderId
+            resource
+            HttpMethod.Get
+            inputs
+            (Some "/test")
+            []
+            []
+            []
+            false
         |> unwrapResult
 
     let inputValues =

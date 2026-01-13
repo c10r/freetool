@@ -18,20 +18,20 @@ const App = () => (
       <DevModeGate>
         <BrowserRouter basename="/freetool">
           <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/spaces" element={<Index />} />
-          <Route path="/spaces-list" element={<Index />} />
-          <Route path="/spaces/:spaceId" element={<Index />} />
-          <Route path="/spaces/:spaceId/:nodeId" element={<Index />} />
-          <Route path="/spaces/:spaceId/:nodeId/run" element={<RunApp />} />
-          <Route path="/spaces/:spaceId/resources" element={<Index />} />
-          <Route path="/spaces/:spaceId/settings" element={<Index />} />
-          <Route path="/spaces/:spaceId/permissions" element={<Index />} />
-          <Route path="/spaces/:spaceId/trash" element={<Index />} />
-          <Route path="/users" element={<Index />} />
-          <Route path="/audit" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
+            <Route path="/" element={<Index />} />
+            <Route path="/spaces" element={<Index />} />
+            <Route path="/spaces-list" element={<Index />} />
+            <Route path="/spaces/:spaceId" element={<Index />} />
+            <Route path="/spaces/:spaceId/:nodeId" element={<Index />} />
+            <Route path="/spaces/:spaceId/:nodeId/run" element={<RunApp />} />
+            <Route path="/spaces/:spaceId/resources" element={<Index />} />
+            <Route path="/spaces/:spaceId/settings" element={<Index />} />
+            <Route path="/spaces/:spaceId/permissions" element={<Index />} />
+            <Route path="/spaces/:spaceId/trash" element={<Index />} />
+            <Route path="/users" element={<Index />} />
+            <Route path="/audit" element={<Index />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </DevModeGate>

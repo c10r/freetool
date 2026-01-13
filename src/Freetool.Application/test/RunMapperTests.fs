@@ -41,7 +41,8 @@ let ``fromCreateDto should convert CreateRunDto to domain input values`` () =
         { InputValues =
             [ { Title = "userId"; Value = "123" }
               { Title = "email"
-                Value = "test@example.com" } ] }
+                Value = "test@example.com" } ]
+          DynamicBody = None }
 
     // Act
     let result = RunMapper.fromCreateDto dto
@@ -61,7 +62,8 @@ let ``executableHttpRequestToDto should convert domain model to DTO correctly`` 
           UrlParameters = [ "limit", "10"; "offset", "0" ]
           Headers = [ "Authorization", "Bearer token"; "Content-Type", "application/json" ]
           Body = [ "email", "test@example.com"; "name", "John Doe" ]
-          HttpMethod = "POST" }
+          HttpMethod = "POST"
+          UseJsonBody = false }
 
     // Act
     let result = RunMapper.executableHttpRequestToDto request
@@ -112,7 +114,8 @@ let createTestRun () =
           UrlParameters = [ "limit", "10" ]
           Headers = [ "Authorization", "Bearer token" ]
           Body = [ "email", "test@example.com" ]
-          HttpMethod = "GET" }
+          HttpMethod = "GET"
+          UseJsonBody = false }
 
     let runData: RunData =
         { Id = RunId.NewId()

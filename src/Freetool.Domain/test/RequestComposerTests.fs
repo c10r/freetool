@@ -48,6 +48,7 @@ let ``RequestComposer should combine Resource and App correctly`` () =
             [ "page", "1"; "size", "10" ]
             [ ("Authorization", "Bearer token123") ]
             [ ("include_metadata", "true") ]
+            false
 
     let app = unwrapResult appResult
 
@@ -109,7 +110,18 @@ let ``RequestComposer should handle URL path composition correctly`` () =
 
         // Create App with specific URL path using the resource
         let appResult =
-            App.createWithResource actorUserId "Test App" folderId resourceWithUrl HttpMethod.Get [] urlPath [] [] []
+            App.createWithResource
+                actorUserId
+                "Test App"
+                folderId
+                resourceWithUrl
+                HttpMethod.Get
+                []
+                urlPath
+                []
+                []
+                []
+                false
 
         let app = unwrapResult appResult
 
@@ -155,6 +167,7 @@ let ``RequestComposer should allow App extending Resource with new values`` () =
             [ ("page", "1"); ("size", "10") ]
             [ "Authorization", "Bearer xyz" ]
             [ "include_metadata", "true" ]
+            false
 
     let app = unwrapResult appResult
 
@@ -201,7 +214,18 @@ let ``RequestComposer should reject mismatched ResourceId`` () =
         |> unwrapResult
 
     let appResult =
-        App.createWithResource actorUserId "Mismatched App" folderId differentResource HttpMethod.Get [] None [] [] []
+        App.createWithResource
+            actorUserId
+            "Mismatched App"
+            folderId
+            differentResource
+            HttpMethod.Get
+            []
+            None
+            []
+            []
+            []
+            false
 
     let app = unwrapResult appResult
 
@@ -239,7 +263,7 @@ let ``RequestComposer should handle empty App extensions`` () =
 
     // App with no extensions (empty lists and None)
     let appResult =
-        App.createWithResource actorUserId "Empty App" folderId resource HttpMethod.Delete [] None [] [] []
+        App.createWithResource actorUserId "Empty App" folderId resource HttpMethod.Delete [] None [] [] [] false
 
     let app = unwrapResult appResult
 

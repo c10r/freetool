@@ -51,6 +51,9 @@ type AppData =
       Body: KeyValuePair list
 
       [<Required>]
+      UseDynamicJsonBody: bool
+
+      [<Required>]
       CreatedAt: DateTime
 
       [<Required>]
@@ -182,6 +185,7 @@ module App =
         (urlParameters: (string * string) list)
         (headers: (string * string) list)
         (body: (string * string) list)
+        (useDynamicJsonBody: bool)
         : Result<ValidatedApp, DomainError> =
         // Validate headers
         let validateKeyValuePairs pairs =
@@ -217,6 +221,7 @@ module App =
                           UrlParameters = validUrlParameters
                           Headers = validHeaders
                           Body = validBody
+                          UseDynamicJsonBody = useDynamicJsonBody
                           CreatedAt = DateTime.UtcNow
                           UpdatedAt = DateTime.UtcNow
                           IsDeleted = false }
@@ -255,6 +260,7 @@ module App =
         (urlParameters: (string * string) list)
         (headers: (string * string) list)
         (body: (string * string) list)
+        (useDynamicJsonBody: bool)
         : Result<ValidatedApp, DomainError> =
 
         // Business rule: App cannot override existing Resource parameters
@@ -265,7 +271,19 @@ module App =
         | Ok() ->
             // No conflicts, proceed with normal creation
             let resourceId = Resource.getId resource
-            create actorUserId name folderId resourceId httpMethod inputs urlPath urlParameters headers body
+
+            create
+                actorUserId
+                name
+                folderId
+                resourceId
+                httpMethod
+                inputs
+                urlPath
+                urlParameters
+                headers
+                body
+                useDynamicJsonBody
 
     let markForDeletion (actorUserId: UserId) (app: ValidatedApp) : ValidatedApp =
         let appName =
@@ -319,6 +337,8 @@ module App =
 
     let getBody (app: App) : (string * string) list =
         app.State.Body |> List.map (fun kvp -> (kvp.Key, kvp.Value))
+
+    let getUseDynamicJsonBody (app: App) : bool = app.State.UseDynamicJsonBody
 
     let toConflictData (app: App) : AppResourceConflictData =
         { AppId = (getId app).ToString()
@@ -487,3 +507,25 @@ module App =
             Ok
                 { State = updatedAppData
                   UncommittedEvents = app.UncommittedEvents @ [ httpMethodChangedEvent :> IDomainEvent ] }
+
+    let updateUseDynamicJsonBody
+        (actorUserId: UserId)
+        (newUseDynamicJsonBody: bool)
+        (app: ValidatedApp)
+        : Result<ValidatedApp, DomainError> =
+        let oldUseDynamicJsonBody = app.State.UseDynamicJsonBody
+
+        let updatedAppData =
+            { app.State with
+                UseDynamicJsonBody = newUseDynamicJsonBody
+                UpdatedAt = DateTime.UtcNow }
+
+        let useDynamicJsonBodyChangedEvent =
+            AppEvents.appUpdated
+                actorUserId
+                app.State.Id
+                [ AppChange.UseDynamicJsonBodyChanged(oldUseDynamicJsonBody, newUseDynamicJsonBody) ]
+
+        Ok
+            { State = updatedAppData
+              UncommittedEvents = app.UncommittedEvents @ [ useDynamicJsonBodyChangedEvent :> IDomainEvent ] }

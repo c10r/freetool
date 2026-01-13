@@ -944,6 +944,91 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/app/{id}/use-dynamic-json-body": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["UpdateAppUseDynamicJsonBodyDto"];
+          "text/json": components["schemas"]["UpdateAppUseDynamicJsonBodyDto"];
+          "application/*+json": components["schemas"]["UpdateAppUseDynamicJsonBodyDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["AppData"];
+            "application/json": components["schemas"]["AppData"];
+            "text/json": components["schemas"]["AppData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/app/{id}/run": {
     parameters: {
       query?: never;
@@ -3496,6 +3581,17 @@ export interface paths {
             "text/json": components["schemas"]["ProblemDetails"];
           };
         };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
         /** @description Not Found */
         404: {
           headers: {
@@ -3575,6 +3671,17 @@ export interface paths {
             "text/json": components["schemas"]["ProblemDetails"];
           };
         };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
         /** @description Not Found */
         404: {
           headers: {
@@ -3645,6 +3752,17 @@ export interface paths {
         };
         /** @description Bad Request */
         400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
           headers: {
             [name: string]: unknown;
           };
@@ -4422,6 +4540,7 @@ export interface components {
       urlParameters: components["schemas"]["KeyValuePair"][];
       headers: components["schemas"]["KeyValuePair"][];
       body: components["schemas"]["KeyValuePair"][];
+      useDynamicJsonBody: boolean;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -4456,6 +4575,7 @@ export interface components {
       urlParameters?: components["schemas"]["KeyValuePairDto"][] | null;
       headers?: components["schemas"]["KeyValuePairDto"][] | null;
       body?: components["schemas"]["KeyValuePairDto"][] | null;
+      useDynamicJsonBody?: boolean;
     };
     CreateFolderDto: {
       name: string;
@@ -4475,6 +4595,9 @@ export interface components {
     };
     CreateRunDto: {
       inputValues: components["schemas"]["RunInputDto"][];
+      dynamicBody?:
+        | components["schemas"]["KeyValuePairDtoFSharpListFSharpOption"]
+        | null;
     };
     CreateSpaceDto: {
       name: string;
@@ -4567,6 +4690,7 @@ export interface components {
       headers?: components["schemas"]["StringStringTuple"][] | null;
       body?: components["schemas"]["StringStringTuple"][] | null;
       httpMethod?: string | null;
+      useJsonBody?: boolean;
     };
     ExecutableHttpRequestFSharpOption: {
       value?: components["schemas"]["ExecutableHttpRequest"] | null;
@@ -4654,6 +4778,9 @@ export interface components {
     KeyValuePairDto: {
       key: string;
       value: string;
+    };
+    KeyValuePairDtoFSharpListFSharpOption: {
+      value?: components["schemas"]["KeyValuePairDto"][] | null;
     };
     MoveFolderDto: {
       /** @description Parent folder ID. Leave null or empty to move to the root folder. */
@@ -4858,6 +4985,9 @@ export interface components {
     };
     UpdateAppUrlPathDto: {
       urlPath?: (string & components["schemas"]["StringFSharpOption"]) | null;
+    };
+    UpdateAppUseDynamicJsonBodyDto: {
+      useDynamicJsonBody?: boolean;
     };
     UpdateFolderNameDto: {
       name: string;

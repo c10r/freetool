@@ -52,9 +52,18 @@ module RunHandler =
                                 | Error error -> return Error error
                                 | Ok() -> return Ok(RunResult(runWithError.State))
                             | Some resource ->
+                                // Extract dynamic body from DTO and convert to tuple list
+                                let dynamicBody =
+                                    dto.DynamicBody |> Option.map (List.map (fun kvp -> (kvp.Key, kvp.Value)))
+
                                 // Compose executable request with input substitution
                                 match
-                                    Run.composeExecutableRequestFromAppAndResource validatedRun app resource currentUser
+                                    Run.composeExecutableRequestFromAppAndResource
+                                        validatedRun
+                                        app
+                                        resource
+                                        currentUser
+                                        dynamicBody
                                 with
                                 | Error err ->
                                     let runWithError =

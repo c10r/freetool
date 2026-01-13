@@ -15,7 +15,9 @@ type RunInputDto =
 
 type CreateRunDto =
     { [<Required>]
-      InputValues: RunInputDto list }
+      InputValues: RunInputDto list
+
+      DynamicBody: KeyValuePairDto list option }
 
 // Output DTOs
 type ExecutableHttpRequestDto =
@@ -23,4 +25,5 @@ type ExecutableHttpRequestDto =
       UrlParameters: KeyValuePairDto list
       Headers: KeyValuePairDto list
       Body: KeyValuePairDto list
-      HttpMethod: string }
+      HttpMethod: string
+      UseJsonBody: bool }
