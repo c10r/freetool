@@ -62,6 +62,7 @@ export function InputWithPlaceholders({
   className,
   id,
   "aria-label": ariaLabel,
+  disableExpressions = false,
 }: InputWithPlaceholdersProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<{
@@ -309,25 +310,29 @@ export function InputWithPlaceholders({
           isPopoverOpen={popoverState.isOpen}
           popoverMode={popoverState.triggerType}
         />
-        <ExpressionPlugin
-          availableInputs={availableInputs}
-          onOpenExpressionEditor={handleOpenExpressionEditor}
-          onClosePlaceholderPopover={handleClosePopover}
-        />
+        {!disableExpressions && (
+          <ExpressionPlugin
+            availableInputs={availableInputs}
+            onOpenExpressionEditor={handleOpenExpressionEditor}
+            onClosePlaceholderPopover={handleClosePopover}
+          />
+        )}
         <OnBlurPlugin onBlur={onBlur} />
         <DisabledPlugin disabled={disabled} />
         <ValidityUpdatePlugin availableInputs={availableInputs} />
       </LexicalComposer>
 
       {/* Expression Editor Dialog */}
-      <ExpressionEditor
-        open={expressionEditorState.isOpen}
-        onOpenChange={handleExpressionEditorOpenChange}
-        initialExpression={expressionEditorState.initialExpression}
-        availableInputs={availableInputs}
-        onSave={handleSaveExpression}
-        mode={expressionEditorState.mode}
-      />
+      {!disableExpressions && (
+        <ExpressionEditor
+          open={expressionEditorState.isOpen}
+          onOpenChange={handleExpressionEditorOpenChange}
+          initialExpression={expressionEditorState.initialExpression}
+          availableInputs={availableInputs}
+          onSave={handleSaveExpression}
+          mode={expressionEditorState.mode}
+        />
+      )}
     </div>
   );
 }

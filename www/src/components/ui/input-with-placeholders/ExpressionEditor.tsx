@@ -1,11 +1,7 @@
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  extractVariables,
-  validateExpression,
-} from "@/lib/expression-evaluator";
+import { validateExpression } from "@/lib/expression-evaluator";
 import { Alert, AlertDescription } from "../alert";
-import { Badge } from "../badge";
 import { Button } from "../button";
 import {
   Dialog,
@@ -16,8 +12,7 @@ import {
   DialogTitle,
 } from "../dialog";
 import type { AppInput } from "../input-with-placeholders.types";
-import { Textarea } from "../textarea";
-import { CURRENT_USER_PREFIX, CURRENT_USER_PROPERTIES } from "./current-user";
+import { InputWithPlaceholders } from "./InputWithPlaceholders";
 
 interface ExpressionEditorProps {
   open: boolean;
@@ -69,22 +64,12 @@ export function ExpressionEditor({
     return validateExpression(expression, availableVars);
   }, [expression, availableInputs]);
 
-  // Extract referenced variables for display
-  const referencedVars = useMemo(
-    () => extractVariables(expression),
-    [expression]
-  );
-
   const handleSave = useCallback(() => {
     if (validation.isValid) {
       onSave(expression.trim());
       onOpenChange(false);
     }
   }, [expression, validation.isValid, onSave, onOpenChange]);
-
-  const handleInsertVariable = useCallback((varName: string) => {
-    setExpression((prev) => `${prev}@${varName}`);
-  }, []);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -105,12 +90,13 @@ export function ExpressionEditor({
             <label htmlFor="expression" className="text-sm font-medium">
               Expression
             </label>
-            <Textarea
+            <InputWithPlaceholders
               id="expression"
               value={expression}
-              onChange={(e) => setExpression(e.target.value)}
-              placeholder="@Debit ? -1 * @Amount : @Amount"
-              className="font-mono text-sm min-h-[80px]"
+              onChange={setExpression}
+              availableInputs={availableInputs}
+              placeholder="Type @ to insert variables, e.g. @Debit ? -1 * @Amount : @Amount"
+              disableExpressions
             />
           </div>
 
@@ -129,61 +115,6 @@ export function ExpressionEditor({
               </AlertDescription>
             </Alert>
           )}
-
-          {/* Referenced variables */}
-          {referencedVars.length > 0 && (
-            <div className="space-y-2">
-              <span className="text-sm font-medium">Referenced Variables</span>
-              <div className="flex flex-wrap gap-1">
-                {referencedVars.map((varName) => (
-                  <Badge key={varName} variant="secondary" className="text-xs">
-                    @{varName}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Available variables */}
-          <div className="space-y-2">
-            <span className="text-sm font-medium">
-              Available Variables (click to insert)
-            </span>
-            <div className="flex flex-wrap gap-1 max-h-[150px] overflow-y-auto">
-              {/* Current user properties */}
-              {CURRENT_USER_PROPERTIES.map((prop) => {
-                const fullName = `${CURRENT_USER_PREFIX}.${prop.key}`;
-                return (
-                  <Badge
-                    key={fullName}
-                    variant="outline"
-                    className="text-xs cursor-pointer hover:bg-accent"
-                    onClick={() => handleInsertVariable(fullName)}
-                  >
-                    @{fullName}
-                  </Badge>
-                );
-              })}
-              {/* App inputs */}
-              {availableInputs
-                .filter(
-                  (i) =>
-                    i.title && !i.title.startsWith(`${CURRENT_USER_PREFIX}.`)
-                )
-                .map((input) => (
-                  <Badge
-                    key={input.title}
-                    variant="outline"
-                    className="text-xs cursor-pointer hover:bg-accent"
-                    onClick={() =>
-                      input.title && handleInsertVariable(input.title)
-                    }
-                  >
-                    @{input.title}
-                  </Badge>
-                ))}
-            </div>
-          </div>
 
           {/* Syntax help */}
           <div className="text-xs text-muted-foreground space-y-1">
