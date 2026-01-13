@@ -16,9 +16,18 @@ import { $createPlaceholderNode, $isPlaceholderNode } from "./PlaceholderNode";
 // Match both {{ expression }} and @placeholder patterns
 // Expressions first (longer pattern takes priority)
 const EXPRESSION_REGEX = /\{\{([^{}]+)\}\}/g;
-// Match @variableName or @current_user.property (identifier with optional dot notation)
+// Match @"quoted name" or @variableName (identifier with optional dot notation)
+// Group 1: quoted name (without quotes), Group 2: unquoted identifier
 const PLACEHOLDER_REGEX =
-  /@([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?)/g;
+  /@(?:"([^"]+)"|([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?))/g;
+
+/**
+ * Check if a variable name needs to be quoted when serializing
+ */
+function needsQuoting(name: string): boolean {
+  // Quote if contains spaces or doesn't match simple identifier pattern
+  return /\s/.test(name) || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
+}
 
 interface ParsedToken {
   type: "text" | "placeholder" | "expression";
@@ -51,7 +60,7 @@ function tokenize(value: string): ParsedToken[] {
     }
   }
 
-  // Find all placeholders (@variable) that don't overlap with expressions
+  // Find all placeholders (@variable or @"quoted") that don't overlap with expressions
   for (const match of value.matchAll(PLACEHOLDER_REGEX)) {
     if (match.index !== undefined) {
       const start = match.index;
@@ -62,11 +71,13 @@ function tokenize(value: string): ParsedToken[] {
           (start >= m.start && start < m.end) || (end > m.start && end <= m.end)
       );
       if (!overlaps) {
+        // match[1] is quoted name, match[2] is unquoted identifier
+        const content = match[1] ?? match[2];
         markers.push({
           start,
           end,
           type: "placeholder",
-          content: match[1],
+          content,
         });
       }
     }
@@ -171,7 +182,8 @@ export function serializeEditorStateToString(): string {
   const children = paragraph.getChildren();
   for (const child of children) {
     if ($isPlaceholderNode(child)) {
-      result += `@${child.getInputTitle()}`;
+      const title = child.getInputTitle();
+      result += needsQuoting(title) ? `@"${title}"` : `@${title}`;
     } else if ($isExpressionNode(child)) {
       result += `{{ ${child.getExpression()} }}`;
     } else if ($isTextNode(child)) {

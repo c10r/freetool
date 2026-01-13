@@ -42,6 +42,24 @@ describe("extractVariables", () => {
   it("should handle expressions without variables", () => {
     expect(extractVariables("1 + 2")).toEqual([]);
   });
+
+  it("should extract quoted variable names with spaces", () => {
+    expect(extractVariables('@"Customer ID"')).toEqual(["Customer ID"]);
+  });
+
+  it("should extract multiple quoted variables with spaces", () => {
+    expect(extractVariables('@"Customer ID" + @"Order Total"')).toEqual([
+      "Customer ID",
+      "Order Total",
+    ]);
+  });
+
+  it("should extract mixed quoted and unquoted variables", () => {
+    expect(extractVariables('@"Customer ID" + @Amount')).toEqual([
+      "Customer ID",
+      "Amount",
+    ]);
+  });
 });
 
 describe("validateExpression", () => {
@@ -73,6 +91,19 @@ describe("validateExpression", () => {
     const result = validateExpression("@Amount +", ["Amount"]);
     expect(result.isValid).toBe(false);
     expect(result.errors.some((e) => e.includes("Syntax error"))).toBe(true);
+  });
+
+  it("should validate quoted variables with spaces", () => {
+    const result = validateExpression('@"Customer ID" * 2', ["Customer ID"]);
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+    expect(result.referencedVariables).toEqual(["Customer ID"]);
+  });
+
+  it("should report unknown quoted variables", () => {
+    const result = validateExpression('@"Unknown Var" + 1', ["Amount"]);
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain("Unknown variable: Unknown Var");
   });
 });
 
@@ -210,6 +241,43 @@ describe("evaluateExpression", () => {
     const result = evaluateExpression("(@A + @B) * 3", context);
     expect(result).toEqual({ success: true, value: "36" });
   });
+
+  it("should evaluate quoted variables with spaces", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { "Customer ID": "42" },
+      types: { "Customer ID": "integer" },
+    };
+    const result = evaluateExpression('@"Customer ID" * 2', context);
+    expect(result).toEqual({ success: true, value: "84" });
+  });
+
+  it("should evaluate mixed quoted and unquoted variables", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { "Order Total": "100", Discount: "10" },
+      types: { "Order Total": "integer", Discount: "integer" },
+    };
+    const result = evaluateExpression('@"Order Total" - @Discount', context);
+    expect(result).toEqual({ success: true, value: "90" });
+  });
+
+  it("should evaluate complex expression with spaced variables", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { "Unit Price": "50", Quantity: "3", "Tax Rate": "10" },
+      types: {
+        "Unit Price": "integer",
+        Quantity: "integer",
+        "Tax Rate": "integer",
+      },
+    };
+    const result = evaluateExpression(
+      '(@"Unit Price" * @Quantity) * (1 + @"Tax Rate" / 100)',
+      context
+    );
+    expect(result).toEqual({ success: true, value: "165" });
+  });
 });
 
 describe("processTemplate", () => {
@@ -260,6 +328,16 @@ describe("processTemplate", () => {
       context
     );
     expect(result).toEqual({ success: true, value: "amount=-100" });
+  });
+
+  it("should process templates with quoted variables with spaces", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { "Customer ID": "12345" },
+      types: { "Customer ID": "text" },
+    };
+    const result = processTemplate('Customer: {{ @"Customer ID" }}', context);
+    expect(result).toEqual({ success: true, value: "Customer: 12345" });
   });
 });
 

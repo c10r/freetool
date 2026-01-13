@@ -40,8 +40,10 @@ export interface ValidationResult {
 
 // Regex pattern strings (use with new RegExp() to avoid global state issues)
 const EXPRESSION_PATTERN = "\\{\\{([^{}]+)\\}\\}";
+// Match @"quoted name" or @identifier (with optional dot notation)
+// Group 1: quoted name (without quotes), Group 2: unquoted identifier
 const VARIABLE_PATTERN =
-  "@([a-zA-Z_][a-zA-Z0-9_]*(?:\\.[a-zA-Z_][a-zA-Z0-9_]*)?)";
+  '@(?:"([^"]+)"|([a-zA-Z_][a-zA-Z0-9_]*(?:\\.[a-zA-Z_][a-zA-Z0-9_]*)?))';
 
 // Create fresh regex instances to avoid global state issues
 function createExpressionRegex(): RegExp {
@@ -50,6 +52,22 @@ function createExpressionRegex(): RegExp {
 
 function createVariableRegex(): RegExp {
   return new RegExp(VARIABLE_PATTERN, "g");
+}
+
+/**
+ * Extract the variable name from a regex match (handles both quoted and unquoted)
+ */
+function getVariableNameFromMatch(match: RegExpMatchArray): string {
+  // match[1] is quoted name, match[2] is unquoted identifier
+  return match[1] ?? match[2];
+}
+
+/**
+ * Normalize a variable name for use in expr-eval (replace special chars with underscores)
+ */
+function normalizeVariableName(name: string): string {
+  // Replace dots and spaces with underscores for expr-eval compatibility
+  return name.replace(/[\s.]+/g, "_");
 }
 
 /**
@@ -90,8 +108,9 @@ export function extractVariables(expression: string): string[] {
   const variables: string[] = [];
   const regex = createVariableRegex();
   for (const match of expression.matchAll(regex)) {
-    if (!variables.includes(match[1])) {
-      variables.push(match[1]);
+    const varName = getVariableNameFromMatch(match);
+    if (!variables.includes(varName)) {
+      variables.push(varName);
     }
   }
   return variables;
@@ -150,8 +169,12 @@ export function validateExpression(
   try {
     // Replace @Variables with placeholder identifiers for parsing
     const varRegex = createVariableRegex();
-    let normalizedExpr = expression.replace(varRegex, (_, name) =>
-      name.replace(".", "_")
+    let normalizedExpr = expression.replace(
+      varRegex,
+      (_match, quotedName, unquotedName) => {
+        const name = quotedName ?? unquotedName;
+        return normalizeVariableName(name);
+      }
     );
     // Transform JS operators to expr-eval syntax
     normalizedExpr = transformOperators(normalizedExpr);
@@ -203,15 +226,19 @@ export function evaluateExpression(
         };
       }
 
-      // Normalize variable name for expr-eval (replace . with _)
-      const normalizedName = varName.replace(".", "_");
+      // Normalize variable name for expr-eval (replace dots and spaces with _)
+      const normalizedName = normalizeVariableName(varName);
       scope[normalizedName] = coerceValue(value, type);
     }
 
     // Replace @Variables with normalized identifiers for expr-eval
     const varRegex = createVariableRegex();
-    let normalizedExpr = expression.replace(varRegex, (_, name) =>
-      name.replace(".", "_")
+    let normalizedExpr = expression.replace(
+      varRegex,
+      (_match, quotedName, unquotedName) => {
+        const name = quotedName ?? unquotedName;
+        return normalizeVariableName(name);
+      }
     );
     // Transform JS operators to expr-eval syntax
     normalizedExpr = transformOperators(normalizedExpr);

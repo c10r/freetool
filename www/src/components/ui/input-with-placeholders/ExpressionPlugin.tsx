@@ -34,9 +34,6 @@ export function ExpressionPlugin({
   const [editor] = useLexicalComposerContext();
   // Track consecutive "{" key presses
   const lastBraceTime = useRef<number>(0);
-  const lastBracePosition = useRef<{ text: string; offset: number } | null>(
-    null
-  );
 
   useEffect(() => {
     // Listen for "{{" pattern (second "{" after first)
@@ -45,13 +42,9 @@ export function ExpressionPlugin({
       (event: KeyboardEvent) => {
         if (event.key === "{") {
           const now = Date.now();
-          const selection = editor.getEditorState().read(() => $getSelection());
 
           // Check if this is a second "{" typed quickly after the first
-          if (
-            now - lastBraceTime.current < 500 &&
-            lastBracePosition.current !== null
-          ) {
+          if (now - lastBraceTime.current < 500) {
             // This is "{{" - open expression editor
             event.preventDefault();
 
@@ -84,25 +77,14 @@ export function ExpressionPlugin({
             }, 0);
 
             lastBraceTime.current = 0;
-            lastBracePosition.current = null;
             return true;
           }
 
           // Track this "{" for potential "{{" detection
           lastBraceTime.current = now;
-          if ($isRangeSelection(selection)) {
-            const anchorNode = selection.anchor.getNode();
-            if ($isTextNode(anchorNode)) {
-              lastBracePosition.current = {
-                text: anchorNode.getTextContent(),
-                offset: selection.anchor.offset,
-              };
-            }
-          }
         } else {
           // Any other key resets the "{" tracking
           lastBraceTime.current = 0;
-          lastBracePosition.current = null;
         }
 
         return false;
