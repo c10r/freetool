@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   extractVariables,
   validateExpression,
@@ -37,6 +37,15 @@ export function ExpressionEditor({
   mode,
 }: ExpressionEditorProps) {
   const [expression, setExpression] = useState(initialExpression);
+
+  // Sync expression state when dialog opens with new initial value
+  // Note: handleOpenChange below only fires for user interactions (clicking overlay, Escape),
+  // not when the `open` prop changes programmatically, so we need this effect
+  useEffect(() => {
+    if (open) {
+      setExpression(initialExpression);
+    }
+  }, [open, initialExpression]);
 
   // Reset expression when dialog opens with new initial value
   const handleOpenChange = useCallback(
