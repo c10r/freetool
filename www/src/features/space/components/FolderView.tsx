@@ -796,7 +796,9 @@ export default function FolderView({
         {children.length === 0 && (
           <Card>
             <CardContent className="py-10 text-center text-muted-foreground">
-              Empty folder. Create your first item.
+              {folder.id === "root"
+                ? "Create your first folder to get started."
+                : "Empty folder. Create your first item."}
             </CardContent>
           </Card>
         )}
