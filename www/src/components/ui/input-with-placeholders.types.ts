@@ -14,7 +14,13 @@ export interface PlaceholderSegment {
   isValid: boolean;
 }
 
-export type Segment = TextSegment | PlaceholderSegment;
+export interface ExpressionSegment {
+  type: "expression";
+  expression: string;
+  isValid: boolean;
+}
+
+export type Segment = TextSegment | PlaceholderSegment | ExpressionSegment;
 
 export interface PopoverState {
   isOpen: boolean;

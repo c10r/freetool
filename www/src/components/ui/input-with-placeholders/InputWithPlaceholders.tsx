@@ -25,6 +25,13 @@ import {
 } from "./commands";
 import { CURRENT_USER_PREFIX, CURRENT_USER_PROPERTIES } from "./current-user";
 import { DisabledPlugin } from "./DisabledPlugin";
+import { ExpressionEditor } from "./ExpressionEditor";
+import { ExpressionNode } from "./ExpressionNode";
+import { ExpressionPlugin } from "./ExpressionPlugin";
+import {
+  type ExpressionEditorPayload,
+  SET_EXPRESSION_COMMAND,
+} from "./expression-commands";
 import { OnBlurPlugin } from "./OnBlurPlugin";
 import { PlaceholderNode } from "./PlaceholderNode";
 import { PlaceholderPlugin } from "./PlaceholderPlugin";
@@ -36,6 +43,13 @@ interface PopoverState {
   isOpen: boolean;
   triggerType: "insert" | "edit";
   editingNodeKey?: NodeKey;
+}
+
+interface ExpressionEditorState {
+  isOpen: boolean;
+  mode: "insert" | "edit";
+  editingNodeKey?: NodeKey;
+  initialExpression?: string;
 }
 
 export function InputWithPlaceholders({
@@ -58,13 +72,18 @@ export function InputWithPlaceholders({
     isOpen: false,
     triggerType: "insert",
   });
+  const [expressionEditorState, setExpressionEditorState] =
+    useState<ExpressionEditorState>({
+      isOpen: false,
+      mode: "insert",
+    });
   const [searchFilter, setSearchFilter] = useState("");
 
   const initialConfig = useMemo(
     () => ({
       namespace: "InputWithPlaceholders",
       theme,
-      nodes: [PlaceholderNode],
+      nodes: [PlaceholderNode, ExpressionNode],
       onError: (_error: Error) => {
         // Errors are handled by LexicalErrorBoundary
       },
@@ -121,6 +140,46 @@ export function InputWithPlaceholders({
   const handleClosePopover = useCallback(() => {
     setPopoverState((prev) => ({ ...prev, isOpen: false }));
   }, []);
+
+  // Expression editor handlers
+  const handleOpenExpressionEditor = useCallback(
+    (payload: ExpressionEditorPayload & { expression?: string }) => {
+      setExpressionEditorState({
+        isOpen: true,
+        mode: payload.mode,
+        editingNodeKey: payload.nodeKey,
+        initialExpression: payload.expression || "",
+      });
+    },
+    []
+  );
+
+  const handleExpressionEditorOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setExpressionEditorState((prev) => ({ ...prev, isOpen: false }));
+      // Return focus to editor
+      requestAnimationFrame(() => {
+        const editorElement = containerRef.current?.querySelector(
+          '[contenteditable="true"]'
+        );
+        if (editorElement instanceof HTMLElement) {
+          editorElement.focus();
+        }
+      });
+    }
+  }, []);
+
+  const handleSaveExpression = useCallback(
+    (expression: string) => {
+      if (editorRef.current) {
+        editorRef.current.dispatchCommand(SET_EXPRESSION_COMMAND, {
+          expression,
+          nodeKey: expressionEditorState.editingNodeKey,
+        });
+      }
+    },
+    [expressionEditorState.editingNodeKey]
+  );
 
   // Filter current_user properties based on search
   const filteredCurrentUserProps = CURRENT_USER_PROPERTIES.filter((prop) => {
@@ -250,10 +309,24 @@ export function InputWithPlaceholders({
           isPopoverOpen={popoverState.isOpen}
           popoverMode={popoverState.triggerType}
         />
+        <ExpressionPlugin
+          availableInputs={availableInputs}
+          onOpenExpressionEditor={handleOpenExpressionEditor}
+        />
         <OnBlurPlugin onBlur={onBlur} />
         <DisabledPlugin disabled={disabled} />
         <ValidityUpdatePlugin availableInputs={availableInputs} />
       </LexicalComposer>
+
+      {/* Expression Editor Dialog */}
+      <ExpressionEditor
+        open={expressionEditorState.isOpen}
+        onOpenChange={handleExpressionEditorOpenChange}
+        initialExpression={expressionEditorState.initialExpression}
+        availableInputs={availableInputs}
+        onSave={handleSaveExpression}
+        mode={expressionEditorState.mode}
+      />
     </div>
   );
 }

@@ -4,15 +4,125 @@ import {
   $getRoot,
   $isTextNode,
 } from "lexical";
+import { validateExpression } from "@/lib/expression-evaluator";
 import type { AppInput } from "../input-with-placeholders.types";
 import {
   isCurrentUserPlaceholder,
   isValidCurrentUserPlaceholder,
 } from "./current-user";
+import { $createExpressionNode, $isExpressionNode } from "./ExpressionNode";
 import { $createPlaceholderNode, $isPlaceholderNode } from "./PlaceholderNode";
 
+// Match both {{ expression }} and { placeholder } patterns
+// Expressions first (longer pattern takes priority)
+const EXPRESSION_REGEX = /\{\{([^{}]+)\}\}/g;
+const PLACEHOLDER_REGEX = /\{([^{}]+)\}/g;
+
+interface ParsedToken {
+  type: "text" | "placeholder" | "expression";
+  content: string;
+  start: number;
+  end: number;
+}
+
 /**
- * Parse a string value with {placeholder} syntax into Lexical editor state.
+ * Tokenize a string into text, placeholder, and expression segments
+ */
+function tokenize(value: string): ParsedToken[] {
+  const tokens: ParsedToken[] = [];
+  const markers: Array<{
+    start: number;
+    end: number;
+    type: "placeholder" | "expression";
+    content: string;
+  }> = [];
+
+  // Find all expressions first ({{ ... }})
+  for (const match of value.matchAll(EXPRESSION_REGEX)) {
+    if (match.index !== undefined) {
+      markers.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        type: "expression",
+        content: match[1].trim(),
+      });
+    }
+  }
+
+  // Find all placeholders ({ ... }) that don't overlap with expressions
+  for (const match of value.matchAll(PLACEHOLDER_REGEX)) {
+    if (match.index !== undefined) {
+      const start = match.index;
+      const end = match.index + match[0].length;
+      // Check if this overlaps with any expression
+      const overlaps = markers.some(
+        (m) =>
+          (start >= m.start && start < m.end) || (end > m.start && end <= m.end)
+      );
+      if (!overlaps) {
+        markers.push({
+          start,
+          end,
+          type: "placeholder",
+          content: match[1],
+        });
+      }
+    }
+  }
+
+  // Sort markers by position
+  markers.sort((a, b) => a.start - b.start);
+
+  // Build tokens
+  let lastIndex = 0;
+  for (const marker of markers) {
+    // Add text before this marker
+    if (marker.start > lastIndex) {
+      tokens.push({
+        type: "text",
+        content: value.slice(lastIndex, marker.start),
+        start: lastIndex,
+        end: marker.start,
+      });
+    }
+    tokens.push({
+      type: marker.type,
+      content: marker.content,
+      start: marker.start,
+      end: marker.end,
+    });
+    lastIndex = marker.end;
+  }
+
+  // Add remaining text
+  if (lastIndex < value.length) {
+    tokens.push({
+      type: "text",
+      content: value.slice(lastIndex),
+      start: lastIndex,
+      end: value.length,
+    });
+  }
+
+  return tokens;
+}
+
+/**
+ * Validate an expression against available inputs
+ */
+function isExpressionValid(
+  expression: string,
+  availableInputs: AppInput[]
+): boolean {
+  const availableVars = availableInputs
+    .map((i) => i.title)
+    .filter((t): t is string => t !== null && t !== undefined);
+  const result = validateExpression(expression, availableVars);
+  return result.isValid;
+}
+
+/**
+ * Parse a string value with {placeholder} and {{ expression }} syntax into Lexical editor state.
  * Call this within an editor.update() callback.
  */
 export function parseValueToEditorState(
@@ -23,39 +133,28 @@ export function parseValueToEditorState(
   root.clear();
 
   const paragraph = $createParagraphNode();
-  const regex = /\{([^{}]+)\}/g;
-  let lastIndex = 0;
+  const tokens = tokenize(value);
 
-  for (const match of value.matchAll(regex)) {
-    // Add text before placeholder
-    if (match.index !== undefined && match.index > lastIndex) {
-      const text = value.slice(lastIndex, match.index);
-      paragraph.append($createTextNode(text));
+  for (const token of tokens) {
+    if (token.type === "text") {
+      paragraph.append($createTextNode(token.content));
+    } else if (token.type === "placeholder") {
+      const inputTitle = token.content;
+      const isValid = isCurrentUserPlaceholder(inputTitle)
+        ? isValidCurrentUserPlaceholder(inputTitle)
+        : availableInputs.some((i) => i.title === inputTitle);
+      paragraph.append($createPlaceholderNode(inputTitle, isValid));
+    } else if (token.type === "expression") {
+      const isValid = isExpressionValid(token.content, availableInputs);
+      paragraph.append($createExpressionNode(token.content, isValid));
     }
-
-    // Add placeholder node
-    const inputTitle = match[1];
-    // Check if it's a current_user placeholder or a regular app input
-    const isValid = isCurrentUserPlaceholder(inputTitle)
-      ? isValidCurrentUserPlaceholder(inputTitle)
-      : availableInputs.some((i) => i.title === inputTitle);
-    paragraph.append($createPlaceholderNode(inputTitle, isValid));
-
-    if (match.index !== undefined) {
-      lastIndex = match.index + match[0].length;
-    }
-  }
-
-  // Add remaining text
-  if (lastIndex < value.length) {
-    paragraph.append($createTextNode(value.slice(lastIndex)));
   }
 
   root.append(paragraph);
 }
 
 /**
- * Serialize Lexical editor state back to a string with {placeholder} syntax.
+ * Serialize Lexical editor state back to a string with {placeholder} and {{ expression }} syntax.
  * Call this within an editorState.read() callback.
  */
 export function serializeEditorStateToString(): string {
@@ -71,6 +170,8 @@ export function serializeEditorStateToString(): string {
   for (const child of children) {
     if ($isPlaceholderNode(child)) {
       result += `{${child.getInputTitle()}}`;
+    } else if ($isExpressionNode(child)) {
+      result += `{{ ${child.getExpression()} }}`;
     } else if ($isTextNode(child)) {
       result += child.getTextContent();
     }

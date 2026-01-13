@@ -1,11 +1,13 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $getRoot } from "lexical";
 import { useEffect } from "react";
+import { validateExpression } from "@/lib/expression-evaluator";
 import type { AppInput } from "../input-with-placeholders.types";
 import {
   isCurrentUserPlaceholder,
   isValidCurrentUserPlaceholder,
 } from "./current-user";
+import { $isExpressionNode } from "./ExpressionNode";
 import { $isPlaceholderNode } from "./PlaceholderNode";
 
 interface ValidityUpdatePluginProps {
@@ -25,6 +27,10 @@ export function ValidityUpdatePlugin({
         return;
       }
 
+      const availableVars = availableInputs
+        .map((i) => i.title)
+        .filter((t): t is string => t !== null && t !== undefined);
+
       const children = paragraph.getChildren();
       for (const child of children) {
         if ($isPlaceholderNode(child)) {
@@ -35,6 +41,12 @@ export function ValidityUpdatePlugin({
             : availableInputs.some((i) => i.title === inputTitle);
           if (child.getIsValid() !== isValid) {
             child.setIsValid(isValid);
+          }
+        } else if ($isExpressionNode(child)) {
+          const expression = child.getExpression();
+          const validation = validateExpression(expression, availableVars);
+          if (child.getIsValid() !== validation.isValid) {
+            child.setIsValid(validation.isValid);
           }
         }
       }
