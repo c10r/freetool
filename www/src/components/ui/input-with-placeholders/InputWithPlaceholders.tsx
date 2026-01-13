@@ -182,9 +182,18 @@ export function InputWithPlaceholders({
     [expressionEditorState.editingNodeKey]
   );
 
+  // If the user types any uppercase letter, they're being intentional about case
+  const isCaseSensitive = searchFilter !== searchFilter.toLowerCase();
+
   // Filter current_user properties based on search
   const filteredCurrentUserProps = CURRENT_USER_PROPERTIES.filter((prop) => {
     const fullTitle = `${CURRENT_USER_PREFIX}.${prop.key}`;
+    if (isCaseSensitive) {
+      return (
+        fullTitle.includes(searchFilter) ||
+        prop.displayName.includes(searchFilter)
+      );
+    }
     return (
       fullTitle.toLowerCase().includes(searchFilter.toLowerCase()) ||
       prop.displayName.toLowerCase().includes(searchFilter.toLowerCase())
@@ -193,11 +202,15 @@ export function InputWithPlaceholders({
 
   // Filter regular app inputs based on search, excluding current_user inputs
   // (current_user inputs are shown in "User Context" section, not "App Fields")
-  const filteredInputs = availableInputs.filter(
-    (input) =>
-      input.title?.toLowerCase().includes(searchFilter.toLowerCase()) &&
-      !input.title?.startsWith(`${CURRENT_USER_PREFIX}.`)
-  );
+  const filteredInputs = availableInputs.filter((input) => {
+    if (!input.title || input.title.startsWith(`${CURRENT_USER_PREFIX}.`)) {
+      return false;
+    }
+    if (isCaseSensitive) {
+      return input.title.includes(searchFilter);
+    }
+    return input.title.toLowerCase().includes(searchFilter.toLowerCase());
+  });
 
   return (
     <div className={cn("relative", className)} ref={containerRef}>
