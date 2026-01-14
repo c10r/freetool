@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   updateAppBody,
   updateAppHeaders,
@@ -84,12 +84,6 @@ export function useAppForm(
   const [formData, setFormData] = useState<AppFormData>(initialData);
   const [saveState, setSaveState] = useState<SaveState>(initialSaveState);
   const savedDataRef = useRef<AppFormData>(initialData);
-
-  // Sync with initial data when it changes (e.g., when app changes)
-  useEffect(() => {
-    savedDataRef.current = initialData;
-    setFormData(initialData);
-  }, [initialData]);
 
   /**
    * Check if there are unsaved changes
