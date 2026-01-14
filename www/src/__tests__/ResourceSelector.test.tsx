@@ -48,7 +48,7 @@ describe("ResourceSelector", () => {
     renderWithProviders(
       <ResourceSelector
         spaceId="space-123"
-        onValueChange={() => {}}
+        onValueChange={vi.fn()}
         placeholder="Select Resource"
       />
     );
@@ -70,7 +70,7 @@ describe("ResourceSelector", () => {
     const { rerender } = renderWithProviders(
       <ResourceSelector
         spaceId="space-1"
-        onValueChange={() => {}}
+        onValueChange={vi.fn()}
         placeholder="Select Resource"
       />
     );
@@ -90,7 +90,7 @@ describe("ResourceSelector", () => {
       >
         <ResourceSelector
           spaceId="space-2"
-          onValueChange={() => {}}
+          onValueChange={vi.fn()}
           placeholder="Select Resource"
         />
       </QueryClientProvider>
@@ -101,7 +101,7 @@ describe("ResourceSelector", () => {
     });
   });
 
-  it("should display loading state while fetching", async () => {
+  it("should display loading state while fetching", () => {
     // Mock a delayed response
     vi.mocked(api.getResources).mockImplementation(
       () =>
@@ -113,7 +113,7 @@ describe("ResourceSelector", () => {
     renderWithProviders(
       <ResourceSelector
         spaceId="space-123"
-        onValueChange={() => {}}
+        onValueChange={vi.fn()}
         placeholder="Select Resource"
       />
     );
@@ -133,7 +133,7 @@ describe("ResourceSelector", () => {
     renderWithProviders(
       <ResourceSelector
         spaceId="space-123"
-        onValueChange={() => {}}
+        onValueChange={vi.fn()}
         placeholder="Select Resource"
       />
     );

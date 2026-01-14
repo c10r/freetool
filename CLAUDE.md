@@ -767,3 +767,12 @@ tailscale serve --bg --set-path=/freetool 5001
 - **React Hooks**: Always fix dependency warnings - they are bugs, not suggestions
 - **Format Before Commit**: Run `npm run format` from `www/`
 - **Lint Must Pass**: Run `npm run lint` from `www/` - **zero warnings required**
+
+### Frontend Task Completion Checklist
+
+Before declaring any frontend task complete, you MUST:
+1. Run `cd www && npm run check` (lint + format with auto-fix)
+2. Verify zero warnings with `npm run lint`
+3. Run tests with `npm test`
+
+This ensures code quality gates pass before commits.
