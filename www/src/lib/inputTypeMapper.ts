@@ -106,13 +106,16 @@ export function getRadioOptionsFromBackendType(
     return [];
   }
 
+  // Handle both camelCase (from API response) and PascalCase formats
   const backendOptions = typedBackend.Fields[0] as Array<{
-    Value: string;
-    Label: string | null;
+    value?: string;
+    Value?: string;
+    label?: string | null;
+    Label?: string | null;
   }>;
 
   return backendOptions.map((opt) => ({
-    value: opt.Value,
-    label: opt.Label ?? undefined,
+    value: opt.value ?? opt.Value ?? "",
+    label: opt.label ?? opt.Label ?? undefined,
   }));
 }

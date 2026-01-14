@@ -6,7 +6,10 @@ import type {
   FolderNode,
   SpaceNode,
 } from "@/features/space/types";
-import { fromBackendInputType } from "@/lib/inputTypeMapper";
+import {
+  fromBackendInputType,
+  getRadioOptionsFromBackendType,
+} from "@/lib/inputTypeMapper";
 import type { components } from "@/schema";
 import type { Space, SpaceUser, SpaceWithDetails } from "@/types/space";
 
@@ -159,6 +162,7 @@ export function useSidebarTree() {
               label: input.title || "",
               type: fromBackendInputType(input.type as InputType),
               required: input.required ?? false,
+              options: getRadioOptionsFromBackendType(input.type as InputType),
             })),
             resourceId: app.resourceId || undefined,
             httpMethod: (app.httpMethod as EndpointMethod) || undefined,
