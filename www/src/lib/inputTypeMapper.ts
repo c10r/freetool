@@ -119,3 +119,38 @@ export function getRadioOptionsFromBackendType(
     label: opt.label ?? opt.Label ?? undefined,
   }));
 }
+
+/**
+ * Extracts the display value from a backend DefaultValue discriminated union object.
+ * The backend returns default values in F# DU format:
+ * { "Case": "IntegerDefault", "Fields": [600] }
+ *
+ * @param defaultValue - The DefaultValue object from the backend (or undefined)
+ * @returns The extracted value as a display string, or null if no default value
+ */
+export function extractDefaultValue(defaultValue: unknown): string | null {
+  if (!defaultValue) {
+    return null;
+  }
+
+  const typed = defaultValue as { Case?: string; Fields?: unknown[] };
+  if (!(typed.Case && typed.Fields) || typed.Fields.length === 0) {
+    return null;
+  }
+
+  const value = typed.Fields[0];
+
+  switch (typed.Case) {
+    case "IntegerDefault":
+    case "TextDefault":
+    case "RadioDefault":
+    case "EmailDefault":
+      return String(value);
+    case "BooleanDefault":
+      return value ? "Yes" : "No";
+    case "DateDefault":
+      return new Date(value as string).toLocaleDateString();
+    default:
+      return String(value);
+  }
+}

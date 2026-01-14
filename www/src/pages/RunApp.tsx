@@ -24,6 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import DynamicBodyEditor from "@/features/space/components/DynamicBodyEditor";
 import { useHasPermission } from "@/hooks/usePermissions";
 import {
+  extractDefaultValue,
   fromBackendInputType,
   getRadioOptionsFromBackendType,
 } from "@/lib/inputTypeMapper";
@@ -315,8 +316,8 @@ const RunApp = () => {
             onChange={(e) => handleInputChange(title, e.target.value)}
             onBlur={(e) => handleEmailBlur(title, e.target.value)}
             placeholder={
-              input.defaultValue
-                ? `Default: ${input.defaultValue}`
+              extractDefaultValue(input.defaultValue)
+                ? `Default: ${extractDefaultValue(input.defaultValue)}`
                 : `Enter ${title}`
             }
             disabled={running}
@@ -342,8 +343,8 @@ const RunApp = () => {
             value={value}
             onChange={(e) => handleInputChange(title, e.target.value)}
             placeholder={
-              input.defaultValue
-                ? `Default: ${input.defaultValue}`
+              extractDefaultValue(input.defaultValue)
+                ? `Default: ${extractDefaultValue(input.defaultValue)}`
                 : `Enter ${title}`
             }
             disabled={running}
@@ -385,8 +386,8 @@ const RunApp = () => {
             value={value}
             onChange={(e) => handleInputChange(title, e.target.value)}
             placeholder={
-              input.defaultValue
-                ? `Default: ${input.defaultValue}`
+              extractDefaultValue(input.defaultValue)
+                ? `Default: ${extractDefaultValue(input.defaultValue)}`
                 : `Enter ${title}`
             }
             disabled={running}
