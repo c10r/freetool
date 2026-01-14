@@ -153,6 +153,25 @@ const RunApp = () => {
     }
   }, [app]);
 
+  // Initialize input values with default values when app loads
+  useEffect(() => {
+    if (app?.inputs) {
+      const defaults: Record<string, string> = {};
+      for (const input of app.inputs) {
+        const title = input.title || "";
+        const defaultValue = extractDefaultValue(
+          (input as { defaultValue?: unknown }).defaultValue
+        );
+        if (defaultValue) {
+          defaults[title] = defaultValue;
+        }
+      }
+      if (Object.keys(defaults).length > 0) {
+        setInputValues(defaults);
+      }
+    }
+  }, [app]);
+
   const handleRunApp = useCallback(async () => {
     if (!nodeId) {
       return;
@@ -315,11 +334,7 @@ const RunApp = () => {
             value={value}
             onChange={(e) => handleInputChange(title, e.target.value)}
             onBlur={(e) => handleEmailBlur(title, e.target.value)}
-            placeholder={
-              extractDefaultValue(input.defaultValue)
-                ? `Default: ${extractDefaultValue(input.defaultValue)}`
-                : `Enter ${title}`
-            }
+            placeholder={`Enter ${title}`}
             disabled={running}
             className={hasError ? "border-red-500" : ""}
           />
@@ -342,11 +357,7 @@ const RunApp = () => {
             type="number"
             value={value}
             onChange={(e) => handleInputChange(title, e.target.value)}
-            placeholder={
-              extractDefaultValue(input.defaultValue)
-                ? `Default: ${extractDefaultValue(input.defaultValue)}`
-                : `Enter ${title}`
-            }
+            placeholder={`Enter ${title}`}
             disabled={running}
             className={hasError ? "border-red-500" : ""}
           />
@@ -385,11 +396,7 @@ const RunApp = () => {
             type="text"
             value={value}
             onChange={(e) => handleInputChange(title, e.target.value)}
-            placeholder={
-              extractDefaultValue(input.defaultValue)
-                ? `Default: ${extractDefaultValue(input.defaultValue)}`
-                : `Enter ${title}`
-            }
+            placeholder={`Enter ${title}`}
             disabled={running}
             className={hasError ? "border-red-500" : ""}
           />

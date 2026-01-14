@@ -7,6 +7,7 @@ import type {
   SpaceNode,
 } from "@/features/space/types";
 import {
+  extractDefaultValue,
   fromBackendInputType,
   getRadioOptionsFromBackendType,
 } from "@/lib/inputTypeMapper";
@@ -86,6 +87,7 @@ interface ApiAppData {
     title?: string | null;
     type?: unknown;
     required?: boolean;
+    defaultValue?: unknown;
   }[];
 }
 
@@ -163,6 +165,8 @@ export function useSidebarTree() {
               type: fromBackendInputType(input.type as InputType),
               required: input.required ?? false,
               options: getRadioOptionsFromBackendType(input.type as InputType),
+              defaultValue:
+                extractDefaultValue(input.defaultValue) || undefined,
             })),
             resourceId: app.resourceId || undefined,
             httpMethod: (app.httpMethod as EndpointMethod) || undefined,
