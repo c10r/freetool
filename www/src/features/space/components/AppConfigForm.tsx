@@ -1,4 +1,3 @@
-import { Check, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getResources } from "@/api/api";
 import { Input } from "@/components/ui/input";
@@ -23,13 +22,6 @@ interface Resource {
   urlParameters?: KeyValuePair[];
   headers?: KeyValuePair[];
   body?: KeyValuePair[];
-}
-
-interface FieldState {
-  updating: boolean;
-  saved: boolean;
-  error: boolean;
-  errorMessage: string;
 }
 
 interface AppInput {
@@ -57,38 +49,8 @@ interface AppConfigFormProps {
   showResourceSelector?: boolean;
   resourceSelectorLabel?: string;
   mode?: "create" | "edit";
-  fieldStates?: {
-    urlPath?: FieldState;
-    httpMethod?: FieldState;
-    urlParameters: FieldState;
-    headers: FieldState;
-    body: FieldState;
-    useDynamicJsonBody?: FieldState;
-  };
-  onKeyValueFieldBlur?: (
-    field: "urlParameters" | "headers" | "body",
-    value: KeyValuePair[]
-  ) => void;
-  onUrlPathFieldBlur?: (value: string) => void;
-  onHttpMethodFieldBlur?: (value: EndpointMethod) => void;
-  onUseDynamicJsonBodyFieldBlur?: (value: boolean) => void;
   inputs?: AppInput[];
 }
-
-const FieldIndicator = ({ state }: { state: FieldState }) => {
-  if (state.updating) {
-    return (
-      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900" />
-    );
-  }
-  if (state.saved && !state.error) {
-    return <Check className="h-4 w-4 text-green-500" />;
-  }
-  if (state.error) {
-    return <X className="h-4 w-4 text-red-500" />;
-  }
-  return null;
-};
 
 export default function AppConfigForm({
   spaceId,
@@ -109,12 +71,6 @@ export default function AppConfigForm({
   disabled = false,
   showResourceSelector = true,
   resourceSelectorLabel = "Resource",
-  mode = "create",
-  fieldStates,
-  onKeyValueFieldBlur,
-  onUrlPathFieldBlur,
-  onHttpMethodFieldBlur,
-  onUseDynamicJsonBodyFieldBlur,
   inputs,
 }: AppConfigFormProps) {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -128,24 +84,6 @@ export default function AppConfigForm({
   // App inputs for the "App Fields" section
   // (InputWithPlaceholders always shows current_user in "User Context" section)
   const appInputs = inputs || [];
-
-  const getFieldState = (
-    field:
-      | "urlPath"
-      | "httpMethod"
-      | "urlParameters"
-      | "headers"
-      | "body"
-      | "useDynamicJsonBody"
-  ): FieldState => {
-    const state = fieldStates?.[field] || {
-      updating: false,
-      saved: false,
-      error: false,
-      errorMessage: "",
-    };
-    return state;
-  };
 
   useEffect(() => {
     const fetchResources = async () => {
@@ -238,50 +176,35 @@ export default function AppConfigForm({
       {/* HTTP Method Selector */}
       <div className="space-y-2">
         <Label htmlFor="http-method">HTTP Method *</Label>
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Select
-              value={httpMethod || ""}
-              onValueChange={(value) => {
-                const method = value as EndpointMethod;
-                onHttpMethodChange?.(method);
-                if (mode === "edit") {
-                  onHttpMethodFieldBlur?.(method);
-                }
-              }}
-              disabled={disabled || getFieldState("httpMethod").updating}
-            >
-              <SelectTrigger id="http-method">
-                <SelectValue placeholder="Select HTTP method" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="GET">
-                  <HttpMethodBadge method="GET" />
-                </SelectItem>
-                <SelectItem value="POST">
-                  <HttpMethodBadge method="POST" />
-                </SelectItem>
-                <SelectItem value="PUT">
-                  <HttpMethodBadge method="PUT" />
-                </SelectItem>
-                <SelectItem value="PATCH">
-                  <HttpMethodBadge method="PATCH" />
-                </SelectItem>
-                <SelectItem value="DELETE">
-                  <HttpMethodBadge method="DELETE" />
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {mode === "edit" && (
-            <FieldIndicator state={getFieldState("httpMethod")} />
-          )}
-        </div>
-        {getFieldState("httpMethod").errorMessage && (
-          <div className="text-red-500 text-sm mt-1">
-            {getFieldState("httpMethod").errorMessage}
-          </div>
-        )}
+        <Select
+          value={httpMethod || ""}
+          onValueChange={(value) => {
+            const method = value as EndpointMethod;
+            onHttpMethodChange?.(method);
+          }}
+          disabled={disabled}
+        >
+          <SelectTrigger id="http-method">
+            <SelectValue placeholder="Select HTTP method" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="GET">
+              <HttpMethodBadge method="GET" />
+            </SelectItem>
+            <SelectItem value="POST">
+              <HttpMethodBadge method="POST" />
+            </SelectItem>
+            <SelectItem value="PUT">
+              <HttpMethodBadge method="PUT" />
+            </SelectItem>
+            <SelectItem value="PATCH">
+              <HttpMethodBadge method="PATCH" />
+            </SelectItem>
+            <SelectItem value="DELETE">
+              <HttpMethodBadge method="DELETE" />
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {selectedResource && (
@@ -311,27 +234,14 @@ export default function AppConfigForm({
               <Label htmlFor="url-path" className="text-sm">
                 Custom Path
               </Label>
-              <div className="relative">
-                <InputWithPlaceholders
-                  id="url-path"
-                  value={urlPath}
-                  onChange={(value) => onUrlPathChange?.(value)}
-                  onBlur={() => onUrlPathFieldBlur?.(urlPath)}
-                  availableInputs={appInputs}
-                  placeholder="Example: /api/users/{id}"
-                  disabled={disabled || getFieldState("urlPath").updating}
-                />
-                {mode === "edit" && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <FieldIndicator state={getFieldState("urlPath")} />
-                  </div>
-                )}
-              </div>
-              {getFieldState("urlPath").errorMessage && (
-                <div className="text-red-500 text-sm mt-1">
-                  {getFieldState("urlPath").errorMessage}
-                </div>
-              )}
+              <InputWithPlaceholders
+                id="url-path"
+                value={urlPath}
+                onChange={(value) => onUrlPathChange?.(value)}
+                availableInputs={appInputs}
+                placeholder="Example: /api/users/{id}"
+                disabled={disabled}
+              />
             </div>
           </div>
         </div>
@@ -348,28 +258,13 @@ export default function AppConfigForm({
               readOnlyLabel="From selected resource (read-only):"
             />
           )}
-        <div className="relative">
-          <KeyValueList
-            items={queryParameters}
-            onChange={onQueryParametersChange}
-            onBlur={(items) => {
-              onKeyValueFieldBlur?.("urlParameters", items);
-            }}
-            ariaLabel="Query parameters"
-            disabled={disabled || getFieldState("urlParameters").updating}
-            availableInputs={appInputs}
-          />
-          {mode === "edit" && (
-            <div className="absolute right-3 top-3">
-              <FieldIndicator state={getFieldState("urlParameters")} />
-            </div>
-          )}
-        </div>
-        {getFieldState("urlParameters").errorMessage && (
-          <div className="text-red-500 text-sm mt-1">
-            {getFieldState("urlParameters").errorMessage}
-          </div>
-        )}
+        <KeyValueList
+          items={queryParameters}
+          onChange={onQueryParametersChange}
+          ariaLabel="Query parameters"
+          disabled={disabled}
+          availableInputs={appInputs}
+        />
       </div>
 
       <div className="space-y-2">
@@ -382,28 +277,13 @@ export default function AppConfigForm({
             readOnlyLabel="From selected resource (read-only):"
           />
         )}
-        <div className="relative">
-          <KeyValueList
-            items={headers}
-            onChange={onHeadersChange}
-            onBlur={(items) => {
-              onKeyValueFieldBlur?.("headers", items);
-            }}
-            ariaLabel="Headers"
-            disabled={disabled || getFieldState("headers").updating}
-            availableInputs={appInputs}
-          />
-          {mode === "edit" && (
-            <div className="absolute right-3 top-3">
-              <FieldIndicator state={getFieldState("headers")} />
-            </div>
-          )}
-        </div>
-        {getFieldState("headers").errorMessage && (
-          <div className="text-red-500 text-sm mt-1">
-            {getFieldState("headers").errorMessage}
-          </div>
-        )}
+        <KeyValueList
+          items={headers}
+          onChange={onHeadersChange}
+          ariaLabel="Headers"
+          disabled={disabled}
+          availableInputs={appInputs}
+        />
       </div>
 
       <div className="space-y-2">
@@ -423,30 +303,15 @@ export default function AppConfigForm({
               predefined values
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="dynamic-body-toggle"
-              checked={useDynamicJsonBody}
-              onCheckedChange={(checked) => {
-                onUseDynamicJsonBodyChange?.(checked);
-                if (mode === "edit") {
-                  onUseDynamicJsonBodyFieldBlur?.(checked);
-                }
-              }}
-              disabled={
-                disabled || getFieldState("useDynamicJsonBody").updating
-              }
-            />
-            {mode === "edit" && (
-              <FieldIndicator state={getFieldState("useDynamicJsonBody")} />
-            )}
-          </div>
+          <Switch
+            id="dynamic-body-toggle"
+            checked={useDynamicJsonBody}
+            onCheckedChange={(checked) => {
+              onUseDynamicJsonBodyChange?.(checked);
+            }}
+            disabled={disabled}
+          />
         </div>
-        {getFieldState("useDynamicJsonBody").errorMessage && (
-          <div className="text-red-500 text-sm mt-1">
-            {getFieldState("useDynamicJsonBody").errorMessage}
-          </div>
-        )}
 
         {/* Static body editor - only shown when dynamic body is disabled */}
         {!useDynamicJsonBody && (
@@ -459,28 +324,13 @@ export default function AppConfigForm({
                 readOnlyLabel="From selected resource (read-only):"
               />
             )}
-            <div className="relative">
-              <KeyValueList
-                items={body}
-                onChange={onBodyChange}
-                onBlur={(items) => {
-                  onKeyValueFieldBlur?.("body", items);
-                }}
-                ariaLabel="JSON body"
-                disabled={disabled || getFieldState("body").updating}
-                availableInputs={appInputs}
-              />
-              {mode === "edit" && (
-                <div className="absolute right-3 top-3">
-                  <FieldIndicator state={getFieldState("body")} />
-                </div>
-              )}
-            </div>
-            {getFieldState("body").errorMessage && (
-              <div className="text-red-500 text-sm mt-1">
-                {getFieldState("body").errorMessage}
-              </div>
-            )}
+            <KeyValueList
+              items={body}
+              onChange={onBodyChange}
+              ariaLabel="JSON body"
+              disabled={disabled}
+              availableInputs={appInputs}
+            />
           </>
         )}
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { updateAppInputSchema } from "@/api/api";
 import { toBackendInputType } from "@/lib/inputTypeMapper";
 import type { AppField } from "../types";
@@ -18,8 +18,8 @@ const initialInputsState: InputsState = {
 };
 
 /**
- * Hook for managing app inputs (fields) with autosave functionality.
- * Follows the same pattern as useAppForm for consistency.
+ * Hook for managing app inputs (fields) with manual save functionality.
+ * Changes are tracked locally and saved explicitly via saveInputs().
  *
  * @param initialFields - Initial app fields to manage
  * @param appId - Optional app ID for API calls
@@ -34,7 +34,6 @@ export function useAppInputs(
   const [inputsState, setInputsState] =
     useState<InputsState>(initialInputsState);
   const savedFieldsRef = useRef<AppField[]>(initialFields);
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync with initial fields when they change (e.g., when app changes)
   useEffect(() => {
@@ -60,98 +59,62 @@ export function useAppInputs(
   }, []);
 
   /**
-   * Performs the actual save operation to the backend
+   * Check if there are unsaved changes by comparing current fields with saved fields
    */
-  const saveFields = useCallback(
-    async (fieldsToSave: AppField[]) => {
-      if (!appId) {
-        return;
-      }
+  const hasUnsavedChanges = useMemo(() => {
+    const currentFieldsJson = JSON.stringify(
+      fields.map((f) => ({
+        label: f.label,
+        type: f.type,
+        required: f.required ?? false,
+        options: f.options,
+      }))
+    );
+    const savedFieldsJson = JSON.stringify(
+      savedFieldsRef.current.map((f) => ({
+        label: f.label,
+        type: f.type,
+        required: f.required ?? false,
+        options: f.options,
+      }))
+    );
+    return currentFieldsJson !== savedFieldsJson;
+  }, [fields]);
 
-      // Check if fields have actually changed
-      const currentFieldsJson = JSON.stringify(
-        fieldsToSave.map((f) => ({
-          label: f.label,
-          type: f.type,
-          required: f.required ?? false,
-          options: f.options,
-        }))
-      );
-      const savedFieldsJson = JSON.stringify(
-        savedFieldsRef.current.map((f) => ({
-          label: f.label,
-          type: f.type,
-          required: f.required ?? false,
-          options: f.options,
-        }))
-      );
+  /**
+   * Performs the save operation to the backend
+   */
+  const saveInputs = useCallback(async () => {
+    if (!appId) {
+      return { success: false, error: "No app ID" };
+    }
 
-      if (currentFieldsJson === savedFieldsJson) {
-        return;
-      }
+    // Check if fields have actually changed
+    if (!hasUnsavedChanges) {
+      return { success: true };
+    }
 
-      setInputsState((prev) => ({
-        ...prev,
-        updating: true,
-        saved: false,
-        error: false,
-      }));
+    setInputsState((prev) => ({
+      ...prev,
+      updating: true,
+      saved: false,
+      error: false,
+    }));
 
-      try {
-        const backendInputs = mapFieldsToBackendFormat(fieldsToSave);
-        const response = await updateAppInputSchema(appId, backendInputs);
+    try {
+      const backendInputs = mapFieldsToBackendFormat(fields);
+      const response = await updateAppInputSchema(appId, backendInputs);
 
-        if (response.error) {
-          const errorMessage =
-            (response.error as { message?: string }).message ||
-            "Failed to save fields";
-          setInputsState({
-            updating: false,
-            saved: false,
-            error: true,
-            errorMessage,
-          });
-
-          // Reset to saved state on error
-          setFields(savedFieldsRef.current);
-
-          // Clear error after 2 seconds
-          setTimeout(() => {
-            setInputsState((prev) => ({
-              ...prev,
-              error: false,
-              errorMessage: "",
-            }));
-          }, 2000);
-
-          return;
-        }
-
-        // Update saved reference on success
-        savedFieldsRef.current = fieldsToSave;
-        onUpdate?.(fieldsToSave);
-
-        setInputsState({
-          updating: false,
-          saved: true,
-          error: false,
-          errorMessage: "",
-        });
-
-        // Clear saved indicator after 2 seconds
-        setTimeout(() => {
-          setInputsState((prev) => ({ ...prev, saved: false }));
-        }, 2000);
-      } catch (_error) {
+      if (response.error) {
+        const errorMessage =
+          (response.error as { message?: string }).message ||
+          "Failed to save fields";
         setInputsState({
           updating: false,
           saved: false,
           error: true,
-          errorMessage: "Network error occurred",
+          errorMessage,
         });
-
-        // Reset to saved state on error
-        setFields(savedFieldsRef.current);
 
         // Clear error after 2 seconds
         setTimeout(() => {
@@ -161,31 +124,57 @@ export function useAppInputs(
             errorMessage: "",
           }));
         }, 2000);
+
+        return { success: false, error: errorMessage };
       }
-    },
-    [appId, mapFieldsToBackendFormat, onUpdate]
-  );
+
+      // Update saved reference on success
+      savedFieldsRef.current = fields;
+      onUpdate?.(fields);
+
+      setInputsState({
+        updating: false,
+        saved: true,
+        error: false,
+        errorMessage: "",
+      });
+
+      // Clear saved indicator after 2 seconds
+      setTimeout(() => {
+        setInputsState((prev) => ({ ...prev, saved: false }));
+      }, 2000);
+
+      return { success: true };
+    } catch (_error) {
+      setInputsState({
+        updating: false,
+        saved: false,
+        error: true,
+        errorMessage: "Network error occurred",
+      });
+
+      // Clear error after 2 seconds
+      setTimeout(() => {
+        setInputsState((prev) => ({
+          ...prev,
+          error: false,
+          errorMessage: "",
+        }));
+      }, 2000);
+
+      return { success: false, error: "Network error occurred" };
+    }
+  }, [appId, fields, hasUnsavedChanges, mapFieldsToBackendFormat, onUpdate]);
 
   /**
-   * Triggers a debounced save operation
+   * Discards unsaved changes and resets to saved state
    */
-  const triggerSave = useCallback(
-    (fieldsToSave: AppField[]) => {
-      // Clear any existing debounce timer
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-
-      // Set new debounce timer (500ms delay)
-      debounceTimerRef.current = setTimeout(() => {
-        saveFields(fieldsToSave);
-      }, 500);
-    },
-    [saveFields]
-  );
+  const discardChanges = useCallback(() => {
+    setFields(savedFieldsRef.current);
+  }, []);
 
   /**
-   * Adds a new field and triggers autosave
+   * Adds a new field (no auto-save)
    */
   const addField = useCallback(() => {
     const id = crypto.randomUUID();
@@ -194,66 +183,35 @@ export function useAppInputs(
       label: `Field ${fields.length + 1}`,
       type: "text",
     };
-    const updatedFields = [...fields, newField];
-    setFields(updatedFields);
-    triggerSave(updatedFields);
-  }, [fields, triggerSave]);
+    setFields((prev) => [...prev, newField]);
+  }, [fields.length]);
 
   /**
-   * Updates an existing field and triggers autosave
+   * Updates an existing field (no auto-save)
    */
-  const updateField = useCallback(
-    (id: string, patch: Partial<AppField>) => {
-      const updatedFields = fields.map((f) =>
-        f.id === id ? { ...f, ...patch } : f
-      );
-      setFields(updatedFields);
-      triggerSave(updatedFields);
-    },
-    [fields, triggerSave]
-  );
+  const updateField = useCallback((id: string, patch: Partial<AppField>) => {
+    setFields((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, ...patch } : f))
+    );
+  }, []);
 
   /**
-   * Deletes a field and triggers autosave
+   * Deletes a field (no auto-save)
    */
-  const deleteField = useCallback(
-    (id: string) => {
-      const updatedFields = fields.filter((f) => f.id !== id);
-      setFields(updatedFields);
-      triggerSave(updatedFields);
-    },
-    [fields, triggerSave]
-  );
-
-  /**
-   * Manually triggers an immediate save (bypasses debounce)
-   */
-  const saveNow = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-    saveFields(fields);
-  }, [fields, saveFields]);
-
-  // Cleanup debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
+  const deleteField = useCallback((id: string) => {
+    setFields((prev) => prev.filter((f) => f.id !== id));
   }, []);
 
   return {
     fields,
     inputsState,
+    hasUnsavedChanges,
     addField,
     updateField,
     deleteField,
     resetState,
     setFields,
-    saveNow,
-    triggerSave,
+    saveInputs,
+    discardChanges,
   };
 }

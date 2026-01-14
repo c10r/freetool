@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   updateAppBody,
   updateAppHeaders,
@@ -18,37 +18,63 @@ export interface AppFormData {
   useDynamicJsonBody?: boolean;
 }
 
-interface FieldState {
-  updating: boolean;
+interface SaveState {
+  saving: boolean;
   saved: boolean;
   error: boolean;
   errorMessage: string;
 }
 
-type FieldStates = {
-  httpMethod: FieldState;
-  urlPath: FieldState;
-  urlParameters: FieldState;
-  headers: FieldState;
-  body: FieldState;
-  useDynamicJsonBody: FieldState;
-};
-
-const initialFieldState: FieldState = {
-  updating: false,
+const initialSaveState: SaveState = {
+  saving: false,
   saved: false,
   error: false,
   errorMessage: "",
 };
 
-const initialFieldStates: FieldStates = {
-  httpMethod: initialFieldState,
-  urlPath: initialFieldState,
-  urlParameters: initialFieldState,
-  headers: initialFieldState,
-  body: initialFieldState,
-  useDynamicJsonBody: initialFieldState,
-};
+/**
+ * Filters out empty key-value pairs
+ */
+function filterEmptyPairs(pairs: KeyValuePair[]): KeyValuePair[] {
+  return pairs.filter(
+    (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
+  );
+}
+
+/**
+ * Compares two AppFormData objects for equality (used for dirty checking)
+ */
+function isFormDataEqual(a: AppFormData, b: AppFormData): boolean {
+  if (a.httpMethod !== b.httpMethod) {
+    return false;
+  }
+  if (a.urlPath !== b.urlPath) {
+    return false;
+  }
+  if (a.useDynamicJsonBody !== b.useDynamicJsonBody) {
+    return false;
+  }
+
+  const aParams = filterEmptyPairs(a.urlParameters);
+  const bParams = filterEmptyPairs(b.urlParameters);
+  if (JSON.stringify(aParams) !== JSON.stringify(bParams)) {
+    return false;
+  }
+
+  const aHeaders = filterEmptyPairs(a.headers);
+  const bHeaders = filterEmptyPairs(b.headers);
+  if (JSON.stringify(aHeaders) !== JSON.stringify(bHeaders)) {
+    return false;
+  }
+
+  const aBody = filterEmptyPairs(a.body);
+  const bBody = filterEmptyPairs(b.body);
+  if (JSON.stringify(aBody) !== JSON.stringify(bBody)) {
+    return false;
+  }
+
+  return true;
+}
 
 export function useAppForm(
   initialData: AppFormData,
@@ -56,368 +82,183 @@ export function useAppForm(
   onUpdate?: (updatedData: AppFormData) => void
 ) {
   const [formData, setFormData] = useState<AppFormData>(initialData);
-  const [fieldStates, setFieldStates] =
-    useState<FieldStates>(initialFieldStates);
+  const [saveState, setSaveState] = useState<SaveState>(initialSaveState);
   const savedDataRef = useRef<AppFormData>(initialData);
 
+  // Sync with initial data when it changes (e.g., when app changes)
   useEffect(() => {
     savedDataRef.current = initialData;
+    setFormData(initialData);
   }, [initialData]);
 
-  const resetFieldStates = useCallback(() => {
-    setFieldStates(initialFieldStates);
-  }, []);
+  /**
+   * Check if there are unsaved changes
+   */
+  const hasUnsavedChanges = useMemo(() => {
+    return !isFormDataEqual(formData, savedDataRef.current);
+  }, [formData]);
 
-  const setFieldState = useCallback(
-    (field: keyof FieldStates, state: Partial<FieldState>) => {
-      setFieldStates((prev) => ({
-        ...prev,
-        [field]: { ...prev[field], ...state },
-      }));
-    },
-    []
-  );
-
+  /**
+   * Update a single form field (no auto-save)
+   */
   const updateFormData = useCallback(
     (
       field: keyof AppFormData,
-      value: string | EndpointMethod | KeyValuePair[]
+      value: string | boolean | EndpointMethod | KeyValuePair[]
     ) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
     },
     []
   );
 
-  const updateKeyValueField = useCallback(
-    async (
-      field: "urlParameters" | "headers" | "body",
-      value: KeyValuePair[]
-    ) => {
-      if (!appId) {
-        return;
-      }
+  /**
+   * Discards unsaved changes and resets to saved state
+   */
+  const discardChanges = useCallback(() => {
+    setFormData(savedDataRef.current);
+  }, []);
 
-      // Filter out empty key-value pairs
-      const filteredValue = value.filter(
-        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
-      );
+  /**
+   * Save all changed config fields to the backend
+   */
+  const saveConfig = useCallback(async () => {
+    if (!appId) {
+      return { success: false, error: "No app ID" };
+    }
 
-      // Don't make network request if value hasn't changed
-      const currentValue = (savedDataRef.current[field] || []).filter(
-        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
-      );
+    if (!hasUnsavedChanges) {
+      return { success: true };
+    }
 
-      if (JSON.stringify(filteredValue) === JSON.stringify(currentValue)) {
-        return;
-      }
+    setSaveState({
+      saving: true,
+      saved: false,
+      error: false,
+      errorMessage: "",
+    });
 
-      setFieldState(field, { updating: true, saved: false, error: false });
+    const errors: string[] = [];
+    const savedData = savedDataRef.current;
 
-      try {
-        // Create the updated data with the new field value
-        const updatedData = { ...formData, [field]: filteredValue };
-
-        let response:
-          | Awaited<ReturnType<typeof updateAppBody>>
-          | Awaited<ReturnType<typeof updateAppHeaders>>
-          | Awaited<ReturnType<typeof updateAppQueryParams>>
-          | undefined;
-        if (field === "urlParameters") {
-          response = await updateAppQueryParams(appId, filteredValue);
-        } else if (field === "headers") {
-          response = await updateAppHeaders(appId, filteredValue);
-        } else if (field === "body") {
-          response = await updateAppBody(appId, filteredValue);
-        }
-
+    try {
+      // Save HTTP method if changed
+      if (formData.httpMethod !== savedData.httpMethod && formData.httpMethod) {
+        const response = await updateAppHttpMethod(appId, formData.httpMethod);
         if (response?.error) {
-          const errorMessage = response.error.message || "Failed to save";
-          setFieldState(field, {
-            updating: false,
-            error: true,
-            errorMessage,
-          });
-
-          // Reset the field value on error
-          setFormData((prev) => ({
-            ...prev,
-            [field]: savedDataRef.current[field] || [],
-          }));
-
-          setTimeout(() => {
-            setFieldState(field, { error: false, errorMessage: "" });
-          }, 2000);
-
-          return;
+          errors.push(response.error.message || "Failed to save HTTP method");
         }
+      }
 
-        // Update local state on success
-        savedDataRef.current = {
-          ...savedDataRef.current,
-          [field]: filteredValue,
-        };
-        setFormData(updatedData);
-        onUpdate?.(updatedData);
+      // Save URL path if changed
+      if (formData.urlPath !== savedData.urlPath) {
+        const response = await updateAppUrlPath(appId, formData.urlPath);
+        if (response?.error) {
+          errors.push(response.error.message || "Failed to save URL path");
+        }
+      }
 
-        setFieldState(field, { updating: false, saved: true });
-        setTimeout(() => {
-          setFieldState(field, { saved: false });
-        }, 2000);
-      } catch (_error) {
-        setFieldState(field, {
-          updating: false,
+      // Save URL parameters if changed
+      const currentParams = filterEmptyPairs(formData.urlParameters);
+      const savedParams = filterEmptyPairs(savedData.urlParameters);
+      if (JSON.stringify(currentParams) !== JSON.stringify(savedParams)) {
+        const response = await updateAppQueryParams(appId, currentParams);
+        if (response?.error) {
+          errors.push(
+            response.error.message || "Failed to save URL parameters"
+          );
+        }
+      }
+
+      // Save headers if changed
+      const currentHeaders = filterEmptyPairs(formData.headers);
+      const savedHeaders = filterEmptyPairs(savedData.headers);
+      if (JSON.stringify(currentHeaders) !== JSON.stringify(savedHeaders)) {
+        const response = await updateAppHeaders(appId, currentHeaders);
+        if (response?.error) {
+          errors.push(response.error.message || "Failed to save headers");
+        }
+      }
+
+      // Save body if changed
+      const currentBody = filterEmptyPairs(formData.body);
+      const savedBody = filterEmptyPairs(savedData.body);
+      if (JSON.stringify(currentBody) !== JSON.stringify(savedBody)) {
+        const response = await updateAppBody(appId, currentBody);
+        if (response?.error) {
+          errors.push(response.error.message || "Failed to save body");
+        }
+      }
+
+      // Save useDynamicJsonBody if changed
+      if (formData.useDynamicJsonBody !== savedData.useDynamicJsonBody) {
+        const response = await updateAppUseDynamicJsonBody(
+          appId,
+          formData.useDynamicJsonBody ?? false
+        );
+        if (response?.error) {
+          errors.push(
+            response.error.message || "Failed to save dynamic JSON body setting"
+          );
+        }
+      }
+
+      if (errors.length > 0) {
+        setSaveState({
+          saving: false,
+          saved: false,
           error: true,
-          errorMessage: "Network error occurred",
+          errorMessage: errors.join(", "),
         });
 
-        // Reset the field value on error
-        setFormData((prev) => ({
-          ...prev,
-          [field]: savedDataRef.current[field] || [],
-        }));
-
+        // Clear error after 3 seconds
         setTimeout(() => {
-          setFieldState(field, { error: false, errorMessage: "" });
-        }, 2000);
-      }
-    },
-    [appId, onUpdate, setFieldState, formData]
-  );
+          setSaveState((prev) => ({ ...prev, error: false, errorMessage: "" }));
+        }, 3000);
 
-  const updateUrlPathField = useCallback(
-    async (value: string) => {
-      if (!appId) {
-        return;
+        return { success: false, error: errors.join(", ") };
       }
 
-      // Don't make network request if value hasn't changed
-      if (value === savedDataRef.current.urlPath) {
-        return;
-      }
+      // Update saved reference on success
+      savedDataRef.current = formData;
+      onUpdate?.(formData);
 
-      setFieldState("urlPath", { updating: true, saved: false, error: false });
-
-      try {
-        const response = await updateAppUrlPath(appId, value);
-
-        if (response?.error) {
-          const errorMessage =
-            response.error.message || "Failed to save URL path";
-          setFieldState("urlPath", {
-            updating: false,
-            error: true,
-            errorMessage,
-          });
-
-          // Reset the field value on error
-          setFormData((prev) => ({
-            ...prev,
-            urlPath: savedDataRef.current.urlPath || "",
-          }));
-
-          setTimeout(() => {
-            setFieldState("urlPath", { error: false, errorMessage: "" });
-          }, 2000);
-
-          return;
-        }
-
-        // Update local state on success
-        const updatedData = { ...formData, urlPath: value };
-        savedDataRef.current = { ...savedDataRef.current, urlPath: value };
-        setFormData(updatedData);
-        onUpdate?.(updatedData);
-
-        setFieldState("urlPath", { updating: false, saved: true });
-        setTimeout(() => {
-          setFieldState("urlPath", { saved: false });
-        }, 2000);
-      } catch (_error) {
-        setFieldState("urlPath", {
-          updating: false,
-          error: true,
-          errorMessage: "Network error occurred",
-        });
-
-        // Reset the field value on error
-        setFormData((prev) => ({
-          ...prev,
-          urlPath: savedDataRef.current.urlPath || "",
-        }));
-
-        setTimeout(() => {
-          setFieldState("urlPath", { error: false, errorMessage: "" });
-        }, 2000);
-      }
-    },
-    [appId, onUpdate, setFieldState, formData]
-  );
-
-  const updateHttpMethodField = useCallback(
-    async (value: EndpointMethod) => {
-      if (!appId) {
-        return;
-      }
-
-      // Don't make network request if value hasn't changed
-      if (value === savedDataRef.current.httpMethod) {
-        return;
-      }
-
-      setFieldState("httpMethod", {
-        updating: true,
-        saved: false,
+      setSaveState({
+        saving: false,
+        saved: true,
         error: false,
+        errorMessage: "",
       });
 
-      try {
-        const response = await updateAppHttpMethod(appId, value);
+      // Clear saved indicator after 2 seconds
+      setTimeout(() => {
+        setSaveState((prev) => ({ ...prev, saved: false }));
+      }, 2000);
 
-        if (response?.error) {
-          const errorMessage =
-            response.error.message || "Failed to save HTTP method";
-          setFieldState("httpMethod", {
-            updating: false,
-            error: true,
-            errorMessage,
-          });
-
-          // Reset the field value on error
-          setFormData((prev) => ({
-            ...prev,
-            httpMethod: savedDataRef.current.httpMethod,
-          }));
-
-          setTimeout(() => {
-            setFieldState("httpMethod", { error: false, errorMessage: "" });
-          }, 2000);
-
-          return;
-        }
-
-        // Update local state on success
-        const updatedData = { ...formData, httpMethod: value };
-        savedDataRef.current = { ...savedDataRef.current, httpMethod: value };
-        setFormData(updatedData);
-        onUpdate?.(updatedData);
-
-        setFieldState("httpMethod", { updating: false, saved: true });
-        setTimeout(() => {
-          setFieldState("httpMethod", { saved: false });
-        }, 2000);
-      } catch (_error) {
-        setFieldState("httpMethod", {
-          updating: false,
-          error: true,
-          errorMessage: "Network error occurred",
-        });
-
-        // Reset the field value on error
-        setFormData((prev) => ({
-          ...prev,
-          httpMethod: savedDataRef.current.httpMethod,
-        }));
-
-        setTimeout(() => {
-          setFieldState("httpMethod", { error: false, errorMessage: "" });
-        }, 2000);
-      }
-    },
-    [appId, onUpdate, setFieldState, formData]
-  );
-
-  const updateUseDynamicJsonBodyField = useCallback(
-    async (value: boolean) => {
-      if (!appId) {
-        return;
-      }
-
-      // Don't make network request if value hasn't changed
-      if (value === savedDataRef.current.useDynamicJsonBody) {
-        return;
-      }
-
-      setFieldState("useDynamicJsonBody", {
-        updating: true,
+      return { success: true };
+    } catch (_error) {
+      setSaveState({
+        saving: false,
         saved: false,
-        error: false,
+        error: true,
+        errorMessage: "Network error occurred",
       });
 
-      try {
-        const response = await updateAppUseDynamicJsonBody(appId, value);
+      // Clear error after 3 seconds
+      setTimeout(() => {
+        setSaveState((prev) => ({ ...prev, error: false, errorMessage: "" }));
+      }, 3000);
 
-        if (response?.error) {
-          const errorMessage =
-            response.error.message ||
-            "Failed to save dynamic JSON body setting";
-          setFieldState("useDynamicJsonBody", {
-            updating: false,
-            error: true,
-            errorMessage,
-          });
-
-          // Reset the field value on error
-          setFormData((prev) => ({
-            ...prev,
-            useDynamicJsonBody: savedDataRef.current.useDynamicJsonBody,
-          }));
-
-          setTimeout(() => {
-            setFieldState("useDynamicJsonBody", {
-              error: false,
-              errorMessage: "",
-            });
-          }, 2000);
-
-          return;
-        }
-
-        // Update local state on success
-        const updatedData = { ...formData, useDynamicJsonBody: value };
-        savedDataRef.current = {
-          ...savedDataRef.current,
-          useDynamicJsonBody: value,
-        };
-        setFormData(updatedData);
-        onUpdate?.(updatedData);
-
-        setFieldState("useDynamicJsonBody", { updating: false, saved: true });
-        setTimeout(() => {
-          setFieldState("useDynamicJsonBody", { saved: false });
-        }, 2000);
-      } catch (_error) {
-        setFieldState("useDynamicJsonBody", {
-          updating: false,
-          error: true,
-          errorMessage: "Network error occurred",
-        });
-
-        // Reset the field value on error
-        setFormData((prev) => ({
-          ...prev,
-          useDynamicJsonBody: savedDataRef.current.useDynamicJsonBody,
-        }));
-
-        setTimeout(() => {
-          setFieldState("useDynamicJsonBody", {
-            error: false,
-            errorMessage: "",
-          });
-        }, 2000);
-      }
-    },
-    [appId, onUpdate, setFieldState, formData]
-  );
+      return { success: false, error: "Network error occurred" };
+    }
+  }, [appId, formData, hasUnsavedChanges, onUpdate]);
 
   return {
     formData,
-    fieldStates,
+    saveState,
+    hasUnsavedChanges,
     updateFormData,
-    updateKeyValueField,
-    updateUrlPathField,
-    updateHttpMethodField,
-    updateUseDynamicJsonBodyField,
-    resetFieldStates,
+    saveConfig,
+    discardChanges,
     setFormData,
   };
 }

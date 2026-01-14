@@ -1,4 +1,4 @@
-import { Check, Edit, Eye, Loader2, Plus, X } from "lucide-react";
+import { Check, Edit, Eye, Loader2, Plus, Save, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { updateAppName } from "@/api/api";
 import { Badge } from "@/components/ui/badge";
@@ -35,16 +35,13 @@ export default function AppView({
   // Permission checks
   const canEditApp = useHasPermission(spaceId, "edit_app");
 
-  // App form hook for autosave functionality
+  // App form hook for config fields (manual save)
   const {
     formData: appFormData,
-    fieldStates: appFieldStates,
+    saveState: configSaveState,
+    hasUnsavedChanges: hasUnsavedConfigChanges,
     updateFormData: updateAppFormData,
-    updateKeyValueField,
-    updateUrlPathField,
-    updateHttpMethodField,
-    updateUseDynamicJsonBodyField,
-    resetFieldStates,
+    saveConfig,
     setFormData: setAppFormData,
   } = useAppForm(
     {
@@ -57,7 +54,7 @@ export default function AppView({
     },
     app.id,
     (updatedData) => {
-      // Update the app node when autosave occurs (only if user has edit permission)
+      // Update the app node when save occurs (only if user has edit permission)
       if (canEditApp) {
         updateNode({
           ...app,
@@ -66,21 +63,23 @@ export default function AppView({
           urlParameters: updatedData.urlParameters,
           headers: updatedData.headers,
           body: updatedData.body,
+          useDynamicJsonBody: updatedData.useDynamicJsonBody,
         });
       }
     }
   );
 
-  // App inputs hook for field autosave functionality
+  // App inputs hook for field management (manual save)
   const {
     fields,
     inputsState,
+    hasUnsavedChanges: hasUnsavedFieldChanges,
     addField,
     resetState: resetInputsState,
     setFields,
-    triggerSave,
+    saveInputs,
   } = useAppInputs(app.fields, app.id, (updatedFields) => {
-    // Update the app node when autosave occurs (only if user has edit permission)
+    // Update the app node when save occurs (only if user has edit permission)
     if (canEditApp) {
       updateNode({
         ...app,
@@ -88,6 +87,17 @@ export default function AppView({
       });
     }
   });
+
+  // Combined unsaved changes state
+  const hasUnsavedChanges = hasUnsavedConfigChanges || hasUnsavedFieldChanges;
+  const isSaving = configSaveState.saving || inputsState.updating;
+
+  // Handle save all changes
+  const handleSaveAll = async () => {
+    const results = await Promise.all([saveInputs(), saveConfig()]);
+    const hasError = results.some((r) => !r.success);
+    return !hasError;
+  };
 
   // Update form data when app changes
   useEffect(() => {
@@ -108,41 +118,34 @@ export default function AppView({
       body: app.body || [],
       useDynamicJsonBody: app.useDynamicJsonBody ?? false,
     });
-    resetFieldStates();
 
     // Update app inputs when app changes
     setFields(app.fields);
     resetInputsState();
-  }, [app, setAppFormData, resetFieldStates, setFields, resetInputsState]);
+  }, [app, setAppFormData, setFields, resetInputsState]);
 
   const updateHttpMethod = (httpMethod: EndpointMethod) => {
     updateAppFormData("httpMethod", httpMethod);
-    // Don't update the app node immediately - wait for autosave
   };
 
   const updateUrlParameters = (urlParameters: KeyValuePair[]) => {
     updateAppFormData("urlParameters", urlParameters);
-    // Don't update the app node immediately - wait for autosave
   };
 
   const updateHeaders = (headers: KeyValuePair[]) => {
     updateAppFormData("headers", headers);
-    // Don't update the app node immediately - wait for autosave
   };
 
   const updateBody = (body: KeyValuePair[]) => {
     updateAppFormData("body", body);
-    // Don't update the app node immediately - wait for autosave
   };
 
   const updateUrlPath = (urlPath: string) => {
     updateAppFormData("urlPath", urlPath);
-    // Don't update the app node immediately - wait for autosave
   };
 
   const updateUseDynamicJsonBody = (useDynamicJsonBody: boolean) => {
     updateAppFormData("useDynamicJsonBody", useDynamicJsonBody);
-    // Don't update the app node immediately - wait for autosave
   };
 
   const _selectedEndpoint = app.endpointId
@@ -259,6 +262,42 @@ export default function AppView({
           )}
         </div>
         <div className="flex gap-2 items-center">
+          {/* Save Changes Button */}
+          {canEditApp && hasUnsavedChanges && (
+            <Button
+              onClick={handleSaveAll}
+              disabled={isSaving}
+              className="gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          )}
+          {/* Show saved indicator briefly after save */}
+          {canEditApp &&
+            !hasUnsavedChanges &&
+            (configSaveState.saved || inputsState.saved) && (
+              <div className="flex items-center gap-1 text-green-600 text-sm">
+                <Check className="h-4 w-4" />
+                Saved
+              </div>
+            )}
+          {/* Show error if save failed */}
+          {(configSaveState.error || inputsState.error) && (
+            <div className="flex items-center gap-1 text-red-600 text-sm">
+              <X className="h-4 w-4" />
+              {configSaveState.errorMessage || inputsState.errorMessage}
+            </div>
+          )}
           <ResourceSelector
             spaceId={spaceId}
             value={app.resourceId}
@@ -291,27 +330,16 @@ export default function AppView({
 
       <Separator />
 
-      {/* Fields section header with save status indicators */}
+      {/* Fields section header */}
       {fields.length > 0 && (
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             Fields
           </span>
-          {inputsState.updating && (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          )}
-          {inputsState.saved && !inputsState.updating && !inputsState.error && (
-            <Check className="h-4 w-4 text-green-500" />
-          )}
-          {inputsState.error && !inputsState.updating && (
-            <div className="flex items-center gap-1">
-              <X className="h-4 w-4 text-red-500" />
-              {inputsState.errorMessage && (
-                <span className="text-xs text-red-500">
-                  {inputsState.errorMessage}
-                </span>
-              )}
-            </div>
+          {hasUnsavedFieldChanges && (
+            <Badge variant="outline" className="text-xs">
+              Unsaved
+            </Badge>
           )}
         </div>
       )}
@@ -320,9 +348,8 @@ export default function AppView({
         fields={fields}
         onChange={(updatedFields) => {
           setFields(updatedFields);
-          triggerSave(updatedFields);
         }}
-        disabled={!canEditApp || inputsState.updating}
+        disabled={!canEditApp}
         showAddButton={false}
       />
 
@@ -348,19 +375,6 @@ export default function AppView({
             onUseDynamicJsonBodyChange={updateUseDynamicJsonBody}
             showResourceSelector={false}
             mode="edit"
-            fieldStates={appFieldStates}
-            onKeyValueFieldBlur={(field, items) => {
-              updateKeyValueField(field, items);
-            }}
-            onUrlPathFieldBlur={(value) => {
-              updateUrlPathField(value);
-            }}
-            onHttpMethodFieldBlur={(value) => {
-              updateHttpMethodField(value);
-            }}
-            onUseDynamicJsonBodyFieldBlur={(value) => {
-              updateUseDynamicJsonBodyField(value);
-            }}
             disabled={!canEditApp}
             inputs={fields.map((f) => ({
               title: f.label,
