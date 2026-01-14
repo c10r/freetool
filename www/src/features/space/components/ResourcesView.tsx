@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Edit, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronLeft, Edit, Plus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
   createResource,
@@ -10,11 +10,13 @@ import {
 import { PaginationControls } from "@/components/PaginationControls";
 import { PermissionButton } from "@/components/PermissionButton";
 import { PermissionGate } from "@/components/PermissionGate";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -30,7 +32,6 @@ import { useHasPermission } from "@/hooks/usePermissions";
 import { useResourceForm } from "../hooks/useResourceForm";
 import type { KeyValuePair } from "../types";
 import {
-  injectAuthIntoHeaders,
   parseAuthFromHeaders,
   removeAuthFromHeaders,
 } from "../utils/authUtils";
@@ -96,11 +97,10 @@ export default function ResourcesView({
   // Edit form state
   const {
     formData: editFormData,
-    fieldStates: editFieldStates,
-    updateTextField,
-    updateKeyValueField,
-    updateAuthField,
-    resetFieldStates,
+    saveState,
+    hasUnsavedChanges,
+    saveConfig,
+    discardChanges,
     setFormData: setEditFormData,
   } = useResourceForm(initialFormData, editingResource?.id, (updatedData) => {
     // Update the resources list when edit form data changes
@@ -200,6 +200,7 @@ export default function ResourcesView({
       setCreateError(null);
 
       // Inject auth into headers before sending
+      const { injectAuthIntoHeaders } = await import("../utils/authUtils");
       const headersWithAuth = injectAuthIntoHeaders(
         createFormData.headers,
         createFormData.authConfig
@@ -253,7 +254,14 @@ export default function ResourcesView({
   const handleCloseEdit = () => {
     setEditingResource(null);
     setEditFormData(initialFormData);
-    resetFieldStates();
+  };
+
+  const handleSaveChanges = async () => {
+    await saveConfig();
+  };
+
+  const handleDiscardChanges = () => {
+    discardChanges();
   };
 
   return (
@@ -449,15 +457,32 @@ export default function ResourcesView({
       <Dialog open={!!editingResource} onOpenChange={() => handleCloseEdit()}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>
-              {canEditResource ? "Edit Resource" : "View Resource"}
-              {!canEditResource && (
-                <p className="text-sm font-normal text-muted-foreground mt-1">
-                  You don't have permission to edit this resource. Contact your
-                  team admin for access.
-                </p>
+            <div className="flex items-center gap-2">
+              <DialogTitle>
+                {canEditResource ? "Edit Resource" : "View Resource"}
+              </DialogTitle>
+              {hasUnsavedChanges && canEditResource && (
+                <Badge variant="secondary">Unsaved</Badge>
               )}
-            </DialogTitle>
+              {saveState.saved && (
+                <Badge variant="default" className="bg-green-500">
+                  <Check className="h-3 w-3 mr-1" />
+                  Saved
+                </Badge>
+              )}
+              {saveState.error && (
+                <Badge variant="destructive">
+                  <X className="h-3 w-3 mr-1" />
+                  Error
+                </Badge>
+              )}
+            </div>
+            {!canEditResource && (
+              <p className="text-sm font-normal text-muted-foreground mt-1">
+                You don't have permission to edit this resource. Contact your
+                team admin for access.
+              </p>
+            )}
           </DialogHeader>
           {editingResource && (
             <div className="space-y-4 overflow-y-auto flex-1 pr-2">
@@ -465,13 +490,38 @@ export default function ResourcesView({
                 data={editFormData}
                 onChange={setEditFormData}
                 mode="edit"
-                fieldStates={editFieldStates}
-                onFieldBlur={updateTextField}
-                onKeyValueFieldBlur={updateKeyValueField}
-                onAuthBlur={updateAuthField}
-                disabled={!canEditResource}
+                disabled={!canEditResource || saveState.saving}
               />
+              {saveState.errorMessage && (
+                <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
+                  {saveState.errorMessage}
+                </div>
+              )}
             </div>
+          )}
+          {canEditResource && (
+            <DialogFooter className="mt-4">
+              <Button
+                variant="outline"
+                onClick={handleDiscardChanges}
+                disabled={!hasUnsavedChanges || saveState.saving}
+              >
+                Discard Changes
+              </Button>
+              <Button
+                onClick={handleSaveChanges}
+                disabled={!hasUnsavedChanges || saveState.saving}
+              >
+                {saveState.saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
           )}
         </DialogContent>
       </Dialog>

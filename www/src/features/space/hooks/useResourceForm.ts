@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   updateResourceBaseUrl,
   updateResourceBody,
@@ -20,39 +20,68 @@ export interface ResourceFormData {
   authConfig: AuthConfig;
 }
 
-interface FieldState {
-  updating: boolean;
+interface SaveState {
+  saving: boolean;
   saved: boolean;
   error: boolean;
   errorMessage: string;
 }
 
-type FieldStates = {
-  name: FieldState;
-  description: FieldState;
-  baseUrl: FieldState;
-  urlParameters: FieldState;
-  headers: FieldState;
-  body: FieldState;
-  authConfig: FieldState;
-};
-
-const initialFieldState: FieldState = {
-  updating: false,
+const initialSaveState: SaveState = {
+  saving: false,
   saved: false,
   error: false,
   errorMessage: "",
 };
 
-const initialFieldStates: FieldStates = {
-  name: initialFieldState,
-  description: initialFieldState,
-  baseUrl: initialFieldState,
-  urlParameters: initialFieldState,
-  headers: initialFieldState,
-  body: initialFieldState,
-  authConfig: initialFieldState,
-};
+/**
+ * Filters out empty key-value pairs
+ */
+function filterEmptyPairs(pairs: KeyValuePair[]): KeyValuePair[] {
+  return pairs.filter(
+    (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
+  );
+}
+
+/**
+ * Compares two ResourceFormData objects for equality (used for dirty checking)
+ */
+function isFormDataEqual(a: ResourceFormData, b: ResourceFormData): boolean {
+  if (a.name !== b.name) {
+    return false;
+  }
+  if (a.description !== b.description) {
+    return false;
+  }
+  if (a.baseUrl !== b.baseUrl) {
+    return false;
+  }
+
+  const aParams = filterEmptyPairs(a.urlParameters);
+  const bParams = filterEmptyPairs(b.urlParameters);
+  if (JSON.stringify(aParams) !== JSON.stringify(bParams)) {
+    return false;
+  }
+
+  const aHeaders = filterEmptyPairs(a.headers);
+  const bHeaders = filterEmptyPairs(b.headers);
+  if (JSON.stringify(aHeaders) !== JSON.stringify(bHeaders)) {
+    return false;
+  }
+
+  const aBody = filterEmptyPairs(a.body);
+  const bBody = filterEmptyPairs(b.body);
+  if (JSON.stringify(aBody) !== JSON.stringify(bBody)) {
+    return false;
+  }
+
+  // Compare auth config
+  if (JSON.stringify(a.authConfig) !== JSON.stringify(b.authConfig)) {
+    return false;
+  }
+
+  return true;
+}
 
 export function useResourceForm(
   initialData: ResourceFormData,
@@ -60,28 +89,25 @@ export function useResourceForm(
   onUpdate?: (updatedData: ResourceFormData) => void
 ) {
   const [formData, setFormData] = useState<ResourceFormData>(initialData);
-  const [fieldStates, setFieldStates] =
-    useState<FieldStates>(initialFieldStates);
+  const [saveState, setSaveState] = useState<SaveState>(initialSaveState);
   const savedDataRef = useRef<ResourceFormData>(initialData);
 
+  // Sync with initial data when it changes (e.g., when resource changes)
   useEffect(() => {
     savedDataRef.current = initialData;
+    setFormData(initialData);
   }, [initialData]);
 
-  const resetFieldStates = useCallback(() => {
-    setFieldStates(initialFieldStates);
-  }, []);
+  /**
+   * Check if there are unsaved changes
+   */
+  const hasUnsavedChanges = useMemo(() => {
+    return !isFormDataEqual(formData, savedDataRef.current);
+  }, [formData]);
 
-  const setFieldState = useCallback(
-    (field: keyof FieldStates, state: Partial<FieldState>) => {
-      setFieldStates((prev) => ({
-        ...prev,
-        [field]: { ...prev[field], ...state },
-      }));
-    },
-    []
-  );
-
+  /**
+   * Update a single form field (no auto-save)
+   */
   const updateFormData = useCallback(
     (field: keyof ResourceFormData, value: string | KeyValuePair[]) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
@@ -89,305 +115,176 @@ export function useResourceForm(
     []
   );
 
-  const updateTextField = useCallback(
-    async (field: "name" | "description" | "baseUrl", value: string) => {
-      if (!(resourceId && value.trim())) {
-        return;
-      }
+  /**
+   * Discards unsaved changes and resets to saved state
+   */
+  const discardChanges = useCallback(() => {
+    setFormData(savedDataRef.current);
+  }, []);
 
-      // Don't make network request if value hasn't changed
-      if (value.trim() === savedDataRef.current[field]) {
-        return;
-      }
+  /**
+   * Save all changed config fields to the backend
+   */
+  const saveConfig = useCallback(async () => {
+    if (!resourceId) {
+      return { success: false, error: "No resource ID" };
+    }
 
-      setFieldState(field, { updating: true, saved: false, error: false });
+    if (!hasUnsavedChanges) {
+      return { success: true };
+    }
 
-      try {
-        let response:
-          | Awaited<ReturnType<typeof updateResourceName>>
-          | Awaited<ReturnType<typeof updateResourceDescription>>
-          | Awaited<ReturnType<typeof updateResourceBaseUrl>>
-          | undefined;
-        if (field === "name") {
-          response = await updateResourceName({
-            id: resourceId,
-            newName: value.trim(),
-          });
-        } else if (field === "description") {
-          response = await updateResourceDescription({
-            id: resourceId,
-            newDescription: value.trim(),
-          });
-        } else if (field === "baseUrl") {
-          response = await updateResourceBaseUrl({
-            id: resourceId,
-            baseUrl: value.trim(),
-          });
-        }
+    setSaveState({
+      saving: true,
+      saved: false,
+      error: false,
+      errorMessage: "",
+    });
 
-        if (response?.error) {
-          const errorMessage = response.error.message || "Failed to save";
-          setFieldState(field, {
-            updating: false,
-            error: true,
-            errorMessage,
-          });
+    const errors: string[] = [];
+    const savedData = savedDataRef.current;
 
-          // Reset the field value on error
-          setFormData((prev) => ({
-            ...prev,
-            [field]: savedDataRef.current[field],
-          }));
-
-          // Hide error indicator after 2 seconds
-          setTimeout(() => {
-            setFieldState(field, { error: false, errorMessage: "" });
-          }, 2000);
-
-          return;
-        }
-
-        // Update local state on success
-        const updatedData = { ...formData, [field]: value.trim() };
-        savedDataRef.current = {
-          ...savedDataRef.current,
-          [field]: value.trim(),
-        };
-        setFormData(updatedData);
-        onUpdate?.(updatedData);
-
-        setFieldState(field, { updating: false, saved: true });
-        setTimeout(() => {
-          setFieldState(field, { saved: false });
-        }, 2000);
-      } catch (_error) {
-        setFieldState(field, {
-          updating: false,
-          error: true,
-          errorMessage: "Network error occurred",
+    try {
+      // Save name if changed
+      if (formData.name !== savedData.name && formData.name.trim()) {
+        const response = await updateResourceName({
+          id: resourceId,
+          newName: formData.name.trim(),
         });
-
-        // Reset the field value on error
-        setFormData((prev) => ({
-          ...prev,
-          [field]: savedDataRef.current[field],
-        }));
-
-        setTimeout(() => {
-          setFieldState(field, { error: false, errorMessage: "" });
-        }, 2000);
-      }
-    },
-    [resourceId, onUpdate, setFieldState, formData]
-  );
-
-  const updateKeyValueField = useCallback(
-    async (
-      field: "urlParameters" | "headers" | "body",
-      value: KeyValuePair[]
-    ) => {
-      if (!resourceId) {
-        return;
-      }
-
-      // Filter out empty key-value pairs
-      const filteredValue = value.filter(
-        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
-      );
-
-      // Don't make network request if value hasn't changed
-      const currentValue = (savedDataRef.current[field] || []).filter(
-        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
-      );
-      if (JSON.stringify(filteredValue) === JSON.stringify(currentValue)) {
-        return;
-      }
-
-      setFieldState(field, { updating: true, saved: false, error: false });
-
-      try {
-        let response:
-          | Awaited<ReturnType<typeof updateResourceUrlParameters>>
-          | Awaited<ReturnType<typeof updateResourceHeaders>>
-          | Awaited<ReturnType<typeof updateResourceBody>>
-          | undefined;
-        if (field === "urlParameters") {
-          response = await updateResourceUrlParameters({
-            id: resourceId,
-            urlParameters: filteredValue,
-          });
-        } else if (field === "headers") {
-          response = await updateResourceHeaders({
-            id: resourceId,
-            headers: filteredValue,
-          });
-        } else if (field === "body") {
-          response = await updateResourceBody({
-            id: resourceId,
-            body: filteredValue,
-          });
-        }
-
         if (response?.error) {
-          const errorMessage = response.error.message || "Failed to save";
-          setFieldState(field, {
-            updating: false,
-            error: true,
-            errorMessage,
-          });
-
-          // Reset the field value on error
-          setFormData((prev) => ({
-            ...prev,
-            [field]: savedDataRef.current[field] || [],
-          }));
-
-          setTimeout(() => {
-            setFieldState(field, { error: false, errorMessage: "" });
-          }, 2000);
-
-          return;
+          errors.push(response.error.message || "Failed to save name");
         }
+      }
 
-        // Update local state on success
-        const updatedData = { ...formData, [field]: filteredValue };
-        savedDataRef.current = {
-          ...savedDataRef.current,
-          [field]: filteredValue,
-        };
-        setFormData(updatedData);
-        onUpdate?.(updatedData);
-
-        setFieldState(field, { updating: false, saved: true });
-        setTimeout(() => {
-          setFieldState(field, { saved: false });
-        }, 2000);
-      } catch (_error) {
-        setFieldState(field, {
-          updating: false,
-          error: true,
-          errorMessage: "Network error occurred",
+      // Save description if changed
+      if (formData.description !== savedData.description) {
+        const response = await updateResourceDescription({
+          id: resourceId,
+          newDescription: formData.description.trim(),
         });
-
-        // Reset the field value on error
-        setFormData((prev) => ({
-          ...prev,
-          [field]: savedDataRef.current[field] || [],
-        }));
-
-        setTimeout(() => {
-          setFieldState(field, { error: false, errorMessage: "" });
-        }, 2000);
-      }
-    },
-    [resourceId, onUpdate, setFieldState, formData]
-  );
-
-  const updateAuthField = useCallback(
-    async (authConfig: AuthConfig) => {
-      if (!resourceId) {
-        return;
+        if (response?.error) {
+          errors.push(response.error.message || "Failed to save description");
+        }
       }
 
-      // Inject auth into current headers to create the full headers array
+      // Save baseUrl if changed
+      if (formData.baseUrl !== savedData.baseUrl && formData.baseUrl.trim()) {
+        const response = await updateResourceBaseUrl({
+          id: resourceId,
+          baseUrl: formData.baseUrl.trim(),
+        });
+        if (response?.error) {
+          errors.push(response.error.message || "Failed to save base URL");
+        }
+      }
+
+      // Save URL parameters if changed
+      const currentParams = filterEmptyPairs(formData.urlParameters);
+      const savedParams = filterEmptyPairs(savedData.urlParameters);
+      if (JSON.stringify(currentParams) !== JSON.stringify(savedParams)) {
+        const response = await updateResourceUrlParameters({
+          id: resourceId,
+          urlParameters: currentParams,
+        });
+        if (response?.error) {
+          errors.push(
+            response.error.message || "Failed to save URL parameters"
+          );
+        }
+      }
+
+      // Save headers if changed (including auth injection)
+      // Inject auth into headers to create the full headers array
       const headersWithAuth = injectAuthIntoHeaders(
         formData.headers,
-        authConfig
+        formData.authConfig
       );
-
-      // Filter out empty key-value pairs for comparison
-      const filteredHeaders = headersWithAuth.filter(
-        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
+      const currentHeaders = filterEmptyPairs(headersWithAuth);
+      const savedHeadersWithAuth = injectAuthIntoHeaders(
+        savedData.headers,
+        savedData.authConfig
       );
-
-      // Don't make network request if headers haven't changed
-      const currentHeaders = (savedDataRef.current.headers || []).filter(
-        (pair) => pair.key.trim() !== "" && pair.value.trim() !== ""
-      );
-      if (JSON.stringify(filteredHeaders) === JSON.stringify(currentHeaders)) {
-        return;
-      }
-
-      setFieldState("authConfig", {
-        updating: true,
-        saved: false,
-        error: false,
-      });
-
-      try {
+      const savedHeaders = filterEmptyPairs(savedHeadersWithAuth);
+      if (JSON.stringify(currentHeaders) !== JSON.stringify(savedHeaders)) {
         const response = await updateResourceHeaders({
           id: resourceId,
-          headers: filteredHeaders,
+          headers: currentHeaders,
         });
-
         if (response?.error) {
-          const errorMessage = response.error.message || "Failed to save";
-          setFieldState("authConfig", {
-            updating: false,
-            error: true,
-            errorMessage,
-          });
-
-          // Reset auth config on error
-          setFormData((prev) => ({
-            ...prev,
-            authConfig: savedDataRef.current.authConfig,
-          }));
-
-          setTimeout(() => {
-            setFieldState("authConfig", { error: false, errorMessage: "" });
-          }, 2000);
-
-          return;
+          errors.push(response.error.message || "Failed to save headers");
         }
+      }
 
-        // Update local state on success
-        const updatedData = {
-          ...formData,
-          headers: formData.headers, // Keep displayed headers (without auth)
-          authConfig,
-        };
-        savedDataRef.current = {
-          ...savedDataRef.current,
-          headers: filteredHeaders, // Save the full headers with auth
-          authConfig,
-        };
-        setFormData(updatedData);
-        onUpdate?.(updatedData);
+      // Save body if changed
+      const currentBody = filterEmptyPairs(formData.body);
+      const savedBody = filterEmptyPairs(savedData.body);
+      if (JSON.stringify(currentBody) !== JSON.stringify(savedBody)) {
+        const response = await updateResourceBody({
+          id: resourceId,
+          body: currentBody,
+        });
+        if (response?.error) {
+          errors.push(response.error.message || "Failed to save body");
+        }
+      }
 
-        setFieldState("authConfig", { updating: false, saved: true });
-        setTimeout(() => {
-          setFieldState("authConfig", { saved: false });
-        }, 2000);
-      } catch (_error) {
-        setFieldState("authConfig", {
-          updating: false,
+      if (errors.length > 0) {
+        setSaveState({
+          saving: false,
+          saved: false,
           error: true,
-          errorMessage: "Network error occurred",
+          errorMessage: errors.join(", "),
         });
 
-        // Reset auth config on error
-        setFormData((prev) => ({
-          ...prev,
-          authConfig: savedDataRef.current.authConfig,
-        }));
-
+        // Clear error after 3 seconds
         setTimeout(() => {
-          setFieldState("authConfig", { error: false, errorMessage: "" });
-        }, 2000);
+          setSaveState((prev) => ({ ...prev, error: false, errorMessage: "" }));
+        }, 3000);
+
+        return { success: false, error: errors.join(", ") };
       }
-    },
-    [resourceId, onUpdate, setFieldState, formData]
-  );
+
+      // Update saved reference on success
+      savedDataRef.current = formData;
+      onUpdate?.(formData);
+
+      setSaveState({
+        saving: false,
+        saved: true,
+        error: false,
+        errorMessage: "",
+      });
+
+      // Clear saved indicator after 2 seconds
+      setTimeout(() => {
+        setSaveState((prev) => ({ ...prev, saved: false }));
+      }, 2000);
+
+      return { success: true };
+    } catch (_error) {
+      setSaveState({
+        saving: false,
+        saved: false,
+        error: true,
+        errorMessage: "Network error occurred",
+      });
+
+      // Clear error after 3 seconds
+      setTimeout(() => {
+        setSaveState((prev) => ({ ...prev, error: false, errorMessage: "" }));
+      }, 3000);
+
+      return { success: false, error: "Network error occurred" };
+    }
+  }, [resourceId, formData, hasUnsavedChanges, onUpdate]);
 
   return {
     formData,
-    fieldStates,
+    saveState,
+    hasUnsavedChanges,
     updateFormData,
-    updateTextField,
-    updateKeyValueField,
-    updateAuthField,
-    resetFieldStates,
+    saveConfig,
+    discardChanges,
     setFormData,
   };
 }
