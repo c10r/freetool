@@ -231,7 +231,7 @@ function WorkspaceContent() {
     const backendInputs = inputs.map((f) => ({
       input: {
         title: f.label,
-        type: toBackendInputType(f.type),
+        type: toBackendInputType(f.type, f.options),
       },
       required: f.required ?? false,
     }));

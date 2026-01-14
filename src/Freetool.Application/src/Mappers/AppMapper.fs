@@ -34,6 +34,14 @@ module AppMapper =
         | InputTypeValue.MultiText(maxLength, allowedValues) ->
             MultiText(MaxLength = maxLength, AllowedValues = allowedValues)
         | InputTypeValue.MultiInteger allowedIntegers -> MultiInteger(AllowedIntegers = allowedIntegers)
+        | InputTypeValue.Radio options ->
+            let optionDtos =
+                options
+                |> List.map (fun o ->
+                    { RadioOptionDto.Value = o.Value
+                      Label = o.Label })
+
+            Radio(Options = optionDtos)
 
     let rec inputTypeFromDtoType (inputTypeDto: InputTypeDto) : Result<InputType, DomainError> =
         match inputTypeDto with
@@ -75,6 +83,15 @@ module AppMapper =
         | MultiInteger allowedIntegers ->
             InputType.MultiInteger(allowedIntegers)
             |> Result.mapError (fun _ -> ValidationError "Invalid MultiInteger configuration")
+        | Radio optionDtos ->
+            let options =
+                optionDtos
+                |> List.map (fun dto ->
+                    { RadioOption.Value = dto.Value
+                      Label = dto.Label })
+
+            InputType.Radio(options)
+            |> Result.mapError (fun _ -> ValidationError "Invalid Radio configuration")
 
     let inputToDto (input: Input) : AppInputDto =
         { Input =

@@ -53,7 +53,7 @@ export function useAppInputs(
     return appFields.map((field) => ({
       input: {
         title: field.label,
-        type: toBackendInputType(field.type),
+        type: toBackendInputType(field.type, field.options),
       },
       required: field.required ?? false,
     }));
@@ -74,6 +74,7 @@ export function useAppInputs(
           label: f.label,
           type: f.type,
           required: f.required ?? false,
+          options: f.options,
         }))
       );
       const savedFieldsJson = JSON.stringify(
@@ -81,6 +82,7 @@ export function useAppInputs(
           label: f.label,
           type: f.type,
           required: f.required ?? false,
+          options: f.options,
         }))
       );
 

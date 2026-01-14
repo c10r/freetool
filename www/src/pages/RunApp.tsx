@@ -19,10 +19,14 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import DynamicBodyEditor from "@/features/space/components/DynamicBodyEditor";
 import { useHasPermission } from "@/hooks/usePermissions";
-import { fromBackendInputType } from "@/lib/inputTypeMapper";
+import {
+  fromBackendInputType,
+  getRadioOptionsFromBackendType,
+} from "@/lib/inputTypeMapper";
 import type { components } from "@/schema";
 
 type AppData = components["schemas"]["AppData"];
@@ -338,6 +342,33 @@ const RunApp = () => {
             className={hasError ? "border-red-500" : ""}
           />
         );
+      case "radio": {
+        const options = input.type
+          ? getRadioOptionsFromBackendType(input.type)
+          : [];
+        return (
+          <RadioGroup
+            value={value}
+            onValueChange={(val) => handleInputChange(title, val)}
+            disabled={running}
+          >
+            {options.map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-2">
+                <RadioGroupItem
+                  value={opt.value}
+                  id={`input-${title}-${opt.value}`}
+                />
+                <Label
+                  htmlFor={`input-${title}-${opt.value}`}
+                  className="font-normal cursor-pointer"
+                >
+                  {opt.label || opt.value}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        );
+      }
       default:
         return (
           <Input

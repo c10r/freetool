@@ -7,9 +7,11 @@ import {
 } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import type { AppNode, Endpoint, FieldType } from "../types";
+import type { AppNode, Endpoint, FieldType, RadioOption } from "../types";
 
 // Type for form field values - supports all possible field types
 type FormFieldValue = string | number | boolean;
@@ -115,7 +117,14 @@ export default function AppFormRenderer({
             {f.label}
             {f.required ? " *" : ""}
           </label>
-          {renderField(f.type, f.id, register, control, !!f.required)}
+          {renderField(
+            f.type,
+            f.id,
+            register,
+            control,
+            !!f.required,
+            f.options
+          )}
           {formState.errors?.[f.id] && (
             <p className="text-sm text-destructive">This field is required</p>
           )}
@@ -133,7 +142,8 @@ function renderField(
   id: string,
   register: UseFormRegister<FormData>,
   control: Control<FormData>,
-  required: boolean
+  required: boolean,
+  options?: RadioOption[]
 ) {
   switch (type) {
     case "text":
@@ -184,6 +194,32 @@ function renderField(
                 onCheckedChange={field.onChange}
               />
             </div>
+          )}
+        />
+      );
+    case "radio":
+      return (
+        <Controller
+          control={control}
+          name={id}
+          rules={required ? { required: true } : undefined}
+          render={({ field }) => (
+            <RadioGroup
+              value={field.value as string}
+              onValueChange={field.onChange}
+            >
+              {(options || []).map((opt) => (
+                <div key={opt.value} className="flex items-center space-x-2">
+                  <RadioGroupItem value={opt.value} id={`${id}-${opt.value}`} />
+                  <Label
+                    htmlFor={`${id}-${opt.value}`}
+                    className="font-normal cursor-pointer"
+                  >
+                    {opt.label || opt.value}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
           )}
         />
       );

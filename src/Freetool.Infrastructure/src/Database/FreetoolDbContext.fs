@@ -423,6 +423,30 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                                 Error(
                                     Freetool.Domain.ValidationError $"Invalid Text type format in database: {typeStr}"
                                 )
+                        | typeStr when typeStr.StartsWith("Radio([") && typeStr.EndsWith("])") ->
+                            let optionsStr = typeStr.Substring(7, typeStr.Length - 9)
+
+                            if System.String.IsNullOrWhiteSpace(optionsStr) then
+                                Error(Freetool.Domain.ValidationError "Radio must have options")
+                            else
+                                let options =
+                                    optionsStr.Split([| "\", \"" |], System.StringSplitOptions.None)
+                                    |> Array.map (fun part ->
+                                        let trimmed = part.Trim('"')
+
+                                        if trimmed.Contains("\":\"") then
+                                            let colonIdx = trimmed.IndexOf("\":\"")
+                                            let value = trimmed.Substring(0, colonIdx)
+                                            let label = trimmed.Substring(colonIdx + 3)
+
+                                            { Freetool.Domain.ValueObjects.RadioOption.Value = value
+                                              Label = Some label }
+                                        else
+                                            { Freetool.Domain.ValueObjects.RadioOption.Value = trimmed
+                                              Label = None })
+                                    |> Array.toList
+
+                                InputType.Radio(options)
                         | _ ->
                             Error(
                                 Freetool.Domain.ValidationError $"Unknown InputType format in database: {item.Type}"
@@ -456,6 +480,32 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                         | Ok validInputType -> validInputType
                         | Error _ -> failwith $"Invalid Text type format in database: {typeStr}"
                     | _ -> failwith $"Invalid Text type format in database: {typeStr}"
+                | typeStr when typeStr.StartsWith("Radio([") && typeStr.EndsWith("])") ->
+                    let optionsStr = typeStr.Substring(7, typeStr.Length - 9)
+
+                    if System.String.IsNullOrWhiteSpace(optionsStr) then
+                        failwith "Radio must have options"
+                    else
+                        let options =
+                            optionsStr.Split([| "\", \"" |], System.StringSplitOptions.None)
+                            |> Array.map (fun part ->
+                                let trimmed = part.Trim('"')
+
+                                if trimmed.Contains("\":\"") then
+                                    let colonIdx = trimmed.IndexOf("\":\"")
+                                    let value = trimmed.Substring(0, colonIdx)
+                                    let label = trimmed.Substring(colonIdx + 3)
+
+                                    { Freetool.Domain.ValueObjects.RadioOption.Value = value
+                                      Label = Some label }
+                                else
+                                    { Freetool.Domain.ValueObjects.RadioOption.Value = trimmed
+                                      Label = None })
+                            |> Array.toList
+
+                        match InputType.Radio(options) with
+                        | Ok validInputType -> validInputType
+                        | Error _ -> failwith $"Invalid Radio type format in database: {typeStr}"
                 | _ -> failwith $"Unknown InputType format in database: {str}"
 
             let inputTypeConverter =

@@ -6,6 +6,8 @@ type FolderLocation =
     | RootFolder
     | ChildFolder of parentId: string
 
+type RadioOptionDto = { Value: string; Label: string option }
+
 [<JsonFSharpConverter(UnionTagName = "case", UnionFieldsName = "fields")>]
 type InputTypeDto =
     | Email
@@ -17,3 +19,4 @@ type InputTypeDto =
     | MultiDate of AllowedDates: string list
     | MultiText of MaxLength: int * AllowedValues: string list
     | MultiInteger of AllowedIntegers: int list
+    | Radio of Options: RadioOptionDto list

@@ -1,10 +1,22 @@
-export type FieldType = "text" | "email" | "date" | "integer" | "boolean";
+export type FieldType =
+  | "text"
+  | "email"
+  | "date"
+  | "integer"
+  | "boolean"
+  | "radio";
+
+export interface RadioOption {
+  value: string;
+  label?: string;
+}
 
 export interface AppField {
   id: string;
   label: string;
   type: FieldType;
   required?: boolean;
+  options?: RadioOption[]; // Used only for radio type
 }
 
 export type NodeType = "folder" | "app";

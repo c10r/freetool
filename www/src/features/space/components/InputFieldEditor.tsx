@@ -1,6 +1,7 @@
 import {
   ALargeSmall,
   Calendar,
+  CircleDot,
   Hash,
   Mail,
   Plus,
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { AppField, FieldType } from "../types";
+import RadioOptionsEditor from "./RadioOptionsEditor";
 
 interface InputFieldEditorProps {
   fields: AppField[];
@@ -49,7 +51,22 @@ export default function InputFieldEditor({
   };
 
   const updateField = (id: string, updates: Partial<AppField>) => {
-    onChange(fields.map((f) => (f.id === id ? { ...f, ...updates } : f)));
+    onChange(
+      fields.map((f) => {
+        if (f.id !== id) {
+          return f;
+        }
+        // Initialize default options when switching to radio type
+        if (updates.type === "radio" && !f.options?.length) {
+          return {
+            ...f,
+            ...updates,
+            options: [{ value: "option1" }, { value: "option2" }],
+          };
+        }
+        return { ...f, ...updates };
+      })
+    );
   };
 
   const deleteField = (id: string) => {
@@ -128,6 +145,11 @@ export default function InputFieldEditor({
                       <ToggleLeft className="h-4 w-4" /> Boolean
                     </span>
                   </SelectItem>
+                  <SelectItem value="radio">
+                    <span className="flex items-center gap-2">
+                      <CircleDot className="h-4 w-4" /> Radio
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -151,6 +173,15 @@ export default function InputFieldEditor({
                 <Trash2 size={16} />
               </Button>
             </div>
+            {f.type === "radio" && (
+              <div className="md:col-span-12 mt-2">
+                <RadioOptionsEditor
+                  options={f.options || []}
+                  onChange={(opts) => updateField(f.id, { options: opts })}
+                  disabled={disabled}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}

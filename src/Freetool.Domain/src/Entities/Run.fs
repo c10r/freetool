@@ -203,6 +203,11 @@ module Run =
                                     ValidationError $"Input '{input.Title}' must be one of the allowed integer values"
                                 )
                         | false, _ -> Error(ValidationError $"Input '{input.Title}' must be a valid integer")
+                    | Radio options ->
+                        if options |> List.exists (fun o -> o.Value = value) then
+                            Ok inputValue
+                        else
+                            Error(ValidationError $"Input '{input.Title}' must be one of the allowed radio options")
 
                 // Validate all input values against their types
                 let zippedInputs =

@@ -3,6 +3,9 @@ namespace Freetool.Domain.ValueObjects
 open Freetool.Domain
 open System
 
+/// Represents a single option in a radio button group
+type RadioOption = { Value: string; Label: string option }
+
 type InputTypeValue =
     | Email
     | Date
@@ -13,6 +16,7 @@ type InputTypeValue =
     | MultiDate of allowedDates: DateTime list
     | MultiText of maxLength: int * allowedValues: string list
     | MultiInteger of allowedIntegers: int list
+    | Radio of options: RadioOption list
 
 [<Struct>]
 type InputType =
@@ -58,6 +62,32 @@ type InputType =
         else
             Ok(InputType(MultiInteger(allowedIntegers)))
 
+    static member Radio(options: RadioOption list) : Result<InputType, DomainError> =
+        if List.length options < 2 then
+            Error(ValidationError "Radio must have at least 2 options")
+        elif List.length options > 50 then
+            Error(ValidationError "Radio cannot have more than 50 options")
+        elif options |> List.exists (fun o -> String.IsNullOrWhiteSpace(o.Value)) then
+            Error(ValidationError "Radio option values cannot be empty or whitespace")
+        else
+            let values = options |> List.map (fun o -> o.Value)
+            let uniqueValues = values |> Set.ofList
+
+            if List.length values <> Set.count uniqueValues then
+                Error(ValidationError "Radio option values must be unique")
+            elif options |> List.exists (fun o -> o.Value.Length > 100) then
+                Error(ValidationError "Radio option values cannot exceed 100 characters")
+            elif
+                options
+                |> List.exists (fun o ->
+                    match o.Label with
+                    | Some label -> label.Length > 100
+                    | None -> false)
+            then
+                Error(ValidationError "Radio option labels cannot exceed 100 characters")
+            else
+                Ok(InputType(Radio(options)))
+
     member this.Value =
         let (InputType inputType) = this
         inputType
@@ -80,3 +110,12 @@ type InputType =
         | MultiInteger allowedIntegers ->
             let intStrings = allowedIntegers |> List.map string
             sprintf "MultiInteger([%s])" (String.Join(", ", intStrings))
+        | Radio options ->
+            let optionStrings =
+                options
+                |> List.map (fun o ->
+                    match o.Label with
+                    | Some label -> sprintf "\"%s\":\"%s\"" o.Value label
+                    | None -> sprintf "\"%s\"" o.Value)
+
+            sprintf "Radio([%s])" (String.Join(", ", optionStrings))
