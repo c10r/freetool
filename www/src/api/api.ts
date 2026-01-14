@@ -208,7 +208,11 @@ export const updateAppUseDynamicJsonBody = (
 
 export const updateAppInputSchema = (
   appId: string,
-  inputs: { input: { title: string; type: unknown }; required: boolean }[]
+  inputs: {
+    input: { title: string; type: unknown };
+    required: boolean;
+    defaultValue?: string;
+  }[]
 ) => {
   return client.PUT("/app/{id}/inputs", {
     params: { path: { id: appId } },

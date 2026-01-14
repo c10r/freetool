@@ -55,6 +55,7 @@ export function useAppInputs(
         type: toBackendInputType(field.type, field.options),
       },
       required: field.required ?? false,
+      defaultValue: field.defaultValue,
     }));
   }, []);
 
@@ -68,6 +69,7 @@ export function useAppInputs(
         type: f.type,
         required: f.required ?? false,
         options: f.options,
+        defaultValue: f.defaultValue,
       }))
     );
     const savedFieldsJson = JSON.stringify(
@@ -76,6 +78,7 @@ export function useAppInputs(
         type: f.type,
         required: f.required ?? false,
         options: f.options,
+        defaultValue: f.defaultValue,
       }))
     );
     return currentFieldsJson !== savedFieldsJson;

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, Edit, Plus, Trash2, X } from "lucide-react";
+import { ChevronLeft, Edit, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
   createResource,
@@ -10,7 +10,6 @@ import {
 import { PaginationControls } from "@/components/PaginationControls";
 import { PermissionButton } from "@/components/PermissionButton";
 import { PermissionGate } from "@/components/PermissionGate";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -102,6 +101,7 @@ export default function ResourcesView({
     saveConfig,
     discardChanges,
     setFormData: setEditFormData,
+    resetFormData,
   } = useResourceForm(initialFormData, editingResource?.id, (updatedData) => {
     // Update the resources list when edit form data changes
     setResources((prev) =>
@@ -240,7 +240,9 @@ export default function ResourcesView({
     const authConfig = parseAuthFromHeaders(resource.headers || []);
     const displayHeaders = removeAuthFromHeaders(resource.headers || []);
 
-    setEditFormData({
+    // Use resetFormData to set both form state and saved baseline
+    // This ensures hasUnsavedChanges starts as false
+    resetFormData({
       name: resource.name,
       description: resource.description,
       baseUrl: resource.baseUrl,
@@ -457,26 +459,9 @@ export default function ResourcesView({
       <Dialog open={!!editingResource} onOpenChange={() => handleCloseEdit()}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <div className="flex items-center gap-2">
-              <DialogTitle>
-                {canEditResource ? "Edit Resource" : "View Resource"}
-              </DialogTitle>
-              {hasUnsavedChanges && canEditResource && (
-                <Badge variant="secondary">Unsaved</Badge>
-              )}
-              {saveState.saved && (
-                <Badge variant="default" className="bg-green-500">
-                  <Check className="h-3 w-3 mr-1" />
-                  Saved
-                </Badge>
-              )}
-              {saveState.error && (
-                <Badge variant="destructive">
-                  <X className="h-3 w-3 mr-1" />
-                  Error
-                </Badge>
-              )}
-            </div>
+            <DialogTitle>
+              {canEditResource ? "Edit Resource" : "View Resource"}
+            </DialogTitle>
             {!canEditResource && (
               <p className="text-sm font-normal text-muted-foreground mt-1">
                 You don't have permission to edit this resource. Contact your

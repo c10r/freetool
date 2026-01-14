@@ -123,6 +123,14 @@ export function useResourceForm(
   }, []);
 
   /**
+   * Resets both form data and saved baseline (for initializing edit mode)
+   */
+  const resetFormData = useCallback((data: ResourceFormData) => {
+    setFormData(data);
+    savedDataRef.current = data;
+  }, []);
+
+  /**
    * Save all changed config fields to the backend
    */
   const saveConfig = useCallback(async () => {
@@ -286,5 +294,6 @@ export function useResourceForm(
     saveConfig,
     discardChanges,
     setFormData,
+    resetFormData,
   };
 }
