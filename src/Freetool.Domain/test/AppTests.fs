@@ -44,10 +44,12 @@ let ``App creation should generate AppCreatedEvent`` () =
     let inputs =
         [ { Title = "Email"
             Type = InputType.Email()
-            Required = true }
+            Required = true
+            DefaultValue = None }
           { Title = "Password"
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
-            Required = true } ]
+            Required = true
+            DefaultValue = None } ]
 
     // Act
     let resourceId = ResourceId.NewId()
@@ -111,7 +113,8 @@ let ``App inputs update should generate correct event`` () =
     let initialInputs =
         [ { Title = "Name"
             Type = InputType.Text(100) |> Result.defaultValue (InputType.Email())
-            Required = true } ]
+            Required = true
+            DefaultValue = None } ]
 
     let resourceId = ResourceId.NewId()
 
@@ -122,13 +125,16 @@ let ``App inputs update should generate correct event`` () =
     let newInputs =
         [ { Title = "First Name"
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
-            Required = true }
+            Required = true
+            DefaultValue = None }
           { Title = "Last Name"
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
-            Required = false }
+            Required = false
+            DefaultValue = None }
           { Title = "Age"
             Type = InputType.Integer()
-            Required = true } ]
+            Required = true
+            DefaultValue = None } ]
 
     // Act
     let result = App.updateInputs actorUserId newInputs app
@@ -220,7 +226,8 @@ let ``App validation should reject invalid input title`` () =
     let invalidInputs =
         [ { Title = ""
             Type = InputType.Email()
-            Required = true } ] // Empty title
+            Required = true
+            DefaultValue = None } ] // Empty title
 
     // Act
     let resourceId = ResourceId.NewId()

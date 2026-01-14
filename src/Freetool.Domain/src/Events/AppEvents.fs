@@ -9,7 +9,8 @@ open Freetool.Domain.ValueObjects
 type Input =
     { Title: string
       Type: InputType
-      Required: bool }
+      Required: bool
+      DefaultValue: DefaultValue option }
 
 type AppChange =
     | NameChanged of oldValue: AppName * newValue: AppName

@@ -328,7 +328,8 @@ let ``CreateRun marks as invalid when input validation fails`` () =
         let requiredInput: Input =
             { Title = "RequiredField"
               Type = inputType
-              Required = true }
+              Required = true
+              DefaultValue = None }
 
         let appData: AppData =
             { Id = AppId.NewId()

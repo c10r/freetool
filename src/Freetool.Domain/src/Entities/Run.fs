@@ -112,10 +112,31 @@ module Run =
         let inputValuesMap =
             inputValues |> List.map (fun iv -> iv.Title, iv.Value) |> Map.ofList
 
+        // Apply default values for optional inputs that weren't provided
+        let inputValuesWithDefaults =
+            appInputs
+            |> List.choose (fun input ->
+                // If input wasn't provided and has a default, use it
+                if
+                    not input.Required
+                    && not (inputValuesMap.ContainsKey input.Title)
+                    && input.DefaultValue.IsSome
+                then
+                    Some
+                        { Title = input.Title
+                          Value = input.DefaultValue.Value.ToRawString() }
+                else
+                    None)
+            |> List.append inputValues
+
+        // Rebuild the map with defaults included
+        let inputValuesMapWithDefaults =
+            inputValuesWithDefaults |> List.map (fun iv -> iv.Title, iv.Value) |> Map.ofList
+
         // Check that all required inputs are provided
         let missingRequiredInputs =
             appInputs
-            |> List.filter (fun input -> input.Required && not (inputValuesMap.ContainsKey input.Title))
+            |> List.filter (fun input -> input.Required && not (inputValuesMapWithDefaults.ContainsKey input.Title))
             |> List.map (fun input -> input.Title)
 
         if not missingRequiredInputs.IsEmpty then
@@ -124,7 +145,7 @@ module Run =
         else
             // Check that all provided inputs exist in the app schema
             let invalidInputs =
-                inputValues
+                inputValuesWithDefaults
                 |> List.filter (fun iv -> not (appInputsMap.ContainsKey iv.Title))
                 |> List.map (fun iv -> iv.Title)
 
@@ -211,7 +232,7 @@ module Run =
 
                 // Validate all input values against their types
                 let zippedInputs =
-                    inputValues
+                    inputValuesWithDefaults
                     |> List.map (fun (value: RunInputValue) ->
                         match appInputsMap.TryFind value.Title with
                         | Some input -> Some(value, input)

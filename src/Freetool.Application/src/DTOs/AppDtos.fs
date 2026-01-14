@@ -7,7 +7,9 @@ type AppInputDto =
       Input: InputDto
 
       [<Required>]
-      Required: bool }
+      Required: bool
+
+      DefaultValue: string option }
 
 type CreateAppDto =
     { [<Required>]

@@ -97,14 +97,29 @@ module AppMapper =
         { Input =
             { Title = input.Title
               Type = inputTypeToDtoType input.Type }
-          Required = input.Required }
+          Required = input.Required
+          DefaultValue = input.DefaultValue |> Option.map (fun dv -> dv.ToRawString()) }
 
     let inputFromDto (inputDto: AppInputDto) : Result<Input, DomainError> =
         inputTypeFromDtoType inputDto.Input.Type
-        |> Result.map (fun inputType ->
-            { Title = inputDto.Input.Title
-              Type = inputType
-              Required = inputDto.Required })
+        |> Result.bind (fun inputType ->
+            // Parse and validate the default value against the input type
+            let defaultValueResult =
+                match inputDto.DefaultValue with
+                | None -> Ok None
+                | Some rawValue ->
+                    if inputDto.Required then
+                        // Required inputs shouldn't have defaults - ignore silently
+                        Ok None
+                    else
+                        DefaultValue.Create(inputType, rawValue) |> Result.map Some
+
+            defaultValueResult
+            |> Result.map (fun defaultValue ->
+                { Title = inputDto.Input.Title
+                  Type = inputType
+                  Required = inputDto.Required
+                  DefaultValue = defaultValue }))
 
     let keyValuePairToDto (kvp: KeyValuePair) : KeyValuePairDto = { Key = kvp.Key; Value = kvp.Value }
 

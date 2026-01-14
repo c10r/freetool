@@ -17,6 +17,7 @@ export interface AppField {
   type: FieldType;
   required?: boolean;
   options?: RadioOption[]; // Used only for radio type
+  defaultValue?: string; // Only applicable when required is false
 }
 
 export type NodeType = "folder" | "app";

@@ -314,7 +314,11 @@ const RunApp = () => {
             value={value}
             onChange={(e) => handleInputChange(title, e.target.value)}
             onBlur={(e) => handleEmailBlur(title, e.target.value)}
-            placeholder={`Enter ${title}`}
+            placeholder={
+              input.defaultValue
+                ? `Default: ${input.defaultValue}`
+                : `Enter ${title}`
+            }
             disabled={running}
             className={hasError ? "border-red-500" : ""}
           />
@@ -337,7 +341,11 @@ const RunApp = () => {
             type="number"
             value={value}
             onChange={(e) => handleInputChange(title, e.target.value)}
-            placeholder={`Enter ${title}`}
+            placeholder={
+              input.defaultValue
+                ? `Default: ${input.defaultValue}`
+                : `Enter ${title}`
+            }
             disabled={running}
             className={hasError ? "border-red-500" : ""}
           />
@@ -376,7 +384,11 @@ const RunApp = () => {
             type="text"
             value={value}
             onChange={(e) => handleInputChange(title, e.target.value)}
-            placeholder={`Enter ${title}`}
+            placeholder={
+              input.defaultValue
+                ? `Default: ${input.defaultValue}`
+                : `Enter ${title}`
+            }
             disabled={running}
             className={hasError ? "border-red-500" : ""}
           />

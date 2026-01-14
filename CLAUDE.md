@@ -747,6 +747,15 @@ tailscale serve --bg --set-path=/freetool 5001
 12. **TypeScript Errors with `any`**: Never use `any` type - use proper interfaces or `unknown` with type guards
 13. **F# Discriminated Union JSON Format**: When sending F# DUs to the backend, use `{ case: "CaseName" }` format (or `{ case: "CaseName", fields: [...] }` for DUs with parameters). The OpenAPI spec shows the *serialization* format (`{ tag: N, is*: true }`), but deserialization requires the `case` format. See `www/src/lib/inputTypeMapper.ts` for the correct pattern.
 
+## Type Safety Guidelines
+
+### Domain Layer: Strong Typing
+The domain layer must maintain strong type safety using F# discriminated unions and value objects:
+- **Never use `string` for typed data** in the domain layer - create proper value objects (e.g., `Email`, `DefaultValue`, `InputType`)
+- **Validation at boundaries**: Parse and validate strings into typed values at the Application/DTO layer boundary
+- **String only in DTOs**: Use `string option` only in DTOs where we interface with user-submitted data
+- Example: `DefaultValue` uses typed DU cases (`IntegerDefault of int`, `EmailDefault of Email`) internally, but converts to/from `string` at the DTO boundary via `ToRawString()` and `DefaultValue.Create()`
+
 ## Code Style
 
 ### Backend (F#)

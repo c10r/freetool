@@ -26,6 +26,7 @@
     <Compile Include="src/ValueObjects/AppName.fs" />
     <Compile Include="src/ValueObjects/InputTitle.fs" />
     <Compile Include="src/ValueObjects/InputType.fs" />
+    <Compile Include="src/ValueObjects/DefaultValue.fs" />
     <Compile Include="src/ValueObjects/BaseUrl.fs" />
     <Compile Include="src/ValueObjects/KeyValuePair.fs" />
     <Compile Include="src/ValueObjects/RunId.fs" />

@@ -56,6 +56,10 @@ export default function InputFieldEditor({
         if (f.id !== id) {
           return f;
         }
+        // Clear defaultValue when required is toggled to true
+        if (updates.required === true) {
+          return { ...f, ...updates, defaultValue: undefined };
+        }
         // Initialize default options when switching to radio type
         if (updates.type === "radio" && !f.options?.length) {
           return {
@@ -178,6 +182,21 @@ export default function InputFieldEditor({
                 <RadioOptionsEditor
                   options={f.options || []}
                   onChange={(opts) => updateField(f.id, { options: opts })}
+                  disabled={disabled}
+                />
+              </div>
+            )}
+            {!f.required && (
+              <div className="md:col-span-12 mt-2">
+                <Input
+                  value={f.defaultValue || ""}
+                  onChange={(e) =>
+                    updateField(f.id, {
+                      defaultValue: e.target.value || undefined,
+                    })
+                  }
+                  placeholder="Default value (optional)"
+                  aria-label="Default value"
                   disabled={disabled}
                 />
               </div>

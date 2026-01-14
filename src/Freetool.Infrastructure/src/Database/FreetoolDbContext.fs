@@ -392,7 +392,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                     |> List.map (fun input ->
                         {| Title = input.Title
                            Type = input.Type.ToString()
-                           Required = input.Required |})
+                           Required = input.Required
+                           DefaultValue =
+                            input.DefaultValue |> Option.map (fun dv -> dv.ToRawString()) |> Option.toObj |})
 
                 System.Text.Json.JsonSerializer.Serialize(serializable)
 
@@ -401,7 +403,8 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                     System.Text.Json.JsonSerializer.Deserialize<
                         {| Title: string
                            Type: string
-                           Required: bool |} list
+                           Required: bool
+                           DefaultValue: string |} list
                      >(
                         json
                     )
@@ -454,9 +457,19 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
                     match inputType with
                     | Ok validInputType ->
+                        // Parse default value if present
+                        let defaultValue =
+                            if System.String.IsNullOrEmpty(item.DefaultValue) then
+                                None
+                            else
+                                match DefaultValue.Create(validInputType, item.DefaultValue) with
+                                | Ok dv -> Some dv
+                                | Error _ -> None // Ignore invalid defaults in database
+
                         { Freetool.Domain.Events.Input.Title = item.Title
                           Freetool.Domain.Events.Input.Type = validInputType
-                          Freetool.Domain.Events.Input.Required = item.Required }
+                          Freetool.Domain.Events.Input.Required = item.Required
+                          Freetool.Domain.Events.Input.DefaultValue = defaultValue }
                     | Error _ -> failwith $"Invalid InputType in database: {item.Type}")
 
             let inputListConverter =
