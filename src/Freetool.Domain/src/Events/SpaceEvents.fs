@@ -53,6 +53,24 @@ type SpaceDeletedEvent =
         member this.EventId = this.EventId
         member this.UserId = this.ActorUserId
 
+/// Event raised when a Space member's permissions are changed
+/// Includes names for audit log display (entities may be deleted later)
+type SpacePermissionsChangedEvent =
+    { SpaceId: SpaceId
+      SpaceName: string
+      TargetUserId: UserId
+      TargetUserName: string
+      PermissionsGranted: string list
+      PermissionsRevoked: string list
+      OccurredAt: DateTime
+      EventId: Guid
+      ActorUserId: UserId }
+
+    interface IDomainEvent with
+        member this.OccurredAt = this.OccurredAt
+        member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
+
 module SpaceEvents =
     /// Creates a SpaceCreatedEvent
     let spaceCreated
@@ -88,3 +106,24 @@ module SpaceEvents =
           EventId = Guid.NewGuid()
           ActorUserId = actorUserId }
         : SpaceDeletedEvent
+
+    /// Creates a SpacePermissionsChangedEvent
+    let spacePermissionsChanged
+        (actorUserId: UserId)
+        (spaceId: SpaceId)
+        (spaceName: string)
+        (targetUserId: UserId)
+        (targetUserName: string)
+        (permissionsGranted: string list)
+        (permissionsRevoked: string list)
+        =
+        { SpaceId = spaceId
+          SpaceName = spaceName
+          TargetUserId = targetUserId
+          TargetUserName = targetUserName
+          PermissionsGranted = permissionsGranted
+          PermissionsRevoked = permissionsRevoked
+          OccurredAt = DateTime.UtcNow
+          EventId = Guid.NewGuid()
+          ActorUserId = actorUserId }
+        : SpacePermissionsChangedEvent

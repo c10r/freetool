@@ -39,6 +39,7 @@ type SpaceEvents =
     | SpaceCreatedEvent
     | SpaceUpdatedEvent
     | SpaceDeletedEvent
+    | SpacePermissionsChangedEvent
 
 type EventType =
     | UserEvents of UserEvents
@@ -93,6 +94,7 @@ module EventTypeConverter =
             | SpaceCreatedEvent -> "SpaceCreatedEvent"
             | SpaceUpdatedEvent -> "SpaceUpdatedEvent"
             | SpaceDeletedEvent -> "SpaceDeletedEvent"
+            | SpacePermissionsChangedEvent -> "SpacePermissionsChangedEvent"
 
     let fromString (str: string) : EventType option =
         match str with
@@ -118,6 +120,7 @@ module EventTypeConverter =
         | "SpaceCreatedEvent" -> Some(SpaceEvents SpaceCreatedEvent)
         | "SpaceUpdatedEvent" -> Some(SpaceEvents SpaceUpdatedEvent)
         | "SpaceDeletedEvent" -> Some(SpaceEvents SpaceDeletedEvent)
+        | "SpacePermissionsChangedEvent" -> Some(SpaceEvents SpacePermissionsChangedEvent)
         | _ -> None
 
 module EntityTypeConverter =

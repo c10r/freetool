@@ -32,10 +32,11 @@ type FolderEvents =
   | "FolderDeletedEvent"
   | "FolderRestoredEvent";
 
-type GroupEvents =
-  | "GroupCreatedEvent"
-  | "GroupUpdatedEvent"
-  | "GroupDeletedEvent";
+type SpaceEvents =
+  | "SpaceCreatedEvent"
+  | "SpaceUpdatedEvent"
+  | "SpaceDeletedEvent"
+  | "SpacePermissionsChangedEvent";
 
 type ResourceEvents =
   | "ResourceCreatedEvent"
@@ -50,10 +51,10 @@ type EventType =
   | AppEvents
   | ResourceEvents
   | FolderEvents
-  | GroupEvents
+  | SpaceEvents
   | RunEvents;
 
-type EntityType = "User" | "Folder" | "Group" | "App" | "Resource" | "Run";
+type EntityType = "User" | "Folder" | "Space" | "App" | "Resource" | "Run";
 
 interface AuditEvent {
   id: string;
@@ -86,6 +87,9 @@ const getEventTypeColor = (eventType: EventType): string => {
   if (eventType.includes("StatusChanged")) {
     return "bg-yellow-100 text-yellow-800";
   }
+  if (eventType.includes("PermissionsChanged")) {
+    return "bg-amber-100 text-amber-800";
+  }
   return "bg-gray-100 text-gray-800";
 };
 
@@ -95,7 +99,7 @@ const getEntityTypeColor = (entityType: EntityType): string => {
       return "bg-purple-100 text-purple-800";
     case "Folder":
       return "bg-orange-100 text-orange-800";
-    case "Group":
+    case "Space":
       return "bg-indigo-100 text-indigo-800";
     case "App":
       return "bg-emerald-100 text-emerald-800";

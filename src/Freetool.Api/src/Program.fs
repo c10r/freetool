@@ -299,7 +299,8 @@ let main args =
         let spaceRepository = serviceProvider.GetRequiredService<ISpaceRepository>()
         let userRepository = serviceProvider.GetRequiredService<IUserRepository>()
         let authService = serviceProvider.GetRequiredService<IAuthorizationService>()
-        SpaceHandler(spaceRepository, userRepository, authService))
+        let eventRepository = serviceProvider.GetRequiredService<IEventRepository>()
+        SpaceHandler(spaceRepository, userRepository, authService, eventRepository))
     |> ignore
 
     builder.Services.AddScoped<ResourceHandler>(fun serviceProvider ->

@@ -221,6 +221,15 @@ type EventEnhancementService
                             JsonSerializer.Deserialize<Freetool.Domain.Events.SpaceDeletedEvent>(eventData, jsonOptions)
 
                         return spaceEventData.Name
+                    | SpacePermissionsChangedEvent ->
+                        // SpacePermissionsChangedEvent has SpaceName
+                        let spaceEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.SpacePermissionsChangedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        return spaceEventData.SpaceName
             with ex ->
                 let entityTypeStr = EntityTypeConverter.toString entityType
                 // Include some of the raw event data for debugging
@@ -281,6 +290,7 @@ type EventEnhancementService
             | SpaceCreatedEvent -> $"{userName} created space \"{entityName}\""
             | SpaceUpdatedEvent -> $"{userName} updated space \"{entityName}\""
             | SpaceDeletedEvent -> $"{userName} deleted space \"{entityName}\""
+            | SpacePermissionsChangedEvent -> $"{userName} changed member permissions in space \"{entityName}\""
 
     interface IEventEnhancementService with
         member this.EnhanceEventAsync(event: EventData) : Task<EnhancedEventData> =

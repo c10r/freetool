@@ -97,6 +97,28 @@ type MockSpaceRepository(spaces: ValidatedSpace list) =
 
         member _.GetCountAsync() : Task<int> = task { return spaceList.Length }
 
+// Mock Event Repository for testing
+type MockEventRepository() =
+    let mutable savedEvents: Freetool.Domain.IDomainEvent list = []
+
+    member _.GetSavedEvents() = savedEvents
+
+    interface IEventRepository with
+        member _.SaveEventAsync(event: Freetool.Domain.IDomainEvent) : Task<unit> =
+            task {
+                savedEvents <- event :: savedEvents
+                return ()
+            }
+
+        member _.GetEventsAsync(_filter: EventFilter) : Task<PagedResult<EventData>> =
+            task {
+                return
+                    { Items = []
+                      TotalCount = 0
+                      Skip = 0
+                      Take = 10 }
+            }
+
 // Mock Authorization Service for testing
 type MockAuthorizationService() =
     let mutable permissions: Map<string, bool> = Map.empty
@@ -193,6 +215,7 @@ let ``CreateSpace succeeds with valid data`` () =
 
         let spaceRepository = MockSpaceRepository([]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let actorUserId = moderator.State.Id
 
@@ -204,7 +227,7 @@ let ``CreateSpace succeeds with valid data`` () =
         let command = CreateSpace(actorUserId, createDto)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -227,6 +250,7 @@ let ``CreateSpace fails when name already exists`` () =
         let userRepository = MockUserRepository([ moderator ]) :> IUserRepository
         let spaceRepository = MockSpaceRepository([ existingSpace ]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let createDto: CreateSpaceDto =
             { Name = "Existing Space"
@@ -236,7 +260,7 @@ let ``CreateSpace fails when name already exists`` () =
         let command = CreateSpace(moderator.State.Id, createDto)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -253,6 +277,7 @@ let ``CreateSpace fails when moderator not found`` () =
         let userRepository = MockUserRepository([]) :> IUserRepository
         let spaceRepository = MockSpaceRepository([]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let createDto: CreateSpaceDto =
             { Name = "Test Space"
@@ -262,7 +287,7 @@ let ``CreateSpace fails when moderator not found`` () =
         let command = CreateSpace(nonExistentModeratorId, createDto)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -280,6 +305,7 @@ let ``CreateSpace fails when member not found`` () =
         let userRepository = MockUserRepository([ moderator ]) :> IUserRepository
         let spaceRepository = MockSpaceRepository([]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let createDto: CreateSpaceDto =
             { Name = "Test Space"
@@ -289,7 +315,7 @@ let ``CreateSpace fails when member not found`` () =
         let command = CreateSpace(moderator.State.Id, createDto)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -313,11 +339,12 @@ let ``DeleteSpace removes space`` () =
         let userRepository = MockUserRepository([ moderator ]) :> IUserRepository
         let spaceRepository = MockSpaceRepository([ space ]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let command = DeleteSpace(moderator.State.Id, space.State.Id.Value.ToString())
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -341,6 +368,7 @@ let ``UpdateSpaceName changes name`` () =
         let userRepository = MockUserRepository([ moderator ]) :> IUserRepository
         let spaceRepository = MockSpaceRepository([ space ]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let updateDto: UpdateSpaceNameDto = { Name = "New Name" }
 
@@ -348,7 +376,7 @@ let ``UpdateSpaceName changes name`` () =
             UpdateSpaceName(moderator.State.Id, space.State.Id.Value.ToString(), updateDto)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -367,6 +395,7 @@ let ``UpdateSpaceName fails for duplicate name`` () =
         let userRepository = MockUserRepository([ moderator ]) :> IUserRepository
         let spaceRepository = MockSpaceRepository([ space1; space2 ]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let updateDto: UpdateSpaceNameDto = { Name = "Space 2" } // Already exists
 
@@ -374,7 +403,7 @@ let ``UpdateSpaceName fails for duplicate name`` () =
             UpdateSpaceName(moderator.State.Id, space1.State.Id.Value.ToString(), updateDto)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -401,6 +430,7 @@ let ``ChangeModerator updates moderator`` () =
 
         let spaceRepository = MockSpaceRepository([ space ]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let changeModeratorDto: ChangeModeratorDto =
             { NewModeratorUserId = newModerator.State.Id.Value.ToString() }
@@ -409,7 +439,7 @@ let ``ChangeModerator updates moderator`` () =
             ChangeModerator(originalModerator.State.Id, space.State.Id.Value.ToString(), changeModeratorDto)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -430,6 +460,7 @@ let ``ChangeModerator fails when user not found`` () =
         let userRepository = MockUserRepository([ originalModerator ]) :> IUserRepository
         let spaceRepository = MockSpaceRepository([ space ]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let changeModeratorDto: ChangeModeratorDto =
             { NewModeratorUserId = nonExistentUserId.Value.ToString() }
@@ -438,7 +469,7 @@ let ``ChangeModerator fails when user not found`` () =
             ChangeModerator(originalModerator.State.Id, space.State.Id.Value.ToString(), changeModeratorDto)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -461,6 +492,7 @@ let ``AddMember adds user to space`` () =
         let userRepository = MockUserRepository([ moderator; newMember ]) :> IUserRepository
         let spaceRepository = MockSpaceRepository([ space ]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let addMemberDto: AddMemberDto = { UserId = newMember.State.Id.Value.ToString() }
 
@@ -468,7 +500,7 @@ let ``AddMember adds user to space`` () =
             AddMember(moderator.State.Id, space.State.Id.Value.ToString(), addMemberDto)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -489,6 +521,7 @@ let ``AddMember fails when user not found`` () =
         let userRepository = MockUserRepository([ moderator ]) :> IUserRepository
         let spaceRepository = MockSpaceRepository([ space ]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let addMemberDto: AddMemberDto = { UserId = nonExistentUserId.Value.ToString() }
 
@@ -496,7 +529,7 @@ let ``AddMember fails when user not found`` () =
             AddMember(moderator.State.Id, space.State.Id.Value.ToString(), addMemberDto)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -523,6 +556,7 @@ let ``RemoveMember removes user from space`` () =
 
         let spaceRepository = MockSpaceRepository([ space ]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let removeMemberDto: RemoveMemberDto =
             { UserId = memberUser.State.Id.Value.ToString() }
@@ -531,7 +565,7 @@ let ``RemoveMember removes user from space`` () =
             RemoveMember(moderator.State.Id, space.State.Id.Value.ToString(), removeMemberDto)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -555,11 +589,12 @@ let ``GetSpaceById returns space when exists`` () =
         let userRepository = MockUserRepository([ moderator ]) :> IUserRepository
         let spaceRepository = MockSpaceRepository([ space ]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let command = GetSpaceById(space.State.Id.Value.ToString())
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -594,11 +629,12 @@ let ``GetSpacesByUserId returns user spaces`` () =
             MockSpaceRepository([ space1; space2; space3 ]) :> ISpaceRepository
 
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let command = GetSpacesByUserId(user.State.Id.Value.ToString(), 0, 10)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with
@@ -631,11 +667,12 @@ let ``GetSpaceMembersWithPermissions returns permissions`` () =
 
         let spaceRepository = MockSpaceRepository([ space ]) :> ISpaceRepository
         let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository() :> IEventRepository
 
         let command = GetSpaceMembersWithPermissions(space.State.Id.Value.ToString(), 0, 10)
 
         // Act
-        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService command
+        let! result = SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
 
         // Assert
         match result with

@@ -5,12 +5,28 @@ open System.Threading.Tasks
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
+open Freetool.Domain.Events
 open Freetool.Application.Interfaces
 open Freetool.Application.Commands
 open Freetool.Application.DTOs
 open Freetool.Application.Mappers
 
 module SpaceHandler =
+
+    /// Converts an AuthRelation to a human-readable permission name
+    let authRelationToString (relation: AuthRelation) : string =
+        match relation with
+        | ResourceCreate -> "CreateResource"
+        | ResourceEdit -> "EditResource"
+        | ResourceDelete -> "DeleteResource"
+        | AppCreate -> "CreateApp"
+        | AppEdit -> "EditApp"
+        | AppDelete -> "DeleteApp"
+        | AppRun -> "RunApp"
+        | FolderCreate -> "CreateFolder"
+        | FolderEdit -> "EditFolder"
+        | FolderDelete -> "DeleteFolder"
+        | _ -> relation.ToString()
 
     /// List of all 10 permission relations for space members
     let allSpacePermissions =
@@ -55,6 +71,7 @@ module SpaceHandler =
         (spaceRepository: ISpaceRepository)
         (userRepository: IUserRepository)
         (authService: IAuthorizationService)
+        (eventRepository: IEventRepository)
         (command: SpaceCommand)
         : Task<Result<SpaceCommandResult, DomainError>> =
         task {
@@ -490,12 +507,45 @@ module SpaceHandler =
                                         { TuplesToAdd = tuplesToAdd
                                           TuplesToRemove = tuplesToRemove }
 
+                                // Look up target user name for audit log
+                                let! targetUserOption = userRepository.GetByIdAsync targetUserId
+
+                                let targetUserName =
+                                    targetUserOption
+                                    |> Option.map (fun u -> User.getName u)
+                                    |> Option.defaultValue $"User {targetUserId.Value}"
+
+                                // Convert tuples to permission name lists
+                                let permissionsGranted =
+                                    tuplesToAdd |> List.map (fun t -> authRelationToString t.Relation)
+
+                                let permissionsRevoked =
+                                    tuplesToRemove |> List.map (fun t -> authRelationToString t.Relation)
+
+                                // Create and save the audit event
+                                let event =
+                                    SpaceEvents.spacePermissionsChanged
+                                        actorUserId
+                                        spaceIdObj
+                                        space.State.Name
+                                        targetUserId
+                                        targetUserName
+                                        permissionsGranted
+                                        permissionsRevoked
+
+                                do! eventRepository.SaveEventAsync event
+
                             return Ok(SpaceCommandResult.UnitResult())
         }
 
 /// SpaceHandler class that implements ICommandHandler
 type SpaceHandler
-    (spaceRepository: ISpaceRepository, userRepository: IUserRepository, authService: IAuthorizationService) =
+    (
+        spaceRepository: ISpaceRepository,
+        userRepository: IUserRepository,
+        authService: IAuthorizationService,
+        eventRepository: IEventRepository
+    ) =
     interface ICommandHandler<SpaceCommand, SpaceCommandResult> with
         member this.HandleCommand command =
-            SpaceHandler.handleCommand spaceRepository userRepository authService command
+            SpaceHandler.handleCommand spaceRepository userRepository authService eventRepository command
