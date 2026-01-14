@@ -534,6 +534,7 @@ module SpaceHandler =
                                         permissionsRevoked
 
                                 do! eventRepository.SaveEventAsync event
+                                do! eventRepository.CommitAsync()
 
                             return Ok(SpaceCommandResult.UnitResult())
         }

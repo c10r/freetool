@@ -7,4 +7,6 @@ open Freetool.Domain.Entities
 
 type IEventRepository =
     abstract member SaveEventAsync: event: IDomainEvent -> Task<unit>
+    /// Commits pending changes. Use for standalone event saves not part of an aggregate operation.
+    abstract member CommitAsync: unit -> Task<unit>
     abstract member GetEventsAsync: filter: EventFilter -> Task<PagedResult<EventData>>

@@ -110,6 +110,8 @@ type MockEventRepository() =
                 return ()
             }
 
+        member _.CommitAsync() : Task<unit> = task { return () }
+
         member _.GetEventsAsync(_filter: EventFilter) : Task<PagedResult<EventData>> =
             task {
                 return

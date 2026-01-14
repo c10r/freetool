@@ -93,6 +93,16 @@ type EventRepository(context: FreetoolDbContext) =
                 return ()
             }
 
+        /// Commits any pending changes to the database.
+        /// Use this for standalone event saves that don't go through an aggregate repository.
+        /// Aggregate repositories (UserRepository, SpaceRepository, etc.) handle their own
+        /// SaveChangesAsync calls, so don't call this when saving events as part of an aggregate operation.
+        member this.CommitAsync() =
+            task {
+                let! _ = context.SaveChangesAsync()
+                return ()
+            }
+
         member this.GetEventsAsync(filter: EventFilter) : Threading.Tasks.Task<PagedResult<EventData>> =
             task {
                 let query = context.Events.AsQueryable()
