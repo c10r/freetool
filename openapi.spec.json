@@ -1563,6 +1563,139 @@
         }
       }
     },
+    "/app/{id}/description": {
+      "put": {
+        "tags": [
+          "App"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateAppDescriptionDto"
+                  }
+                ]
+              }
+            },
+            "text/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateAppDescriptionDto"
+                  }
+                ]
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/UpdateAppDescriptionDto"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppData"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppData"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
     "/app/{id}/run": {
       "post": {
         "tags": [
@@ -6653,6 +6786,16 @@
           "useDynamicJsonBody": {
             "type": "boolean"
           },
+          "description": {
+            "maxLength": 500,
+            "type": "string",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StringFSharpOption"
+              }
+            ],
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -6710,6 +6853,15 @@
           },
           "required": {
             "type": "boolean"
+          },
+          "defaultValue": {
+            "type": "string",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StringFSharpOption"
+              }
+            ],
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -6797,6 +6949,15 @@
           },
           "useDynamicJsonBody": {
             "type": "boolean"
+          },
+          "description": {
+            "type": "string",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StringFSharpOption"
+              }
+            ],
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -6978,6 +7139,83 @@
         "additionalProperties": false,
         "format": "date-time",
         "nullable": true
+      },
+      "DefaultValue": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "item": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DefaultValueType"
+              }
+            ],
+            "nullable": true,
+            "readOnly": true
+          },
+          "value": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DefaultValueType"
+              }
+            ],
+            "nullable": true,
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "DefaultValueFSharpOption": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DefaultValue"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "DefaultValueType": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "isEmailDefault": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "isDateDefault": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "isTextDefault": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "isIntegerDefault": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "isBooleanDefault": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "isRadioDefault": {
+            "type": "boolean",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
       },
       "DevModeResponseDto": {
         "type": "object",
@@ -7345,6 +7583,14 @@
           },
           "required": {
             "type": "boolean"
+          },
+          "defaultValue": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DefaultValueFSharpOption"
+              }
+            ],
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -7443,6 +7689,10 @@
           "isMultiInteger": {
             "type": "boolean",
             "readOnly": true
+          },
+          "isRadio": {
+            "type": "boolean",
+            "readOnly": true
           }
         },
         "additionalProperties": false
@@ -7488,6 +7738,10 @@
             "readOnly": true
           },
           "isMultiInteger": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "isRadio": {
             "type": "boolean",
             "readOnly": true
           }
@@ -8233,6 +8487,21 @@
             "items": {
               "$ref": "#/components/schemas/KeyValuePairDto"
             },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateAppDescriptionDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StringFSharpOption"
+              }
+            ],
             "nullable": true
           }
         },

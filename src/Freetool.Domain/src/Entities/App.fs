@@ -53,6 +53,9 @@ type AppData =
       [<Required>]
       UseDynamicJsonBody: bool
 
+      [<MaxLength(500)>]
+      Description: string option
+
       [<Required>]
       CreatedAt: DateTime
 
@@ -222,6 +225,7 @@ module App =
                           Headers = validHeaders
                           Body = validBody
                           UseDynamicJsonBody = useDynamicJsonBody
+                          Description = None
                           CreatedAt = DateTime.UtcNow
                           UpdatedAt = DateTime.UtcNow
                           IsDeleted = false }
@@ -339,6 +343,8 @@ module App =
         app.State.Body |> List.map (fun kvp -> (kvp.Key, kvp.Value))
 
     let getUseDynamicJsonBody (app: App) : bool = app.State.UseDynamicJsonBody
+
+    let getDescription (app: App) : string option = app.State.Description
 
     let toConflictData (app: App) : AppResourceConflictData =
         { AppId = (getId app).ToString()
@@ -529,3 +535,29 @@ module App =
         Ok
             { State = updatedAppData
               UncommittedEvents = app.UncommittedEvents @ [ useDynamicJsonBodyChangedEvent :> IDomainEvent ] }
+
+    let updateDescription
+        (actorUserId: UserId)
+        (newDescription: string option)
+        (app: ValidatedApp)
+        : Result<ValidatedApp, DomainError> =
+        // Validate description length
+        match newDescription with
+        | Some desc when desc.Length > 500 -> Error(ValidationError "Description cannot exceed 500 characters")
+        | _ ->
+            let oldDescription = app.State.Description
+
+            let updatedAppData =
+                { app.State with
+                    Description = newDescription
+                    UpdatedAt = DateTime.UtcNow }
+
+            let descriptionChangedEvent =
+                AppEvents.appUpdated
+                    actorUserId
+                    app.State.Id
+                    [ AppChange.DescriptionChanged(oldDescription, newDescription) ]
+
+            Ok
+                { State = updatedAppData
+                  UncommittedEvents = app.UncommittedEvents @ [ descriptionChangedEvent :> IDomainEvent ] }

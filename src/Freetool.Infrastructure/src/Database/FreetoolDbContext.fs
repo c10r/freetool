@@ -557,6 +557,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun a -> a.Body).HasConversion(keyValuePairListConverter)
             |> ignore
 
+            entity.Property(fun a -> a.Description).HasConversion(optionStringConverter)
+            |> ignore
+
             // Global query filter for soft delete
             entity.HasQueryFilter(fun a -> not a.IsDeleted) |> ignore)
         |> ignore

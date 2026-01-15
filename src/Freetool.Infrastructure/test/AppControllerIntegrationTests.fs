@@ -218,6 +218,7 @@ let createTestApp (folderId: FolderId) (resourceId: ResourceId) (appId: AppId) :
           Headers = []
           Body = []
           UseDynamicJsonBody = false
+          Description = None
           CreatedAt = DateTime.UtcNow
           UpdatedAt = DateTime.UtcNow
           IsDeleted = false }
@@ -248,6 +249,7 @@ let createAppData (appId: AppId) (folderId: FolderId) (resourceId: ResourceId) :
       Headers = []
       Body = []
       UseDynamicJsonBody = false
+      Description = None
       CreatedAt = DateTime.UtcNow
       UpdatedAt = DateTime.UtcNow
       IsDeleted = false }
@@ -351,7 +353,8 @@ let ``CreateApp returns 201 with valid request`` () : Task =
               UrlParameters = []
               Headers = []
               Body = []
-              UseDynamicJsonBody = false }
+              UseDynamicJsonBody = false
+              Description = None }
 
         // Act
         let! result = controller.CreateApp(createDto)
@@ -413,7 +416,8 @@ let ``CreateApp returns 400 for invalid name`` () : Task =
               UrlParameters = []
               Headers = []
               Body = []
-              UseDynamicJsonBody = false }
+              UseDynamicJsonBody = false
+              Description = None }
 
         // Act
         let! result = controller.CreateApp(createDto)
@@ -472,7 +476,8 @@ let ``CreateApp returns 409 for duplicate name`` () : Task =
               UrlParameters = []
               Headers = []
               Body = []
-              UseDynamicJsonBody = false }
+              UseDynamicJsonBody = false
+              Description = None }
 
         // Act
         let! result = controller.CreateApp(createDto)

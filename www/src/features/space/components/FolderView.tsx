@@ -797,7 +797,7 @@ export default function FolderView({
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                {child.type === "folder" ? "Folder" : "App"}
+                {child.type === "folder" ? "Folder" : child.description || ""}
               </p>
             </CardContent>
           </Card>

@@ -79,6 +79,7 @@ export interface AppNode extends BaseNode {
   headers?: KeyValuePair[]; // headers for the app
   body?: KeyValuePair[]; // JSON body for the app
   useDynamicJsonBody?: boolean; // when true, body is provided at runtime
+  description?: string; // optional description for the app
 }
 
 export type SpaceNode = FolderNode | AppNode;

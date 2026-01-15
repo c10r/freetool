@@ -453,9 +453,9 @@ const RunApp = () => {
                 <h1 className="text-2xl font-semibold">
                   {app?.name || "Run App"}
                 </h1>
-                <p className="text-muted-foreground">
-                  Executing app and showing results
-                </p>
+                {app?.description && (
+                  <p className="text-muted-foreground">{app.description}</p>
+                )}
               </div>
             </div>
             {spaceReady ? (

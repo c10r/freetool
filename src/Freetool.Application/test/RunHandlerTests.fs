@@ -186,6 +186,7 @@ let createTestApp (name: string) (folderId: FolderId) (resourceId: ResourceId) :
           Headers = []
           Body = []
           UseDynamicJsonBody = false
+          Description = None
           CreatedAt = DateTime.UtcNow
           UpdatedAt = DateTime.UtcNow
           IsDeleted = false }
@@ -343,6 +344,7 @@ let ``CreateRun marks as invalid when input validation fails`` () =
               Headers = []
               Body = []
               UseDynamicJsonBody = false
+              Description = None
               CreatedAt = DateTime.UtcNow
               UpdatedAt = DateTime.UtcNow
               IsDeleted = false }

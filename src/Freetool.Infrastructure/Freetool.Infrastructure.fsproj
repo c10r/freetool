@@ -44,6 +44,7 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.020_MoveHttpMethodFromResourceToApp.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.021_MigratePlaceholderSyntaxToAtPrefix.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.022_AddUseDynamicJsonBodyToApps.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.023_AddDescriptionToApps.sql" />
   </ItemGroup>
 
   <ItemGroup>

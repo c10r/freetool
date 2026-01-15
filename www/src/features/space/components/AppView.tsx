@@ -1,6 +1,6 @@
 import { Check, Edit, Eye, Loader2, Plus, Save, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { updateAppName } from "@/api/api";
+import { updateAppDescription, updateAppName } from "@/api/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +31,14 @@ export default function AppView({
   const [nameSaved, setNameSaved] = useState(false);
   const [nameError, setNameError] = useState(false);
   const [nameErrorMessage, setNameErrorMessage] = useState("");
+
+  // Description editing state
+  const [descriptionEditing, setDescriptionEditing] = useState(false);
+  const [description, setDescription] = useState(app.description || "");
+  const [descriptionUpdating, setDescriptionUpdating] = useState(false);
+  const [descriptionSaved, setDescriptionSaved] = useState(false);
+  const [descriptionError, setDescriptionError] = useState(false);
+  const [descriptionErrorMessage, setDescriptionErrorMessage] = useState("");
 
   // Permission checks
   const canEditApp = useHasPermission(spaceId, "edit_app");
@@ -108,6 +116,14 @@ export default function AppView({
     setNameSaved(false);
     setNameError(false);
     setNameErrorMessage("");
+
+    // Reset description state when app changes
+    setDescription(app.description || "");
+    setDescriptionEditing(false);
+    setDescriptionUpdating(false);
+    setDescriptionSaved(false);
+    setDescriptionError(false);
+    setDescriptionErrorMessage("");
 
     // Update app form data when app changes
     setAppFormData({
@@ -317,6 +333,134 @@ export default function AppView({
           </div>
         )}
       </header>
+
+      {/* Description editing */}
+      <div className="flex items-center gap-2 -mt-2">
+        {descriptionEditing ? (
+          <div className="flex items-center gap-2 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Add a description..."
+                className="pr-10"
+                disabled={descriptionUpdating || !canEditApp}
+              />
+              {descriptionUpdating && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900" />
+                </div>
+              )}
+              {descriptionSaved &&
+                !descriptionUpdating &&
+                !descriptionError && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <Check className="h-4 w-4 text-green-500" />
+                  </div>
+                )}
+              {descriptionError && !descriptionUpdating && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <X className="h-4 w-4 text-red-500" />
+                </div>
+              )}
+            </div>
+            <Button
+              onClick={async () => {
+                const trimmedDescription = description.trim();
+                const currentDescription = app.description || "";
+
+                if (trimmedDescription === currentDescription) {
+                  setDescriptionEditing(false);
+                  return;
+                }
+
+                setDescriptionUpdating(true);
+                setDescriptionError(false);
+                setDescriptionErrorMessage("");
+
+                try {
+                  const response = await updateAppDescription(
+                    app.id,
+                    trimmedDescription || null
+                  );
+
+                  if (response.error) {
+                    const errorMessage =
+                      response.error.message || "Failed to save description";
+                    setDescriptionError(true);
+                    setDescriptionErrorMessage(errorMessage as string);
+                    setDescription(app.description || "");
+
+                    setTimeout(() => {
+                      setDescriptionError(false);
+                      setDescriptionErrorMessage("");
+                    }, 2_000);
+
+                    return;
+                  }
+
+                  updateNode({
+                    ...app,
+                    description: trimmedDescription || undefined,
+                  });
+                  setDescriptionEditing(false);
+
+                  setDescriptionSaved(true);
+                  setTimeout(() => {
+                    setDescriptionSaved(false);
+                  }, 2_000);
+                } catch (_error) {
+                  setDescriptionError(true);
+                  setDescriptionErrorMessage("Network error occurred");
+                  setDescription(app.description || "");
+
+                  setTimeout(() => {
+                    setDescriptionError(false);
+                    setDescriptionErrorMessage("");
+                  }, 2_000);
+                } finally {
+                  setDescriptionUpdating(false);
+                }
+              }}
+              disabled={descriptionUpdating}
+              size="sm"
+            >
+              {descriptionUpdating ? "Saving..." : "Save"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDescription(app.description || "");
+                setDescriptionEditing(false);
+              }}
+              disabled={descriptionUpdating}
+            >
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              {app.description || (canEditApp ? "No description" : "")}
+            </p>
+            {canEditApp && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDescriptionEditing(true)}
+                className="h-6 px-2"
+              >
+                <Edit size={12} className="mr-1" />
+                {app.description ? "Edit" : "Add description"}
+              </Button>
+            )}
+          </div>
+        )}
+        {descriptionErrorMessage && (
+          <div className="text-red-500 text-sm">{descriptionErrorMessage}</div>
+        )}
+      </div>
 
       {!canEditApp && (
         <div className="bg-muted/50 border border-muted rounded-lg p-4">

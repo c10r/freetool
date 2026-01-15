@@ -562,6 +562,38 @@ type AppController
                         | Error error -> this.HandleDomainError(error)
         }
 
+    [<HttpPut("{id}/description")>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.UpdateAppDescription
+        (id: string, [<FromBody>] updateDto: UpdateAppDescriptionDto)
+        : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+
+            // Check authorization: user must have edit_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
+
+            match spaceIdResult with
+            | Error error -> return this.HandleDomainError(error)
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppEdit
+
+                match authResult with
+                | Error _ -> return this.HandleAuthorizationError()
+                | Ok() ->
+                    let! result = commandHandler.HandleCommand(UpdateAppDescription(userId, id, updateDto))
+
+                    return
+                        match result with
+                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                        | Error error -> this.HandleDomainError(error)
+        }
+
     [<HttpDelete("{id}")>]
     [<ProducesResponseType(StatusCodes.Status204NoContent)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]

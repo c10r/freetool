@@ -1029,6 +1029,91 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/app/{id}/description": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["UpdateAppDescriptionDto"];
+          "text/json": components["schemas"]["UpdateAppDescriptionDto"];
+          "application/*+json": components["schemas"]["UpdateAppDescriptionDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["AppData"];
+            "application/json": components["schemas"]["AppData"];
+            "text/json": components["schemas"]["AppData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/app/{id}/run": {
     parameters: {
       query?: never;
@@ -4541,6 +4626,9 @@ export interface components {
       headers: components["schemas"]["KeyValuePair"][];
       body: components["schemas"]["KeyValuePair"][];
       useDynamicJsonBody: boolean;
+      description?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -4560,6 +4648,9 @@ export interface components {
     AppInputDto: {
       input: components["schemas"]["InputDto"];
       required: boolean;
+      defaultValue?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
     };
     BaseUrl: string;
     ChangeModeratorDto: {
@@ -4576,6 +4667,9 @@ export interface components {
       headers?: components["schemas"]["KeyValuePairDto"][] | null;
       body?: components["schemas"]["KeyValuePairDto"][] | null;
       useDynamicJsonBody?: boolean;
+      description?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
     };
     CreateFolderDto: {
       name: string;
@@ -4618,6 +4712,25 @@ export interface components {
     };
     /** Format: date-time */
     DateTimeFSharpOption: string | null;
+    DefaultValue: {
+      /** Format: int32 */
+      readonly tag?: number;
+      readonly item?: components["schemas"]["DefaultValueType"] | null;
+      readonly value?: components["schemas"]["DefaultValueType"] | null;
+    };
+    DefaultValueFSharpOption: {
+      value?: components["schemas"]["DefaultValue"];
+    };
+    DefaultValueType: {
+      /** Format: int32 */
+      readonly tag?: number;
+      readonly isEmailDefault?: boolean;
+      readonly isDateDefault?: boolean;
+      readonly isTextDefault?: boolean;
+      readonly isIntegerDefault?: boolean;
+      readonly isBooleanDefault?: boolean;
+      readonly isRadioDefault?: boolean;
+    };
     DevModeResponseDto: {
       devMode?: boolean;
     };
@@ -4730,6 +4843,7 @@ export interface components {
       title?: string | null;
       type?: components["schemas"]["InputType"];
       required?: boolean;
+      defaultValue?: components["schemas"]["DefaultValueFSharpOption"] | null;
     };
     InputDto: {
       title: string;
@@ -4753,6 +4867,7 @@ export interface components {
       readonly isMultiDate?: boolean;
       readonly isMultiText?: boolean;
       readonly isMultiInteger?: boolean;
+      readonly isRadio?: boolean;
     };
     InputTypeValue: {
       /** Format: int32 */
@@ -4766,6 +4881,7 @@ export interface components {
       readonly isMultiDate?: boolean;
       readonly isMultiText?: boolean;
       readonly isMultiInteger?: boolean;
+      readonly isRadio?: boolean;
     };
     InviteUserDto: {
       /** Format: email */
@@ -4967,6 +5083,11 @@ export interface components {
     };
     UpdateAppBodyDto: {
       body?: components["schemas"]["KeyValuePairDto"][] | null;
+    };
+    UpdateAppDescriptionDto: {
+      description?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
     };
     UpdateAppHeadersDto: {
       headers?: components["schemas"]["KeyValuePairDto"][] | null;

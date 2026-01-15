@@ -22,6 +22,7 @@ type AppChange =
     | BodyChanged of oldBody: KeyValuePair list * newBody: KeyValuePair list
     | HttpMethodChanged of oldValue: HttpMethod * newValue: HttpMethod
     | UseDynamicJsonBodyChanged of oldValue: bool * newValue: bool
+    | DescriptionChanged of oldValue: string option * newValue: string option
 
 type AppCreatedEvent =
     { AppId: AppId

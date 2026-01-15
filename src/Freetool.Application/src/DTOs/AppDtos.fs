@@ -39,7 +39,9 @@ type CreateAppDto =
 
       Body: KeyValuePairDto list
 
-      UseDynamicJsonBody: bool }
+      UseDynamicJsonBody: bool
+
+      Description: string option }
 
 type UpdateAppNameDto =
     { [<Required>]
@@ -66,3 +68,5 @@ type UpdateAppHttpMethodDto =
       HttpMethod: string }
 
 type UpdateAppUseDynamicJsonBodyDto = { UseDynamicJsonBody: bool }
+
+type UpdateAppDescriptionDto = { Description: string option }
