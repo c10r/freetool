@@ -687,7 +687,7 @@ tailscale serve --bg --set-path=/freetool 5001
    - Create mapper in `Mappers/NewEntityMapper.fs`
 
 3. **Infrastructure Layer:**
-   - Create EF entity mapping if needed
+   - Create EF entity mapping in `FreetoolDbContext.fs` (see "Entity Framework Configuration" below)
    - Create repository in `Database/Repositories/NewEntityRepository.fs`
    - Add migration script
    - Update `.fsproj` file ordering
@@ -725,6 +725,34 @@ tailscale serve --bg --set-path=/freetool 5001
 
 **Note:** AutoTracing automatically picks up new commands - no extra configuration needed!
 
+### Adding a New Property to Existing Entity
+
+When adding a new field/property to an existing entity (e.g., adding `Description` to `App`):
+
+1. **Domain Layer:** Add field to entity record in `Entities/`
+2. **Application Layer:** Add field to DTO in `DTOs/`, update mapper in `Mappers/`
+3. **Infrastructure Layer:**
+   - Add migration script for the new column
+   - **CRITICAL:** Add property conversion in `FreetoolDbContext.fs` (see "Entity Framework Configuration" below)
+4. **API Layer:** Update controller if needed (new endpoints, changed response shape)
+5. **Regenerate frontend types** (see step 7 in "Adding a New Entity")
+
+### Entity Framework Configuration
+
+**Location:** `src/Freetool.Infrastructure/src/Database/FreetoolDbContext.fs`
+
+When adding properties to entities, you MUST configure them in `OnModelCreating` if they use F# types that need conversion:
+
+| F# Type | Required Converter | Example |
+|---------|-------------------|---------|
+| `string option` | `optionStringConverter` | `entity.Property(fun a -> a.Description).HasConversion(optionStringConverter)` |
+| `int option` | `optionIntConverter` | `entity.Property(fun a -> a.Count).HasConversion(optionIntConverter)` |
+| Custom value objects | Custom `ValueConverter` | See existing examples in DbContext |
+| Lists (e.g., `Input list`) | JSON converter | `entity.Property(fun a -> a.Inputs).HasConversion<string>(inputListConverter)` |
+| Discriminated unions | Custom converter | See `EventType`, `EntityType` examples |
+
+**Why this matters:** Without proper converters, Entity Framework silently ignores columns when reading from the database, causing fields to always be `None`/null even when data exists in the DB. The PUT/POST may work (writes succeed) but GET fails to return the data.
+
 ## Common Gotchas
 
 ### Backend
@@ -734,6 +762,7 @@ tailscale serve --bg --set-path=/freetool 5001
 4. **Authorization Failing**: Verify OpenFGA store has correct relationships (`CreateRelationshipsAsync`)
 5. **Migration Not Running**: Ensure SQL file is marked as `<EmbeddedResource>` in `.fsproj`
 5a. **New ID Type Not Serializing as String**: Add the ID type to `FSharpSchemaFilter.fs` - see "Adding a New Entity" step 6
+5b. **New Property Missing from GET Response**: If a new field saves correctly (PUT/POST works) but doesn't appear in GET responses, you're missing the Entity Framework converter in `FreetoolDbContext.fs` - see "Entity Framework Configuration" section
 
 ### Audit Log Issues
 6. **Entity Name Shows "Unknown"**: Update/Delete events need proper name extraction in EventEnhancementService - use repository lookups for updates, include Name in deleted events
