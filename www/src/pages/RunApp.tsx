@@ -405,11 +405,7 @@ const RunApp = () => {
   };
 
   const handleGoBack = () => {
-    if (app?.parentId) {
-      navigate(`/spaces/${app.parentId}`);
-    } else {
-      navigate("/spaces");
-    }
+    navigate(-1);
   };
 
   if (loading) {
