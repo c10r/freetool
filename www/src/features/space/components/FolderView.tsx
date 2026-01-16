@@ -637,18 +637,23 @@ export default function FolderView({
       )}
 
       <Separator />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
         {children.map((child) => (
           <Card
             key={child.id}
             className="transition-transform hover:scale-[1.01] cursor-pointer"
             onClick={() => handleCardClick(child)}
           >
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-medium">
-                {child.name}
-              </CardTitle>
-              <div className="flex items-center gap-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 overflow-hidden">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <CardTitle className="text-base font-medium truncate min-w-0">
+                    {child.name}
+                  </CardTitle>
+                </TooltipTrigger>
+                <TooltipContent>{child.name}</TooltipContent>
+              </Tooltip>
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {child.type === "folder" ? (
                   <Popover
                     open={cardPopoverOpen && newFolderParentId === child.id}
