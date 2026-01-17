@@ -115,15 +115,37 @@ export default function ResourcesView({
 
   const fetchApps = useCallback(async () => {
     try {
-      const response = await getApps();
-      if (response.data?.items) {
-        const mappedApps = response.data.items.map((item) => ({
-          id: item.id ?? "",
-          name: item.name,
-          resourceId: item.resourceId,
-        }));
-        setApps(mappedApps);
+      const allApps: Array<{ id: string; name: string; resourceId?: string }> =
+        [];
+      let appsSkip = 0;
+      let hasMore = true;
+      const pageSize = 100;
+
+      while (hasMore) {
+        const response = await getApps(appsSkip, pageSize);
+        const items = response.data?.items ?? [];
+        if (items.length === 0) {
+          break;
+        }
+
+        allApps.push(
+          ...items.map((item) => ({
+            id: item.id ?? "",
+            name: item.name,
+            resourceId: item.resourceId,
+          }))
+        );
+
+        const totalCount = response.data?.totalCount;
+        const take = response.data?.take ?? items.length;
+        appsSkip += items.length;
+        hasMore =
+          totalCount !== undefined
+            ? appsSkip < totalCount
+            : items.length === take;
       }
+
+      setApps(allApps);
     } catch (_err) {
       // Silently handle fetch errors - apps list is for validation purposes only
     }

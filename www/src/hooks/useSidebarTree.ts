@@ -55,11 +55,20 @@ async function fetchAllPages<T>(
       break;
     }
 
-    allItems.push(...response.data.items);
+    const pageItems = response.data.items;
+    if (pageItems.length === 0) {
+      break;
+    }
 
-    const totalCount = response.data.totalCount ?? 0;
-    skip += MAX_PAGE_SIZE;
-    hasMore = skip < totalCount;
+    allItems.push(...pageItems);
+
+    const totalCount = response.data.totalCount;
+    const pageSize = response.data.take ?? pageItems.length;
+    skip += pageItems.length;
+    hasMore =
+      totalCount !== undefined
+        ? skip < totalCount
+        : pageItems.length === pageSize;
   }
 
   return allItems;

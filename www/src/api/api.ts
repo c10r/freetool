@@ -127,7 +127,7 @@ type AppCreateInput = {
 };
 
 export const getApps = (skip?: number, take?: number) => {
-  if (skip && take) {
+  if (typeof skip === "number" && typeof take === "number") {
     return client.GET("/app", {
       params: {
         query: { skip, take },
@@ -150,7 +150,7 @@ export const getAppByFolder = (
   skip?: number,
   take?: number
 ) => {
-  if (skip && take) {
+  if (typeof skip === "number" && typeof take === "number") {
     return client.GET("/app/folder/{folderId}", {
       params: {
         path: { folderId },
@@ -358,7 +358,7 @@ export const createFolder = (
 };
 
 export const getAllFolders = (skip?: number, take?: number) => {
-  if (skip && take) {
+  if (typeof skip === "number" && typeof take === "number") {
     return client.GET("/folder", {
       params: {
         query: {
@@ -376,7 +376,7 @@ export const getFoldersBySpace = (
   skip?: number,
   take?: number
 ) => {
-  if (skip && take) {
+  if (typeof skip === "number" && typeof take === "number") {
     return client.GET("/folder", {
       params: {
         query: {
@@ -411,7 +411,7 @@ export const getFolderById = (id: string) => {
 };
 
 export const getRootFolder = (skip?: number, take?: number) => {
-  if (skip && take) {
+  if (typeof skip === "number" && typeof take === "number") {
     return client.GET("/folder/root", {
       params: {
         query: { skip, take },
@@ -459,7 +459,7 @@ export const updateFolderName = (id: string, newName: string) => {
  */
 
 export const getSpaces = (skip?: number, take?: number) => {
-  if (skip && take) {
+  if (typeof skip === "number" && typeof take === "number") {
     return client.GET("/space", {
       params: {
         query: { skip, take },
@@ -743,7 +743,7 @@ export const updateResourceBody = ({
  */
 
 export const getUsers = (skip?: number, take?: number) => {
-  if (skip && take) {
+  if (typeof skip === "number" && typeof take === "number") {
     return client.GET("/user", {
       params: {
         query: { skip, take },
