@@ -136,13 +136,13 @@ export default function AppConfigForm({
     <div className="space-y-4">
       {showResourceSelector && (
         <div className="space-y-2">
-          <Label htmlFor="resource-select">{resourceSelectorLabel}</Label>
+          <Label htmlFor="resource-select">{resourceSelectorLabel} *</Label>
           <Select
             value={resourceId || ""}
             onValueChange={(value) => onResourceChange(value || undefined)}
             disabled={disabled || loadingResources}
           >
-            <SelectTrigger id="resource-select">
+            <SelectTrigger id="resource-select" aria-required>
               <SelectValue
                 placeholder={
                   loadingResources

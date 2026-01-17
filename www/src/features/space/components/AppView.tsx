@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useHasPermission } from "@/hooks/usePermissions";
 import { useAppForm } from "../hooks/useAppForm";
@@ -314,13 +315,18 @@ export default function AppView({
               {configSaveState.errorMessage || inputsState.errorMessage}
             </div>
           )}
-          <ResourceSelector
-            spaceId={spaceId}
-            value={app.resourceId}
-            onValueChange={(resourceId) => updateNode({ ...app, resourceId })}
-            className="w-64"
-            disabled={!canEditApp}
-          />
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="app-resource-select">Resource *</Label>
+            <ResourceSelector
+              id="app-resource-select"
+              spaceId={spaceId}
+              value={app.resourceId}
+              onValueChange={(resourceId) => updateNode({ ...app, resourceId })}
+              className="w-64"
+              disabled={!canEditApp}
+              required
+            />
+          </div>
           {canEditApp && (
             <Button onClick={addField}>
               <Plus className="mr-2 h-4 w-4" /> Add Field

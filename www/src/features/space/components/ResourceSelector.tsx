@@ -20,6 +20,8 @@ interface ResourceSelectorProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  id?: string;
+  required?: boolean;
 }
 
 export default function ResourceSelector({
@@ -29,6 +31,8 @@ export default function ResourceSelector({
   placeholder = "Select Resource",
   disabled = false,
   className,
+  id,
+  required = false,
 }: ResourceSelectorProps) {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(false);
@@ -73,7 +77,12 @@ export default function ResourceSelector({
       onValueChange={(v) => onValueChange(v || undefined)}
       disabled={disabled || loading}
     >
-      <SelectTrigger className={className} aria-label="Select Resource">
+      <SelectTrigger
+        id={id}
+        className={className}
+        aria-label="Select Resource"
+        aria-required={required}
+      >
         <SelectValue
           placeholder={
             loading
