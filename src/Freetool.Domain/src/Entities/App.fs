@@ -181,7 +181,7 @@ module App =
         : Result<unit, DomainError> =
         BusinessRules.checkResourceToAppConflicts resource urlParameters headers body
 
-    let private create
+    let private createInternal
         (actorUserId: UserId)
         (name: string)
         (folderId: FolderId)
@@ -193,6 +193,7 @@ module App =
         (headers: (string * string) list)
         (body: (string * string) list)
         (useDynamicJsonBody: bool)
+        (description: string option)
         : Result<ValidatedApp, DomainError> =
         // Validate headers
         let validateKeyValuePairs pairs =
@@ -229,7 +230,7 @@ module App =
                           Headers = validHeaders
                           Body = validBody
                           UseDynamicJsonBody = useDynamicJsonBody
-                          Description = None
+                          Description = description
                           CreatedAt = DateTime.UtcNow
                           UpdatedAt = DateTime.UtcNow
                           IsDeleted = false }
@@ -257,7 +258,7 @@ module App =
                             { validatedApp with
                                 UncommittedEvents = [ appCreatedEvent :> IDomainEvent ] }
 
-    let createWithResource
+    let create
         (actorUserId: UserId)
         (name: string)
         (folderId: FolderId)
@@ -269,6 +270,7 @@ module App =
         (headers: (string * string) list)
         (body: (string * string) list)
         (useDynamicJsonBody: bool)
+        (description: string option)
         : Result<ValidatedApp, DomainError> =
 
         // Business rule: App cannot override existing Resource parameters
@@ -280,7 +282,7 @@ module App =
             // No conflicts, proceed with normal creation
             let resourceId = Resource.getId resource
 
-            create
+            createInternal
                 actorUserId
                 name
                 folderId
@@ -292,6 +294,9 @@ module App =
                 headers
                 body
                 useDynamicJsonBody
+                description
+
+
 
     let markForDeletion (actorUserId: UserId) (app: ValidatedApp) : ValidatedApp =
         let appName =

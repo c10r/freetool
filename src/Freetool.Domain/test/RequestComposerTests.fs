@@ -37,7 +37,7 @@ let ``RequestComposer should combine Resource and App correctly`` () =
     let folderId = FolderId.NewId()
 
     let appResult =
-        App.createWithResource
+        App.create
             actorUserId
             "User Profile App"
             folderId
@@ -49,6 +49,7 @@ let ``RequestComposer should combine Resource and App correctly`` () =
             [ ("Authorization", "Bearer token123") ]
             [ ("include_metadata", "true") ]
             false
+            None
 
     let app = unwrapResult appResult
 
@@ -110,18 +111,7 @@ let ``RequestComposer should handle URL path composition correctly`` () =
 
         // Create App with specific URL path using the resource
         let appResult =
-            App.createWithResource
-                actorUserId
-                "Test App"
-                folderId
-                resourceWithUrl
-                HttpMethod.Get
-                []
-                urlPath
-                []
-                []
-                []
-                false
+            App.create actorUserId "Test App" folderId resourceWithUrl HttpMethod.Get [] urlPath [] [] [] false None
 
         let app = unwrapResult appResult
 
@@ -156,7 +146,7 @@ let ``RequestComposer should allow App extending Resource with new values`` () =
 
     // App that only adds new values (no overrides)
     let appResult =
-        App.createWithResource
+        App.create
             actorUserId
             "Extend App"
             folderId
@@ -168,6 +158,7 @@ let ``RequestComposer should allow App extending Resource with new values`` () =
             [ "Authorization", "Bearer xyz" ]
             [ "include_metadata", "true" ]
             false
+            None
 
     let app = unwrapResult appResult
 
@@ -214,18 +205,7 @@ let ``RequestComposer should reject mismatched ResourceId`` () =
         |> unwrapResult
 
     let appResult =
-        App.createWithResource
-            actorUserId
-            "Mismatched App"
-            folderId
-            differentResource
-            HttpMethod.Get
-            []
-            None
-            []
-            []
-            []
-            false
+        App.create actorUserId "Mismatched App" folderId differentResource HttpMethod.Get [] None [] [] [] false None
 
     let app = unwrapResult appResult
 
@@ -263,7 +243,7 @@ let ``RequestComposer should handle empty App extensions`` () =
 
     // App with no extensions (empty lists and None)
     let appResult =
-        App.createWithResource actorUserId "Empty App" folderId resource HttpMethod.Delete [] None [] [] [] false
+        App.create actorUserId "Empty App" folderId resource HttpMethod.Delete [] None [] [] [] false None
 
     let app = unwrapResult appResult
 

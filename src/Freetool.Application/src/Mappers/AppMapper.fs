@@ -137,7 +137,8 @@ module AppMapper =
           UrlParameters: (string * string) list
           Headers: (string * string) list
           Body: (string * string) list
-          UseDynamicJsonBody: bool }
+          UseDynamicJsonBody: bool
+          Description: string option }
 
     let fromCreateDto (dto: CreateAppDto) : Result<CreateAppRequest, DomainError> =
         dto.Inputs
@@ -157,7 +158,8 @@ module AppMapper =
               UrlParameters = urlParameters
               Headers = headers
               Body = body
-              UseDynamicJsonBody = dto.UseDynamicJsonBody })
+              UseDynamicJsonBody = dto.UseDynamicJsonBody
+              Description = dto.Description })
 
     let fromUpdateNameDto (dto: UpdateAppNameDto) (app: ValidatedApp) : UnvalidatedApp =
         { State =

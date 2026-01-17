@@ -407,7 +407,7 @@ module DevSeedingService =
 
                                                         // Create an app in the folder
                                                         match
-                                                            App.createWithResource
+                                                            App.create
                                                                 adminUserId
                                                                 "Hello World"
                                                                 folderId
@@ -419,6 +419,7 @@ module DevSeedingService =
                                                                 []
                                                                 []
                                                                 false
+                                                                None
                                                         with
                                                         | Error err ->
                                                             logger.LogWarning(

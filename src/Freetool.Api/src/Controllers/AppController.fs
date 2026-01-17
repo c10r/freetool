@@ -168,7 +168,7 @@ type AppController
                                 | Ok validHttpMethod ->
                                     // Use Domain method that enforces no-override business rule
                                     match
-                                        App.createWithResource
+                                        App.create
                                             userId
                                             createRequest.Name
                                             folderId
@@ -180,6 +180,7 @@ type AppController
                                             createRequest.Headers
                                             createRequest.Body
                                             createRequest.UseDynamicJsonBody
+                                            createRequest.Description
                                     with
                                     | Error domainError -> return this.HandleDomainError(domainError)
                                     | Ok validatedApp ->
