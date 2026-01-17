@@ -753,14 +753,27 @@ export default function SpaceSettingsView({
                       );
                       const hasChanges =
                         !!pendingPermissionChanges[member.userId];
+                      const isReadOnlyRow =
+                        member.isModerator || member.isOrgAdmin;
+                      const rowClassName = [
+                        hasChanges ? "bg-yellow-50" : "",
+                        isReadOnlyRow
+                          ? "bg-muted/40 text-muted-foreground"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
+                      const stickyCellClassName = [
+                        "sticky left-0 z-10 font-medium",
+                        isReadOnlyRow ? "bg-muted/40" : "bg-background",
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
 
                       return (
-                        <TableRow
-                          key={member.userId}
-                          className={hasChanges ? "bg-yellow-50" : ""}
-                        >
+                        <TableRow key={member.userId} className={rowClassName}>
                           {/* Member name cell - sticky */}
-                          <TableCell className="sticky left-0 bg-background z-10 font-medium">
+                          <TableCell className={stickyCellClassName}>
                             <div className="flex items-center gap-2">
                               {member.profilePicUrl ? (
                                 <img
@@ -822,8 +835,10 @@ export default function SpaceSettingsView({
                           {/* Permission checkboxes */}
                           {PERMISSION_GROUPS.map((group) =>
                             group.permissions.map((perm, idx) => {
-                              const isChecked = effectivePermissions[perm.key];
-                              const isDisabled = !canEdit || member.isModerator;
+                              const isChecked = isReadOnlyRow
+                                ? true
+                                : effectivePermissions[perm.key];
+                              const isDisabled = !canEdit || isReadOnlyRow;
 
                               return (
                                 <TableCell

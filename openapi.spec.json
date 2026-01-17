@@ -7576,6 +7576,11 @@
           },
           "description": {
             "type": "string",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StringFSharpOption"
+              }
+            ],
             "nullable": true
           },
           "type": {
@@ -7612,7 +7617,6 @@
             "type": "string"
           },
           "description": {
-            "maxLength": 100,
             "type": "string",
             "allOf": [
               {
