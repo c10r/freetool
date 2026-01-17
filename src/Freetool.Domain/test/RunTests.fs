@@ -22,10 +22,12 @@ let createTestAppWithResource () =
 
     let inputs =
         [ { Title = "userId"
+            Description = None
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
             Required = true
             DefaultValue = None }
           { Title = "email"
+            Description = None
             Type = InputType.Email()
             Required = true
             DefaultValue = None } ]
@@ -299,6 +301,7 @@ let ``Run creation should validate Email input type with valid email`` () =
 
     let inputs =
         [ { Title = "userEmail"
+            Description = None
             Type = InputType.Email()
             Required = true
             DefaultValue = None } ]
@@ -352,6 +355,7 @@ let ``Run creation should reject Email input type with invalid email`` () =
 
     let inputs =
         [ { Title = "userEmail"
+            Description = None
             Type = InputType.Email()
             Required = true
             DefaultValue = None } ]
@@ -405,6 +409,7 @@ let ``Run creation should validate Integer input type with valid integer`` () =
 
     let inputs =
         [ { Title = "age"
+            Description = None
             Type = InputType.Integer()
             Required = true
             DefaultValue = None } ]
@@ -456,6 +461,7 @@ let ``Run creation should reject Integer input type with invalid integer`` () =
 
     let inputs =
         [ { Title = "age"
+            Description = None
             Type = InputType.Integer()
             Required = true
             DefaultValue = None } ]
@@ -511,6 +517,7 @@ let ``Run creation should validate Boolean input type with valid boolean`` () =
 
     let inputs =
         [ { Title = "isActive"
+            Description = None
             Type = InputType.Boolean()
             Required = true
             DefaultValue = None } ]
@@ -562,6 +569,7 @@ let ``Run creation should reject Boolean input type with invalid boolean`` () =
 
     let inputs =
         [ { Title = "isActive"
+            Description = None
             Type = InputType.Boolean()
             Required = true
             DefaultValue = None } ]
@@ -615,6 +623,7 @@ let ``Run creation should validate Date input type with valid date`` () =
 
     let inputs =
         [ { Title = "birthDate"
+            Description = None
             Type = InputType.Date()
             Required = true
             DefaultValue = None } ]
@@ -668,6 +677,7 @@ let ``Run creation should reject Date input type with invalid date`` () =
 
     let inputs =
         [ { Title = "birthDate"
+            Description = None
             Type = InputType.Date()
             Required = true
             DefaultValue = None } ]
@@ -723,6 +733,7 @@ let ``Run creation should validate Text input type within length limit`` () =
 
     let inputs =
         [ { Title = "description"
+            Description = None
             Type = InputType.Text(50) |> unwrapResult
             Required = true
             DefaultValue = None } ]
@@ -776,6 +787,7 @@ let ``Run creation should reject Text input type exceeding length limit`` () =
 
     let inputs =
         [ { Title = "description"
+            Description = None
             Type = InputType.Text(10) |> unwrapResult
             Required = true
             DefaultValue = None } ]
@@ -832,6 +844,7 @@ let ``Run creation should validate MultiText input type with valid choice`` () =
 
     let inputs =
         [ { Title = "priority"
+            Description = None
             Type = InputType.MultiText(20, [ "high"; "medium"; "low" ]) |> unwrapResult
             Required = true
             DefaultValue = None } ]
@@ -883,6 +896,7 @@ let ``Run creation should reject MultiText input type with invalid choice`` () =
 
     let inputs =
         [ { Title = "priority"
+            Description = None
             Type = InputType.MultiText(20, [ "high"; "medium"; "low" ]) |> unwrapResult
             Required = true
             DefaultValue = None } ]

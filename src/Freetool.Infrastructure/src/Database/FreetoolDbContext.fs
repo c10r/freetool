@@ -391,6 +391,7 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                     inputs
                     |> List.map (fun input ->
                         {| Title = input.Title
+                           Description = input.Description |> Option.toObj
                            Type = input.Type.ToString()
                            Required = input.Required
                            DefaultValue =
@@ -402,6 +403,7 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                 let deserialized =
                     System.Text.Json.JsonSerializer.Deserialize<
                         {| Title: string
+                           Description: string
                            Type: string
                            Required: bool
                            DefaultValue: string |} list
@@ -466,7 +468,14 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                                 | Ok dv -> Some dv
                                 | Error _ -> None // Ignore invalid defaults in database
 
+                        let description =
+                            if System.String.IsNullOrWhiteSpace(item.Description) then
+                                None
+                            else
+                                Some item.Description
+
                         { Freetool.Domain.Events.Input.Title = item.Title
+                          Freetool.Domain.Events.Input.Description = description
                           Freetool.Domain.Events.Input.Type = validInputType
                           Freetool.Domain.Events.Input.Required = item.Required
                           Freetool.Domain.Events.Input.DefaultValue = defaultValue }

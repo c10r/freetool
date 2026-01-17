@@ -8,6 +8,7 @@ open Freetool.Domain.ValueObjects
 [<CLIMutable>]
 type Input =
     { Title: string
+      Description: string option
       Type: InputType
       Required: bool
       DefaultValue: DefaultValue option }

@@ -4841,12 +4841,16 @@ export interface components {
     HttpMethod: string;
     Input: {
       title?: string | null;
+      description?: string | null;
       type?: components["schemas"]["InputType"];
       required?: boolean;
       defaultValue?: components["schemas"]["DefaultValueFSharpOption"] | null;
     };
     InputDto: {
       title: string;
+      description?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
       type: components["schemas"]["InputTypeDto"];
     };
     InputType: {

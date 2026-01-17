@@ -83,7 +83,11 @@ module App =
     let private validateInput (input: Input) : Result<Input, DomainError> =
         match InputTitle.Create(Some input.Title) with
         | Error err -> Error err
-        | Ok validTitle -> Ok { input with Title = validTitle.Value }
+        | Ok validTitle ->
+            match input.Description with
+            | Some desc when desc.Length > 100 ->
+                Error(ValidationError "Input description cannot exceed 100 characters")
+            | _ -> Ok { input with Title = validTitle.Value }
 
     let fromData (appData: AppData) : ValidatedApp =
         { State = appData

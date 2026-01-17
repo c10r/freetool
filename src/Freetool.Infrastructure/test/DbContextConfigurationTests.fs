@@ -78,6 +78,7 @@ let ``AppData with complex JSON properties can be persisted and retrieved`` () =
 
     let testInput: Freetool.Domain.Events.Input =
         { Title = "Test Input"
+          Description = None
           Type = testInputType
           Required = true
           DefaultValue = None }

@@ -43,10 +43,12 @@ let ``App creation should generate AppCreatedEvent`` () =
 
     let inputs =
         [ { Title = "Email"
+            Description = None
             Type = InputType.Email()
             Required = true
             DefaultValue = None }
           { Title = "Password"
+            Description = None
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
             Required = true
             DefaultValue = None } ]
@@ -112,6 +114,7 @@ let ``App inputs update should generate correct event`` () =
 
     let initialInputs =
         [ { Title = "Name"
+            Description = None
             Type = InputType.Text(100) |> Result.defaultValue (InputType.Email())
             Required = true
             DefaultValue = None } ]
@@ -124,14 +127,17 @@ let ``App inputs update should generate correct event`` () =
 
     let newInputs =
         [ { Title = "First Name"
+            Description = None
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
             Required = true
             DefaultValue = None }
           { Title = "Last Name"
+            Description = None
             Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
             Required = false
             DefaultValue = None }
           { Title = "Age"
+            Description = None
             Type = InputType.Integer()
             Required = true
             DefaultValue = None } ]
@@ -225,6 +231,7 @@ let ``App validation should reject invalid input title`` () =
 
     let invalidInputs =
         [ { Title = ""
+            Description = None
             Type = InputType.Email()
             Required = true
             DefaultValue = None } ] // Empty title

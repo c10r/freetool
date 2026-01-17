@@ -52,6 +52,7 @@ export function useAppInputs(
     return appFields.map((field) => ({
       input: {
         title: field.label,
+        description: field.description?.trim() || null,
         type: toBackendInputType(field.type, field.options),
       },
       required: field.required ?? false,
@@ -66,6 +67,7 @@ export function useAppInputs(
     const currentFieldsJson = JSON.stringify(
       fields.map((f) => ({
         label: f.label,
+        description: f.description,
         type: f.type,
         required: f.required ?? false,
         options: f.options,
@@ -75,6 +77,7 @@ export function useAppInputs(
     const savedFieldsJson = JSON.stringify(
       savedFieldsRef.current.map((f) => ({
         label: f.label,
+        description: f.description,
         type: f.type,
         required: f.required ?? false,
         options: f.options,

@@ -529,6 +529,11 @@ const RunApp = () => {
                         <span className="text-red-500 ml-1">*</span>
                       )}
                     </Label>
+                    {input.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {input.description}
+                      </p>
+                    )}
                     {renderInputField(input)}
                     {formErrors[input.title || ""] && (
                       <p className="text-sm text-red-500">

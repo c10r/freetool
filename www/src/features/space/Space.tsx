@@ -232,6 +232,7 @@ function WorkspaceContent() {
     const backendInputs = inputs.map((f) => ({
       input: {
         title: f.label,
+        description: f.description?.trim() || null,
         type: toBackendInputType(f.type, f.options),
       },
       required: f.required ?? false,

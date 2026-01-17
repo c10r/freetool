@@ -162,6 +162,7 @@ export function useSidebarTree() {
             fields: (app.inputs || []).map((input) => ({
               id: crypto.randomUUID(),
               label: input.title || "",
+              description: input.description || undefined,
               type: fromBackendInputType(input.type as InputType),
               required: input.required ?? false,
               options: getRadioOptionsFromBackendType(input.type as InputType),

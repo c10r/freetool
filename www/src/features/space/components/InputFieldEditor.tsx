@@ -177,6 +177,18 @@ export default function InputFieldEditor({
                 <Trash2 size={16} />
               </Button>
             </div>
+            <div className="md:col-span-12">
+              <Input
+                value={f.description || ""}
+                onChange={(e) =>
+                  updateField(f.id, { description: e.target.value })
+                }
+                placeholder="Description (optional)"
+                aria-label="Field description"
+                maxLength={100}
+                disabled={disabled}
+              />
+            </div>
             {f.type === "radio" && (
               <div className="md:col-span-12 mt-2">
                 <RadioOptionsEditor

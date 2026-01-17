@@ -14,6 +14,7 @@ export interface RadioOption {
 export interface AppField {
   id: string;
   label: string;
+  description?: string;
   type: FieldType;
   required?: boolean;
   options?: RadioOption[]; // Used only for radio type

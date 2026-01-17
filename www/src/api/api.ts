@@ -104,11 +104,13 @@ client.use(errorMiddleware);
  */
 
 type AppInput = {
-  inputs: {
+  input: {
     title: string;
+    description?: string | null;
     type: string;
   };
   required: boolean;
+  defaultValue?: string;
 };
 
 type AppCreateInput = {
@@ -210,7 +212,7 @@ export const updateAppUseDynamicJsonBody = (
 export const updateAppInputSchema = (
   appId: string,
   inputs: {
-    input: { title: string; type: unknown };
+    input: { title: string; description?: string | null; type: unknown };
     required: boolean;
     defaultValue?: string;
   }[]

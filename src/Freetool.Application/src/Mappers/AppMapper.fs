@@ -96,6 +96,7 @@ module AppMapper =
     let inputToDto (input: Input) : AppInputDto =
         { Input =
             { Title = input.Title
+              Description = input.Description
               Type = inputTypeToDtoType input.Type }
           Required = input.Required
           DefaultValue = input.DefaultValue |> Option.map (fun dv -> dv.ToRawString()) }
@@ -117,6 +118,7 @@ module AppMapper =
             defaultValueResult
             |> Result.map (fun defaultValue ->
                 { Title = inputDto.Input.Title
+                  Description = inputDto.Input.Description
                   Type = inputType
                   Required = inputDto.Required
                   DefaultValue = defaultValue }))
