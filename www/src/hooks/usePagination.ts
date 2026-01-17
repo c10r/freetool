@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
-
-const DEFAULT_PAGE_SIZE = 50;
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 interface UsePaginationOptions {
   pageSize?: number;

@@ -11,13 +11,14 @@ import {
   fromBackendInputType,
   getRadioOptionsFromBackendType,
 } from "@/lib/inputTypeMapper";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import type { components } from "@/schema";
 import type { Space, SpaceUser, SpaceWithDetails } from "@/types/space";
 
 type InputType = components["schemas"]["InputType"];
 
 // Constants for pagination
-const MAX_PAGE_SIZE = 100;
+const MAX_PAGE_SIZE = DEFAULT_PAGE_SIZE;
 
 // Query keys for cache invalidation
 export const sidebarQueryKeys = {

@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/tooltip";
 import { usePagination } from "@/hooks/usePagination";
 import { useHasPermission } from "@/hooks/usePermissions";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { useResourceForm } from "../hooks/useResourceForm";
 import type { KeyValuePair } from "../types";
 import {
@@ -119,7 +120,7 @@ export default function ResourcesView({
         [];
       let appsSkip = 0;
       let hasMore = true;
-      const pageSize = 100;
+      const pageSize = DEFAULT_PAGE_SIZE;
 
       while (hasMore) {
         const response = await getApps(appsSkip, pageSize);
