@@ -113,6 +113,7 @@ type AppInput = {
 
 type AppCreateInput = {
   name: string;
+  description?: string | null;
   folderId: string | null;
   resourceId: string;
   inputs: AppInput[];

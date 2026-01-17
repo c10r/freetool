@@ -117,6 +117,7 @@ export default function FolderView({
   const [createAppError, setCreateAppError] = useState<string | null>(null);
   const [appFormData, setAppFormData] = useState({
     name: "",
+    description: "",
     resourceId: "",
     httpMethod: undefined as EndpointMethod | undefined,
     urlPath: "",
@@ -306,6 +307,7 @@ export default function FolderView({
       await createApp(
         folder.id,
         appFormData.name.trim(),
+        appFormData.description.trim(),
         appFormData.resourceId,
         appFormData.httpMethod,
         appFormData.urlPath,
@@ -319,6 +321,7 @@ export default function FolderView({
       // Reset form and close on success
       setAppFormData({
         name: "",
+        description: "",
         resourceId: "",
         httpMethod: undefined,
         urlPath: "",
@@ -350,6 +353,7 @@ export default function FolderView({
     setCreateAppError(null);
     setAppFormData({
       name: "",
+      description: "",
       resourceId: "",
       httpMethod: undefined,
       urlPath: "",
@@ -568,6 +572,22 @@ export default function FolderView({
                     handleCreateApp();
                   }
                 }}
+                disabled={isCreatingApp}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="app-description">Description</Label>
+              <Input
+                id="app-description"
+                placeholder="Add a description..."
+                value={appFormData.description}
+                onChange={(e) =>
+                  setAppFormData({
+                    ...appFormData,
+                    description: e.target.value,
+                  })
+                }
                 disabled={isCreatingApp}
               />
             </div>

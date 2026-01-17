@@ -100,6 +100,7 @@ export interface SpaceMainProps {
   createApp: (
     parentId: string,
     name?: string,
+    description?: string,
     resourceId?: string,
     httpMethod?: EndpointMethod,
     urlPath?: string,

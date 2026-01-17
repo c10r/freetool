@@ -218,6 +218,7 @@ function WorkspaceContent() {
   const addApp = async (
     parentId: string,
     name = "New App",
+    description = "",
     resourceId = "",
     httpMethod?: EndpointMethod,
     urlPath = "",
@@ -239,6 +240,7 @@ function WorkspaceContent() {
     // Call backend API to create the app
     const response = await createAppAPI({
       name: name.trim(),
+      description: description.trim() || null,
       folderId: parentId === "root" ? null : parentId,
       inputs: backendInputs,
       resourceId: resourceId || "",
