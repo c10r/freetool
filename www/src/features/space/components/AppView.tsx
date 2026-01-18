@@ -97,13 +97,83 @@ export default function AppView({
     }
   });
 
+  const normalizeDescription = (value: string) => value.trim();
+  const currentDescription = normalizeDescription(app.description || "");
+  const draftDescription = normalizeDescription(description);
+  const hasUnsavedDescriptionChanges = draftDescription !== currentDescription;
+
   // Combined unsaved changes state
-  const hasUnsavedChanges = hasUnsavedConfigChanges || hasUnsavedFieldChanges;
-  const isSaving = configSaveState.saving || inputsState.updating;
+  const hasUnsavedChanges =
+    hasUnsavedConfigChanges ||
+    hasUnsavedFieldChanges ||
+    hasUnsavedDescriptionChanges;
+  const isSaving =
+    configSaveState.saving || inputsState.updating || descriptionUpdating;
+
+  const saveDescription = async () => {
+    if (!hasUnsavedDescriptionChanges) {
+      return { success: true };
+    }
+
+    setDescriptionUpdating(true);
+    setDescriptionError(false);
+    setDescriptionErrorMessage("");
+
+    try {
+      const response = await updateAppDescription(
+        app.id,
+        draftDescription || null
+      );
+
+      if (response.error) {
+        const errorMessage =
+          response.error.message || "Failed to save description";
+        setDescriptionError(true);
+        setDescriptionErrorMessage(errorMessage as string);
+        setDescription(app.description || "");
+
+        setTimeout(() => {
+          setDescriptionError(false);
+          setDescriptionErrorMessage("");
+        }, 2_000);
+
+        return { success: false };
+      }
+
+      updateNode({
+        ...app,
+        description: draftDescription || undefined,
+      });
+
+      setDescriptionSaved(true);
+      setTimeout(() => {
+        setDescriptionSaved(false);
+      }, 2_000);
+
+      return { success: true };
+    } catch (_error) {
+      setDescriptionError(true);
+      setDescriptionErrorMessage("Network error occurred");
+      setDescription(app.description || "");
+
+      setTimeout(() => {
+        setDescriptionError(false);
+        setDescriptionErrorMessage("");
+      }, 2_000);
+
+      return { success: false };
+    } finally {
+      setDescriptionUpdating(false);
+    }
+  };
 
   // Handle save all changes
   const handleSaveAll = async () => {
-    const results = await Promise.all([saveInputs(), saveConfig()]);
+    const results = await Promise.all([
+      saveInputs(),
+      saveConfig(),
+      saveDescription(),
+    ]);
     const hasError = results.some((r) => !r.success);
     return !hasError;
   };
@@ -302,17 +372,21 @@ export default function AppView({
           {/* Show saved indicator briefly after save */}
           {canEditApp &&
             !hasUnsavedChanges &&
-            (configSaveState.saved || inputsState.saved) && (
+            (configSaveState.saved ||
+              inputsState.saved ||
+              descriptionSaved) && (
               <div className="flex items-center gap-1 text-green-600 text-sm">
                 <Check className="h-4 w-4" />
                 Saved
               </div>
             )}
           {/* Show error if save failed */}
-          {(configSaveState.error || inputsState.error) && (
+          {(configSaveState.error || inputsState.error || descriptionError) && (
             <div className="flex items-center gap-1 text-red-600 text-sm">
               <X className="h-4 w-4" />
-              {configSaveState.errorMessage || inputsState.errorMessage}
+              {configSaveState.errorMessage ||
+                inputsState.errorMessage ||
+                descriptionErrorMessage}
             </div>
           )}
           <div className="flex flex-col gap-1">
@@ -371,69 +445,6 @@ export default function AppView({
               )}
             </div>
             <Button
-              onClick={async () => {
-                const trimmedDescription = description.trim();
-                const currentDescription = app.description || "";
-
-                if (trimmedDescription === currentDescription) {
-                  setDescriptionEditing(false);
-                  return;
-                }
-
-                setDescriptionUpdating(true);
-                setDescriptionError(false);
-                setDescriptionErrorMessage("");
-
-                try {
-                  const response = await updateAppDescription(
-                    app.id,
-                    trimmedDescription || null
-                  );
-
-                  if (response.error) {
-                    const errorMessage =
-                      response.error.message || "Failed to save description";
-                    setDescriptionError(true);
-                    setDescriptionErrorMessage(errorMessage as string);
-                    setDescription(app.description || "");
-
-                    setTimeout(() => {
-                      setDescriptionError(false);
-                      setDescriptionErrorMessage("");
-                    }, 2_000);
-
-                    return;
-                  }
-
-                  updateNode({
-                    ...app,
-                    description: trimmedDescription || undefined,
-                  });
-                  setDescriptionEditing(false);
-
-                  setDescriptionSaved(true);
-                  setTimeout(() => {
-                    setDescriptionSaved(false);
-                  }, 2_000);
-                } catch (_error) {
-                  setDescriptionError(true);
-                  setDescriptionErrorMessage("Network error occurred");
-                  setDescription(app.description || "");
-
-                  setTimeout(() => {
-                    setDescriptionError(false);
-                    setDescriptionErrorMessage("");
-                  }, 2_000);
-                } finally {
-                  setDescriptionUpdating(false);
-                }
-              }}
-              disabled={descriptionUpdating}
-              size="sm"
-            >
-              {descriptionUpdating ? "Saving..." : "Save"}
-            </Button>
-            <Button
               variant="ghost"
               size="sm"
               onClick={() => {
@@ -462,9 +473,6 @@ export default function AppView({
               </Button>
             )}
           </div>
-        )}
-        {descriptionErrorMessage && (
-          <div className="text-red-500 text-sm">{descriptionErrorMessage}</div>
         )}
       </div>
 

@@ -79,8 +79,8 @@ export function ExpressionEditor({
             {mode === "insert" ? "Insert Expression" : "Edit Expression"}
           </DialogTitle>
           <DialogDescription>
-            Write a JavaScript-like expression. Use @VariableName to reference
-            inputs.
+            Write a JavaScript-like expression or a JSON object/array. Use
+            @VariableName to reference inputs.
           </DialogDescription>
         </DialogHeader>
 
@@ -134,6 +134,10 @@ export function ExpressionEditor({
               </li>
               <li>
                 Ternary: <code>condition ? valueIfTrue : valueIfFalse</code>
+              </li>
+              <li>
+                JSON: <code>{'{ "key": @Var }'}</code>,{" "}
+                <code>{"[ @Var, 1 ]"}</code> (use @Var as a JSON value)
               </li>
             </ul>
           </div>

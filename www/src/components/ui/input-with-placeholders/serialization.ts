@@ -15,7 +15,7 @@ import { $createPlaceholderNode, $isPlaceholderNode } from "./PlaceholderNode";
 
 // Match both {{ expression }} and @placeholder patterns
 // Expressions first (longer pattern takes priority)
-const EXPRESSION_REGEX = /\{\{([^{}]+)\}\}/g;
+const EXPRESSION_REGEX = /\{\{([\s\S]*?)\}\}/g;
 // Match @"quoted name" or @variableName (identifier with optional dot notation)
 // Group 1: quoted name (without quotes), Group 2: unquoted identifier
 const PLACEHOLDER_REGEX =

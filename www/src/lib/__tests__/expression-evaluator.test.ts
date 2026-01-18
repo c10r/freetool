@@ -105,6 +105,22 @@ describe("validateExpression", () => {
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain("Unknown variable: Unknown Var");
   });
+
+  it("should validate JSON object expressions", () => {
+    const result = validateExpression(
+      '{ "amount": @Amount, "user": { "email": @current_user.email } }',
+      ["Amount"]
+    );
+    expect(result.isValid).toBe(true);
+  });
+
+  it("should reject variables inside JSON strings", () => {
+    const result = validateExpression('{ "name": "Hello @Name" }', ["Name"]);
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      "Variables cannot be used inside JSON strings; use @Var as a JSON value."
+    );
+  });
 });
 
 describe("evaluateExpression", () => {
@@ -278,6 +294,35 @@ describe("evaluateExpression", () => {
     );
     expect(result).toEqual({ success: true, value: "165" });
   });
+
+  it("should evaluate JSON object expressions", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { Amount: "42", Name: "Alice" },
+      types: { Amount: "integer", Name: "text" },
+    };
+    const result = evaluateExpression(
+      '{ "amount": @Amount, "name": @Name }',
+      context
+    );
+    expect(result).toEqual({
+      success: true,
+      value: '{"amount":42,"name":"Alice"}',
+    });
+  });
+
+  it("should evaluate JSON array expressions", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { A: "true", B: "5" },
+      types: { A: "boolean", B: "integer" },
+    };
+    const result = evaluateExpression("[@A, @B, @current_user.email]", context);
+    expect(result).toEqual({
+      success: true,
+      value: '[true,5,"test@example.com"]',
+    });
+  });
 });
 
 describe("processTemplate", () => {
@@ -338,6 +383,22 @@ describe("processTemplate", () => {
     };
     const result = processTemplate('Customer: {{ @"Customer ID" }}', context);
     expect(result).toEqual({ success: true, value: "Customer: 12345" });
+  });
+
+  it("should process templates with JSON expression output", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { Amount: "10" },
+      types: { Amount: "integer" },
+    };
+    const result = processTemplate(
+      'payload={{ { "amount": @Amount } }}',
+      context
+    );
+    expect(result).toEqual({
+      success: true,
+      value: 'payload={"amount":10}',
+    });
   });
 });
 
