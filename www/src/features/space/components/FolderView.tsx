@@ -85,6 +85,7 @@ export default function FolderView({
     setCreateAppError(null);
     setAppFormData({
       name: "",
+      description: "",
       resourceId: "",
       httpMethod: undefined,
       urlPath: "",
@@ -307,7 +308,7 @@ export default function FolderView({
       await createApp(
         folder.id,
         appFormData.name.trim(),
-        appFormData.description.trim(),
+        appFormData.description?.trim() ?? "",
         appFormData.resourceId,
         appFormData.httpMethod,
         appFormData.urlPath,
