@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuthorization } from "@/hooks/useAuthorization";
 import { usePagination } from "@/hooks/usePagination";
 import { compareUsersByName } from "@/lib/utils";
 
@@ -80,6 +81,7 @@ function buildUserSpacesMap(users: User[], spaces: Space[]): UserWithSpaces[] {
 }
 
 export default function UsersView() {
+  const { currentUser } = useAuthorization();
   const [users, setUsers] = useState<User[]>([]);
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -249,7 +251,12 @@ export default function UsersView() {
               </TableHeader>
               <TableBody>
                 {usersWithSpaces.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow
+                    key={user.id}
+                    className={
+                      currentUser?.id === user.id ? "bg-blue-50/60" : undefined
+                    }
+                  >
                     {/* Avatar */}
                     <TableCell>
                       <Avatar className="h-10 w-10">
@@ -269,13 +276,18 @@ export default function UsersView() {
                     {/* Name */}
                     <TableCell className="font-medium">
                       <div className="flex flex-col gap-1">
-                        <span>
+                        <span className="flex items-center gap-2">
                           {isInvitedPlaceholder(user) ? (
                             <span className="text-muted-foreground italic">
                               Invited
                             </span>
                           ) : (
                             user.name
+                          )}
+                          {currentUser?.id === user.id && (
+                            <Badge variant="outline" className="text-xs">
+                              You
+                            </Badge>
                           )}
                         </span>
                         {user.isOrgAdmin && (

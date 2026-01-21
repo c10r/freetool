@@ -759,10 +759,8 @@ export const inviteUser = ({ email }: { email: string }) =>
 /**
  * Authorization & Permissions
  *
- * NOTE: These endpoints are NOT yet implemented in the backend.
- * They return placeholder data for frontend development.
- * TODO: Once backend implements GET /user/me and GET /space/{id}/permissions,
- * update these functions to use the real endpoints.
+ * NOTE: Space permissions is still a placeholder until GET /space/{id}/permissions
+ * is implemented in the backend.
  */
 
 import type {
@@ -775,34 +773,11 @@ import type {
  * Get the current authenticated user's profile and role information
  *
  * @returns Current user data including spaces and admin status
- *
- * NOTE: This is a PLACEHOLDER implementation. The backend endpoint
- * GET /user/me does not exist yet. This returns mock data.
  */
-export const getCurrentUser = async (): Promise<{
+export const getCurrentUser = (): Promise<{
   data?: CurrentUserResponse;
   error?: { message: string };
-}> => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  return {
-    data: {
-      id: "user-1",
-      name: "Development User",
-      email: "dev@example.com",
-      profilePicUrl: undefined,
-      isOrgAdmin: true, // Mock as org admin for development
-      spaces: [
-        {
-          id: "space-1",
-          name: "Engineering",
-          role: "moderator",
-        },
-      ],
-    },
-  };
-};
+}> => client.GET("/user/me");
 
 /**
  * Get the current user's permissions for a specific space
