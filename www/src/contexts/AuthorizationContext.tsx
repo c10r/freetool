@@ -120,13 +120,11 @@ export function AuthorizationProvider({
    * Check if current user is a moderator of a specific space
    */
   const isSpaceModerator = (spaceId: string): boolean => {
-    if (!currentUser) {
+    if (!currentUser?.spaces) {
       return false;
     }
-    return (
-      currentUser.spaces.some(
-        (space) => space.id === spaceId && space.role === "moderator"
-      ) ?? false
+    return currentUser.spaces.some(
+      (space) => space.id === spaceId && space.role === "moderator"
     );
   };
 
