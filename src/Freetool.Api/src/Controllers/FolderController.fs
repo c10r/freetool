@@ -17,10 +17,44 @@ open Freetool.Application.Mappers
 type FolderController
     (
         folderRepository: IFolderRepository,
+        spaceRepository: ISpaceRepository,
         commandHandler: ICommandHandler<FolderCommand, FolderCommandResult>,
         authorizationService: IAuthorizationService
     ) =
     inherit AuthenticatedControllerBase()
+
+    /// Checks if the current user is an organization administrator
+    member private this.IsOrganizationAdmin() : Task<bool> =
+        task {
+            let userId = this.CurrentUserId
+
+            return!
+                authorizationService.CheckPermissionAsync
+                    (User(userId.ToString()))
+                    OrganizationAdmin
+                    (OrganizationObject "default")
+        }
+
+    /// Gets the list of space IDs that the current user has access to
+    member private this.GetAccessibleSpaceIdsForCurrentUser() : Task<SpaceId list> =
+        task {
+            let! isOrgAdmin = this.IsOrganizationAdmin()
+
+            if isOrgAdmin then
+                // Org admins can see all spaces
+                let! allSpaces = spaceRepository.GetAllAsync 0 Int32.MaxValue
+                return allSpaces |> List.map (fun space -> space.State.Id)
+            else
+                // Regular users see only spaces they're members or moderators of
+                let userId = this.CurrentUserId
+                let! memberSpaces = spaceRepository.GetByUserIdAsync userId
+                let! moderatorSpaces = spaceRepository.GetByModeratorUserIdAsync userId
+
+                return
+                    (memberSpaces @ moderatorSpaces)
+                    |> List.distinctBy (fun s -> s.State.Id)
+                    |> List.map (fun s -> s.State.Id)
+        }
 
     [<HttpPost>]
     [<ProducesResponseType(typeof<FolderData>, StatusCodes.Status201Created)>]
@@ -138,15 +172,27 @@ type FolderController
                 else take
 
             // Parse optional spaceId
-            if System.String.IsNullOrWhiteSpace(spaceId) then
-                // No space filter - backward compatibility
-                let! result = commandHandler.HandleCommand(GetAllFolders(None, skipValue, takeValue))
+            if String.IsNullOrWhiteSpace(spaceId) then
+                // No space filter - filter by user's accessible spaces
+                let! accessibleSpaceIds = this.GetAccessibleSpaceIdsForCurrentUser()
 
-                return
-                    match result with
-                    | Ok(FoldersResult pagedFolders) -> this.Ok(pagedFolders) :> IActionResult
-                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
-                    | Error error -> this.HandleDomainError(error)
+                if List.isEmpty accessibleSpaceIds then
+                    let emptyResult: PagedResult<FolderData> =
+                        { Items = []
+                          TotalCount = 0
+                          Skip = skipValue
+                          Take = takeValue }
+
+                    return this.Ok(emptyResult) :> IActionResult
+                else
+                    let! result =
+                        commandHandler.HandleCommand(GetFoldersBySpaceIds(accessibleSpaceIds, skipValue, takeValue))
+
+                    return
+                        match result with
+                        | Ok(FoldersResult pagedFolders) -> this.Ok(pagedFolders) :> IActionResult
+                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                        | Error error -> this.HandleDomainError(error)
             else
                 // Validate and parse space ID
                 match Guid.TryParse(spaceId) with

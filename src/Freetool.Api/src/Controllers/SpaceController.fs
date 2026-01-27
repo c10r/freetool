@@ -187,7 +187,16 @@ type SpaceController
                 elif take > 100 then 100
                 else take
 
-            let! result = commandHandler.HandleCommand(GetAllSpaces(skipValue, takeValue))
+            let! isOrgAdmin = this.CheckIsOrgAdminAsync()
+
+            let! result =
+                if isOrgAdmin then
+                    // Org admins can see all spaces
+                    commandHandler.HandleCommand(GetAllSpaces(skipValue, takeValue))
+                else
+                    // Regular users see only spaces they're members/moderators of
+                    let userId = this.CurrentUserId
+                    commandHandler.HandleCommand(GetSpacesByUserId(userId.Value.ToString(), skipValue, takeValue))
 
             return
                 match result with

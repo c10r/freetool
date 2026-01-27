@@ -30,6 +30,10 @@ type IFolderRepository =
 
     abstract member GetCountBySpaceAsync: spaceId: SpaceId -> Task<int>
 
+    abstract member GetBySpaceIdsAsync: spaceIds: SpaceId list -> skip: int -> take: int -> Task<ValidatedFolder list>
+
+    abstract member GetCountBySpaceIdsAsync: spaceIds: SpaceId list -> Task<int>
+
     abstract member GetRootCountAsync: unit -> Task<int>
 
     abstract member GetChildCountAsync: FolderId -> Task<int>

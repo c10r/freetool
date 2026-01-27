@@ -15,6 +15,7 @@ type FolderCommand =
     | GetFolderWithChildren of folderId: string
     | GetRootFolders of skip: int * take: int
     | GetAllFolders of spaceId: SpaceId option * skip: int * take: int
+    | GetFoldersBySpaceIds of spaceIds: SpaceId list * skip: int * take: int
     | DeleteFolder of actorUserId: UserId * folderId: string
     | UpdateFolderName of actorUserId: UserId * folderId: string * UpdateFolderNameDto
     | MoveFolder of actorUserId: UserId * folderId: string * MoveFolderDto

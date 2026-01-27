@@ -260,6 +260,31 @@ module FolderHandler =
                               Take = take }
 
                         return Ok(FoldersResult result)
+
+            | GetFoldersBySpaceIds(spaceIds, skip, take) ->
+                if skip < 0 then
+                    return Error(ValidationError "Skip cannot be negative")
+                elif take <= 0 || take > 100 then
+                    return Error(ValidationError "Take must be between 1 and 100")
+                elif List.isEmpty spaceIds then
+                    let result =
+                        { Items = []
+                          TotalCount = 0
+                          Skip = skip
+                          Take = take }
+
+                    return Ok(FoldersResult result)
+                else
+                    let! folders = folderRepository.GetBySpaceIdsAsync spaceIds skip take
+                    let! totalCount = folderRepository.GetCountBySpaceIdsAsync spaceIds
+
+                    let result =
+                        { Items = folders |> List.map (fun folder -> folder.State)
+                          TotalCount = totalCount
+                          Skip = skip
+                          Take = take }
+
+                    return Ok(FoldersResult result)
         }
 
 type FolderHandler(folderRepository: IFolderRepository) =

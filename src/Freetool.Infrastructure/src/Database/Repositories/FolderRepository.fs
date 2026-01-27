@@ -259,6 +259,54 @@ type FolderRepository(context: FreetoolDbContext, eventRepository: IEventReposit
         member _.GetCountBySpaceAsync(spaceId: SpaceId) : Task<int> =
             task { return! context.Folders.CountAsync(fun f -> f.SpaceId = spaceId) }
 
+        member _.GetBySpaceIdsAsync (spaceIds: SpaceId list) (skip: int) (take: int) : Task<ValidatedFolder list> =
+            task {
+                if List.isEmpty spaceIds then
+                    return []
+                else
+                    let spaceIdArray = spaceIds |> List.toArray
+
+                    let! folderDatas =
+                        context.Folders
+                            .Where(fun f -> spaceIdArray.Contains(f.SpaceId))
+                            .OrderBy(fun f -> f.Name)
+                            .Skip(skip)
+                            .Take(take)
+                            .ToListAsync()
+
+                    // Initialize Children for all retrieved folders
+                    folderDatas |> Seq.iter (fun data -> data.Children <- [])
+
+                    let! foldersWithChildren =
+                        folderDatas
+                        |> Seq.map (fun data ->
+                            task {
+                                let dataId = data.Id
+
+                                let! childrenData =
+                                    context.Folders
+                                        .Where(fun f -> f.ParentId = Some(dataId))
+                                        .OrderBy(fun f -> f.Name)
+                                        .ToListAsync()
+
+                                childrenData |> Seq.iter (fun childData -> childData.Children <- [])
+                                data.Children <- childrenData |> Seq.toList
+                                return Folder.fromData data
+                            })
+                        |> Task.WhenAll
+
+                    return foldersWithChildren |> Array.toList
+            }
+
+        member _.GetCountBySpaceIdsAsync(spaceIds: SpaceId list) : Task<int> =
+            task {
+                if List.isEmpty spaceIds then
+                    return 0
+                else
+                    let spaceIdArray = spaceIds |> List.toArray
+                    return! context.Folders.CountAsync(fun f -> spaceIdArray.Contains(f.SpaceId))
+            }
+
         member _.GetRootCountAsync() : Task<int> =
             task { return! context.Folders.CountAsync(fun f -> f.ParentId = None) }
 

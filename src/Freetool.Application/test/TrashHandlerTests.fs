@@ -141,6 +141,17 @@ type MockFolderRepository(folders: ValidatedFolder list, deletedFolders: Validat
         member _.GetCountBySpaceAsync(spaceId: SpaceId) =
             task { return folderList |> List.filter (fun f -> f.State.SpaceId = spaceId) |> List.length }
 
+        member _.GetBySpaceIdsAsync (spaceIds: SpaceId list) (_skip: int) (_take: int) : Task<ValidatedFolder list> =
+            task { return folderList |> List.filter (fun f -> spaceIds |> List.contains f.State.SpaceId) }
+
+        member _.GetCountBySpaceIdsAsync(spaceIds: SpaceId list) : Task<int> =
+            task {
+                return
+                    folderList
+                    |> List.filter (fun f -> spaceIds |> List.contains f.State.SpaceId)
+                    |> List.length
+            }
+
         member _.GetRootCountAsync() = task { return 0 }
         member _.GetChildCountAsync _ = task { return 0 }
 

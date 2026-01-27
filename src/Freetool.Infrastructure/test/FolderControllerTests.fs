@@ -49,6 +49,7 @@ type MockFolderRepository(getByIdFn: FolderId -> Task<ValidatedFolder option>) =
         member _.GetRootFoldersAsync _ _ = Task.FromResult([])
         member _.GetAllAsync _ _ = Task.FromResult([])
         member _.GetBySpaceAsync _ _ _ = Task.FromResult([])
+        member _.GetBySpaceIdsAsync _ _ _ = Task.FromResult([])
         member _.AddAsync(_) = Task.FromResult(Ok())
         member _.UpdateAsync(_) = Task.FromResult(Ok())
         member _.DeleteAsync(_) = Task.FromResult(Ok())
@@ -56,12 +57,28 @@ type MockFolderRepository(getByIdFn: FolderId -> Task<ValidatedFolder option>) =
         member _.ExistsByNameInParentAsync _ _ = Task.FromResult(false)
         member _.GetCountAsync() = Task.FromResult(0)
         member _.GetCountBySpaceAsync(_) = Task.FromResult(0)
+        member _.GetCountBySpaceIdsAsync(_) = Task.FromResult(0)
         member _.GetRootCountAsync() = Task.FromResult(0)
         member _.GetChildCountAsync(_) = Task.FromResult(0)
         member _.GetDeletedBySpaceAsync(_) = Task.FromResult([])
         member _.GetDeletedByIdAsync(_) = Task.FromResult(None)
         member _.RestoreWithChildrenAsync _ = Task.FromResult(Ok 0)
         member _.CheckNameConflictAsync _ _ _ = Task.FromResult(false)
+
+// Mock space repository for testing
+type MockSpaceRepository() =
+    interface ISpaceRepository with
+        member _.GetByIdAsync(_) = Task.FromResult(None)
+        member _.GetByNameAsync(_) = Task.FromResult(None)
+        member _.GetAllAsync _ _ = Task.FromResult([])
+        member _.GetByUserIdAsync(_) = Task.FromResult([])
+        member _.GetByModeratorUserIdAsync(_) = Task.FromResult([])
+        member _.AddAsync(_) = Task.FromResult(Ok())
+        member _.UpdateAsync(_) = Task.FromResult(Ok())
+        member _.DeleteAsync(_) = Task.FromResult(Ok())
+        member _.ExistsAsync(_) = Task.FromResult(false)
+        member _.ExistsByNameAsync(_) = Task.FromResult(false)
+        member _.GetCountAsync() = Task.FromResult(0)
 
 // Mock command handler for testing
 type MockFolderCommandHandler(handleCommandFn: FolderCommand -> Task<Result<FolderCommandResult, DomainError>>) =
@@ -79,11 +96,13 @@ let createTestController
         MockAuthorizationService(checkPermissionFn) :> IAuthorizationService
 
     let folderRepository = MockFolderRepository(getByIdFn) :> IFolderRepository
+    let spaceRepository = MockSpaceRepository() :> ISpaceRepository
 
     let commandHandler =
         MockFolderCommandHandler(handleCommandFn) :> ICommandHandler<FolderCommand, FolderCommandResult>
 
-    let controller = FolderController(folderRepository, commandHandler, authService)
+    let controller =
+        FolderController(folderRepository, spaceRepository, commandHandler, authService)
 
     // Setup HttpContext with the provided UserId
     let httpContext = DefaultHttpContext()
@@ -518,6 +537,7 @@ let ``GetAllFolders allows any authenticated user`` () : Task =
         let handleCommand cmd =
             match cmd with
             | GetAllFolders _ -> Task.FromResult(Ok(FoldersResult pagedResult))
+            | GetFoldersBySpaceIds _ -> Task.FromResult(Ok(FoldersResult pagedResult))
             | _ -> Task.FromResult(Error(NotFound "Command not supported"))
 
         let controller = createTestController checkPermission getById handleCommand userId
