@@ -1,4 +1,4 @@
-import { Edit, FilePlus2, FolderPlus, Play, Plus, Trash2 } from "lucide-react";
+import { Edit, FilePlus2, FolderPlus, Play, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -699,7 +699,7 @@ export default function FolderView({
                         }}
                         aria-label="New Folder"
                       >
-                        <Plus size={16} />
+                        <FolderPlus size={16} />
                       </PermissionButton>
                     </PopoverTrigger>
                     <PopoverContent className="w-80">
