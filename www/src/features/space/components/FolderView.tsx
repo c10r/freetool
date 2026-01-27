@@ -705,7 +705,7 @@ export default function FolderView({
                     <PopoverContent className="w-80">
                       <div className="space-y-4">
                         <div>
-                          <h4 className="font-medium">Create New Folder</h4>
+                          <h4 className="font-medium">Create Sub-Folder</h4>
                           <p className="text-sm text-muted-foreground">
                             Enter a name for the new folder in "
                             {nodes[newFolderParentId]?.name || "Unknown"}".
