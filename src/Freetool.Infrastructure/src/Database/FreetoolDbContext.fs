@@ -6,6 +6,62 @@ open Microsoft.EntityFrameworkCore.Storage.ValueConversion
 open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
 
+// Helper module for ExecutableHttpRequest serialization
+// Using CLIMutable records for JSON serialization compatibility
+[<CLIMutable>]
+type KeyValuePair = { Key: string; Value: string }
+
+[<CLIMutable>]
+type SerializableHttpRequest =
+    { BaseUrl: string
+      UrlParameters: KeyValuePair array
+      Headers: KeyValuePair array
+      Body: KeyValuePair array
+      HttpMethod: string
+      UseJsonBody: bool }
+
+module ExecutableHttpRequestSerializer =
+    let serialize (requestOpt: Freetool.Domain.ExecutableHttpRequest option) : string =
+        match requestOpt with
+        | None -> null
+        | Some request ->
+            let serializable: SerializableHttpRequest =
+                { BaseUrl = request.BaseUrl
+                  UrlParameters =
+                    request.UrlParameters
+                    |> List.map (fun (k, v) -> { Key = k; Value = v })
+                    |> List.toArray
+                  Headers =
+                    request.Headers
+                    |> List.map (fun (k, v) -> { Key = k; Value = v })
+                    |> List.toArray
+                  Body = request.Body |> List.map (fun (k, v) -> { Key = k; Value = v }) |> List.toArray
+                  HttpMethod = request.HttpMethod
+                  UseJsonBody = request.UseJsonBody }
+
+            System.Text.Json.JsonSerializer.Serialize(serializable)
+
+    let deserialize (json: string) : Freetool.Domain.ExecutableHttpRequest option =
+        if System.String.IsNullOrEmpty(json) then
+            None
+        else
+            try
+                let deserialized =
+                    System.Text.Json.JsonSerializer.Deserialize<SerializableHttpRequest>(json)
+
+                Some
+                    { Freetool.Domain.ExecutableHttpRequest.BaseUrl = deserialized.BaseUrl
+                      UrlParameters =
+                        deserialized.UrlParameters
+                        |> Array.toList
+                        |> List.map (fun kv -> (kv.Key, kv.Value))
+                      Headers = deserialized.Headers |> Array.toList |> List.map (fun kv -> (kv.Key, kv.Value))
+                      Body = deserialized.Body |> Array.toList |> List.map (fun kv -> (kv.Key, kv.Value))
+                      HttpMethod = deserialized.HttpMethod
+                      UseJsonBody = deserialized.UseJsonBody }
+            with _ ->
+                None
+
 type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     inherit DbContext(options)
 
@@ -72,7 +128,6 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
         modelBuilder.Ignore<Freetool.Domain.RunInputValue>() |> ignore
         modelBuilder.Ignore<Freetool.Domain.Events.Input>() |> ignore
         modelBuilder.Ignore<Freetool.Domain.ExecutableHttpRequest>() |> ignore
-        modelBuilder.Ignore<Freetool.Domain.ExecutableHttpRequest option>() |> ignore
         modelBuilder.Ignore<string option>() |> ignore
 
         // Set up value converters for custom types and complex objects
@@ -238,6 +293,16 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                 )
 
             entity.Property(fun r -> r.InputValues).HasConversion(runInputValueListConverter)
+            |> ignore
+
+            // JSON converter for ExecutableHttpRequest option
+            let executableHttpRequestConverter =
+                ValueConverter<Freetool.Domain.ExecutableHttpRequest option, string>(
+                    ExecutableHttpRequestSerializer.serialize,
+                    ExecutableHttpRequestSerializer.deserialize
+                )
+
+            entity.Property(fun r -> r.ExecutableRequest).HasConversion(executableHttpRequestConverter)
             |> ignore
 
             entity.Property(fun r -> r.StartedAt).HasConversion<System.Nullable<DateTime>>(optionDateTimeConverter)

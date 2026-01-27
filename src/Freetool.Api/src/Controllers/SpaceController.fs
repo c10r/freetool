@@ -350,7 +350,7 @@ type SpaceController
                 match result with
                 | Ok(SpaceResult spaceData) ->
                     let spaceIdStr = spaceData.Id.Value.ToString()
-                    let newMemberIdStr = addMemberDto.UserId
+                    let newMemberIdStr = System.Guid.Parse(addMemberDto.UserId).ToString()
 
                     // Add member relation in OpenFGA
                     do!

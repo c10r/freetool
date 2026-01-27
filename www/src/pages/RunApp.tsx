@@ -704,12 +704,40 @@ const RunApp = () => {
                 </div>
               )}
 
-              {result && !running && (
-                <div className="text-green-600 bg-green-50 p-3 rounded">
-                  <h4 className="font-medium mb-1">Success</h4>
-                  <p className="text-sm">App executed successfully</p>
-                </div>
-              )}
+              {result &&
+                !running &&
+                (result.status as unknown as { Case: string })?.Case ===
+                  "Success" && (
+                  <div className="text-green-600 bg-green-50 p-3 rounded">
+                    <h4 className="font-medium mb-1">Success</h4>
+                    <p className="text-sm">App executed successfully</p>
+                  </div>
+                )}
+
+              {result &&
+                !running &&
+                (result.status as unknown as { Case: string })?.Case ===
+                  "Failure" && (
+                  <div className="text-red-600 bg-red-50 p-3 rounded">
+                    <h4 className="font-medium mb-1">Failure</h4>
+                    <p className="text-sm">
+                      {result.errorMessage || "The app execution failed"}
+                    </p>
+                  </div>
+                )}
+
+              {result &&
+                !running &&
+                (result.status as unknown as { Case: string })?.Case ===
+                  "InvalidConfiguration" && (
+                  <div className="text-yellow-600 bg-yellow-50 p-3 rounded">
+                    <h4 className="font-medium mb-1">Invalid Configuration</h4>
+                    <p className="text-sm">
+                      {result.errorMessage ||
+                        "The app has an invalid configuration"}
+                    </p>
+                  </div>
+                )}
             </CardContent>
           </Card>
         )}
@@ -742,10 +770,16 @@ const RunApp = () => {
                             {result.executableRequest?.urlParameters &&
                               result.executableRequest.urlParameters.length >
                                 0 &&
-                              `?${result.executableRequest.urlParameters
+                              `?${(
+                                result.executableRequest
+                                  .urlParameters as unknown as [
+                                  string,
+                                  string,
+                                ][]
+                              )
                                 .map(
                                   (tuple) =>
-                                    `${tuple.item1 ?? ""}=${tuple.item2 ?? ""}`
+                                    `${tuple[0] ?? ""}=${tuple[1] ?? ""}`
                                 )
                                 .join("&")}`}
                           </p>
@@ -759,12 +793,16 @@ const RunApp = () => {
                                 <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
                                   {JSON.stringify(
                                     Object.fromEntries(
-                                      result.executableRequest.headers.map(
-                                        (tuple) => [
-                                          tuple.item1 ?? "",
-                                          tuple.item2 ?? "",
-                                        ]
-                                      )
+                                      (
+                                        result.executableRequest
+                                          .headers as unknown as [
+                                          string,
+                                          string,
+                                        ][]
+                                      ).map((tuple) => [
+                                        tuple[0] ?? "",
+                                        tuple[1] ?? "",
+                                      ])
                                     ),
                                     null,
                                     2
@@ -782,12 +820,13 @@ const RunApp = () => {
                                 <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
                                   {JSON.stringify(
                                     Object.fromEntries(
-                                      result.executableRequest.body.map(
-                                        (tuple) => [
-                                          tuple.item1 ?? "",
-                                          tuple.item2 ?? "",
-                                        ]
-                                      )
+                                      (
+                                        result.executableRequest
+                                          .body as unknown as [string, string][]
+                                      ).map((tuple) => [
+                                        tuple[0] ?? "",
+                                        tuple[1] ?? "",
+                                      ])
                                     ),
                                     null,
                                     2
