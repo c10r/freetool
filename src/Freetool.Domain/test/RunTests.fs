@@ -811,3 +811,257 @@ let ``Run creation should reject MultiText input type with invalid choice`` () =
         Assert.Contains("priority", message)
         Assert.Contains("allowed text values", message)
     | _ -> Assert.True(false, "Expected validation error for invalid MultiText choice")
+
+// Variable Substitution Tests (Quoted Variables and Expressions)
+
+/// Helper function to create test app with inputs that have spaces in names
+let createTestAppWithQuotedVariables () =
+    let folderId = FolderId.NewId()
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
+
+    let inputs =
+        [ { Title = "Customer ID"
+            Description = None
+            Type = InputType.Text(50) |> Result.defaultValue (InputType.Email())
+            Required = true
+            DefaultValue = None }
+          { Title = "Amount"
+            Description = None
+            Type = InputType.Integer()
+            Required = true
+            DefaultValue = None }
+          { Title = "Debit"
+            Description = None
+            Type = InputType.Boolean()
+            Required = true
+            DefaultValue = None } ]
+
+    // Create a test resource with quoted variable syntax in URL params and body
+    // (URL path can't have spaces, so we use URL params for variables with spaces)
+    let resource =
+        Resource.create
+            actorUserId
+            spaceId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/customers"
+            [ "customer_id", "@\"Customer ID\""; "amount", "@\"Amount\"" ]
+            []
+            []
+
+        |> unwrapResult
+
+    let app =
+        App.create actorUserId "Test App" folderId resource HttpMethod.Get inputs None [] [] [] false None
+        |> unwrapResult
+
+    app, resource
+
+[<Fact>]
+let ``Run executable request should substitute quoted variable names with spaces`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let app, resource = createTestAppWithQuotedVariables ()
+
+    let inputValues =
+        [ { Title = "Customer ID"
+            Value = "CUST-12345" }
+          { Title = "Amount"; Value = "10000" }
+          { Title = "Debit"; Value = "true" } ]
+
+    let run = Run.createWithValidation actorUserId app inputValues |> unwrapResult
+
+    let testCurrentUser: CurrentUser =
+        { Id = "test-user-id"
+          Email = "test@example.com"
+          FirstName = "Test"
+          LastName = "User" }
+
+    // Act
+    let result =
+        Run.composeExecutableRequestFromAppAndResource run app resource testCurrentUser None
+
+    // Assert
+    match result with
+    | Ok runWithRequest ->
+        match Run.getExecutableRequest runWithRequest with
+        | Some execRequest ->
+            // URL params should have "Customer ID" substituted
+            let customerIdParam =
+                execRequest.UrlParameters |> List.find (fun (k, _) -> k = "customer_id")
+
+            Assert.Equal(("customer_id", "CUST-12345"), customerIdParam)
+            Assert.DoesNotContain("@\"Customer ID\"", execRequest.UrlParameters |> List.map snd |> String.concat ",")
+
+            // URL params should have Amount substituted
+            let amountParam =
+                execRequest.UrlParameters |> List.find (fun (k, _) -> k = "amount")
+
+            Assert.Equal(("amount", "10000"), amountParam)
+
+        | None -> Assert.True(false, "Expected executable request to be set")
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+/// Helper function to create test app with expression templates
+let createTestAppWithExpressions () =
+    let folderId = FolderId.NewId()
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
+
+    let inputs =
+        [ { Title = "Amount"
+            Description = None
+            Type = InputType.Integer()
+            Required = true
+            DefaultValue = None }
+          { Title = "Debit"
+            Description = None
+            Type = InputType.Boolean()
+            Required = true
+            DefaultValue = None } ]
+
+    // Create a test resource with expression template
+    let resource =
+        Resource.create
+            actorUserId
+            spaceId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/transactions"
+            []
+            []
+            [ "amount", "{{ @Debit ? -1 * @Amount : @Amount }}" ]
+
+        |> unwrapResult
+
+    let app =
+        App.create actorUserId "Test App" folderId resource HttpMethod.Post inputs None [] [] [] false None
+        |> unwrapResult
+
+    app, resource
+
+[<Fact>]
+let ``Run executable request should evaluate expression template with ternary and arithmetic (debit case)`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let app, resource = createTestAppWithExpressions ()
+
+    let inputValues =
+        [ { Title = "Amount"; Value = "10000" }; { Title = "Debit"; Value = "true" } ] // Debit is true, so amount should be negative
+
+    let run = Run.createWithValidation actorUserId app inputValues |> unwrapResult
+
+    let testCurrentUser: CurrentUser =
+        { Id = "test-user-id"
+          Email = "test@example.com"
+          FirstName = "Test"
+          LastName = "User" }
+
+    // Act
+    let result =
+        Run.composeExecutableRequestFromAppAndResource run app resource testCurrentUser None
+
+    // Assert
+    match result with
+    | Ok runWithRequest ->
+        match Run.getExecutableRequest runWithRequest with
+        | Some execRequest ->
+            // Body should have evaluated expression: -1 * 10000 = -10000
+            let amountBody = execRequest.Body |> List.find (fun (k, _) -> k = "amount")
+            Assert.Equal(("amount", "-10000"), amountBody)
+
+        | None -> Assert.True(false, "Expected executable request to be set")
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run executable request should evaluate expression template with ternary and arithmetic (credit case)`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let app, resource = createTestAppWithExpressions ()
+
+    let inputValues =
+        [ { Title = "Amount"; Value = "5000" }; { Title = "Debit"; Value = "false" } ] // Debit is false, so amount should be positive
+
+    let run = Run.createWithValidation actorUserId app inputValues |> unwrapResult
+
+    let testCurrentUser: CurrentUser =
+        { Id = "test-user-id"
+          Email = "test@example.com"
+          FirstName = "Test"
+          LastName = "User" }
+
+    // Act
+    let result =
+        Run.composeExecutableRequestFromAppAndResource run app resource testCurrentUser None
+
+    // Assert
+    match result with
+    | Ok runWithRequest ->
+        match Run.getExecutableRequest runWithRequest with
+        | Some execRequest ->
+            // Body should have evaluated expression: amount stays positive
+            let amountBody = execRequest.Body |> List.find (fun (k, _) -> k = "amount")
+            Assert.Equal(("amount", "5000"), amountBody)
+
+        | None -> Assert.True(false, "Expected executable request to be set")
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run executable request should substitute current_user variables`` () =
+    // Arrange
+    let folderId = FolderId.NewId()
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
+
+    let inputs: Input list = []
+
+    let resource =
+        Resource.create
+            actorUserId
+            spaceId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/users/@current_user.id"
+            [ "email", "@current_user.email" ]
+            [ "X-User-Name", "@current_user.firstName @current_user.lastName" ]
+            []
+        |> unwrapResult
+
+    let app =
+        App.create actorUserId "Test App" folderId resource HttpMethod.Get inputs None [] [] [] false None
+        |> unwrapResult
+
+    let run = Run.createWithValidation actorUserId app [] |> unwrapResult
+
+    let testCurrentUser: CurrentUser =
+        { Id = "user-123"
+          Email = "john@example.com"
+          FirstName = "John"
+          LastName = "Doe" }
+
+    // Act
+    let result =
+        Run.composeExecutableRequestFromAppAndResource run app resource testCurrentUser None
+
+    // Assert
+    match result with
+    | Ok runWithRequest ->
+        match Run.getExecutableRequest runWithRequest with
+        | Some execRequest ->
+            // Base URL should have current_user.id substituted
+            Assert.Contains("user-123", execRequest.BaseUrl)
+            Assert.DoesNotContain("@current_user.id", execRequest.BaseUrl)
+
+            // URL params should have current_user.email substituted
+            let emailParam = execRequest.UrlParameters |> List.find (fun (k, _) -> k = "email")
+
+            Assert.Equal(("email", "john@example.com"), emailParam)
+
+            // Headers should have current_user names substituted
+            let userHeader = execRequest.Headers |> List.find (fun (k, _) -> k = "X-User-Name")
+
+            Assert.Equal(("X-User-Name", "John Doe"), userHeader)
+
+        | None -> Assert.True(false, "Expected executable request to be set")
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
