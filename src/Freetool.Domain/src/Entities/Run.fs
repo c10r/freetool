@@ -478,13 +478,15 @@ module Run =
             match bodyResult with
             | Error err -> Error err
             | Ok finalBody ->
+                // Always use JSON for request bodies (modern API standard)
+                // The useDynamicJsonBody flag only controls whether body comes from user input at runtime
                 let executableRequest =
                     { BaseUrl = substituteTemplate baseRequest.BaseUrl
                       UrlParameters = substitutedUrlParams
                       Headers = substitutedHeaders
                       Body = finalBody
                       HttpMethod = baseRequest.HttpMethod
-                      UseJsonBody = useDynamicJsonBody }
+                      UseJsonBody = true }
 
                 Ok(setExecutableRequest executableRequest run)
 

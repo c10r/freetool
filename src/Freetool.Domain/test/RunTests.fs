@@ -1065,3 +1065,55 @@ let ``Run executable request should substitute current_user variables`` () =
 
         | None -> Assert.True(false, "Expected executable request to be set")
     | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run executable request should substitute quoted current_user variables`` () =
+    // Arrange - test the quoted form @"current_user.email" which is used when names contain dots
+    let folderId = FolderId.NewId()
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
+
+    let inputs: Input list = []
+
+    // Use quoted syntax for current_user variables (as the frontend serializes them)
+    let resource =
+        Resource.create
+            actorUserId
+            spaceId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com"
+            []
+            [ "initiator-email", "@\"current_user.email\"" ]
+            []
+        |> unwrapResult
+
+    let app =
+        App.create actorUserId "Test App" folderId resource HttpMethod.Get inputs None [] [] [] false None
+        |> unwrapResult
+
+    let run = Run.createWithValidation actorUserId app [] |> unwrapResult
+
+    let testCurrentUser: CurrentUser =
+        { Id = "user-123"
+          Email = "john@example.com"
+          FirstName = "John"
+          LastName = "Doe" }
+
+    // Act
+    let result =
+        Run.composeExecutableRequestFromAppAndResource run app resource testCurrentUser None
+
+    // Assert
+    match result with
+    | Ok runWithRequest ->
+        match Run.getExecutableRequest runWithRequest with
+        | Some execRequest ->
+            // Headers should have quoted current_user.email substituted
+            let emailHeader =
+                execRequest.Headers |> List.find (fun (k, _) -> k = "initiator-email")
+
+            Assert.Equal(("initiator-email", "john@example.com"), emailHeader)
+
+        | None -> Assert.True(false, "Expected executable request to be set")
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")

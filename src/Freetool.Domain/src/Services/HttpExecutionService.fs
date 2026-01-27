@@ -35,14 +35,33 @@ module HttpExecutionService =
         | _ when List.isEmpty bodyParameters -> None // No body parameters provided
         | _ ->
             if useJsonBody then
-                // Build JSON object from key-value pairs
+                // Build JSON object from key-value pairs, preserving value types
+                // Try to parse values as their proper JSON types (number, boolean, null)
                 let jsonObject =
                     bodyParameters
                     |> List.fold
-                        (fun (dict: System.Collections.Generic.Dictionary<string, string>) (key, value) ->
-                            dict.[key] <- value
+                        (fun (dict: System.Collections.Generic.Dictionary<string, obj>) (key, value) ->
+                            // Try parsing as different types to preserve JSON type information
+                            let typedValue: obj =
+                                match System.Int64.TryParse(value) with
+                                | true, intVal -> intVal :> obj
+                                | false, _ ->
+                                    match
+                                        System.Double.TryParse(
+                                            value,
+                                            System.Globalization.NumberStyles.Float,
+                                            System.Globalization.CultureInfo.InvariantCulture
+                                        )
+                                    with
+                                    | true, floatVal -> floatVal :> obj
+                                    | false, _ ->
+                                        match System.Boolean.TryParse(value) with
+                                        | true, boolVal -> boolVal :> obj
+                                        | false, _ -> if value = "null" then null else value :> obj
+
+                            dict.[key] <- typedValue
                             dict)
-                        (System.Collections.Generic.Dictionary<string, string>())
+                        (System.Collections.Generic.Dictionary<string, obj>())
 
                 let jsonString = JsonSerializer.Serialize(jsonObject)
                 let content = new StringContent(jsonString, Encoding.UTF8, "application/json")
@@ -73,29 +92,32 @@ module HttpExecutionService =
                 let httpMethod = HttpMethod(request.HttpMethod.ToUpperInvariant())
                 use requestMessage = new HttpRequestMessage(httpMethod, fullUrl)
 
-                // Add headers
+                // Add headers - track which ones fail to be added to request headers
+                let mutable failedRequestHeaders = []
+
                 for (headerName, headerValue) in request.Headers do
                     try
                         // Try to add to request headers first
-                        if not (requestMessage.Headers.TryAddWithoutValidation(headerName, headerValue)) then
-                            // If it fails, it might be a content header, so we'll handle it when we set content
-                            ()
+                        let added = requestMessage.Headers.TryAddWithoutValidation(headerName, headerValue)
+
+                        if not added then
+                            failedRequestHeaders <- (headerName, headerValue) :: failedRequestHeaders
                     with _ ->
-                        () // Ignore invalid headers
+                        failedRequestHeaders <- (headerName, headerValue) :: failedRequestHeaders
 
                 // Add body content if applicable
                 match buildRequestContent request.HttpMethod request.Body request.UseJsonBody with
                 | Some content ->
                     requestMessage.Content <- content
 
-                    // Add any content headers that couldn't be added to request headers
-                    for (headerName, headerValue) in request.Headers do
+                    // Only add headers that failed to be added to request headers
+                    for (headerName, headerValue) in failedRequestHeaders do
                         try
                             if requestMessage.Content.Headers.Contains(headerName) |> not then
                                 requestMessage.Content.Headers.TryAddWithoutValidation(headerName, headerValue)
                                 |> ignore
                         with _ ->
-                            () // Ignore invalid content headers
+                            ()
                 | None -> ()
 
                 // Execute the request
