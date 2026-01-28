@@ -459,7 +459,7 @@ function WorkspaceContent() {
           spaceId={spaceId || ""}
           spaces={spaces}
         />
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           <header className="flex items-center justify-between px-6 py-4 border-b bg-card/30">
             <h1 className="text-xl font-semibold">Freetool</h1>
             <div className="flex items-center gap-4">
