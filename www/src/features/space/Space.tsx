@@ -310,7 +310,7 @@ function WorkspaceContent() {
   // Show loading state (combined space data + permissions)
   if (loadingTree || permissionsLoading || loadingSpace) {
     return (
-      <div className="h-screen flex overflow-hidden">
+      <div className="flex overflow-hidden">
         <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
           <div className="text-center text-muted-foreground">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto mb-2" />
@@ -390,7 +390,7 @@ function WorkspaceContent() {
   // Show error state
   if (treeError) {
     return (
-      <div className="h-screen flex overflow-hidden">
+      <div className="flex overflow-hidden">
         <aside className="w-64 border-r bg-card/40 flex items-center justify-center">
           <div className="text-center text-red-500 p-4">
             <div className="text-2xl mb-2">⚠️</div>
@@ -427,7 +427,7 @@ function WorkspaceContent() {
   // Skip for global routes which don't need space content
   if (Object.keys(nodes).length === 0 && !isGlobalRoute && !showNoSpacesState) {
     return (
-      <div className="h-screen flex overflow-hidden">
+      <div className="flex overflow-hidden">
         <SidebarTree
           nodes={nodes}
           rootId={rootId}
@@ -450,7 +450,7 @@ function WorkspaceContent() {
   return (
     <>
       <DevModeBanner />
-      <div className="h-screen flex overflow-hidden">
+      <div className="flex overflow-hidden">
         <SidebarTree
           nodes={nodes}
           rootId={rootId}
@@ -459,7 +459,7 @@ function WorkspaceContent() {
           spaceId={spaceId || ""}
           spaces={spaces}
         />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
           <header className="flex items-center justify-between px-6 py-4 border-b bg-card/30">
             <h1 className="text-xl font-semibold">Freetool</h1>
             <div className="flex items-center gap-4">
