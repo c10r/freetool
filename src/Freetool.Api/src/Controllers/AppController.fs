@@ -94,10 +94,15 @@ type AppController
                 let! allSpaces = spaceRepository.GetAllAsync 0 System.Int32.MaxValue
                 return allSpaces |> List.map (fun space -> space.State.Id)
             else
-                // Regular users see only spaces they're members of
+                // Regular users see only spaces they're members or moderators of
                 let userId = this.CurrentUserId
-                let! spaces = spaceRepository.GetByUserIdAsync userId
-                return spaces |> List.map (fun space -> space.State.Id)
+                let! memberSpaces = spaceRepository.GetByUserIdAsync userId
+                let! moderatorSpaces = spaceRepository.GetByModeratorUserIdAsync userId
+
+                return
+                    (memberSpaces @ moderatorSpaces)
+                    |> List.distinctBy (fun space -> space.State.Id)
+                    |> List.map (fun space -> space.State.Id)
         }
 
     // Helper method to handle authorization errors

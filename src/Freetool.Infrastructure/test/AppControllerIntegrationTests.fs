@@ -125,15 +125,18 @@ type MockRunRepository() =
         member _.GetCountByAppIdAndStatusAsync _ _ = Task.FromResult(0)
 
 // Mock space repository for testing
-type MockSpaceRepository(spaces: ValidatedSpace list) =
+type MockSpaceRepository(memberSpaces: ValidatedSpace list, moderatorSpaces: ValidatedSpace list) =
+    let allSpaces =
+        (memberSpaces @ moderatorSpaces) |> List.distinctBy (fun s -> s.State.Id)
+
     interface ISpaceRepository with
         member _.GetByIdAsync(spaceId: SpaceId) =
-            Task.FromResult(spaces |> List.tryFind (fun s -> s.State.Id = spaceId))
+            Task.FromResult(allSpaces |> List.tryFind (fun s -> s.State.Id = spaceId))
 
         member _.GetByNameAsync(_) = Task.FromResult(None)
-        member _.GetAllAsync _ _ = Task.FromResult(spaces)
-        member _.GetByUserIdAsync(_) = Task.FromResult(spaces)
-        member _.GetByModeratorUserIdAsync(_) = Task.FromResult([])
+        member _.GetAllAsync _ _ = Task.FromResult(allSpaces)
+        member _.GetByUserIdAsync(_) = Task.FromResult(memberSpaces)
+        member _.GetByModeratorUserIdAsync(_) = Task.FromResult(moderatorSpaces)
         member _.AddAsync(_) = Task.FromResult(Ok())
         member _.UpdateAsync(_) = Task.FromResult(Ok())
         member _.DeleteAsync(_) = Task.FromResult(Ok())
@@ -257,12 +260,13 @@ let createAppData (appId: AppId) (folderId: FolderId) (resourceId: ResourceId) :
       IsDeleted = false }
 
 // Helper to create a test controller with mocked dependencies
-let createTestController
+let createTestControllerWithSpaceAccess
     (checkPermissionFn: AuthSubject -> AuthRelation -> AuthObject -> bool)
     (getAppByIdFn: AppId -> Task<ValidatedApp option>)
     (getFolderByIdFn: FolderId -> Task<ValidatedFolder option>)
     (getResourceByIdFn: ResourceId -> Task<ValidatedResource option>)
-    (spaces: ValidatedSpace list)
+    (memberSpaces: ValidatedSpace list)
+    (moderatorSpaces: ValidatedSpace list)
     (handleCommandFn: AppCommand -> Task<Result<AppCommandResult, DomainError>>)
     (userId: UserId)
     =
@@ -276,7 +280,9 @@ let createTestController
         MockResourceRepository(getResourceByIdFn) :> IResourceRepository
 
     let runRepository = MockRunRepository() :> IRunRepository
-    let spaceRepository = MockSpaceRepository(spaces) :> ISpaceRepository
+
+    let spaceRepository =
+        MockSpaceRepository(memberSpaces, moderatorSpaces) :> ISpaceRepository
 
     let userRepository =
         MockUserRepository(fun _ -> Task.FromResult(None)) :> IUserRepository
@@ -302,6 +308,25 @@ let createTestController
     controller.ControllerContext <- ControllerContext(HttpContext = httpContext)
 
     controller
+
+let createTestController
+    (checkPermissionFn: AuthSubject -> AuthRelation -> AuthObject -> bool)
+    (getAppByIdFn: AppId -> Task<ValidatedApp option>)
+    (getFolderByIdFn: FolderId -> Task<ValidatedFolder option>)
+    (getResourceByIdFn: ResourceId -> Task<ValidatedResource option>)
+    (spaces: ValidatedSpace list)
+    (handleCommandFn: AppCommand -> Task<Result<AppCommandResult, DomainError>>)
+    (userId: UserId)
+    =
+    createTestControllerWithSpaceAccess
+        checkPermissionFn
+        getAppByIdFn
+        getFolderByIdFn
+        getResourceByIdFn
+        spaces
+        []
+        handleCommandFn
+        userId
 
 // ============================================================================
 // Create Operations Tests
@@ -627,6 +652,57 @@ let ``GetAppsByFolderId returns 200 with paginated list`` () : Task =
         | :? OkObjectResult as okResult ->
             Assert.Equal(200, okResult.StatusCode.Value)
             Assert.NotNull(okResult.Value)
+        | _ -> Assert.True(false, "Expected OkObjectResult")
+    }
+
+[<Fact>]
+let ``GetApps includes spaces where user is moderator`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let spaceId = SpaceId.NewId()
+        let space = createTestSpace spaceId userId
+
+        let checkPermission _ _ _ = true
+        let getAppById _ = Task.FromResult(None)
+        let getFolderById _ = Task.FromResult(None)
+        let getResourceById _ = Task.FromResult(None)
+
+        let receivedSpaceIds = ref []
+
+        let handleCommand cmd =
+            match cmd with
+            | GetAppsBySpaceIds(spaceIds, skip, take) ->
+                receivedSpaceIds := spaceIds
+
+                let pagedResult: PagedResult<AppData> =
+                    { Items = []
+                      TotalCount = 0
+                      Skip = skip
+                      Take = take }
+
+                Task.FromResult(Ok(AppsResult pagedResult))
+            | _ -> Task.FromResult(Error(NotFound "Command not supported"))
+
+        let controller =
+            createTestControllerWithSpaceAccess
+                checkPermission
+                getAppById
+                getFolderById
+                getResourceById
+                []
+                [ space ]
+                handleCommand
+                userId
+
+        // Act
+        let! result = controller.GetApps(0, 10)
+
+        // Assert
+        match result with
+        | :? OkObjectResult as okResult ->
+            Assert.Equal(200, okResult.StatusCode.Value)
+            Assert.Equal<SpaceId list>([ spaceId ], !receivedSpaceIds)
         | _ -> Assert.True(false, "Expected OkObjectResult")
     }
 
