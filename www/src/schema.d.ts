@@ -2702,6 +2702,91 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/resource/{id}/database-config": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["UpdateResourceDatabaseConfigDto"];
+          "text/json": components["schemas"]["UpdateResourceDatabaseConfigDto"];
+          "application/*+json": components["schemas"]["UpdateResourceDatabaseConfigDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ResourceData"];
+            "application/json": components["schemas"]["ResourceData"];
+            "text/json": components["schemas"]["ResourceData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/space": {
     parameters: {
       query?: never;
@@ -4681,11 +4766,22 @@ export interface components {
       name: string;
       description: string;
       spaceId: string;
+      resourceKind: string;
       /** Format: uri */
-      baseUrl: string;
+      baseUrl?: (string & components["schemas"]["BaseUrl"]) | null;
       urlParameters?: components["schemas"]["KeyValuePairDto"][] | null;
       headers?: components["schemas"]["KeyValuePairDto"][] | null;
       body?: components["schemas"]["KeyValuePairDto"][] | null;
+      databaseName?: string | null;
+      databaseHost?: string | null;
+      /** Format: int32 */
+      databasePort?: number | null;
+      databaseAuthScheme?: string | null;
+      databaseUsername?: string | null;
+      databasePassword?: string | null;
+      useSsl?: boolean;
+      enableSshTunnel?: boolean;
+      connectionOptions?: components["schemas"]["KeyValuePairDto"][] | null;
     };
     CreateRunDto: {
       inputValues: components["schemas"]["RunInputDto"][];
@@ -4925,10 +5021,21 @@ export interface components {
       description: string & components["schemas"]["ResourceDescription"];
       /** Format: uuid */
       spaceId: string & components["schemas"]["SpaceId"];
-      baseUrl: string & components["schemas"]["BaseUrl"];
+      resourceKind: string;
+      baseUrl?: (string & components["schemas"]["BaseUrl"]) | null;
       urlParameters: components["schemas"]["KeyValuePair"][];
       headers: components["schemas"]["KeyValuePair"][];
       body: components["schemas"]["KeyValuePair"][];
+      databaseName?: string | null;
+      databaseHost?: string | null;
+      /** Format: int32 */
+      databasePort?: number | null;
+      databaseAuthScheme?: string | null;
+      databaseUsername?: string | null;
+      databasePassword?: string | null;
+      useSsl?: boolean;
+      enableSshTunnel?: boolean;
+      connectionOptions: components["schemas"]["KeyValuePair"][];
     };
     ResourceDataPagedResult: {
       items?: components["schemas"]["ResourceData"][] | null;
@@ -5125,6 +5232,18 @@ export interface components {
     };
     UpdateResourceBodyDto: {
       body?: components["schemas"]["KeyValuePairDto"][] | null;
+    };
+    UpdateResourceDatabaseConfigDto: {
+      databaseName: string;
+      databaseHost: string;
+      /** Format: int32 */
+      databasePort: number;
+      databaseAuthScheme: string;
+      databaseUsername: string;
+      databasePassword?: string | null;
+      useSsl?: boolean;
+      enableSshTunnel?: boolean;
+      connectionOptions?: components["schemas"]["KeyValuePairDto"][] | null;
     };
     UpdateResourceDescriptionDto: {
       description: string;

@@ -7,7 +7,8 @@ open Freetool.Application.Services
 module ResponseSanitizer =
     let sanitizeResource (resource: ResourceData) : ResourceData =
         { resource with
-            Headers = AuthorizationHeaderRedaction.redactKeyValuePairs resource.Headers }
+            Headers = AuthorizationHeaderRedaction.redactKeyValuePairs resource.Headers
+            DatabasePassword = None }
 
     let sanitizeResources (pagedResources: PagedResult<ResourceData>) : PagedResult<ResourceData> =
         { pagedResources with

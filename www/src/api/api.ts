@@ -583,35 +583,88 @@ export const getResources = (spaceId: string, skip?: number, take?: number) => {
   });
 };
 
-export const createResource = ({
-  spaceId,
-  name,
-  description,
-  baseUrl,
-  httpMethod,
-  urlParameters,
-  headers,
-  body,
-}: {
+type CreateHttpResourceInput = {
   spaceId: string;
   name: string;
   description: string;
+  resourceKind: "http";
   baseUrl: string;
-  httpMethod: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   urlParameters: { key: string; value: string }[];
   headers: { key: string; value: string }[];
   body: { key: string; value: string }[];
-}) => {
-  return client.POST("/resource", {
-    body: {
+};
+
+type CreateSqlResourceInput = {
+  spaceId: string;
+  name: string;
+  description: string;
+  resourceKind: "sql";
+  databaseName: string;
+  databaseHost: string;
+  databasePort: number;
+  databaseAuthScheme: "username_password";
+  databaseUsername: string;
+  databasePassword?: string;
+  useSsl: boolean;
+  enableSshTunnel: boolean;
+  connectionOptions: { key: string; value: string }[];
+};
+
+export const createResource = (
+  input: CreateHttpResourceInput | CreateSqlResourceInput
+) => {
+  if (input.resourceKind === "http") {
+    const {
       spaceId,
       name,
       description,
       baseUrl,
-      httpMethod,
       urlParameters,
       headers,
       body,
+    } = input;
+    return client.POST("/resource/http", {
+      body: {
+        spaceId,
+        name,
+        description,
+        baseUrl,
+        urlParameters,
+        headers,
+        body,
+      },
+    });
+  }
+
+  const {
+    spaceId,
+    name,
+    description,
+    databaseName,
+    databaseHost,
+    databasePort,
+    databaseAuthScheme,
+    databaseUsername,
+    databasePassword,
+    useSsl,
+    enableSshTunnel,
+    connectionOptions,
+  } = input;
+
+  return client.POST("/resource/sql", {
+    body: {
+      spaceId,
+      name,
+      description,
+      databaseName,
+      databaseHost,
+      databasePort,
+      databaseAuthScheme,
+      databaseUsername,
+      databasePassword,
+      useSsl,
+      enableSshTunnel,
+      connectionOptions,
     },
   });
 };
@@ -734,6 +787,49 @@ export const updateResourceBody = ({
     },
     body: {
       body,
+    },
+  });
+};
+
+export const updateResourceDatabaseConfig = ({
+  id,
+  databaseName,
+  databaseHost,
+  databasePort,
+  databaseAuthScheme,
+  databaseUsername,
+  databasePassword,
+  useSsl,
+  enableSshTunnel,
+  connectionOptions,
+}: {
+  id: string;
+  databaseName: string;
+  databaseHost: string;
+  databasePort: number;
+  databaseAuthScheme: "username_password";
+  databaseUsername: string;
+  databasePassword?: string;
+  useSsl: boolean;
+  enableSshTunnel: boolean;
+  connectionOptions: { key: string; value: string }[];
+}) => {
+  return client.PUT("/resource/{id}/database-config", {
+    params: {
+      path: {
+        id,
+      },
+    },
+    body: {
+      databaseName,
+      databaseHost,
+      databasePort,
+      databaseAuthScheme,
+      databaseUsername,
+      databasePassword,
+      useSsl,
+      enableSshTunnel,
+      connectionOptions,
     },
   });
 };

@@ -51,6 +51,22 @@ export interface KeyValuePair {
   value: string;
 }
 
+export type ResourceKind = "http" | "sql";
+
+export type DatabaseAuthScheme = "username_password";
+
+export interface DatabaseConfig {
+  databaseName: string;
+  host: string;
+  port: string;
+  authScheme: DatabaseAuthScheme;
+  username: string;
+  password: string;
+  useSsl: boolean;
+  enableSshTunnel: boolean;
+  connectionOptions: KeyValuePair[];
+}
+
 // Authorization configuration types
 export type AuthType = "none" | "basic" | "bearer";
 

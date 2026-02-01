@@ -212,6 +212,8 @@ let main args =
             options.JsonSerializerOptions.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull
             options.JsonSerializerOptions.PropertyNamingPolicy <- System.Text.Json.JsonNamingPolicy.CamelCase
             options.JsonSerializerOptions.Converters.Add(HttpMethodConverter())
+            options.JsonSerializerOptions.Converters.Add(ResourceKindConverter())
+            options.JsonSerializerOptions.Converters.Add(DatabaseAuthSchemeConverter())
             options.JsonSerializerOptions.Converters.Add(EventTypeConverter())
             options.JsonSerializerOptions.Converters.Add(EntityTypeConverter())
             options.JsonSerializerOptions.Converters.Add(KeyValuePairConverter())

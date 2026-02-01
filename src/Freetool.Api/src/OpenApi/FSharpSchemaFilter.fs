@@ -38,6 +38,11 @@ type FSharpUnionSchemaFilter() =
             elif
                 context.Type = typeof<AppName>
                 || context.Type = typeof<BaseUrl>
+                || context.Type = typeof<DatabaseAuthScheme>
+                || context.Type = typeof<DatabaseHost>
+                || context.Type = typeof<DatabaseName>
+                || context.Type = typeof<DatabasePassword>
+                || context.Type = typeof<DatabaseUsername>
                 || context.Type = typeof<Email>
                 || context.Type = typeof<FolderName>
                 || context.Type = typeof<ResourceDescription>
@@ -71,6 +76,14 @@ type FSharpUnionSchemaFilter() =
                     schema.Properties <- null
                     schema.AdditionalProperties <- null
                     schema.Required <- null
+                // Handle DatabasePort option - convert to nullable integer
+                elif innerType = typeof<DatabasePort> then
+                    schema.Type <- "integer"
+                    schema.Format <- "int32"
+                    schema.Nullable <- true
+                    schema.Properties <- null
+                    schema.AdditionalProperties <- null
+                    schema.Required <- null
                 // Handle DateTime option - convert to nullable datetime
                 elif innerType = typeof<System.DateTime> then
                     schema.Type <- "string"
@@ -83,6 +96,21 @@ type FSharpUnionSchemaFilter() =
                 elif innerType = typeof<FolderId> then
                     schema.Type <- "string"
                     schema.Format <- "uuid"
+                    schema.Nullable <- true
+                    schema.Properties <- null
+                    schema.AdditionalProperties <- null
+                    schema.Required <- null
+                // Handle option value objects that serialize to strings
+                elif
+                    innerType = typeof<BaseUrl>
+                    || innerType = typeof<DatabaseAuthScheme>
+                    || innerType = typeof<DatabaseHost>
+                    || innerType = typeof<DatabaseName>
+                    || innerType = typeof<DatabasePassword>
+                    || innerType = typeof<DatabaseUsername>
+                    || innerType = typeof<ResourceKind>
+                then
+                    schema.Type <- "string"
                     schema.Nullable <- true
                     schema.Properties <- null
                     schema.AdditionalProperties <- null
@@ -139,6 +167,16 @@ type FSharpUnionSchemaFilter() =
                        OpenApiString("PATCH") :> IOpenApiAny
                        OpenApiString("POST") :> IOpenApiAny
                        OpenApiString("PUT") :> IOpenApiAny |]
+
+                schema.Properties <- null
+                schema.AdditionalProperties <- null
+                schema.Required <- null
+
+            // Handle ResourceKind union
+            elif context.Type = typeof<ResourceKind> then
+                schema.Type <- "string"
+
+                schema.Enum <- [| OpenApiString("HTTP") :> IOpenApiAny; OpenApiString("SQL") :> IOpenApiAny |]
 
                 schema.Properties <- null
                 schema.AdditionalProperties <- null

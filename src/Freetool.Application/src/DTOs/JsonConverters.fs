@@ -52,6 +52,32 @@ type HttpMethodConverter() =
     override _.Write(writer: Utf8JsonWriter, value: HttpMethod, _options: JsonSerializerOptions) =
         writer.WriteStringValue(value.ToString())
 
+type ResourceKindConverter() =
+    inherit JsonConverter<ResourceKind>()
+
+    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
+        let kindStr = reader.GetString()
+
+        match ResourceKind.Create(kindStr) with
+        | Ok resourceKind -> resourceKind
+        | Error _ -> raise (JsonException($"Invalid resource kind: {kindStr}"))
+
+    override _.Write(writer: Utf8JsonWriter, value: ResourceKind, _options: JsonSerializerOptions) =
+        writer.WriteStringValue(value.ToString())
+
+type DatabaseAuthSchemeConverter() =
+    inherit JsonConverter<DatabaseAuthScheme>()
+
+    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
+        let schemeStr = reader.GetString()
+
+        match DatabaseAuthScheme.Create(schemeStr) with
+        | Ok scheme -> scheme
+        | Error _ -> raise (JsonException($"Invalid database auth scheme: {schemeStr}"))
+
+    override _.Write(writer: Utf8JsonWriter, value: DatabaseAuthScheme, _options: JsonSerializerOptions) =
+        writer.WriteStringValue(value.ToString())
+
 type EventTypeConverter() =
     inherit JsonConverter<EventType>()
 

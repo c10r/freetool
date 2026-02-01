@@ -30,31 +30,50 @@ import { usePagination } from "@/hooks/usePagination";
 import { useHasPermission } from "@/hooks/usePermissions";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { useResourceForm } from "../hooks/useResourceForm";
-import type { KeyValuePair } from "../types";
+import type { DatabaseConfig, KeyValuePair, ResourceKind } from "../types";
 import {
   parseAuthFromHeaders,
   removeAuthFromHeaders,
 } from "../utils/authUtils";
 import ResourceForm, { type ResourceFormData } from "./ResourceForm";
 
+const filterEmptyPairs = (pairs: KeyValuePair[]) =>
+  pairs.filter((pair) => pair.key.trim() && pair.value.trim());
+
 interface Resource {
   id: string;
   name: string;
   description: string;
+  resourceKind: ResourceKind;
   baseUrl: string;
   urlParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
+  databaseConfig: DatabaseConfig;
 }
+
+const emptyDatabaseConfig: DatabaseConfig = {
+  databaseName: "",
+  host: "",
+  port: "",
+  authScheme: "username_password",
+  username: "",
+  password: "",
+  useSsl: false,
+  enableSshTunnel: false,
+  connectionOptions: [],
+};
 
 const initialFormData: ResourceFormData = {
   name: "",
   description: "",
+  resourceKind: "http",
   baseUrl: "",
   urlParameters: [],
   headers: [],
   body: [],
   authConfig: { type: "none" },
+  databaseConfig: emptyDatabaseConfig,
 };
 
 interface ResourcesViewProps {
@@ -159,14 +178,32 @@ export default function ResourcesView({
       const response = await getResources(spaceId, skip, pageSize);
       if (response.data?.items) {
         const mappedItems = response.data?.items.map((item) => {
+          const resourceKind =
+            item.resourceKind?.toLowerCase() === "sql" ? "sql" : "http";
+
           return {
             id: item.id ?? "",
             name: item.name,
             description: item.description,
-            baseUrl: item.baseUrl,
+            resourceKind,
+            baseUrl: item.baseUrl ?? "",
             urlParameters: item.urlParameters || [],
             headers: item.headers || [],
             body: item.body || [],
+            databaseConfig: {
+              databaseName: item.databaseName ?? "",
+              host: item.databaseHost ?? "",
+              port: item.databasePort ? String(item.databasePort) : "",
+              authScheme:
+                item.databaseAuthScheme?.toLowerCase() === "username_password"
+                  ? "username_password"
+                  : "username_password",
+              username: item.databaseUsername ?? "",
+              password: "",
+              useSsl: item.useSsl ?? false,
+              enableSshTunnel: item.enableSshTunnel ?? false,
+              connectionOptions: item.connectionOptions || [],
+            },
           } as Resource;
         });
         setResources(mappedItems);
@@ -248,31 +285,93 @@ export default function ResourcesView({
   }, [fetchResources]);
 
   const handleCreateResource = async () => {
-    if (!(createFormData.name.trim() && createFormData.baseUrl.trim())) {
-      setCreateError("Name and Base URL are required");
+    const nameValue = createFormData.name.trim();
+    const descriptionValue = createFormData.description.trim();
+    const isHttp = createFormData.resourceKind === "http";
+
+    if (!(nameValue && descriptionValue)) {
+      setCreateError("Name and description are required");
       return;
+    }
+
+    if (isHttp && !createFormData.baseUrl.trim()) {
+      setCreateError("Base URL is required for HTTP resources");
+      return;
+    }
+
+    if (!isHttp) {
+      const { databaseConfig } = createFormData;
+      const parsedPort = Number.parseInt(databaseConfig.port, 10);
+      if (
+        !(
+          databaseConfig.databaseName.trim() &&
+          databaseConfig.host.trim() &&
+          databaseConfig.port.trim() &&
+          databaseConfig.username.trim() &&
+          databaseConfig.password.trim()
+        )
+      ) {
+        setCreateError(
+          "Database name, host, port, username, and password are required"
+        );
+        return;
+      }
+
+      if (Number.isNaN(parsedPort)) {
+        setCreateError("Database port must be a number");
+        return;
+      }
     }
 
     try {
       setCreating(true);
       setCreateError(null);
 
-      // Inject auth into headers before sending
-      const { injectAuthIntoHeaders } = await import("../utils/authUtils");
-      const headersWithAuth = injectAuthIntoHeaders(
-        createFormData.headers,
-        createFormData.authConfig
+      let headersWithAuth = createFormData.headers;
+      if (isHttp) {
+        // Inject auth into headers before sending
+        const { injectAuthIntoHeaders } = await import("../utils/authUtils");
+        headersWithAuth = injectAuthIntoHeaders(
+          createFormData.headers,
+          createFormData.authConfig
+        );
+      }
+
+      const parsedPort = Number.parseInt(
+        createFormData.databaseConfig.port,
+        10
       );
 
-      await createResource({
-        spaceId,
-        name: createFormData.name.trim(),
-        description: createFormData.description.trim(),
-        baseUrl: createFormData.baseUrl.trim(),
-        urlParameters: createFormData.urlParameters,
-        headers: headersWithAuth,
-        body: createFormData.body,
-      });
+      if (isHttp) {
+        await createResource({
+          spaceId,
+          name: nameValue,
+          description: descriptionValue,
+          resourceKind: "http",
+          baseUrl: createFormData.baseUrl.trim(),
+          urlParameters: filterEmptyPairs(createFormData.urlParameters),
+          headers: filterEmptyPairs(headersWithAuth),
+          body: filterEmptyPairs(createFormData.body),
+        });
+      } else {
+        await createResource({
+          spaceId,
+          name: nameValue,
+          description: descriptionValue,
+          resourceKind: "sql",
+          databaseName: createFormData.databaseConfig.databaseName.trim(),
+          databaseHost: createFormData.databaseConfig.host.trim(),
+          databasePort: parsedPort,
+          databaseAuthScheme: createFormData.databaseConfig.authScheme,
+          databaseUsername: createFormData.databaseConfig.username.trim(),
+          databasePassword: createFormData.databaseConfig.password,
+          useSsl: createFormData.databaseConfig.useSsl,
+          enableSshTunnel: createFormData.databaseConfig.enableSshTunnel,
+          connectionOptions: filterEmptyPairs(
+            createFormData.databaseConfig.connectionOptions
+          ),
+        });
+      }
 
       setCreateFormData(initialFormData);
       setShowCreateForm(false);
@@ -295,19 +394,30 @@ export default function ResourcesView({
     setEditingResource(resource);
 
     // Parse auth from headers and remove Authorization header from display
-    const authConfig = parseAuthFromHeaders(resource.headers || []);
-    const displayHeaders = removeAuthFromHeaders(resource.headers || []);
+    const authConfig =
+      resource.resourceKind === "http"
+        ? parseAuthFromHeaders(resource.headers || [])
+        : { type: "none" };
+    const displayHeaders =
+      resource.resourceKind === "http"
+        ? removeAuthFromHeaders(resource.headers || [])
+        : [];
 
     // Use resetFormData to set both form state and saved baseline
     // This ensures hasUnsavedChanges starts as false
     resetFormData({
       name: resource.name,
       description: resource.description,
+      resourceKind: resource.resourceKind,
       baseUrl: resource.baseUrl,
       urlParameters: resource.urlParameters || [],
       headers: displayHeaders,
       body: resource.body || [],
       authConfig,
+      databaseConfig:
+        resource.resourceKind === "sql"
+          ? resource.databaseConfig
+          : emptyDatabaseConfig,
     });
   };
 
@@ -323,6 +433,20 @@ export default function ResourcesView({
   const handleDiscardChanges = () => {
     discardChanges();
   };
+
+  const createDisabled =
+    creating ||
+    !createFormData.name.trim() ||
+    !createFormData.description.trim() ||
+    (createFormData.resourceKind === "http"
+      ? !createFormData.baseUrl.trim()
+      : !(
+          createFormData.databaseConfig.databaseName.trim() &&
+          createFormData.databaseConfig.host.trim() &&
+          createFormData.databaseConfig.port.trim() &&
+          createFormData.databaseConfig.username.trim() &&
+          createFormData.databaseConfig.password.trim()
+        ));
 
   return (
     <section className="p-6 space-y-4 overflow-y-auto flex-1">
@@ -375,14 +499,7 @@ export default function ResourcesView({
             />
 
             <div className="flex gap-2 pt-2">
-              <Button
-                onClick={handleCreateResource}
-                disabled={
-                  creating ||
-                  !createFormData.name.trim() ||
-                  !createFormData.baseUrl.trim()
-                }
-              >
+              <Button onClick={handleCreateResource} disabled={createDisabled}>
                 {creating ? "Creating..." : "Create Resource"}
               </Button>
               <Button
@@ -500,7 +617,13 @@ export default function ResourcesView({
                     {resource.description}
                   </p>
                   <p className="text-xs font-mono bg-gray-50 p-2 rounded">
-                    {resource.baseUrl}
+                    {resource.resourceKind === "http"
+                      ? resource.baseUrl
+                      : `${resource.databaseConfig.host}${
+                          resource.databaseConfig.port
+                            ? `:${resource.databaseConfig.port}`
+                            : ""
+                        }/${resource.databaseConfig.databaseName}`}
                   </p>
                   <div className="mt-3">{renderUsageSummary(resource.id)}</div>
                 </CardContent>

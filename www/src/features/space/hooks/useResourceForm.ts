@@ -2,22 +2,30 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   updateResourceBaseUrl,
   updateResourceBody,
+  updateResourceDatabaseConfig,
   updateResourceDescription,
   updateResourceHeaders,
   updateResourceName,
   updateResourceUrlParameters,
 } from "@/api/api";
-import type { AuthConfig, KeyValuePair } from "../types";
+import type {
+  AuthConfig,
+  DatabaseConfig,
+  KeyValuePair,
+  ResourceKind,
+} from "../types";
 import { injectAuthIntoHeaders } from "../utils/authUtils";
 
 export interface ResourceFormData {
   name: string;
   description: string;
+  resourceKind: ResourceKind;
   baseUrl: string;
   urlParameters: KeyValuePair[];
   headers: KeyValuePair[];
   body: KeyValuePair[];
   authConfig: AuthConfig;
+  databaseConfig: DatabaseConfig;
 }
 
 interface SaveState {
@@ -43,6 +51,37 @@ function filterEmptyPairs(pairs: KeyValuePair[]): KeyValuePair[] {
   );
 }
 
+function isDatabaseConfigEqual(a: DatabaseConfig, b: DatabaseConfig): boolean {
+  if (a.databaseName.trim() !== b.databaseName.trim()) {
+    return false;
+  }
+  if (a.host.trim() !== b.host.trim()) {
+    return false;
+  }
+  if (a.port.trim() !== b.port.trim()) {
+    return false;
+  }
+  if (a.authScheme !== b.authScheme) {
+    return false;
+  }
+  if (a.username.trim() !== b.username.trim()) {
+    return false;
+  }
+  if (a.password.trim() !== b.password.trim()) {
+    return false;
+  }
+  if (a.useSsl !== b.useSsl) {
+    return false;
+  }
+  if (a.enableSshTunnel !== b.enableSshTunnel) {
+    return false;
+  }
+
+  const aOptions = filterEmptyPairs(a.connectionOptions);
+  const bOptions = filterEmptyPairs(b.connectionOptions);
+  return JSON.stringify(aOptions) === JSON.stringify(bOptions);
+}
+
 /**
  * Compares two ResourceFormData objects for equality (used for dirty checking)
  */
@@ -51,6 +90,9 @@ function isFormDataEqual(a: ResourceFormData, b: ResourceFormData): boolean {
     return false;
   }
   if (a.description !== b.description) {
+    return false;
+  }
+  if (a.resourceKind !== b.resourceKind) {
     return false;
   }
   if (a.baseUrl !== b.baseUrl) {
@@ -77,6 +119,10 @@ function isFormDataEqual(a: ResourceFormData, b: ResourceFormData): boolean {
 
   // Compare auth config
   if (JSON.stringify(a.authConfig) !== JSON.stringify(b.authConfig)) {
+    return false;
+  }
+
+  if (!isDatabaseConfigEqual(a.databaseConfig, b.databaseConfig)) {
     return false;
   }
 
@@ -109,7 +155,10 @@ export function useResourceForm(
    * Update a single form field (no auto-save)
    */
   const updateFormData = useCallback(
-    (field: keyof ResourceFormData, value: string | KeyValuePair[]) => {
+    (
+      field: keyof ResourceFormData,
+      value: ResourceFormData[keyof ResourceFormData]
+    ) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
     },
     []
@@ -175,64 +224,103 @@ export function useResourceForm(
         }
       }
 
-      // Save baseUrl if changed
-      if (formData.baseUrl !== savedData.baseUrl && formData.baseUrl.trim()) {
-        const response = await updateResourceBaseUrl({
-          id: resourceId,
-          baseUrl: formData.baseUrl.trim(),
-        });
-        if (response?.error) {
-          errors.push(response.error.message || "Failed to save base URL");
+      if (formData.resourceKind === "http") {
+        // Save baseUrl if changed
+        if (formData.baseUrl !== savedData.baseUrl && formData.baseUrl.trim()) {
+          const response = await updateResourceBaseUrl({
+            id: resourceId,
+            baseUrl: formData.baseUrl.trim(),
+          });
+          if (response?.error) {
+            errors.push(response.error.message || "Failed to save base URL");
+          }
+        }
+
+        // Save URL parameters if changed
+        const currentParams = filterEmptyPairs(formData.urlParameters);
+        const savedParams = filterEmptyPairs(savedData.urlParameters);
+        if (JSON.stringify(currentParams) !== JSON.stringify(savedParams)) {
+          const response = await updateResourceUrlParameters({
+            id: resourceId,
+            urlParameters: currentParams,
+          });
+          if (response?.error) {
+            errors.push(
+              response.error.message || "Failed to save URL parameters"
+            );
+          }
+        }
+
+        // Save headers if changed (including auth injection)
+        // Inject auth into headers to create the full headers array
+        const headersWithAuth = injectAuthIntoHeaders(
+          formData.headers,
+          formData.authConfig
+        );
+        const currentHeaders = filterEmptyPairs(headersWithAuth);
+        const savedHeadersWithAuth = injectAuthIntoHeaders(
+          savedData.headers,
+          savedData.authConfig
+        );
+        const savedHeaders = filterEmptyPairs(savedHeadersWithAuth);
+        if (JSON.stringify(currentHeaders) !== JSON.stringify(savedHeaders)) {
+          const response = await updateResourceHeaders({
+            id: resourceId,
+            headers: currentHeaders,
+          });
+          if (response?.error) {
+            errors.push(response.error.message || "Failed to save headers");
+          }
+        }
+
+        // Save body if changed
+        const currentBody = filterEmptyPairs(formData.body);
+        const savedBody = filterEmptyPairs(savedData.body);
+        if (JSON.stringify(currentBody) !== JSON.stringify(savedBody)) {
+          const response = await updateResourceBody({
+            id: resourceId,
+            body: currentBody,
+          });
+          if (response?.error) {
+            errors.push(response.error.message || "Failed to save body");
+          }
         }
       }
 
-      // Save URL parameters if changed
-      const currentParams = filterEmptyPairs(formData.urlParameters);
-      const savedParams = filterEmptyPairs(savedData.urlParameters);
-      if (JSON.stringify(currentParams) !== JSON.stringify(savedParams)) {
-        const response = await updateResourceUrlParameters({
-          id: resourceId,
-          urlParameters: currentParams,
-        });
-        if (response?.error) {
-          errors.push(
-            response.error.message || "Failed to save URL parameters"
-          );
-        }
-      }
+      if (formData.resourceKind === "sql") {
+        if (
+          !isDatabaseConfigEqual(
+            formData.databaseConfig,
+            savedData.databaseConfig
+          )
+        ) {
+          const parsedPort = Number.parseInt(formData.databaseConfig.port, 10);
 
-      // Save headers if changed (including auth injection)
-      // Inject auth into headers to create the full headers array
-      const headersWithAuth = injectAuthIntoHeaders(
-        formData.headers,
-        formData.authConfig
-      );
-      const currentHeaders = filterEmptyPairs(headersWithAuth);
-      const savedHeadersWithAuth = injectAuthIntoHeaders(
-        savedData.headers,
-        savedData.authConfig
-      );
-      const savedHeaders = filterEmptyPairs(savedHeadersWithAuth);
-      if (JSON.stringify(currentHeaders) !== JSON.stringify(savedHeaders)) {
-        const response = await updateResourceHeaders({
-          id: resourceId,
-          headers: currentHeaders,
-        });
-        if (response?.error) {
-          errors.push(response.error.message || "Failed to save headers");
-        }
-      }
+          if (Number.isNaN(parsedPort)) {
+            errors.push("Database port must be a number");
+          } else {
+            const response = await updateResourceDatabaseConfig({
+              id: resourceId,
+              databaseName: formData.databaseConfig.databaseName.trim(),
+              databaseHost: formData.databaseConfig.host.trim(),
+              databasePort: parsedPort,
+              databaseAuthScheme: formData.databaseConfig.authScheme,
+              databaseUsername: formData.databaseConfig.username.trim(),
+              databasePassword:
+                formData.databaseConfig.password.trim() || undefined,
+              useSsl: formData.databaseConfig.useSsl,
+              enableSshTunnel: formData.databaseConfig.enableSshTunnel,
+              connectionOptions: filterEmptyPairs(
+                formData.databaseConfig.connectionOptions
+              ),
+            });
 
-      // Save body if changed
-      const currentBody = filterEmptyPairs(formData.body);
-      const savedBody = filterEmptyPairs(savedData.body);
-      if (JSON.stringify(currentBody) !== JSON.stringify(savedBody)) {
-        const response = await updateResourceBody({
-          id: resourceId,
-          body: currentBody,
-        });
-        if (response?.error) {
-          errors.push(response.error.message || "Failed to save body");
+            if (response?.error) {
+              errors.push(
+                response.error.message || "Failed to save database config"
+              );
+            }
+          }
         }
       }
 

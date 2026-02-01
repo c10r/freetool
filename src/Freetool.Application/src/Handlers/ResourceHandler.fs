@@ -224,6 +224,23 @@ module ResourceHandler =
                             | Error error -> return Error error
                             | Ok() -> return Ok(ResourceResult(validatedResource.State))
 
+            | UpdateResourceDatabaseConfig(actorUserId, resourceId, dto) ->
+                match Guid.TryParse resourceId with
+                | false, _ -> return Error(ValidationError "Invalid resource ID format")
+                | true, guid ->
+                    let resourceIdObj = ResourceId.FromGuid guid
+                    let! resourceOption = resourceRepository.GetByIdAsync resourceIdObj
+
+                    match resourceOption with
+                    | None -> return Error(NotFound "Resource not found")
+                    | Some resource ->
+                        match ResourceMapper.fromUpdateDatabaseConfigDto actorUserId dto resource with
+                        | Error error -> return Error error
+                        | Ok validatedResource ->
+                            match! resourceRepository.UpdateAsync validatedResource with
+                            | Error error -> return Error error
+                            | Ok() -> return Ok(ResourceResult(validatedResource.State))
+
             | GetResourceById resourceId ->
                 match Guid.TryParse resourceId with
                 | false, _ -> return Error(ValidationError "Invalid resource ID format")

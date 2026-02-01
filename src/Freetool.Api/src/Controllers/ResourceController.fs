@@ -21,12 +21,12 @@ type ResourceController
     ) =
     inherit AuthenticatedControllerBase()
 
-    [<HttpPost>]
+    [<HttpPost("http")>]
     [<ProducesResponseType(typeof<ResourceData>, StatusCodes.Status201Created)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
     [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
     [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
-    member this.CreateResource([<FromBody>] createDto: CreateResourceDto) : Task<IActionResult> =
+    member this.CreateHttpResource([<FromBody>] createDto: CreateHttpResourceDto) : Task<IActionResult> =
         task {
             let userId = this.CurrentUserId
 
@@ -46,7 +46,48 @@ type ResourceController
                     )
                     :> IActionResult
             else
-                match ResourceMapper.fromCreateDto userId createDto with
+                match ResourceMapper.fromCreateHttpDto userId createDto with
+                | Error domainError -> return this.HandleDomainError(domainError)
+                | Ok validatedResource ->
+                    let! result = commandHandler.HandleCommand(CreateResource(userId, validatedResource))
+
+                    return
+                        match result with
+                        | Ok(ResourceResult resourceDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeResource resourceDto
+
+                            this.CreatedAtAction(nameof this.GetResourceById, {| id = sanitized.Id |}, sanitized)
+                            :> IActionResult
+                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                        | Error error -> this.HandleDomainError(error)
+        }
+
+    [<HttpPost("sql")>]
+    [<ProducesResponseType(typeof<ResourceData>, StatusCodes.Status201Created)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.CreateSqlResource([<FromBody>] createDto: CreateSqlResourceDto) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+
+            // Check authorization: user must have create_resource permission on the space
+            let! canCreate =
+                authorizationService.CheckPermissionAsync
+                    (User(userId.ToString()))
+                    ResourceCreate
+                    (SpaceObject createDto.SpaceId)
+
+            if not canCreate then
+                return
+                    this.StatusCode(
+                        403,
+                        {| error = "Forbidden"
+                           message = "You do not have permission to create resources in this space" |}
+                    )
+                    :> IActionResult
+            else
+                match ResourceMapper.fromCreateSqlDto userId createDto with
                 | Error domainError -> return this.HandleDomainError(domainError)
                 | Ok validatedResource ->
                     let! result = commandHandler.HandleCommand(CreateResource(userId, validatedResource))
@@ -390,6 +431,55 @@ type ResourceController
                             :> IActionResult
                     else
                         let! result = commandHandler.HandleCommand(UpdateResourceBody(userId, id, updateDto))
+
+                        return
+                            match result with
+                            | Ok(ResourceResult resourceDto) ->
+                                let sanitized = ResponseSanitizer.sanitizeResource resourceDto
+                                this.Ok(sanitized) :> IActionResult
+                            | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                            | Error error -> this.HandleDomainError(error)
+        }
+
+    [<HttpPut("{id}/database-config")>]
+    [<ProducesResponseType(typeof<ResourceData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.UpdateResourceDatabaseConfig
+        (id: string, [<FromBody>] updateDto: UpdateResourceDatabaseConfigDto)
+        : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+
+            match System.Guid.TryParse id with
+            | false, _ -> return this.HandleDomainError(ValidationError "Invalid resource ID format")
+            | true, guid ->
+                let resourceId = ResourceId.FromGuid guid
+                let! resourceOption = resourceRepository.GetByIdAsync resourceId
+
+                match resourceOption with
+                | None -> return this.HandleDomainError(NotFound "Resource not found")
+                | Some resource ->
+                    let spaceId = Resource.getSpaceId resource
+
+                    let! canEdit =
+                        authorizationService.CheckPermissionAsync
+                            (User(userId.ToString()))
+                            ResourceEdit
+                            (SpaceObject(spaceId.ToString()))
+
+                    if not canEdit then
+                        return
+                            this.StatusCode(
+                                403,
+                                {| error = "Forbidden"
+                                   message = "You do not have permission to edit resources in this space" |}
+                            )
+                            :> IActionResult
+                    else
+                        let! result = commandHandler.HandleCommand(UpdateResourceDatabaseConfig(userId, id, updateDto))
 
                         return
                             match result with

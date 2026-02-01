@@ -20,3 +20,4 @@ type ResourceCommand =
     | UpdateResourceUrlParameters of actorUserId: UserId * resourceId: string * UpdateResourceUrlParametersDto
     | UpdateResourceHeaders of actorUserId: UserId * resourceId: string * UpdateResourceHeadersDto
     | UpdateResourceBody of actorUserId: UserId * resourceId: string * UpdateResourceBodyDto
+    | UpdateResourceDatabaseConfig of actorUserId: UserId * resourceId: string * UpdateResourceDatabaseConfigDto

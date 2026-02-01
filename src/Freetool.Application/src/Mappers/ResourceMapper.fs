@@ -8,7 +8,7 @@ open Freetool.Application.DTOs
 module ResourceMapper =
     let private keyValuePairFromDto (dto: KeyValuePairDto) : (string * string) = (dto.Key, dto.Value)
 
-    let fromCreateDto (actorUserId: UserId) (dto: CreateResourceDto) : Result<ValidatedResource, DomainError> =
+    let fromCreateHttpDto (actorUserId: UserId) (dto: CreateHttpResourceDto) : Result<ValidatedResource, DomainError> =
         let urlParameters = dto.UrlParameters |> List.map keyValuePairFromDto
         let headers = dto.Headers |> List.map keyValuePairFromDto
         let body = dto.Body |> List.map keyValuePairFromDto
@@ -17,7 +17,53 @@ module ResourceMapper =
         | true, guid ->
             let spaceId = SpaceId.FromGuid guid
 
-            Resource.create actorUserId spaceId dto.Name dto.Description dto.BaseUrl urlParameters headers body
+            Resource.createWithKind
+                actorUserId
+                spaceId
+                ResourceKind.Http
+                dto.Name
+                dto.Description
+                (Some dto.BaseUrl)
+                urlParameters
+                headers
+                body
+                None
+                None
+                None
+                None
+                None
+                None
+                false
+                false
+                []
+        | false, _ -> Error(ValidationError "Invalid space ID format")
+
+    let fromCreateSqlDto (actorUserId: UserId) (dto: CreateSqlResourceDto) : Result<ValidatedResource, DomainError> =
+        let connectionOptions = dto.ConnectionOptions |> List.map keyValuePairFromDto
+
+        match System.Guid.TryParse dto.SpaceId with
+        | true, guid ->
+            let spaceId = SpaceId.FromGuid guid
+
+            Resource.createWithKind
+                actorUserId
+                spaceId
+                ResourceKind.Sql
+                dto.Name
+                dto.Description
+                None
+                []
+                []
+                []
+                (Some dto.DatabaseName)
+                (Some dto.DatabaseHost)
+                (Some dto.DatabasePort)
+                (Some dto.DatabaseAuthScheme)
+                (Some dto.DatabaseUsername)
+                dto.DatabasePassword
+                dto.UseSsl
+                dto.EnableSshTunnel
+                connectionOptions
         | false, _ -> Error(ValidationError "Invalid space ID format")
 
     let fromUpdateNameDto
@@ -67,3 +113,23 @@ module ResourceMapper =
         : Result<ValidatedResource, DomainError> =
         let body = dto.Body |> List.map keyValuePairFromDto
         Resource.updateBody actorUserId body apps resource
+
+    let fromUpdateDatabaseConfigDto
+        (actorUserId: UserId)
+        (dto: UpdateResourceDatabaseConfigDto)
+        (resource: ValidatedResource)
+        : Result<ValidatedResource, DomainError> =
+        let connectionOptions = dto.ConnectionOptions |> List.map keyValuePairFromDto
+
+        Resource.updateDatabaseConfig
+            actorUserId
+            dto.DatabaseName
+            dto.DatabaseHost
+            dto.DatabasePort
+            dto.DatabaseAuthScheme
+            dto.DatabaseUsername
+            dto.DatabasePassword
+            dto.UseSsl
+            dto.EnableSshTunnel
+            connectionOptions
+            resource

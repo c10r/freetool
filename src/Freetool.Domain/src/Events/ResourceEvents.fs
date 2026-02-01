@@ -11,13 +11,25 @@ type ResourceChange =
     | UrlParametersChanged of oldValue: KeyValuePair list * newValue: KeyValuePair list
     | HeadersChanged of oldValue: KeyValuePair list * newValue: KeyValuePair list
     | BodyChanged of oldValue: KeyValuePair list * newValue: KeyValuePair list
+    | DatabaseConfigChanged of oldValue: DatabaseConfigSummary * newValue: DatabaseConfigSummary
+
+and DatabaseConfigSummary =
+    { DatabaseName: DatabaseName
+      Host: DatabaseHost
+      Port: DatabasePort
+      AuthScheme: DatabaseAuthScheme
+      Username: DatabaseUsername
+      UseSsl: bool
+      EnableSshTunnel: bool
+      ConnectionOptions: KeyValuePair list
+      HasPassword: bool }
 
 type ResourceCreatedEvent =
     { ResourceId: ResourceId
       Name: ResourceName
       Description: ResourceDescription
       SpaceId: SpaceId
-      BaseUrl: BaseUrl
+      BaseUrl: BaseUrl option
       UrlParameters: KeyValuePair list
       Headers: KeyValuePair list
       Body: KeyValuePair list
@@ -73,7 +85,7 @@ module ResourceEvents =
         (name: ResourceName)
         (description: ResourceDescription)
         (spaceId: SpaceId)
-        (baseUrl: BaseUrl)
+        (baseUrl: BaseUrl option)
         (urlParameters: KeyValuePair list)
         (headers: KeyValuePair list)
         (body: KeyValuePair list)

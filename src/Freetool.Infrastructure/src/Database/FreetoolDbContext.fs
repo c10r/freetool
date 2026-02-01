@@ -370,12 +370,117 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                 )
 
             let baseUrlConverter =
-                ValueConverter<Freetool.Domain.ValueObjects.BaseUrl, string>(
-                    (fun baseUrl -> baseUrl.Value),
+                ValueConverter<Freetool.Domain.ValueObjects.BaseUrl option, string>(
+                    (fun opt ->
+                        match opt with
+                        | Some baseUrl -> baseUrl.Value
+                        | None -> null),
                     (fun str ->
-                        match Freetool.Domain.ValueObjects.BaseUrl.Create(Some str) with
-                        | Ok validBaseUrl -> validBaseUrl
-                        | Error _ -> failwith $"Invalid BaseUrl in database: {str}")
+                        if isNull str then
+                            None
+                        else
+                            match Freetool.Domain.ValueObjects.BaseUrl.Create(Some str) with
+                            | Ok validBaseUrl -> Some validBaseUrl
+                            | Error _ -> failwith $"Invalid BaseUrl in database: {str}")
+                )
+
+            let resourceKindConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.ResourceKind, string>(
+                    (fun resourceKind -> resourceKind.ToString()),
+                    (fun str ->
+                        match Freetool.Domain.ValueObjects.ResourceKind.Create(str) with
+                        | Ok validKind -> validKind
+                        | Error _ -> failwith $"Invalid ResourceKind in database: {str}")
+                )
+
+            let databaseNameConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.DatabaseName option, string>(
+                    (fun opt ->
+                        match opt with
+                        | Some name -> name.Value
+                        | None -> null),
+                    (fun str ->
+                        if isNull str then
+                            None
+                        else
+                            match Freetool.Domain.ValueObjects.DatabaseName.Create(Some str) with
+                            | Ok validName -> Some validName
+                            | Error _ -> failwith $"Invalid DatabaseName in database: {str}")
+                )
+
+            let databaseHostConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.DatabaseHost option, string>(
+                    (fun opt ->
+                        match opt with
+                        | Some host -> host.Value
+                        | None -> null),
+                    (fun str ->
+                        if isNull str then
+                            None
+                        else
+                            match Freetool.Domain.ValueObjects.DatabaseHost.Create(Some str) with
+                            | Ok validHost -> Some validHost
+                            | Error _ -> failwith $"Invalid DatabaseHost in database: {str}")
+                )
+
+            let databasePortConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.DatabasePort option, System.Nullable<int>>(
+                    (fun opt ->
+                        match opt with
+                        | Some port -> System.Nullable(port.Value)
+                        | None -> System.Nullable()),
+                    (fun nullable ->
+                        if nullable.HasValue then
+                            match Freetool.Domain.ValueObjects.DatabasePort.Create(Some nullable.Value) with
+                            | Ok validPort -> Some validPort
+                            | Error _ -> failwith $"Invalid DatabasePort in database: {nullable.Value}"
+                        else
+                            None)
+                )
+
+            let databaseAuthSchemeConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.DatabaseAuthScheme option, string>(
+                    (fun opt ->
+                        match opt with
+                        | Some scheme -> scheme.ToString()
+                        | None -> null),
+                    (fun str ->
+                        if isNull str then
+                            None
+                        else
+                            match Freetool.Domain.ValueObjects.DatabaseAuthScheme.Create(str) with
+                            | Ok validScheme -> Some validScheme
+                            | Error _ -> failwith $"Invalid DatabaseAuthScheme in database: {str}")
+                )
+
+            let databaseUsernameConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.DatabaseUsername option, string>(
+                    (fun opt ->
+                        match opt with
+                        | Some username -> username.Value
+                        | None -> null),
+                    (fun str ->
+                        if isNull str then
+                            None
+                        else
+                            match Freetool.Domain.ValueObjects.DatabaseUsername.Create(Some str) with
+                            | Ok validUsername -> Some validUsername
+                            | Error _ -> failwith $"Invalid DatabaseUsername in database: {str}")
+                )
+
+            let databasePasswordConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.DatabasePassword option, string>(
+                    (fun opt ->
+                        match opt with
+                        | Some password -> password.Value
+                        | None -> null),
+                    (fun str ->
+                        if isNull str then
+                            None
+                        else
+                            match Freetool.Domain.ValueObjects.DatabasePassword.Create(Some str) with
+                            | Ok validPassword -> Some validPassword
+                            | Error _ -> failwith $"Invalid DatabasePassword in database")
                 )
 
             entity.Property(fun r -> r.Id).HasConversion(resourceIdConverter) |> ignore
@@ -386,6 +491,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
             entity.Property(fun r -> r.SpaceId).HasConversion(spaceIdConverter) |> ignore
 
+            entity.Property(fun r -> r.ResourceKind).HasConversion(resourceKindConverter)
+            |> ignore
+
             entity.Property(fun r -> r.BaseUrl).HasConversion(baseUrlConverter) |> ignore
 
             entity.Property(fun r -> r.UrlParameters).HasConversion(keyValuePairListConverter)
@@ -395,6 +503,27 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             |> ignore
 
             entity.Property(fun r -> r.Body).HasConversion(keyValuePairListConverter)
+            |> ignore
+
+            entity.Property(fun r -> r.DatabaseName).HasConversion(databaseNameConverter)
+            |> ignore
+
+            entity.Property(fun r -> r.DatabaseHost).HasConversion(databaseHostConverter)
+            |> ignore
+
+            entity.Property(fun r -> r.DatabasePort).HasConversion(databasePortConverter)
+            |> ignore
+
+            entity.Property(fun r -> r.DatabaseAuthScheme).HasConversion(databaseAuthSchemeConverter)
+            |> ignore
+
+            entity.Property(fun r -> r.DatabaseUsername).HasConversion(databaseUsernameConverter)
+            |> ignore
+
+            entity.Property(fun r -> r.DatabasePassword).HasConversion(databasePasswordConverter)
+            |> ignore
+
+            entity.Property(fun r -> r.ConnectionOptions).HasConversion(keyValuePairListConverter)
             |> ignore
 
             // Configure foreign key relationship to space
