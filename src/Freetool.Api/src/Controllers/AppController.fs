@@ -19,6 +19,7 @@ type AppController
         appRepository: IAppRepository,
         resourceRepository: IResourceRepository,
         runRepository: IRunRepository,
+        sqlExecutionService: ISqlExecutionService,
         folderRepository: IFolderRepository,
         spaceRepository: ISpaceRepository,
         userRepository: IUserRepository,
@@ -173,7 +174,7 @@ type AppController
                                 | Ok validHttpMethod ->
                                     // Use Domain method that enforces no-override business rule
                                     match
-                                        App.create
+                                        App.createWithSqlConfig
                                             userId
                                             createRequest.Name
                                             folderId
@@ -185,6 +186,7 @@ type AppController
                                             createRequest.Headers
                                             createRequest.Body
                                             createRequest.UseDynamicJsonBody
+                                            createRequest.SqlConfig
                                             createRequest.Description
                                     with
                                     | Error domainError -> return this.HandleDomainError(domainError)
@@ -592,6 +594,42 @@ type AppController
                         | Error error -> this.HandleDomainError(error)
         }
 
+    [<HttpPut("{id}/sql-config")>]
+    [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.UpdateAppSqlConfig(id: string, [<FromBody>] updateDto: UpdateAppSqlConfigDto) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+
+            // Check authorization: user must have edit_app permission on the space
+            let! spaceIdResult = this.GetSpaceIdFromApp id
+
+            match spaceIdResult with
+            | Error error -> return this.HandleDomainError(error)
+            | Ok spaceId ->
+                let! authResult = this.CheckAuthorization spaceId AppEdit
+
+                match authResult with
+                | Error _ -> return this.HandleAuthorizationError()
+                | Ok() ->
+                    let! result =
+                        AppHandler.handleCommandWithResourceRepository
+                            appRepository
+                            resourceRepository
+                            (UpdateAppSqlConfig(userId, id, updateDto))
+
+                    return
+                        match result with
+                        | Ok(AppResult appDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeApp appDto
+                            this.Ok(sanitized) :> IActionResult
+                        | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                        | Error error -> this.HandleDomainError(error)
+        }
+
     [<HttpPut("{id}/description")>]
     [<ProducesResponseType(typeof<AppData>, StatusCodes.Status200OK)>]
     [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
@@ -694,6 +732,7 @@ type AppController
                                 runRepository
                                 appRepository
                                 resourceRepository
+                                sqlExecutionService
                                 (CreateRun(userId, id, currentUser, createRunDto))
 
                         return

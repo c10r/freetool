@@ -281,6 +281,13 @@ module AppHandler =
                             | Error error -> return Error error
                             | Ok() -> return Ok(AppResult(updatedApp.State))
 
+            | UpdateAppSqlConfig(_, _, _) ->
+                return
+                    Error(
+                        InvalidOperation
+                            "Resource repository required for SQL config update - use AppHandler.handleCommandWithResourceRepository"
+                    )
+
             | UpdateAppDescription(actorUserId, appId, dto) ->
                 match Guid.TryParse appId with
                 | false, _ -> return Error(ValidationError "Invalid app ID format")
@@ -395,6 +402,35 @@ module AppHandler =
                                 match! appRepository.UpdateAsync updatedApp with
                                 | Error error -> return Error error
                                 | Ok() -> return Ok(AppResult(updatedApp.State))
+
+            | UpdateAppSqlConfig(actorUserId, appId, dto) ->
+                match Guid.TryParse appId with
+                | false, _ -> return Error(ValidationError "Invalid app ID format")
+                | true, guid ->
+                    let appIdObj = AppId.FromGuid guid
+                    let! appOption = appRepository.GetByIdAsync appIdObj
+
+                    match appOption with
+                    | None -> return Error(NotFound "App not found")
+                    | Some app ->
+                        let! resourceOption = resourceRepository.GetByIdAsync app.State.ResourceId
+
+                        match resourceOption with
+                        | None -> return Error(NotFound "Resource not found")
+                        | Some resource ->
+                            match Resource.getResourceKind resource with
+                            | ResourceKind.Http ->
+                                return Error(ValidationError "SQL config is only supported for SQL resources")
+                            | ResourceKind.Sql ->
+                                match AppMapper.fromUpdateSqlConfigDto dto with
+                                | Error error -> return Error error
+                                | Ok sqlConfig ->
+                                    match App.updateSqlConfig actorUserId sqlConfig app with
+                                    | Error error -> return Error error
+                                    | Ok updatedApp ->
+                                        match! appRepository.UpdateAsync updatedApp with
+                                        | Error error -> return Error error
+                                        | Ok() -> return Ok(AppResult(updatedApp.State))
 
             | _ -> return! handleCommand appRepository command
         }

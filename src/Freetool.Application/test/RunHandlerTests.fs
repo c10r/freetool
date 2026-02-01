@@ -83,6 +83,13 @@ type MockRunRepository(runs: ValidatedRun list) =
                     |> List.length
             }
 
+type MockSqlExecutionService() =
+    interface ISqlExecutionService with
+        member _.ExecuteQueryAsync (_resource: ResourceData) (_query: SqlQuery) : Task<Result<string, DomainError>> =
+            task { return Ok "[]" }
+
+let sqlExecutionService = MockSqlExecutionService() :> ISqlExecutionService
+
 // Mock App repository for testing
 type MockAppRepository(apps: ValidatedApp list) =
     let mutable appList = apps
@@ -186,6 +193,7 @@ let createTestApp (name: string) (folderId: FolderId) (resourceId: ResourceId) :
           Headers = []
           Body = []
           UseDynamicJsonBody = false
+          SqlConfig = None
           Description = None
           CreatedAt = DateTime.UtcNow
           UpdatedAt = DateTime.UtcNow
@@ -241,7 +249,8 @@ let ``CreateRun succeeds with valid app and inputs`` () =
             CreateRun(actorUserId, appId.Value.ToString(), testCurrentUser, createRunDto)
 
         // Act
-        let! result = RunHandler.handleCommand runRepository appRepository resourceRepository command
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository sqlExecutionService command
 
         // Assert
         match result with
@@ -267,7 +276,8 @@ let ``CreateRun fails for nonexistent app`` () =
             CreateRun(actorUserId, nonExistentAppId, testCurrentUser, createRunDto)
 
         // Act
-        let! result = RunHandler.handleCommand runRepository appRepository resourceRepository command
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository sqlExecutionService command
 
         // Assert
         match result with
@@ -296,7 +306,8 @@ let ``CreateRun fails when resource not found`` () =
             CreateRun(actorUserId, appId.Value.ToString(), testCurrentUser, createRunDto)
 
         // Act
-        let! result = RunHandler.handleCommand runRepository appRepository resourceRepository command
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository sqlExecutionService command
 
         // Assert
         match result with
@@ -345,6 +356,7 @@ let ``CreateRun marks as invalid when input validation fails`` () =
               Headers = []
               Body = []
               UseDynamicJsonBody = false
+              SqlConfig = None
               Description = None
               CreatedAt = DateTime.UtcNow
               UpdatedAt = DateTime.UtcNow
@@ -368,7 +380,8 @@ let ``CreateRun marks as invalid when input validation fails`` () =
             CreateRun(actorUserId, appId.Value.ToString(), testCurrentUser, createRunDto)
 
         // Act
-        let! result = RunHandler.handleCommand runRepository appRepository resourceRepository command
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository sqlExecutionService command
 
         // Assert
         match result with
@@ -394,7 +407,8 @@ let ``GetRunById returns run when exists`` () =
         let command = GetRunById(runId.Value.ToString())
 
         // Act
-        let! result = RunHandler.handleCommand runRepository appRepository resourceRepository command
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository sqlExecutionService command
 
         // Assert
         match result with
@@ -414,7 +428,8 @@ let ``GetRunById returns NotFound for nonexistent run`` () =
         let command = GetRunById(nonExistentRunId)
 
         // Act
-        let! result = RunHandler.handleCommand runRepository appRepository resourceRepository command
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository sqlExecutionService command
 
         // Assert
         match result with
@@ -441,7 +456,8 @@ let ``GetRunsByAppId returns paginated runs`` () =
         let command = GetRunsByAppId(appId.Value.ToString(), 0, 10)
 
         // Act
-        let! result = RunHandler.handleCommand runRepository appRepository resourceRepository command
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository sqlExecutionService command
 
         // Assert
         match result with
@@ -472,7 +488,8 @@ let ``GetRunsByStatus returns runs with matching status`` () =
         let command = GetRunsByStatus("pending", 0, 10)
 
         // Act
-        let! result = RunHandler.handleCommand runRepository appRepository resourceRepository command
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository sqlExecutionService command
 
         // Assert
         match result with
@@ -494,7 +511,8 @@ let ``GetRunsByStatus fails for invalid status string`` () =
         let command = GetRunsByStatus("invalid_status_xyz", 0, 10)
 
         // Act
-        let! result = RunHandler.handleCommand runRepository appRepository resourceRepository command
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository sqlExecutionService command
 
         // Assert
         match result with
@@ -524,7 +542,8 @@ let ``GetRunsByAppIdAndStatus combines filters`` () =
         let command = GetRunsByAppIdAndStatus(appId1.Value.ToString(), "pending", 0, 10)
 
         // Act
-        let! result = RunHandler.handleCommand runRepository appRepository resourceRepository command
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository sqlExecutionService command
 
         // Assert
         match result with
@@ -552,7 +571,8 @@ let ``GetRunsByAppIdAndStatus with invalid app ID returns validation error`` () 
         let command = GetRunsByAppIdAndStatus("not-a-valid-guid", "pending", 0, 10)
 
         // Act
-        let! result = RunHandler.handleCommand runRepository appRepository resourceRepository command
+        let! result =
+            RunHandler.handleCommand runRepository appRepository resourceRepository sqlExecutionService command
 
         // Assert
         match result with

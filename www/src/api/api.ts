@@ -1,5 +1,5 @@
 import createClient, { type Middleware } from "openapi-fetch";
-import type { KeyValuePair } from "@/features/space/types";
+import type { KeyValuePair, SqlQueryConfig } from "@/features/space/types";
 import type { paths } from "../schema";
 import { handleApiError } from "./errorHandler";
 
@@ -118,12 +118,14 @@ type AppCreateInput = {
   description?: string | null;
   folderId: string | null;
   resourceId: string;
+  httpMethod: string;
   inputs: AppInput[];
   urlPath?: string;
   body: KeyValuePair[];
   headers: KeyValuePair[];
   urlParameters: KeyValuePair[];
   useDynamicJsonBody?: boolean;
+  sqlConfig?: SqlQueryConfig;
 };
 
 export const getApps = (skip?: number, take?: number) => {
@@ -205,6 +207,20 @@ export const updateAppUseDynamicJsonBody = (
     },
     body: {
       useDynamicJsonBody,
+    },
+  });
+};
+
+export const updateAppSqlConfig = (
+  appId: string,
+  sqlConfig?: SqlQueryConfig
+) => {
+  return client.PUT("/app/{id}/sql-config", {
+    params: {
+      path: { id: appId },
+    },
+    body: {
+      sqlConfig: sqlConfig ?? null,
     },
   });
 };
@@ -602,6 +618,7 @@ type CreateSqlResourceInput = {
   databaseName: string;
   databaseHost: string;
   databasePort: number;
+  databaseEngine: "postgres";
   databaseAuthScheme: "username_password";
   databaseUsername: string;
   databasePassword?: string;
@@ -643,6 +660,7 @@ export const createResource = (
     databaseName,
     databaseHost,
     databasePort,
+    databaseEngine,
     databaseAuthScheme,
     databaseUsername,
     databasePassword,
@@ -659,6 +677,7 @@ export const createResource = (
       databaseName,
       databaseHost,
       databasePort,
+      databaseEngine,
       databaseAuthScheme,
       databaseUsername,
       databasePassword,
@@ -796,6 +815,7 @@ export const updateResourceDatabaseConfig = ({
   databaseName,
   databaseHost,
   databasePort,
+  databaseEngine,
   databaseAuthScheme,
   databaseUsername,
   databasePassword,
@@ -807,6 +827,7 @@ export const updateResourceDatabaseConfig = ({
   databaseName: string;
   databaseHost: string;
   databasePort: number;
+  databaseEngine: string;
   databaseAuthScheme: "username_password";
   databaseUsername: string;
   databasePassword?: string;
@@ -824,12 +845,30 @@ export const updateResourceDatabaseConfig = ({
       databaseName,
       databaseHost,
       databasePort,
+      databaseEngine,
       databaseAuthScheme,
       databaseUsername,
       databasePassword,
       useSsl,
       enableSshTunnel,
       connectionOptions,
+    },
+  });
+};
+
+export const getSqlTables = (resourceId: string) => {
+  return client.GET("/resource/{id}/schema/tables", {
+    params: {
+      path: { id: resourceId },
+    },
+  });
+};
+
+export const getSqlColumns = (resourceId: string, table: string) => {
+  return client.GET("/resource/{id}/schema/columns", {
+    params: {
+      path: { id: resourceId },
+      query: { table },
     },
   });
 };

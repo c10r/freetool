@@ -127,6 +127,81 @@ module AppMapper =
 
     let keyValuePairFromDto (dto: KeyValuePairDto) : (string * string) = (dto.Key, dto.Value)
 
+    let private keyValuePairValueFromDto (dto: KeyValuePairDto) : Result<KeyValuePair, DomainError> =
+        KeyValuePair.Create(dto.Key, dto.Value)
+
+    let private sqlQueryModeFromDto (mode: string) : Result<SqlQueryMode, DomainError> =
+        match mode.Trim().ToLowerInvariant() with
+        | "gui" -> Ok SqlQueryMode.Gui
+        | "raw" -> Ok SqlQueryMode.Raw
+        | _ -> Error(ValidationError $"Invalid SQL query mode: {mode}")
+
+    let private sqlFilterOperatorFromDto (op: string) : Result<SqlFilterOperator, DomainError> =
+        match op.Trim().ToUpperInvariant() with
+        | "=" -> Ok SqlFilterOperator.Equals
+        | "!="
+        | "<>" -> Ok SqlFilterOperator.NotEquals
+        | ">" -> Ok SqlFilterOperator.GreaterThan
+        | ">=" -> Ok SqlFilterOperator.GreaterThanOrEqual
+        | "<" -> Ok SqlFilterOperator.LessThan
+        | "<=" -> Ok SqlFilterOperator.LessThanOrEqual
+        | "LIKE" -> Ok SqlFilterOperator.Like
+        | "ILIKE" -> Ok SqlFilterOperator.ILike
+        | "IN" -> Ok SqlFilterOperator.In
+        | "NOT IN" -> Ok SqlFilterOperator.NotIn
+        | "IS NULL" -> Ok SqlFilterOperator.IsNull
+        | "IS NOT NULL" -> Ok SqlFilterOperator.IsNotNull
+        | _ -> Error(ValidationError $"Invalid SQL filter operator: {op}")
+
+    let private sqlSortDirectionFromDto (direction: string) : Result<SqlSortDirection, DomainError> =
+        match direction.Trim().ToUpperInvariant() with
+        | "ASC" -> Ok SqlSortDirection.Asc
+        | "DESC" -> Ok SqlSortDirection.Desc
+        | _ -> Error(ValidationError $"Invalid SQL sort direction: {direction}")
+
+    let private sqlFilterFromDto (dto: SqlFilterDto) : Result<SqlFilter, DomainError> =
+        sqlFilterOperatorFromDto dto.Operator
+        |> Result.map (fun op ->
+            { Column = dto.Column
+              Operator = op
+              Value = dto.Value })
+
+    let private sqlOrderByFromDto (dto: SqlOrderByDto) : Result<SqlOrderBy, DomainError> =
+        sqlSortDirectionFromDto dto.Direction
+        |> Result.map (fun direction ->
+            { Column = dto.Column
+              Direction = direction })
+
+    let private sqlQueryConfigFromDto (dto: SqlQueryConfigDto option) : Result<SqlQueryConfig option, DomainError> =
+        match dto with
+        | None -> Ok None
+        | Some config ->
+            match sqlQueryModeFromDto config.Mode with
+            | Error err -> Error err
+            | Ok mode ->
+                let filterResults = config.Filters |> List.map sqlFilterFromDto |> sequenceResults
+                let orderByResults = config.OrderBy |> List.map sqlOrderByFromDto |> sequenceResults
+
+                let rawParamsResults =
+                    config.RawSqlParams |> List.map keyValuePairValueFromDto |> sequenceResults
+
+                match filterResults, orderByResults, rawParamsResults with
+                | Error err, _, _ -> Error err
+                | _, Error err, _ -> Error err
+                | _, _, Error err -> Error err
+                | Ok filters, Ok orderBy, Ok rawParams ->
+                    Ok(
+                        Some
+                            { Mode = mode
+                              Table = config.Table
+                              Columns = config.Columns
+                              Filters = filters
+                              Limit = config.Limit
+                              OrderBy = orderBy
+                              RawSql = config.RawSql
+                              RawSqlParams = rawParams }
+                    )
+
     type CreateAppRequest =
         { Name: string
           FolderId: string
@@ -138,28 +213,34 @@ module AppMapper =
           Headers: (string * string) list
           Body: (string * string) list
           UseDynamicJsonBody: bool
+          SqlConfig: SqlQueryConfig option
           Description: string option }
 
     let fromCreateDto (dto: CreateAppDto) : Result<CreateAppRequest, DomainError> =
         dto.Inputs
         |> List.map inputFromDto
         |> sequenceResults
-        |> Result.map (fun inputs ->
-            let urlParameters = dto.UrlParameters |> List.map keyValuePairFromDto
-            let headers = dto.Headers |> List.map keyValuePairFromDto
-            let body = dto.Body |> List.map keyValuePairFromDto
+        |> Result.bind (fun inputs ->
+            match sqlQueryConfigFromDto dto.SqlConfig with
+            | Error err -> Error err
+            | Ok sqlConfig ->
+                let urlParameters = dto.UrlParameters |> List.map keyValuePairFromDto
+                let headers = dto.Headers |> List.map keyValuePairFromDto
+                let body = dto.Body |> List.map keyValuePairFromDto
 
-            { Name = dto.Name
-              FolderId = dto.FolderId
-              ResourceId = dto.ResourceId
-              HttpMethod = dto.HttpMethod
-              Inputs = inputs
-              UrlPath = dto.UrlPath
-              UrlParameters = urlParameters
-              Headers = headers
-              Body = body
-              UseDynamicJsonBody = dto.UseDynamicJsonBody
-              Description = dto.Description })
+                Ok
+                    { Name = dto.Name
+                      FolderId = dto.FolderId
+                      ResourceId = dto.ResourceId
+                      HttpMethod = dto.HttpMethod
+                      Inputs = inputs
+                      UrlPath = dto.UrlPath
+                      UrlParameters = urlParameters
+                      Headers = headers
+                      Body = body
+                      UseDynamicJsonBody = dto.UseDynamicJsonBody
+                      SqlConfig = sqlConfig
+                      Description = dto.Description })
 
     let fromUpdateNameDto (dto: UpdateAppNameDto) (app: ValidatedApp) : UnvalidatedApp =
         { State =
@@ -167,6 +248,9 @@ module AppMapper =
                 Name = dto.Name
                 UpdatedAt = DateTime.UtcNow }
           UncommittedEvents = app.UncommittedEvents }
+
+    let fromUpdateSqlConfigDto (dto: UpdateAppSqlConfigDto) : Result<SqlQueryConfig option, DomainError> =
+        sqlQueryConfigFromDto dto.SqlConfig
 
     let fromUpdateInputsDto (dto: UpdateAppInputsDto) (app: ValidatedApp) : Result<UnvalidatedApp, DomainError> =
         dto.Inputs

@@ -438,6 +438,21 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                             None)
                 )
 
+            let databaseEngineConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.DatabaseEngine option, string>(
+                    (fun opt ->
+                        match opt with
+                        | Some engine -> engine.ToString()
+                        | None -> null),
+                    (fun str ->
+                        if isNull str then
+                            None
+                        else
+                            match Freetool.Domain.ValueObjects.DatabaseEngine.Create(str) with
+                            | Ok validEngine -> Some validEngine
+                            | Error _ -> failwith $"Invalid DatabaseEngine in database: {str}")
+                )
+
             let databaseAuthSchemeConverter =
                 ValueConverter<Freetool.Domain.ValueObjects.DatabaseAuthScheme option, string>(
                     (fun opt ->
@@ -512,6 +527,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             |> ignore
 
             entity.Property(fun r -> r.DatabasePort).HasConversion(databasePortConverter)
+            |> ignore
+
+            entity.Property(fun r -> r.DatabaseEngine).HasConversion(databaseEngineConverter)
             |> ignore
 
             entity.Property(fun r -> r.DatabaseAuthScheme).HasConversion(databaseAuthSchemeConverter)
@@ -758,6 +776,143 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             |> ignore
 
             entity.Property(fun a -> a.Body).HasConversion(keyValuePairListConverter)
+            |> ignore
+
+            let sqlModeToString (mode: Freetool.Domain.Entities.SqlQueryMode) =
+                match mode with
+                | Freetool.Domain.Entities.SqlQueryMode.Gui -> "gui"
+                | Freetool.Domain.Entities.SqlQueryMode.Raw -> "raw"
+
+            let sqlModeFromString (value: string) =
+                match value.Trim().ToLowerInvariant() with
+                | "gui" -> Freetool.Domain.Entities.SqlQueryMode.Gui
+                | "raw" -> Freetool.Domain.Entities.SqlQueryMode.Raw
+                | _ -> failwith $"Invalid SqlQueryMode in database: {value}"
+
+            let sqlOperatorToString (op: Freetool.Domain.Entities.SqlFilterOperator) =
+                match op with
+                | Freetool.Domain.Entities.SqlFilterOperator.Equals -> "="
+                | Freetool.Domain.Entities.SqlFilterOperator.NotEquals -> "!="
+                | Freetool.Domain.Entities.SqlFilterOperator.GreaterThan -> ">"
+                | Freetool.Domain.Entities.SqlFilterOperator.GreaterThanOrEqual -> ">="
+                | Freetool.Domain.Entities.SqlFilterOperator.LessThan -> "<"
+                | Freetool.Domain.Entities.SqlFilterOperator.LessThanOrEqual -> "<="
+                | Freetool.Domain.Entities.SqlFilterOperator.Like -> "LIKE"
+                | Freetool.Domain.Entities.SqlFilterOperator.ILike -> "ILIKE"
+                | Freetool.Domain.Entities.SqlFilterOperator.In -> "IN"
+                | Freetool.Domain.Entities.SqlFilterOperator.NotIn -> "NOT IN"
+                | Freetool.Domain.Entities.SqlFilterOperator.IsNull -> "IS NULL"
+                | Freetool.Domain.Entities.SqlFilterOperator.IsNotNull -> "IS NOT NULL"
+
+            let sqlOperatorFromString (value: string) =
+                match value.Trim().ToUpperInvariant() with
+                | "=" -> Freetool.Domain.Entities.SqlFilterOperator.Equals
+                | "!="
+                | "<>" -> Freetool.Domain.Entities.SqlFilterOperator.NotEquals
+                | ">" -> Freetool.Domain.Entities.SqlFilterOperator.GreaterThan
+                | ">=" -> Freetool.Domain.Entities.SqlFilterOperator.GreaterThanOrEqual
+                | "<" -> Freetool.Domain.Entities.SqlFilterOperator.LessThan
+                | "<=" -> Freetool.Domain.Entities.SqlFilterOperator.LessThanOrEqual
+                | "LIKE" -> Freetool.Domain.Entities.SqlFilterOperator.Like
+                | "ILIKE" -> Freetool.Domain.Entities.SqlFilterOperator.ILike
+                | "IN" -> Freetool.Domain.Entities.SqlFilterOperator.In
+                | "NOT IN" -> Freetool.Domain.Entities.SqlFilterOperator.NotIn
+                | "IS NULL" -> Freetool.Domain.Entities.SqlFilterOperator.IsNull
+                | "IS NOT NULL" -> Freetool.Domain.Entities.SqlFilterOperator.IsNotNull
+                | _ -> failwith $"Invalid SqlFilterOperator in database: {value}"
+
+            let sqlDirectionToString (direction: Freetool.Domain.Entities.SqlSortDirection) =
+                match direction with
+                | Freetool.Domain.Entities.SqlSortDirection.Asc -> "ASC"
+                | Freetool.Domain.Entities.SqlSortDirection.Desc -> "DESC"
+
+            let sqlDirectionFromString (value: string) =
+                match value.Trim().ToUpperInvariant() with
+                | "ASC" -> Freetool.Domain.Entities.SqlSortDirection.Asc
+                | "DESC" -> Freetool.Domain.Entities.SqlSortDirection.Desc
+                | _ -> failwith $"Invalid SqlSortDirection in database: {value}"
+
+            let sqlConfigConverter =
+                ValueConverter<Freetool.Domain.Entities.SqlQueryConfig option, string>(
+                    (fun configOpt ->
+                        match configOpt with
+                        | None -> null
+                        | Some config ->
+                            let serialized =
+                                {| Mode = sqlModeToString config.Mode
+                                   Table = config.Table
+                                   Columns = config.Columns
+                                   Filters =
+                                    config.Filters
+                                    |> List.map (fun filter ->
+                                        {| Column = filter.Column
+                                           Operator = sqlOperatorToString filter.Operator
+                                           Value = filter.Value |})
+                                   Limit = config.Limit
+                                   OrderBy =
+                                    config.OrderBy
+                                    |> List.map (fun orderBy ->
+                                        {| Column = orderBy.Column
+                                           Direction = sqlDirectionToString orderBy.Direction |})
+                                   RawSql = config.RawSql
+                                   RawSqlParams =
+                                    config.RawSqlParams
+                                    |> List.map (fun kvp -> {| Key = kvp.Key; Value = kvp.Value |}) |}
+
+                            System.Text.Json.JsonSerializer.Serialize(serialized)),
+                    (fun json ->
+                        if System.String.IsNullOrWhiteSpace(json) then
+                            None
+                        else
+                            let deserialized =
+                                System.Text.Json.JsonSerializer.Deserialize<
+                                    {| Mode: string
+                                       Table: string option
+                                       Columns: string list
+                                       Filters:
+                                           {| Column: string
+                                              Operator: string
+                                              Value: string option |} list
+                                       Limit: int option
+                                       OrderBy: {| Column: string; Direction: string |} list
+                                       RawSql: string option
+                                       RawSqlParams: {| Key: string; Value: string |} list |}
+                                 >(
+                                    json
+                                )
+
+                            let filters =
+                                deserialized.Filters
+                                |> List.map (fun filter ->
+                                    { Freetool.Domain.Entities.SqlFilter.Column = filter.Column
+                                      Operator = sqlOperatorFromString filter.Operator
+                                      Value = filter.Value })
+
+                            let orderBy =
+                                deserialized.OrderBy
+                                |> List.map (fun order ->
+                                    { Freetool.Domain.Entities.SqlOrderBy.Column = order.Column
+                                      Direction = sqlDirectionFromString order.Direction })
+
+                            let rawParams =
+                                deserialized.RawSqlParams
+                                |> List.map (fun kvp ->
+                                    match Freetool.Domain.ValueObjects.KeyValuePair.Create(kvp.Key, kvp.Value) with
+                                    | Ok valid -> valid
+                                    | Error _ -> failwith $"Invalid KeyValuePair in database: {kvp.Key}={kvp.Value}")
+
+                            Some
+                                { Freetool.Domain.Entities.SqlQueryConfig.Mode = sqlModeFromString deserialized.Mode
+                                  Table = deserialized.Table
+                                  Columns = deserialized.Columns
+                                  Filters = filters
+                                  Limit = deserialized.Limit
+                                  OrderBy = orderBy
+                                  RawSql = deserialized.RawSql
+                                  RawSqlParams = rawParams })
+                )
+
+            entity.Property(fun a -> a.SqlConfig).HasConversion(sqlConfigConverter)
             |> ignore
 
             entity.Property(fun a -> a.Description).HasConversion(optionStringConverter)

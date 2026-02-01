@@ -56,6 +56,7 @@ const emptyDatabaseConfig: DatabaseConfig = {
   databaseName: "",
   host: "",
   port: "",
+  engine: "postgres",
   authScheme: "username_password",
   username: "",
   password: "",
@@ -194,6 +195,10 @@ export default function ResourcesView({
               databaseName: item.databaseName ?? "",
               host: item.databaseHost ?? "",
               port: item.databasePort ? String(item.databasePort) : "",
+              engine:
+                item.databaseEngine?.toLowerCase() === "postgres"
+                  ? "postgres"
+                  : "postgres",
               authScheme:
                 item.databaseAuthScheme?.toLowerCase() === "username_password"
                   ? "username_password"
@@ -362,6 +367,7 @@ export default function ResourcesView({
           databaseName: createFormData.databaseConfig.databaseName.trim(),
           databaseHost: createFormData.databaseConfig.host.trim(),
           databasePort: parsedPort,
+          databaseEngine: createFormData.databaseConfig.engine,
           databaseAuthScheme: createFormData.databaseConfig.authScheme,
           databaseUsername: createFormData.databaseConfig.username.trim(),
           databasePassword: createFormData.databaseConfig.password,

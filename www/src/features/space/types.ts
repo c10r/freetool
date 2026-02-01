@@ -53,12 +53,55 @@ export interface KeyValuePair {
 
 export type ResourceKind = "http" | "sql";
 
+export type SqlQueryMode = "gui" | "raw";
+
+export type SqlFilterOperator =
+  | "="
+  | "!="
+  | ">"
+  | ">="
+  | "<"
+  | "<="
+  | "IN"
+  | "NOT IN"
+  | "LIKE"
+  | "ILIKE"
+  | "IS NULL"
+  | "IS NOT NULL";
+
+export type SqlSortDirection = "ASC" | "DESC";
+
+export interface SqlFilter {
+  column: string;
+  operator: SqlFilterOperator;
+  value?: string;
+}
+
+export interface SqlOrderBy {
+  column: string;
+  direction: SqlSortDirection;
+}
+
+export interface SqlQueryConfig {
+  mode: SqlQueryMode;
+  table?: string;
+  columns: string[];
+  filters: SqlFilter[];
+  limit?: number;
+  orderBy: SqlOrderBy[];
+  rawSql?: string;
+  rawSqlParams: KeyValuePair[];
+}
+
 export type DatabaseAuthScheme = "username_password";
+
+export type DatabaseEngine = "postgres";
 
 export interface DatabaseConfig {
   databaseName: string;
   host: string;
   port: string;
+  engine: DatabaseEngine;
   authScheme: DatabaseAuthScheme;
   username: string;
   password: string;
@@ -96,6 +139,7 @@ export interface AppNode extends BaseNode {
   headers?: KeyValuePair[]; // headers for the app
   body?: KeyValuePair[]; // JSON body for the app
   useDynamicJsonBody?: boolean; // when true, body is provided at runtime
+  sqlConfig?: SqlQueryConfig; // SQL config for SQL resources
   description?: string; // optional description for the app
 }
 
@@ -125,7 +169,8 @@ export interface SpaceMainProps {
     headers?: KeyValuePair[],
     body?: KeyValuePair[],
     inputs?: AppField[],
-    useDynamicJsonBody?: boolean
+    useDynamicJsonBody?: boolean,
+    sqlConfig?: SqlQueryConfig
   ) => Promise<void>;
   deleteNode: (id: string) => void;
   endpoints: Record<string, Endpoint>;

@@ -54,6 +54,8 @@ type ResourceData =
 
       DatabasePort: DatabasePort option
 
+      DatabaseEngine: DatabaseEngine option
+
       DatabaseAuthScheme: DatabaseAuthScheme option
 
       [<MaxLength(128)>]
@@ -104,6 +106,7 @@ type DatabaseResourceConfig =
     { DatabaseName: DatabaseName
       Host: DatabaseHost
       Port: DatabasePort
+      Engine: DatabaseEngine
       AuthScheme: DatabaseAuthScheme
       Username: DatabaseUsername
       Password: DatabasePassword
@@ -129,6 +132,7 @@ module Resource =
         (databaseName: string option)
         (databaseHost: string option)
         (databasePort: int option)
+        (databaseEngine: string option)
         (databaseAuthScheme: string option)
         (databaseUsername: string option)
         (databasePassword: string option)
@@ -192,32 +196,41 @@ module Resource =
                                 match DatabasePort.Create(databasePort) with
                                 | Error err -> Error err
                                 | Ok validDatabasePort ->
-                                    match databaseAuthScheme with
-                                    | None ->
-                                        Error(ValidationError "Database auth scheme is required for SQL resources")
-                                    | Some rawScheme ->
-                                        match DatabaseAuthScheme.Create(rawScheme) with
+                                    match databaseEngine with
+                                    | None -> Error(ValidationError "Database engine is required for SQL resources")
+                                    | Some rawEngine ->
+                                        match DatabaseEngine.Create(rawEngine) with
                                         | Error err -> Error err
-                                        | Ok validAuthScheme ->
-                                            match DatabaseUsername.Create(databaseUsername) with
-                                            | Error err -> Error err
-                                            | Ok validUsername ->
-                                                match DatabasePassword.Create(databasePassword) with
+                                        | Ok validEngine ->
+                                            match databaseAuthScheme with
+                                            | None ->
+                                                Error(
+                                                    ValidationError "Database auth scheme is required for SQL resources"
+                                                )
+                                            | Some rawScheme ->
+                                                match DatabaseAuthScheme.Create(rawScheme) with
                                                 | Error err -> Error err
-                                                | Ok validPassword ->
-                                                    match validateKeyValuePairs connectionOptions with
+                                                | Ok validAuthScheme ->
+                                                    match DatabaseUsername.Create(databaseUsername) with
                                                     | Error err -> Error err
-                                                    | Ok validOptions ->
-                                                        Ok
-                                                            { DatabaseName = validDatabaseName
-                                                              Host = validDatabaseHost
-                                                              Port = validDatabasePort
-                                                              AuthScheme = validAuthScheme
-                                                              Username = validUsername
-                                                              Password = validPassword
-                                                              UseSsl = useSsl
-                                                              EnableSshTunnel = enableSshTunnel
-                                                              ConnectionOptions = validOptions }
+                                                    | Ok validUsername ->
+                                                        match DatabasePassword.Create(databasePassword) with
+                                                        | Error err -> Error err
+                                                        | Ok validPassword ->
+                                                            match validateKeyValuePairs connectionOptions with
+                                                            | Error err -> Error err
+                                                            | Ok validOptions ->
+                                                                Ok
+                                                                    { DatabaseName = validDatabaseName
+                                                                      Host = validDatabaseHost
+                                                                      Port = validDatabasePort
+                                                                      Engine = validEngine
+                                                                      AuthScheme = validAuthScheme
+                                                                      Username = validUsername
+                                                                      Password = validPassword
+                                                                      UseSsl = useSsl
+                                                                      EnableSshTunnel = enableSshTunnel
+                                                                      ConnectionOptions = validOptions }
 
                 let now = DateTime.UtcNow
 
@@ -230,6 +243,7 @@ module Resource =
                             databaseName.IsSome
                             || databaseHost.IsSome
                             || databasePort.IsSome
+                            || databaseEngine.IsSome
                             || databaseAuthScheme.IsSome
                             || databaseUsername.IsSome
                             || databasePassword.IsSome
@@ -252,6 +266,7 @@ module Resource =
                                   DatabaseName = None
                                   DatabaseHost = None
                                   DatabasePort = None
+                                  DatabaseEngine = None
                                   DatabaseAuthScheme = None
                                   DatabaseUsername = None
                                   DatabasePassword = None
@@ -302,6 +317,7 @@ module Resource =
                                   DatabaseName = Some databaseConfig.DatabaseName
                                   DatabaseHost = Some databaseConfig.Host
                                   DatabasePort = Some databaseConfig.Port
+                                  DatabaseEngine = Some databaseConfig.Engine
                                   DatabaseAuthScheme = Some databaseConfig.AuthScheme
                                   DatabaseUsername = Some databaseConfig.Username
                                   DatabasePassword = Some databaseConfig.Password
@@ -348,6 +364,7 @@ module Resource =
             urlParameters
             headers
             body
+            None
             None
             None
             None
@@ -585,14 +602,16 @@ module Resource =
             resourceData.DatabaseName,
             resourceData.DatabaseHost,
             resourceData.DatabasePort,
+            resourceData.DatabaseEngine,
             resourceData.DatabaseAuthScheme,
             resourceData.DatabaseUsername
         with
-        | Some databaseName, Some databaseHost, Some databasePort, Some authScheme, Some username ->
+        | Some databaseName, Some databaseHost, Some databasePort, Some databaseEngine, Some authScheme, Some username ->
             Ok
                 { DatabaseName = databaseName
                   Host = databaseHost
                   Port = databasePort
+                  Engine = databaseEngine
                   AuthScheme = authScheme
                   Username = username
                   UseSsl = resourceData.UseSsl
@@ -606,6 +625,7 @@ module Resource =
         (databaseName: string)
         (databaseHost: string)
         (databasePort: int)
+        (databaseEngine: string)
         (databaseAuthScheme: string)
         (databaseUsername: string)
         (databasePassword: string option)
@@ -626,76 +646,83 @@ module Resource =
                     match DatabasePort.Create(Some databasePort) with
                     | Error err -> Error err
                     | Ok validDatabasePort ->
-                        match DatabaseAuthScheme.Create(databaseAuthScheme) with
+                        match DatabaseEngine.Create(databaseEngine) with
                         | Error err -> Error err
-                        | Ok validAuthScheme ->
-                            match DatabaseUsername.Create(Some databaseUsername) with
+                        | Ok validEngine ->
+                            match DatabaseAuthScheme.Create(databaseAuthScheme) with
                             | Error err -> Error err
-                            | Ok validUsername ->
-                                let validatedPasswordResult =
-                                    match databasePassword with
-                                    | Some rawPassword -> DatabasePassword.Create(Some rawPassword) |> Result.map Some
-                                    | None ->
-                                        match resource.State.DatabasePassword with
-                                        | Some existingPassword -> Ok(Some existingPassword)
-                                        | None -> Error(ValidationError "Database password is required")
-
-                                match validatedPasswordResult with
+                            | Ok validAuthScheme ->
+                                match DatabaseUsername.Create(Some databaseUsername) with
                                 | Error err -> Error err
-                                | Ok validPassword ->
-                                    let validateKeyValuePairs pairs =
-                                        pairs
-                                        |> List.fold
-                                            (fun acc (key: string, value: string) ->
-                                                match acc with
-                                                | Error err -> Error err
-                                                | Ok validPairs ->
-                                                    match KeyValuePair.Create(key, value) with
-                                                    | Error err -> Error err
-                                                    | Ok validPair -> Ok(validPair :: validPairs))
-                                            (Ok [])
-                                        |> Result.map List.rev
+                                | Ok validUsername ->
+                                    let validatedPasswordResult =
+                                        match databasePassword with
+                                        | Some rawPassword ->
+                                            DatabasePassword.Create(Some rawPassword) |> Result.map Some
+                                        | None ->
+                                            match resource.State.DatabasePassword with
+                                            | Some existingPassword -> Ok(Some existingPassword)
+                                            | None -> Error(ValidationError "Database password is required")
 
-                                    match validateKeyValuePairs connectionOptions with
+                                    match validatedPasswordResult with
                                     | Error err -> Error err
-                                    | Ok validOptions ->
-                                        match toDatabaseConfigSummary resource.State with
+                                    | Ok validPassword ->
+                                        let validateKeyValuePairs pairs =
+                                            pairs
+                                            |> List.fold
+                                                (fun acc (key: string, value: string) ->
+                                                    match acc with
+                                                    | Error err -> Error err
+                                                    | Ok validPairs ->
+                                                        match KeyValuePair.Create(key, value) with
+                                                        | Error err -> Error err
+                                                        | Ok validPair -> Ok(validPair :: validPairs))
+                                                (Ok [])
+                                            |> Result.map List.rev
+
+                                        match validateKeyValuePairs connectionOptions with
                                         | Error err -> Error err
-                                        | Ok oldSummary ->
-                                            let newSummary =
-                                                { DatabaseName = validDatabaseName
-                                                  Host = validDatabaseHost
-                                                  Port = validDatabasePort
-                                                  AuthScheme = validAuthScheme
-                                                  Username = validUsername
-                                                  UseSsl = useSsl
-                                                  EnableSshTunnel = enableSshTunnel
-                                                  ConnectionOptions = validOptions
-                                                  HasPassword = validPassword.IsSome }
+                                        | Ok validOptions ->
+                                            match toDatabaseConfigSummary resource.State with
+                                            | Error err -> Error err
+                                            | Ok oldSummary ->
+                                                let newSummary =
+                                                    { DatabaseName = validDatabaseName
+                                                      Host = validDatabaseHost
+                                                      Port = validDatabasePort
+                                                      Engine = validEngine
+                                                      AuthScheme = validAuthScheme
+                                                      Username = validUsername
+                                                      UseSsl = useSsl
+                                                      EnableSshTunnel = enableSshTunnel
+                                                      ConnectionOptions = validOptions
+                                                      HasPassword = validPassword.IsSome }
 
-                                            let updatedResourceData =
-                                                { resource.State with
-                                                    DatabaseName = Some validDatabaseName
-                                                    DatabaseHost = Some validDatabaseHost
-                                                    DatabasePort = Some validDatabasePort
-                                                    DatabaseAuthScheme = Some validAuthScheme
-                                                    DatabaseUsername = Some validUsername
-                                                    DatabasePassword = validPassword
-                                                    UseSsl = useSsl
-                                                    EnableSshTunnel = enableSshTunnel
-                                                    ConnectionOptions = validOptions
-                                                    UpdatedAt = DateTime.UtcNow }
+                                                let updatedResourceData =
+                                                    { resource.State with
+                                                        DatabaseName = Some validDatabaseName
+                                                        DatabaseHost = Some validDatabaseHost
+                                                        DatabasePort = Some validDatabasePort
+                                                        DatabaseEngine = Some validEngine
+                                                        DatabaseAuthScheme = Some validAuthScheme
+                                                        DatabaseUsername = Some validUsername
+                                                        DatabasePassword = validPassword
+                                                        UseSsl = useSsl
+                                                        EnableSshTunnel = enableSshTunnel
+                                                        ConnectionOptions = validOptions
+                                                        UpdatedAt = DateTime.UtcNow }
 
-                                            let configChangedEvent =
-                                                ResourceEvents.resourceUpdated
-                                                    actorUserId
-                                                    resource.State.Id
-                                                    [ ResourceChange.DatabaseConfigChanged(oldSummary, newSummary) ]
+                                                let configChangedEvent =
+                                                    ResourceEvents.resourceUpdated
+                                                        actorUserId
+                                                        resource.State.Id
+                                                        [ ResourceChange.DatabaseConfigChanged(oldSummary, newSummary) ]
 
-                                            Ok
-                                                { State = updatedResourceData
-                                                  UncommittedEvents =
-                                                    resource.UncommittedEvents @ [ configChangedEvent :> IDomainEvent ] }
+                                                Ok
+                                                    { State = updatedResourceData
+                                                      UncommittedEvents =
+                                                        resource.UncommittedEvents
+                                                        @ [ configChangedEvent :> IDomainEvent ] }
 
     let markForDeletion (actorUserId: UserId) (resource: ValidatedResource) : ValidatedResource =
         let resourceDeletedEvent =

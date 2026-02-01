@@ -53,6 +53,9 @@ type AppData =
       [<Required>]
       UseDynamicJsonBody: bool
 
+      [<Column(TypeName = "TEXT")>] // JSON serialized SQL config (null for HTTP apps)
+      SqlConfig: SqlQueryConfig option
+
       [<MaxLength(500)>]
       Description: string option
 
@@ -88,6 +91,99 @@ module App =
             | Some desc when desc.Length > 100 ->
                 Error(ValidationError "Input description cannot exceed 100 characters")
             | _ -> Ok { input with Title = validTitle.Value }
+
+    let private normalizeSqlText (value: string option) : string option =
+        value
+        |> Option.map (fun v -> v.Trim())
+        |> Option.bind (fun v -> if v = "" then None else Some v)
+
+    let private validateSqlConfig (sqlConfig: SqlQueryConfig option) : Result<SqlQueryConfig option, DomainError> =
+        match sqlConfig with
+        | None -> Ok None
+        | Some config ->
+            let normalizedColumns =
+                config.Columns |> List.map (fun c -> c.Trim()) |> List.filter (fun c -> c <> "")
+
+            let normalizedOrderBy =
+                config.OrderBy
+                |> List.map (fun order ->
+                    { order with
+                        Column = order.Column.Trim() })
+                |> List.filter (fun order -> order.Column <> "")
+
+            let validateFilter (filter: SqlFilter) =
+                if System.String.IsNullOrWhiteSpace(filter.Column) then
+                    Error(ValidationError "SQL filter column is required")
+                else
+                    match filter.Operator with
+                    | SqlFilterOperator.IsNull
+                    | SqlFilterOperator.IsNotNull ->
+                        if filter.Value.IsSome then
+                            Error(ValidationError "SQL filter value must be empty for IS NULL operators")
+                        else
+                            Ok
+                                { filter with
+                                    Column = filter.Column.Trim()
+                                    Value = None }
+                    | _ ->
+                        match normalizeSqlText filter.Value with
+                        | None -> Error(ValidationError "SQL filter value is required")
+                        | Some value ->
+                            Ok
+                                { filter with
+                                    Column = filter.Column.Trim()
+                                    Value = Some value }
+
+            let validateFilters =
+                config.Filters
+                |> List.map validateFilter
+                |> List.fold
+                    (fun acc item ->
+                        match acc, item with
+                        | Error err, _ -> Error err
+                        | _, Error err -> Error err
+                        | Ok items, Ok valid -> Ok(valid :: items))
+                    (Ok [])
+                |> Result.map List.rev
+
+            let normalizedLimit =
+                match config.Limit with
+                | Some limit when limit <= 0 -> Error(ValidationError "SQL limit must be greater than zero")
+                | _ -> Ok config.Limit
+
+            match config.Mode with
+            | SqlQueryMode.Gui ->
+                match normalizeSqlText config.Table with
+                | None -> Error(ValidationError "SQL table is required for GUI mode")
+                | Some table ->
+                    match validateFilters, normalizedLimit with
+                    | Error err, _ -> Error err
+                    | _, Error err -> Error err
+                    | Ok validFilters, Ok validLimit ->
+                        Ok(
+                            Some
+                                { config with
+                                    Table = Some table
+                                    Columns = normalizedColumns
+                                    Filters = validFilters
+                                    Limit = validLimit
+                                    OrderBy = normalizedOrderBy
+                                    RawSql = None }
+                        )
+            | SqlQueryMode.Raw ->
+                match normalizeSqlText config.RawSql with
+                | None -> Error(ValidationError "Raw SQL is required for SQL raw mode")
+                | Some rawSql ->
+                    Ok(
+                        Some
+                            { config with
+                                Table = None
+                                Columns = []
+                                Filters = []
+                                Limit = None
+                                OrderBy = []
+                                RawSql = Some rawSql }
+                    )
 
     let fromData (appData: AppData) : ValidatedApp =
         { State = appData
@@ -193,6 +289,7 @@ module App =
         (headers: (string * string) list)
         (body: (string * string) list)
         (useDynamicJsonBody: bool)
+        (sqlConfig: SqlQueryConfig option)
         (description: string option)
         : Result<ValidatedApp, DomainError> =
         // Validate headers
@@ -218,45 +315,122 @@ module App =
                 match validateKeyValuePairs body with
                 | Error err -> Error err
                 | Ok validBody ->
-                    let appData =
-                        { Id = AppId.NewId()
-                          Name = name
-                          FolderId = folderId
-                          ResourceId = resourceId
-                          HttpMethod = httpMethod
-                          Inputs = inputs
-                          UrlPath = urlPath
-                          UrlParameters = validUrlParameters
-                          Headers = validHeaders
-                          Body = validBody
-                          UseDynamicJsonBody = useDynamicJsonBody
-                          Description = description
-                          CreatedAt = DateTime.UtcNow
-                          UpdatedAt = DateTime.UtcNow
-                          IsDeleted = false }
-
-                    let unvalidatedApp =
-                        { State = appData
-                          UncommittedEvents = [] }
-
-                    match validate unvalidatedApp with
+                    match validateSqlConfig sqlConfig with
                     | Error err -> Error err
-                    | Ok validatedApp ->
-                        let validName = AppName.Create(Some name) |> Result.defaultValue (AppName(""))
+                    | Ok validSqlConfig ->
+                        let appData =
+                            { Id = AppId.NewId()
+                              Name = name
+                              FolderId = folderId
+                              ResourceId = resourceId
+                              HttpMethod = httpMethod
+                              Inputs = inputs
+                              UrlPath = urlPath
+                              UrlParameters = validUrlParameters
+                              Headers = validHeaders
+                              Body = validBody
+                              UseDynamicJsonBody = useDynamicJsonBody
+                              SqlConfig = validSqlConfig
+                              Description = description
+                              CreatedAt = DateTime.UtcNow
+                              UpdatedAt = DateTime.UtcNow
+                              IsDeleted = false }
 
-                        let appCreatedEvent =
-                            AppEvents.appCreated
-                                actorUserId
-                                appData.Id
-                                validName
-                                (Some folderId)
-                                resourceId
-                                httpMethod
-                                inputs
+                        let unvalidatedApp =
+                            { State = appData
+                              UncommittedEvents = [] }
 
-                        Ok
-                            { validatedApp with
-                                UncommittedEvents = [ appCreatedEvent :> IDomainEvent ] }
+                        match validate unvalidatedApp with
+                        | Error err -> Error err
+                        | Ok validatedApp ->
+                            let validName = AppName.Create(Some name) |> Result.defaultValue (AppName(""))
+
+                            let appCreatedEvent =
+                                AppEvents.appCreated
+                                    actorUserId
+                                    appData.Id
+                                    validName
+                                    (Some folderId)
+                                    resourceId
+                                    httpMethod
+                                    inputs
+
+                            Ok
+                                { validatedApp with
+                                    UncommittedEvents = [ appCreatedEvent :> IDomainEvent ] }
+
+    let createWithSqlConfig
+        (actorUserId: UserId)
+        (name: string)
+        (folderId: FolderId)
+        (resource: ValidatedResource)
+        (httpMethod: HttpMethod)
+        (inputs: Input list)
+        (urlPath: string option)
+        (urlParameters: (string * string) list)
+        (headers: (string * string) list)
+        (body: (string * string) list)
+        (useDynamicJsonBody: bool)
+        (sqlConfig: SqlQueryConfig option)
+        (description: string option)
+        : Result<ValidatedApp, DomainError> =
+        match Resource.getResourceKind resource with
+        | ResourceKind.Http ->
+            // Business rule: App cannot override existing Resource parameters
+            let resourceConflictData = Resource.toConflictData resource
+
+            match checkResourceConflicts resourceConflictData (Some urlParameters) (Some headers) (Some body) with
+            | Error err -> Error err
+            | Ok() ->
+                if sqlConfig.IsSome then
+                    Error(ValidationError "SQL config is only allowed for SQL resources")
+                else
+                    // No conflicts, proceed with normal creation
+                    let resourceId = Resource.getId resource
+
+                    createInternal
+                        actorUserId
+                        name
+                        folderId
+                        resourceId
+                        httpMethod
+                        inputs
+                        urlPath
+                        urlParameters
+                        headers
+                        body
+                        useDynamicJsonBody
+                        None
+                        description
+        | ResourceKind.Sql ->
+            if sqlConfig.IsNone then
+                Error(ValidationError "SQL config is required for SQL resources")
+            elif useDynamicJsonBody then
+                Error(ValidationError "Dynamic JSON body is not supported for SQL resources")
+            elif
+                (urlPath |> Option.exists (fun p -> p.Trim() <> ""))
+                || not urlParameters.IsEmpty
+                || not headers.IsEmpty
+                || not body.IsEmpty
+            then
+                Error(ValidationError "HTTP fields are not allowed for SQL resources")
+            else
+                let resourceId = Resource.getId resource
+
+                createInternal
+                    actorUserId
+                    name
+                    folderId
+                    resourceId
+                    httpMethod
+                    inputs
+                    None
+                    []
+                    []
+                    []
+                    false
+                    sqlConfig
+                    description
 
     let create
         (actorUserId: UserId)
@@ -272,29 +446,20 @@ module App =
         (useDynamicJsonBody: bool)
         (description: string option)
         : Result<ValidatedApp, DomainError> =
-
-        // Business rule: App cannot override existing Resource parameters
-        let resourceConflictData = Resource.toConflictData resource
-
-        match checkResourceConflicts resourceConflictData (Some urlParameters) (Some headers) (Some body) with
-        | Error err -> Error err
-        | Ok() ->
-            // No conflicts, proceed with normal creation
-            let resourceId = Resource.getId resource
-
-            createInternal
-                actorUserId
-                name
-                folderId
-                resourceId
-                httpMethod
-                inputs
-                urlPath
-                urlParameters
-                headers
-                body
-                useDynamicJsonBody
-                description
+        createWithSqlConfig
+            actorUserId
+            name
+            folderId
+            resource
+            httpMethod
+            inputs
+            urlPath
+            urlParameters
+            headers
+            body
+            useDynamicJsonBody
+            None
+            description
 
 
 
@@ -352,6 +517,8 @@ module App =
         app.State.Body |> List.map (fun kvp -> (kvp.Key, kvp.Value))
 
     let getUseDynamicJsonBody (app: App) : bool = app.State.UseDynamicJsonBody
+
+    let getSqlConfig (app: App) : SqlQueryConfig option = app.State.SqlConfig
 
     let getDescription (app: App) : string option = app.State.Description
 
@@ -544,6 +711,29 @@ module App =
         Ok
             { State = updatedAppData
               UncommittedEvents = app.UncommittedEvents @ [ useDynamicJsonBodyChangedEvent :> IDomainEvent ] }
+
+    let updateSqlConfig
+        (actorUserId: UserId)
+        (newSqlConfig: SqlQueryConfig option)
+        (app: ValidatedApp)
+        : Result<ValidatedApp, DomainError> =
+        match validateSqlConfig newSqlConfig with
+        | Error err -> Error err
+        | Ok validSqlConfig ->
+            let updatedAppData =
+                { app.State with
+                    SqlConfig = validSqlConfig
+                    UpdatedAt = DateTime.UtcNow }
+
+            let sqlConfigChangedEvent =
+                AppEvents.appUpdated
+                    actorUserId
+                    app.State.Id
+                    [ AppChange.SqlConfigChanged(app.State.SqlConfig, validSqlConfig) ]
+
+            Ok
+                { State = updatedAppData
+                  UncommittedEvents = app.UncommittedEvents @ [ sqlConfigChangedEvent :> IDomainEvent ] }
 
     let updateDescription
         (actorUserId: UserId)

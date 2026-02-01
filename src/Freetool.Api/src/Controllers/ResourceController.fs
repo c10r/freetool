@@ -17,7 +17,8 @@ type ResourceController
     (
         commandHandler: ICommandHandler<ResourceCommand, ResourceCommandResult>,
         authorizationService: IAuthorizationService,
-        resourceRepository: IResourceRepository
+        resourceRepository: IResourceRepository,
+        sqlMetadataService: ISqlMetadataService
     ) =
     inherit AuthenticatedControllerBase()
 
@@ -119,6 +120,105 @@ type ResourceController
                     this.Ok(sanitized) :> IActionResult
                 | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                 | Error error -> this.HandleDomainError(error)
+        }
+
+    [<HttpGet("{id}/schema/tables")>]
+    [<ProducesResponseType(typeof<SqlTableInfoDto list>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.GetSqlTables(id: string) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+
+            match System.Guid.TryParse id with
+            | false, _ -> return this.HandleDomainError(ValidationError "Invalid resource ID format")
+            | true, guid ->
+                let resourceId = ResourceId.FromGuid guid
+                let! resourceOption = resourceRepository.GetByIdAsync resourceId
+
+                match resourceOption with
+                | None -> return this.HandleDomainError(NotFound "Resource not found")
+                | Some resource ->
+                    let spaceId = Resource.getSpaceId resource
+
+                    let! canCreateApp =
+                        authorizationService.CheckPermissionAsync
+                            (User(userId.ToString()))
+                            AppCreate
+                            (SpaceObject(spaceId.ToString()))
+
+                    if not canCreateApp then
+                        return
+                            this.StatusCode(
+                                403,
+                                {| error = "Forbidden"
+                                   message = "You do not have permission to access SQL schema for this space" |}
+                            )
+                            :> IActionResult
+                    else
+                        match Resource.getResourceKind resource with
+                        | ResourceKind.Http ->
+                            return this.HandleDomainError(ValidationError "Resource is not a SQL resource")
+                        | ResourceKind.Sql ->
+                            let! result = sqlMetadataService.GetTablesAsync resource.State
+
+                            return
+                                match result with
+                                | Ok tables -> this.Ok(tables) :> IActionResult
+                                | Error error -> this.HandleDomainError(error)
+        }
+
+    [<HttpGet("{id}/schema/columns")>]
+    [<ProducesResponseType(typeof<SqlColumnInfoDto list>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.GetSqlColumns(id: string, [<FromQuery>] table: string) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+
+            if System.String.IsNullOrWhiteSpace(table) then
+                return this.HandleDomainError(ValidationError "Table name is required")
+            else
+                match System.Guid.TryParse id with
+                | false, _ -> return this.HandleDomainError(ValidationError "Invalid resource ID format")
+                | true, guid ->
+                    let resourceId = ResourceId.FromGuid guid
+                    let! resourceOption = resourceRepository.GetByIdAsync resourceId
+
+                    match resourceOption with
+                    | None -> return this.HandleDomainError(NotFound "Resource not found")
+                    | Some resource ->
+                        let spaceId = Resource.getSpaceId resource
+
+                        let! canCreateApp =
+                            authorizationService.CheckPermissionAsync
+                                (User(userId.ToString()))
+                                AppCreate
+                                (SpaceObject(spaceId.ToString()))
+
+                        if not canCreateApp then
+                            return
+                                this.StatusCode(
+                                    403,
+                                    {| error = "Forbidden"
+                                       message = "You do not have permission to access SQL schema for this space" |}
+                                )
+                                :> IActionResult
+                        else
+                            match Resource.getResourceKind resource with
+                            | ResourceKind.Http ->
+                                return this.HandleDomainError(ValidationError "Resource is not a SQL resource")
+                            | ResourceKind.Sql ->
+                                let! result = sqlMetadataService.GetColumnsAsync resource.State table
+
+                                return
+                                    match result with
+                                    | Ok columns -> this.Ok(columns) :> IActionResult
+                                    | Error error -> this.HandleDomainError(error)
         }
 
     [<HttpGet("/space/{spaceId}/resource")>]

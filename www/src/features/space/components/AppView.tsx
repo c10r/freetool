@@ -60,6 +60,7 @@ export default function AppView({
       headers: app.headers || [],
       body: app.body || [],
       useDynamicJsonBody: app.useDynamicJsonBody ?? false,
+      sqlConfig: app.sqlConfig,
     },
     app.id,
     (updatedData) => {
@@ -73,6 +74,7 @@ export default function AppView({
           headers: updatedData.headers,
           body: updatedData.body,
           useDynamicJsonBody: updatedData.useDynamicJsonBody,
+          sqlConfig: updatedData.sqlConfig,
         });
       }
     }
@@ -204,6 +206,7 @@ export default function AppView({
       headers: app.headers || [],
       body: app.body || [],
       useDynamicJsonBody: app.useDynamicJsonBody ?? false,
+      sqlConfig: app.sqlConfig,
     });
 
     // Update app inputs when app changes
@@ -233,6 +236,12 @@ export default function AppView({
 
   const updateUseDynamicJsonBody = (useDynamicJsonBody: boolean) => {
     updateAppFormData("useDynamicJsonBody", useDynamicJsonBody);
+  };
+
+  const updateSqlConfig = (sqlConfig: AppNode["sqlConfig"]) => {
+    if (sqlConfig) {
+      updateAppFormData("sqlConfig", sqlConfig);
+    }
   };
 
   const _selectedEndpoint = app.endpointId
@@ -522,6 +531,7 @@ export default function AppView({
             headers={appFormData.headers}
             body={appFormData.body}
             useDynamicJsonBody={appFormData.useDynamicJsonBody}
+            sqlConfig={appFormData.sqlConfig}
             onResourceChange={(resourceId) =>
               updateNode({ ...app, resourceId })
             }
@@ -531,6 +541,7 @@ export default function AppView({
             onHeadersChange={updateHeaders}
             onBodyChange={updateBody}
             onUseDynamicJsonBodyChange={updateUseDynamicJsonBody}
+            onSqlConfigChange={updateSqlConfig}
             showResourceSelector={false}
             mode="edit"
             disabled={!canEditApp}

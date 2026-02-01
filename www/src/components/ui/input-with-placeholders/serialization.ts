@@ -145,25 +145,29 @@ export function parseValueToEditorState(
   const root = $getRoot();
   root.clear();
 
-  const paragraph = $createParagraphNode();
-  const tokens = tokenize(value);
+  const lines = value.split(/\r?\n/);
 
-  for (const token of tokens) {
-    if (token.type === "text") {
-      paragraph.append($createTextNode(token.content));
-    } else if (token.type === "placeholder") {
-      const inputTitle = token.content;
-      const isValid = isCurrentUserPlaceholder(inputTitle)
-        ? isValidCurrentUserPlaceholder(inputTitle)
-        : availableInputs.some((i) => i.title === inputTitle);
-      paragraph.append($createPlaceholderNode(inputTitle, isValid));
-    } else if (token.type === "expression") {
-      const isValid = isExpressionValid(token.content, availableInputs);
-      paragraph.append($createExpressionNode(token.content, isValid));
+  for (const line of lines) {
+    const paragraph = $createParagraphNode();
+    const tokens = tokenize(line);
+
+    for (const token of tokens) {
+      if (token.type === "text") {
+        paragraph.append($createTextNode(token.content));
+      } else if (token.type === "placeholder") {
+        const inputTitle = token.content;
+        const isValid = isCurrentUserPlaceholder(inputTitle)
+          ? isValidCurrentUserPlaceholder(inputTitle)
+          : availableInputs.some((i) => i.title === inputTitle);
+        paragraph.append($createPlaceholderNode(inputTitle, isValid));
+      } else if (token.type === "expression") {
+        const isValid = isExpressionValid(token.content, availableInputs);
+        paragraph.append($createExpressionNode(token.content, isValid));
+      }
     }
-  }
 
-  root.append(paragraph);
+    root.append(paragraph);
+  }
 }
 
 /**
@@ -172,24 +176,27 @@ export function parseValueToEditorState(
  */
 export function serializeEditorStateToString(): string {
   const root = $getRoot();
-  let result = "";
-
-  const paragraph = root.getFirstChild();
-  if (!paragraph) {
-    return result;
+  const paragraphs = root.getChildren();
+  if (paragraphs.length === 0) {
+    return "";
   }
 
-  const children = paragraph.getChildren();
-  for (const child of children) {
-    if ($isPlaceholderNode(child)) {
-      const title = child.getInputTitle();
-      result += needsQuoting(title) ? `@"${title}"` : `@${title}`;
-    } else if ($isExpressionNode(child)) {
-      result += `{{ ${child.getExpression()} }}`;
-    } else if ($isTextNode(child)) {
-      result += child.getTextContent();
+  const lines: string[] = [];
+  for (const paragraph of paragraphs) {
+    let line = "";
+    const children = paragraph.getChildren();
+    for (const child of children) {
+      if ($isPlaceholderNode(child)) {
+        const title = child.getInputTitle();
+        line += needsQuoting(title) ? `@"${title}"` : `@${title}`;
+      } else if ($isExpressionNode(child)) {
+        line += `{{ ${child.getExpression()} }}`;
+      } else if ($isTextNode(child)) {
+        line += child.getTextContent();
+      }
     }
+    lines.push(line);
   }
 
-  return result;
+  return lines.join("\n");
 }

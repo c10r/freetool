@@ -21,6 +21,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import DynamicBodyEditor from "@/features/space/components/DynamicBodyEditor";
 import { useHasPermission } from "@/hooks/usePermissions";
 import {
@@ -57,6 +65,24 @@ const formatResponse = (
       isJson: false,
     };
   }
+};
+
+const parseJsonResponse = (response: string): unknown | null => {
+  try {
+    return JSON.parse(response);
+  } catch {
+    return null;
+  }
+};
+
+const isTableData = (data: unknown): data is Record<string, unknown>[] => {
+  return (
+    Array.isArray(data) &&
+    data.length > 0 &&
+    data.every(
+      (item) => item && typeof item === "object" && !Array.isArray(item)
+    )
+  );
 };
 
 const RunApp = () => {
@@ -872,6 +898,53 @@ const RunApp = () => {
             <CardContent>
               {result.response ? (
                 (() => {
+                  const parsed = parseJsonResponse(result.response);
+                  if (isTableData(parsed)) {
+                    const columns = Array.from(
+                      new Set(parsed.flatMap((row) => Object.keys(row || {})))
+                    );
+
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            Content Type: JSON (table view)
+                          </span>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              {columns.map((column) => (
+                                <TableHead key={column}>{column}</TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {parsed.map((row) => {
+                              const rowKey = JSON.stringify(row);
+                              return (
+                                <TableRow key={rowKey}>
+                                  {columns.map((column) => {
+                                    const value = row[column];
+                                    return (
+                                      <TableCell key={`${rowKey}-${column}`}>
+                                        {value === null || value === undefined
+                                          ? ""
+                                          : typeof value === "object"
+                                            ? JSON.stringify(value)
+                                            : String(value)}
+                                      </TableCell>
+                                    );
+                                  })}
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    );
+                  }
+
                   const { content, isJson } = formatResponse(result.response);
                   return (
                     <div className="space-y-2">

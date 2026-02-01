@@ -61,6 +61,9 @@ function isDatabaseConfigEqual(a: DatabaseConfig, b: DatabaseConfig): boolean {
   if (a.port.trim() !== b.port.trim()) {
     return false;
   }
+  if (a.engine !== b.engine) {
+    return false;
+  }
   if (a.authScheme !== b.authScheme) {
     return false;
   }
@@ -304,6 +307,7 @@ export function useResourceForm(
               databaseName: formData.databaseConfig.databaseName.trim(),
               databaseHost: formData.databaseConfig.host.trim(),
               databasePort: parsedPort,
+              databaseEngine: formData.databaseConfig.engine,
               databaseAuthScheme: formData.databaseConfig.authScheme,
               databaseUsername: formData.databaseConfig.username.trim(),
               databasePassword:

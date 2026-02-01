@@ -36,6 +36,7 @@ export interface InputWithPlaceholdersProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  inputClassName?: string;
   id?: string;
   "aria-label"?: string;
   /** Disable {{ expression }} syntax - only allow @placeholder references */

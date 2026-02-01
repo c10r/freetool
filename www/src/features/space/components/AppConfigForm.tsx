@@ -11,13 +11,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type { EndpointMethod, KeyValuePair } from "../types";
+import { createDefaultSqlConfig } from "../sqlConfig.utils";
+import type {
+  EndpointMethod,
+  KeyValuePair,
+  ResourceKind,
+  SqlQueryConfig,
+} from "../types";
 import HttpMethodBadge from "./HttpMethodBadge";
 import KeyValueList from "./KeyValueList";
+import SqlQueryConfigForm from "./SqlQueryConfigForm";
 
 interface Resource {
   id: string;
   name: string;
+  resourceKind: ResourceKind;
   baseUrl?: string;
   urlParameters?: KeyValuePair[];
   headers?: KeyValuePair[];
@@ -38,13 +46,18 @@ interface AppConfigFormProps {
   headers: KeyValuePair[];
   body: KeyValuePair[];
   useDynamicJsonBody?: boolean;
-  onResourceChange: (resourceId: string | undefined) => void;
+  sqlConfig?: SqlQueryConfig;
+  onResourceChange: (
+    resourceId: string | undefined,
+    resourceKind?: ResourceKind
+  ) => void;
   onUrlPathChange?: (urlPath: string) => void;
   onHttpMethodChange?: (method: EndpointMethod) => void;
   onQueryParametersChange: (urlParameters: KeyValuePair[]) => void;
   onHeadersChange: (headers: KeyValuePair[]) => void;
   onBodyChange: (body: KeyValuePair[]) => void;
   onUseDynamicJsonBodyChange?: (useDynamicJsonBody: boolean) => void;
+  onSqlConfigChange?: (sqlConfig: SqlQueryConfig) => void;
   disabled?: boolean;
   showResourceSelector?: boolean;
   resourceSelectorLabel?: string;
@@ -61,6 +74,7 @@ export default function AppConfigForm({
   headers,
   body,
   useDynamicJsonBody = false,
+  sqlConfig,
   onResourceChange,
   onUrlPathChange,
   onHttpMethodChange,
@@ -68,6 +82,7 @@ export default function AppConfigForm({
   onHeadersChange,
   onBodyChange,
   onUseDynamicJsonBodyChange,
+  onSqlConfigChange,
   disabled = false,
   showResourceSelector = true,
   resourceSelectorLabel = "Resource",
@@ -80,6 +95,7 @@ export default function AppConfigForm({
   const selectedResource = resourceId
     ? resources.find((r) => r.id === resourceId)
     : undefined;
+  const effectiveSqlConfig = sqlConfig ?? createDefaultSqlConfig();
 
   // App inputs for the "App Fields" section
   // (InputWithPlaceholders always shows current_user in "User Context" section)
@@ -103,6 +119,8 @@ export default function AppConfigForm({
           const resourceList = response.data.items.map((item) => ({
             id: item.id ?? "",
             name: item.name,
+            resourceKind:
+              item.resourceKind?.toLowerCase() === "sql" ? "sql" : "http",
             baseUrl: item.baseUrl,
             urlParameters: (item.urlParameters || []).map((kvp) => ({
               key: kvp.key || "",
@@ -132,6 +150,12 @@ export default function AppConfigForm({
     fetchResources();
   }, [spaceId]);
 
+  useEffect(() => {
+    if (selectedResource?.resourceKind === "sql" && !sqlConfig) {
+      onSqlConfigChange?.(createDefaultSqlConfig());
+    }
+  }, [selectedResource?.resourceKind, sqlConfig, onSqlConfigChange]);
+
   return (
     <div className="space-y-4">
       {showResourceSelector && (
@@ -139,7 +163,10 @@ export default function AppConfigForm({
           <Label htmlFor="resource-select">{resourceSelectorLabel} *</Label>
           <Select
             value={resourceId || ""}
-            onValueChange={(value) => onResourceChange(value || undefined)}
+            onValueChange={(value) => {
+              const nextResource = resources.find((r) => r.id === value);
+              onResourceChange(value || undefined, nextResource?.resourceKind);
+            }}
             disabled={disabled || loadingResources}
           >
             <SelectTrigger id="resource-select" aria-required>
@@ -173,174 +200,189 @@ export default function AppConfigForm({
         </div>
       )}
 
-      {/* HTTP Method Selector */}
-      <div className="space-y-2">
-        <Label htmlFor="http-method">HTTP Method *</Label>
-        <Select
-          value={httpMethod || ""}
-          onValueChange={(value) => {
-            const method = value as EndpointMethod;
-            onHttpMethodChange?.(method);
-          }}
+      {selectedResource?.resourceKind === "sql" && (
+        <SqlQueryConfigForm
+          resourceId={resourceId}
+          config={effectiveSqlConfig}
+          onChange={(nextConfig) => onSqlConfigChange?.(nextConfig)}
           disabled={disabled}
-        >
-          <SelectTrigger id="http-method">
-            <SelectValue placeholder="Select HTTP method" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="GET">
-              <HttpMethodBadge method="GET" />
-            </SelectItem>
-            <SelectItem value="POST">
-              <HttpMethodBadge method="POST" />
-            </SelectItem>
-            <SelectItem value="PUT">
-              <HttpMethodBadge method="PUT" />
-            </SelectItem>
-            <SelectItem value="PATCH">
-              <HttpMethodBadge method="PATCH" />
-            </SelectItem>
-            <SelectItem value="DELETE">
-              <HttpMethodBadge method="DELETE" />
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {selectedResource && (
-        <div className="space-y-2">
-          <Label>URL</Label>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Label
-                htmlFor="base-url"
-                className="text-sm text-muted-foreground"
-              >
-                Base URL (from resource)
-              </Label>
-              <Input
-                id="base-url"
-                value={
-                  selectedResource.baseUrl
-                    ? selectedResource.baseUrl.substring(0, 50) +
-                      (selectedResource.baseUrl.length > 50 ? "..." : "")
-                    : ""
-                }
-                disabled
-                className="bg-muted"
-              />
-            </div>
-            <div className="flex-1">
-              <Label htmlFor="url-path" className="text-sm">
-                Custom Path
-              </Label>
-              <InputWithPlaceholders
-                id="url-path"
-                value={urlPath}
-                onChange={(value) => onUrlPathChange?.(value)}
-                availableInputs={appInputs}
-                placeholder="Example: /api/users/{id}"
-                disabled={disabled}
-              />
-            </div>
-          </div>
-        </div>
+          availableInputs={appInputs}
+        />
       )}
 
-      <div className="space-y-2">
-        <Label>Query Parameters</Label>
-        {selectedResource?.urlParameters &&
-          selectedResource.urlParameters.length > 0 && (
-            <KeyValueList
-              items={selectedResource.urlParameters}
-              ariaLabel="Query parameters"
-              readOnly
-              readOnlyLabel="From selected resource (read-only):"
-            />
-          )}
-        <KeyValueList
-          items={queryParameters}
-          onChange={onQueryParametersChange}
-          ariaLabel="Query parameters"
-          disabled={disabled}
-          availableInputs={appInputs}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Headers</Label>
-        {selectedResource?.headers && selectedResource.headers.length > 0 && (
-          <KeyValueList
-            items={selectedResource.headers}
-            ariaLabel="Headers"
-            readOnly
-            readOnlyLabel="From selected resource (read-only):"
-          />
-        )}
-        <KeyValueList
-          items={headers}
-          onChange={onHeadersChange}
-          ariaLabel="Headers"
-          disabled={disabled}
-          availableInputs={appInputs}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>JSON Body</Label>
-
-        {/* Dynamic JSON Body Toggle */}
-        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-          <div className="space-y-0.5">
-            <Label
-              htmlFor="dynamic-body-toggle"
-              className="text-sm font-medium cursor-pointer"
+      {selectedResource?.resourceKind !== "sql" && (
+        <>
+          {/* HTTP Method Selector */}
+          <div className="space-y-2">
+            <Label htmlFor="http-method">HTTP Method *</Label>
+            <Select
+              value={httpMethod || ""}
+              onValueChange={(value) => {
+                const method = value as EndpointMethod;
+                onHttpMethodChange?.(method);
+              }}
+              disabled={disabled}
             >
-              Dynamic JSON Body
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Users provide body key-value pairs at runtime instead of
-              predefined values
-            </p>
+              <SelectTrigger id="http-method">
+                <SelectValue placeholder="Select HTTP method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="GET">
+                  <HttpMethodBadge method="GET" />
+                </SelectItem>
+                <SelectItem value="POST">
+                  <HttpMethodBadge method="POST" />
+                </SelectItem>
+                <SelectItem value="PUT">
+                  <HttpMethodBadge method="PUT" />
+                </SelectItem>
+                <SelectItem value="PATCH">
+                  <HttpMethodBadge method="PATCH" />
+                </SelectItem>
+                <SelectItem value="DELETE">
+                  <HttpMethodBadge method="DELETE" />
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Switch
-            id="dynamic-body-toggle"
-            checked={useDynamicJsonBody}
-            onCheckedChange={(checked) => {
-              onUseDynamicJsonBodyChange?.(checked);
-            }}
-            disabled={disabled}
-          />
-        </div>
 
-        {/* Static body editor - only shown when dynamic body is disabled */}
-        {!useDynamicJsonBody && (
-          <>
-            {selectedResource?.body && selectedResource.body.length > 0 && (
-              <KeyValueList
-                items={selectedResource.body}
-                ariaLabel="JSON body"
-                readOnly
-                readOnlyLabel="From selected resource (read-only):"
-              />
-            )}
+          {selectedResource && (
+            <div className="space-y-2">
+              <Label>URL</Label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Label
+                    htmlFor="base-url"
+                    className="text-sm text-muted-foreground"
+                  >
+                    Base URL (from resource)
+                  </Label>
+                  <Input
+                    id="base-url"
+                    value={
+                      selectedResource.baseUrl
+                        ? selectedResource.baseUrl.substring(0, 50) +
+                          (selectedResource.baseUrl.length > 50 ? "..." : "")
+                        : ""
+                    }
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label htmlFor="url-path" className="text-sm">
+                    Custom Path
+                  </Label>
+                  <InputWithPlaceholders
+                    id="url-path"
+                    value={urlPath}
+                    onChange={(value) => onUrlPathChange?.(value)}
+                    availableInputs={appInputs}
+                    placeholder="Example: /api/users/{id}"
+                    disabled={disabled}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label>Query Parameters</Label>
+            {selectedResource?.urlParameters &&
+              selectedResource.urlParameters.length > 0 && (
+                <KeyValueList
+                  items={selectedResource.urlParameters}
+                  ariaLabel="Query parameters"
+                  readOnly
+                  readOnlyLabel="From selected resource (read-only):"
+                />
+              )}
             <KeyValueList
-              items={body}
-              onChange={onBodyChange}
-              ariaLabel="JSON body"
+              items={queryParameters}
+              onChange={onQueryParametersChange}
+              ariaLabel="Query parameters"
               disabled={disabled}
               availableInputs={appInputs}
             />
-          </>
-        )}
+          </div>
 
-        {useDynamicJsonBody && (
-          <p className="text-sm text-muted-foreground italic">
-            Body parameters will be provided by users when running this app (max
-            10 key-value pairs).
-          </p>
-        )}
-      </div>
+          <div className="space-y-2">
+            <Label>Headers</Label>
+            {selectedResource?.headers &&
+              selectedResource.headers.length > 0 && (
+                <KeyValueList
+                  items={selectedResource.headers}
+                  ariaLabel="Headers"
+                  readOnly
+                  readOnlyLabel="From selected resource (read-only):"
+                />
+              )}
+            <KeyValueList
+              items={headers}
+              onChange={onHeadersChange}
+              ariaLabel="Headers"
+              disabled={disabled}
+              availableInputs={appInputs}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>JSON Body</Label>
+
+            {/* Dynamic JSON Body Toggle */}
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor="dynamic-body-toggle"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Dynamic JSON Body
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Users provide body key-value pairs at runtime instead of
+                  predefined values
+                </p>
+              </div>
+              <Switch
+                id="dynamic-body-toggle"
+                checked={useDynamicJsonBody}
+                onCheckedChange={(checked) => {
+                  onUseDynamicJsonBodyChange?.(checked);
+                }}
+                disabled={disabled}
+              />
+            </div>
+
+            {/* Static body editor - only shown when dynamic body is disabled */}
+            {!useDynamicJsonBody && (
+              <>
+                {selectedResource?.body && selectedResource.body.length > 0 && (
+                  <KeyValueList
+                    items={selectedResource.body}
+                    ariaLabel="JSON body"
+                    readOnly
+                    readOnlyLabel="From selected resource (read-only):"
+                  />
+                )}
+                <KeyValueList
+                  items={body}
+                  onChange={onBodyChange}
+                  ariaLabel="JSON body"
+                  disabled={disabled}
+                  availableInputs={appInputs}
+                />
+              </>
+            )}
+
+            {useDynamicJsonBody && (
+              <p className="text-sm text-muted-foreground italic">
+                Body parameters will be provided by users when running this app
+                (max 10 key-value pairs).
+              </p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

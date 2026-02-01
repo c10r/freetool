@@ -195,6 +195,30 @@ export function useSidebarTree() {
               value: kvp.value || "",
             })),
             useDynamicJsonBody: app.useDynamicJsonBody ?? false,
+            sqlConfig: app.sqlConfig
+              ? {
+                  mode: app.sqlConfig.mode,
+                  table: app.sqlConfig.table || undefined,
+                  columns: app.sqlConfig.columns || [],
+                  filters: (app.sqlConfig.filters || []).map((filter) => ({
+                    column: filter.column || "",
+                    operator: filter.operator,
+                    value: filter.value || undefined,
+                  })),
+                  limit: app.sqlConfig.limit || undefined,
+                  orderBy: (app.sqlConfig.orderBy || []).map((order) => ({
+                    column: order.column || "",
+                    direction: order.direction,
+                  })),
+                  rawSql: app.sqlConfig.rawSql || undefined,
+                  rawSqlParams: (app.sqlConfig.rawSqlParams || []).map(
+                    (kvp) => ({
+                      key: kvp.key || "",
+                      value: kvp.value || "",
+                    })
+                  ),
+                }
+              : undefined,
             description: app.description || undefined,
           };
           nodes[app.id] = appNode;

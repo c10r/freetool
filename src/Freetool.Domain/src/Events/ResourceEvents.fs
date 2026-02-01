@@ -17,6 +17,7 @@ and DatabaseConfigSummary =
     { DatabaseName: DatabaseName
       Host: DatabaseHost
       Port: DatabasePort
+      Engine: DatabaseEngine
       AuthScheme: DatabaseAuthScheme
       Username: DatabaseUsername
       UseSsl: bool

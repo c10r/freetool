@@ -35,11 +35,13 @@ import {
 import { useHasPermission } from "@/hooks/usePermissions";
 import { useResources } from "@/hooks/useResources";
 import type { components } from "@/schema";
+import { createDefaultSqlConfig } from "../sqlConfig.utils";
 import type {
   AppField,
   EndpointMethod,
   FolderNode,
   KeyValuePair,
+  ResourceKind,
   SpaceMainProps,
   SpaceNode,
 } from "../types";
@@ -87,6 +89,7 @@ export default function FolderView({
       name: "",
       description: "",
       resourceId: "",
+      resourceKind: undefined,
       httpMethod: undefined,
       urlPath: "",
       queryParameters: [],
@@ -94,6 +97,7 @@ export default function FolderView({
       body: [],
       inputs: [],
       useDynamicJsonBody: false,
+      sqlConfig: createDefaultSqlConfig(),
     });
   }, []);
   const [newFolderName, setNewFolderName] = useState("");
@@ -120,6 +124,7 @@ export default function FolderView({
     name: "",
     description: "",
     resourceId: "",
+    resourceKind: undefined as ResourceKind | undefined,
     httpMethod: undefined as EndpointMethod | undefined,
     urlPath: "",
     queryParameters: [] as KeyValuePair[],
@@ -127,6 +132,7 @@ export default function FolderView({
     body: [] as KeyValuePair[],
     inputs: [] as AppField[],
     useDynamicJsonBody: false,
+    sqlConfig: createDefaultSqlConfig(),
   });
 
   // App running state
@@ -295,7 +301,7 @@ export default function FolderView({
       return;
     }
 
-    if (!appFormData.httpMethod) {
+    if (appFormData.resourceKind !== "sql" && !appFormData.httpMethod) {
       setCreateAppError("HTTP method is required");
       return;
     }
@@ -316,7 +322,8 @@ export default function FolderView({
         appFormData.headers,
         appFormData.body,
         appFormData.inputs,
-        appFormData.useDynamicJsonBody
+        appFormData.useDynamicJsonBody,
+        appFormData.sqlConfig
       );
 
       // Reset form and close on success
@@ -324,6 +331,7 @@ export default function FolderView({
         name: "",
         description: "",
         resourceId: "",
+        resourceKind: undefined,
         httpMethod: undefined,
         urlPath: "",
         queryParameters: [],
@@ -331,6 +339,7 @@ export default function FolderView({
         body: [],
         inputs: [],
         useDynamicJsonBody: false,
+        sqlConfig: createDefaultSqlConfig(),
       });
       setShowCreateAppForm(false);
     } catch (error) {
@@ -356,6 +365,7 @@ export default function FolderView({
       name: "",
       description: "",
       resourceId: "",
+      resourceKind: undefined,
       httpMethod: undefined,
       urlPath: "",
       queryParameters: [],
@@ -363,6 +373,7 @@ export default function FolderView({
       body: [],
       inputs: [],
       useDynamicJsonBody: false,
+      sqlConfig: createDefaultSqlConfig(),
     });
   };
 
@@ -608,8 +619,26 @@ export default function FolderView({
               headers={appFormData.headers}
               body={appFormData.body}
               useDynamicJsonBody={appFormData.useDynamicJsonBody}
-              onResourceChange={(resourceId) =>
-                setAppFormData({ ...appFormData, resourceId })
+              sqlConfig={appFormData.sqlConfig}
+              onResourceChange={(resourceId, resourceKind) =>
+                setAppFormData((prev) => {
+                  const nextResourceId = resourceId;
+                  if (resourceKind === "sql") {
+                    return {
+                      ...prev,
+                      resourceId: nextResourceId,
+                      resourceKind,
+                      httpMethod: "GET",
+                      urlPath: "",
+                      queryParameters: [],
+                      headers: [],
+                      body: [],
+                      useDynamicJsonBody: false,
+                      sqlConfig: prev.sqlConfig || createDefaultSqlConfig(),
+                    };
+                  }
+                  return { ...prev, resourceId: nextResourceId, resourceKind };
+                })
               }
               onHttpMethodChange={(httpMethod) =>
                 setAppFormData({ ...appFormData, httpMethod })
@@ -627,6 +656,9 @@ export default function FolderView({
               onUseDynamicJsonBodyChange={(useDynamicJsonBody) =>
                 setAppFormData({ ...appFormData, useDynamicJsonBody })
               }
+              onSqlConfigChange={(sqlConfig) =>
+                setAppFormData({ ...appFormData, sqlConfig })
+              }
               disabled={isCreatingApp}
               inputs={appFormData.inputs.map((f) => ({
                 title: f.label,
@@ -640,7 +672,8 @@ export default function FolderView({
                 disabled={
                   isCreatingApp ||
                   !appFormData.name.trim() ||
-                  !appFormData.httpMethod
+                  (appFormData.resourceKind !== "sql" &&
+                    !appFormData.httpMethod)
                 }
               >
                 {isCreatingApp ? "Creating..." : "Create App"}

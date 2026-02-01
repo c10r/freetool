@@ -94,6 +94,7 @@ let ``SQL resource creation should require database config`` () =
             (Some "analytics")
             (Some "db.internal")
             (Some 5432)
+            (Some "postgres")
             (Some "username_password")
             (Some "reporter")
             (Some "secret")

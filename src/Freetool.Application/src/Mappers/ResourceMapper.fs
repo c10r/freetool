@@ -33,6 +33,7 @@ module ResourceMapper =
                 None
                 None
                 None
+                None
                 false
                 false
                 []
@@ -58,6 +59,7 @@ module ResourceMapper =
                 (Some dto.DatabaseName)
                 (Some dto.DatabaseHost)
                 (Some dto.DatabasePort)
+                (Some dto.DatabaseEngine)
                 (Some dto.DatabaseAuthScheme)
                 (Some dto.DatabaseUsername)
                 dto.DatabasePassword
@@ -126,6 +128,7 @@ module ResourceMapper =
             dto.DatabaseName
             dto.DatabaseHost
             dto.DatabasePort
+            dto.DatabaseEngine
             dto.DatabaseAuthScheme
             dto.DatabaseUsername
             dto.DatabasePassword

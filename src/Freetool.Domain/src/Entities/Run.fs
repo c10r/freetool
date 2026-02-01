@@ -68,6 +68,10 @@ type CurrentUser =
       FirstName: string
       LastName: string }
 
+type SqlQuery =
+    { Sql: string
+      Parameters: (string * string) list }
+
 module Run =
     let fromData (runData: RunData) : ValidatedRun =
         { State = runData
@@ -100,6 +104,150 @@ module Run =
                     Error(ValidationError $"Dynamic body cannot have duplicate keys: {duplicateList}")
                 else
                     Ok body
+
+    let private createTemplateSubstituter
+        (inputValuesMap: Map<string, string>)
+        (currentUser: CurrentUser)
+        : (string -> string) =
+        // Regex patterns for variable and expression matching
+        // Match @"quoted name" or @identifier (with optional dot notation for current_user)
+        let variablePattern =
+            @"@(?:""([^""]+)""|([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?))"
+
+        // Match {{ expression }}
+        let expressionPattern = @"\{\{([\s\S]*?)\}\}"
+
+        /// Substitute variables in text (@var or @"var" syntax)
+        let substituteVariables (text: string) : string =
+            Regex.Replace(
+                text,
+                variablePattern,
+                fun m ->
+                    // Group 1 is quoted name, Group 2 is unquoted identifier
+                    let varName =
+                        if m.Groups.[1].Success then
+                            m.Groups.[1].Value
+                        else
+                            m.Groups.[2].Value
+
+                    // Check for current_user prefix
+                    if varName.StartsWith("current_user.") then
+                        match varName with
+                        | "current_user.email" -> currentUser.Email
+                        | "current_user.id" -> currentUser.Id
+                        | "current_user.firstName" -> currentUser.FirstName
+                        | "current_user.lastName" -> currentUser.LastName
+                        | _ -> m.Value // Keep original if not recognized
+                    else
+                        match inputValuesMap.TryFind varName with
+                        | Some value -> value
+                        | None -> m.Value // Keep original if not found
+            )
+
+        /// Check if a value is "truthy" for ternary evaluation
+        let isTruthy (value: string) : bool =
+            match value.Trim().ToLowerInvariant() with
+            | ""
+            | "0"
+            | "false"
+            | "null"
+            | "undefined" -> false
+            | _ -> true
+
+        /// Try to parse a string as a decimal for arithmetic
+        let tryParseDecimal (s: string) : decimal option =
+            match System.Decimal.TryParse(s.Trim()) with
+            | true, d -> Some d
+            | _ -> None
+
+        /// Evaluate a simple arithmetic expression (single binary operation)
+        /// Supports: +, -, *, / with decimal numbers
+        let evaluateArithmetic (expr: string) : string =
+            let expr = expr.Trim()
+
+            // Try to parse as a plain number first
+            match tryParseDecimal expr with
+            | Some d -> string d
+            | None ->
+                // Try multiplication: a * b
+                let mulPattern = @"^\s*(-?\d+(?:\.\d+)?)\s*\*\s*(-?\d+(?:\.\d+)?)\s*$"
+                let mulMatch = Regex.Match(expr, mulPattern)
+
+                if mulMatch.Success then
+                    match tryParseDecimal mulMatch.Groups.[1].Value, tryParseDecimal mulMatch.Groups.[2].Value with
+                    | Some a, Some b -> string (a * b)
+                    | _ -> expr
+                else
+                    // Try division: a / b
+                    let divPattern = @"^\s*(-?\d+(?:\.\d+)?)\s*/\s*(-?\d+(?:\.\d+)?)\s*$"
+                    let divMatch = Regex.Match(expr, divPattern)
+
+                    if divMatch.Success then
+                        match tryParseDecimal divMatch.Groups.[1].Value, tryParseDecimal divMatch.Groups.[2].Value with
+                        | Some a, Some b when b <> 0m -> string (a / b)
+                        | _ -> expr
+                    else
+                        // Try addition: a + b
+                        let addPattern = @"^\s*(-?\d+(?:\.\d+)?)\s*\+\s*(-?\d+(?:\.\d+)?)\s*$"
+                        let addMatch = Regex.Match(expr, addPattern)
+
+                        if addMatch.Success then
+                            match
+                                tryParseDecimal addMatch.Groups.[1].Value, tryParseDecimal addMatch.Groups.[2].Value
+                            with
+                            | Some a, Some b -> string (a + b)
+                            | _ -> expr
+                        else
+                            // Try subtraction: a - b (careful with negative first operand)
+                            let subPattern = @"^\s*(-?\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*$"
+                            let subMatch = Regex.Match(expr, subPattern)
+
+                            if subMatch.Success then
+                                match
+                                    tryParseDecimal subMatch.Groups.[1].Value, tryParseDecimal subMatch.Groups.[2].Value
+                                with
+                                | Some a, Some b -> string (a - b)
+                                | _ -> expr
+                            else
+                                expr // Return original if no pattern matches
+
+        /// Evaluate a simple expression (supports variables, arithmetic, ternary)
+        let evaluateExpression (expr: string) : string =
+            // First substitute all variables
+            let substituted = substituteVariables expr
+
+            // Check for ternary: condition ? trueVal : falseVal
+            let ternaryPattern = @"^\s*(.+?)\s*\?\s*(.+?)\s*:\s*(.+?)\s*$"
+            let ternaryMatch = Regex.Match(substituted, ternaryPattern)
+
+            if ternaryMatch.Success then
+                let condition = ternaryMatch.Groups.[1].Value.Trim()
+                let trueVal = ternaryMatch.Groups.[2].Value.Trim()
+                let falseVal = ternaryMatch.Groups.[3].Value.Trim()
+
+                // Evaluate condition (truthy check)
+                if isTruthy condition then
+                    evaluateArithmetic trueVal
+                else
+                    evaluateArithmetic falseVal
+            else
+                evaluateArithmetic substituted
+
+        /// Process the template - substitute variables and evaluate {{ expressions }}
+        let substituteTemplate (template: string) : string =
+            // First substitute simple variables (outside of {{ }})
+            let withVars = substituteVariables template
+
+            // Then evaluate {{ expressions }}
+            Regex.Replace(
+                withVars,
+                expressionPattern,
+                fun m ->
+                    let expr = m.Groups.[1].Value.Trim()
+                    evaluateExpression expr
+            )
+
+        substituteTemplate
 
     // Validate input values against app's input schema
     let private validateInputValues
@@ -307,146 +455,7 @@ module Run =
             let inputValuesMap =
                 run.State.InputValues |> List.map (fun iv -> iv.Title, iv.Value) |> Map.ofList
 
-            // Regex patterns for variable and expression matching
-            // Match @"quoted name" or @identifier (with optional dot notation for current_user)
-            let variablePattern =
-                @"@(?:""([^""]+)""|([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?))"
-
-            // Match {{ expression }}
-            let expressionPattern = @"\{\{([\s\S]*?)\}\}"
-
-            /// Substitute variables in text (@var or @"var" syntax)
-            let substituteVariables (text: string) : string =
-                Regex.Replace(
-                    text,
-                    variablePattern,
-                    fun m ->
-                        // Group 1 is quoted name, Group 2 is unquoted identifier
-                        let varName =
-                            if m.Groups.[1].Success then
-                                m.Groups.[1].Value
-                            else
-                                m.Groups.[2].Value
-
-                        // Check for current_user prefix
-                        if varName.StartsWith("current_user.") then
-                            match varName with
-                            | "current_user.email" -> currentUser.Email
-                            | "current_user.id" -> currentUser.Id
-                            | "current_user.firstName" -> currentUser.FirstName
-                            | "current_user.lastName" -> currentUser.LastName
-                            | _ -> m.Value // Keep original if not recognized
-                        else
-                            match inputValuesMap.TryFind varName with
-                            | Some value -> value
-                            | None -> m.Value // Keep original if not found
-                )
-
-            /// Check if a value is "truthy" for ternary evaluation
-            let isTruthy (value: string) : bool =
-                match value.Trim().ToLowerInvariant() with
-                | ""
-                | "0"
-                | "false"
-                | "null"
-                | "undefined" -> false
-                | _ -> true
-
-            /// Try to parse a string as a decimal for arithmetic
-            let tryParseDecimal (s: string) : decimal option =
-                match System.Decimal.TryParse(s.Trim()) with
-                | true, d -> Some d
-                | _ -> None
-
-            /// Evaluate a simple arithmetic expression (single binary operation)
-            /// Supports: +, -, *, / with decimal numbers
-            let evaluateArithmetic (expr: string) : string =
-                let expr = expr.Trim()
-
-                // Try to parse as a plain number first
-                match tryParseDecimal expr with
-                | Some d -> string d
-                | None ->
-                    // Try multiplication: a * b
-                    let mulPattern = @"^\s*(-?\d+(?:\.\d+)?)\s*\*\s*(-?\d+(?:\.\d+)?)\s*$"
-                    let mulMatch = Regex.Match(expr, mulPattern)
-
-                    if mulMatch.Success then
-                        match tryParseDecimal mulMatch.Groups.[1].Value, tryParseDecimal mulMatch.Groups.[2].Value with
-                        | Some a, Some b -> string (a * b)
-                        | _ -> expr
-                    else
-                        // Try division: a / b
-                        let divPattern = @"^\s*(-?\d+(?:\.\d+)?)\s*/\s*(-?\d+(?:\.\d+)?)\s*$"
-                        let divMatch = Regex.Match(expr, divPattern)
-
-                        if divMatch.Success then
-                            match
-                                tryParseDecimal divMatch.Groups.[1].Value, tryParseDecimal divMatch.Groups.[2].Value
-                            with
-                            | Some a, Some b when b <> 0m -> string (a / b)
-                            | _ -> expr
-                        else
-                            // Try addition: a + b
-                            let addPattern = @"^\s*(-?\d+(?:\.\d+)?)\s*\+\s*(-?\d+(?:\.\d+)?)\s*$"
-                            let addMatch = Regex.Match(expr, addPattern)
-
-                            if addMatch.Success then
-                                match
-                                    tryParseDecimal addMatch.Groups.[1].Value, tryParseDecimal addMatch.Groups.[2].Value
-                                with
-                                | Some a, Some b -> string (a + b)
-                                | _ -> expr
-                            else
-                                // Try subtraction: a - b (careful with negative first operand)
-                                let subPattern = @"^\s*(-?\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*$"
-                                let subMatch = Regex.Match(expr, subPattern)
-
-                                if subMatch.Success then
-                                    match
-                                        tryParseDecimal subMatch.Groups.[1].Value,
-                                        tryParseDecimal subMatch.Groups.[2].Value
-                                    with
-                                    | Some a, Some b -> string (a - b)
-                                    | _ -> expr
-                                else
-                                    expr // Return original if no pattern matches
-
-            /// Evaluate a simple expression (supports variables, arithmetic, ternary)
-            let evaluateExpression (expr: string) : string =
-                // First substitute all variables
-                let substituted = substituteVariables expr
-
-                // Check for ternary: condition ? trueVal : falseVal
-                let ternaryPattern = @"^\s*(.+?)\s*\?\s*(.+?)\s*:\s*(.+?)\s*$"
-                let ternaryMatch = Regex.Match(substituted, ternaryPattern)
-
-                if ternaryMatch.Success then
-                    let condition = ternaryMatch.Groups.[1].Value.Trim()
-                    let trueVal = ternaryMatch.Groups.[2].Value.Trim()
-                    let falseVal = ternaryMatch.Groups.[3].Value.Trim()
-
-                    // Evaluate condition (truthy check)
-                    if isTruthy condition then
-                        evaluateArithmetic trueVal
-                    else
-                        evaluateArithmetic falseVal
-                else
-                    evaluateArithmetic substituted
-
-            /// Process the template - substitute variables and evaluate {{ expressions }}
-            let substituteTemplate (template: string) : string =
-                // First substitute simple variables (outside of {{ }})
-                let withVars = substituteVariables template
-
-                // Then evaluate {{ expressions }}
-                Regex.Replace(
-                    withVars,
-                    expressionPattern,
-                    fun m ->
-                        let expr = m.Groups.[1].Value.Trim()
-                        evaluateExpression expr
-                )
+            let substituteTemplate = createTemplateSubstituter inputValuesMap currentUser
 
             // Substitute input values in URL parameters, headers, and body
             let substitutedUrlParams =
@@ -489,6 +498,163 @@ module Run =
                       UseJsonBody = true }
 
                 Ok(setExecutableRequest executableRequest run)
+
+    let private quoteIdentifier (value: string) : string =
+        let escaped = value.Replace("\"", "\"\"")
+        $"\"{escaped}\""
+
+    let private quoteCompositeIdentifier (value: string) : string =
+        value.Split('.')
+        |> Array.map (fun part -> part.Trim())
+        |> Array.filter (fun part -> part <> "")
+        |> Array.map quoteIdentifier
+        |> String.concat "."
+
+    let composeSqlQueryFromAppAndResource
+        (run: ValidatedRun)
+        (app: ValidatedApp)
+        (currentUser: CurrentUser)
+        : Result<SqlQuery, DomainError> =
+        let inputValuesMap =
+            run.State.InputValues |> List.map (fun iv -> iv.Title, iv.Value) |> Map.ofList
+
+        let substituteTemplate = createTemplateSubstituter inputValuesMap currentUser
+
+        match App.getSqlConfig app with
+        | None -> Error(InvalidOperation "SQL config is missing for SQL app")
+        | Some sqlConfig ->
+            match sqlConfig.Mode with
+            | SqlQueryMode.Raw ->
+                match sqlConfig.RawSql with
+                | None -> Error(ValidationError "Raw SQL is required for SQL raw mode")
+                | Some rawSql ->
+                    let sql = substituteTemplate rawSql
+
+                    let parameters =
+                        sqlConfig.RawSqlParams
+                        |> List.map (fun kvp -> (kvp.Key, substituteTemplate kvp.Value))
+
+                    Ok { Sql = sql; Parameters = parameters }
+            | SqlQueryMode.Gui ->
+                match sqlConfig.Table with
+                | None -> Error(ValidationError "SQL table is required for GUI mode")
+                | Some table ->
+                    let mutable paramIndex = 0
+                    let parameters = System.Collections.Generic.List<(string * string)>()
+
+                    let addParam (value: string) =
+                        paramIndex <- paramIndex + 1
+                        let name = $"p{paramIndex}"
+                        parameters.Add(name, value)
+                        $"@{name}"
+
+                    let buildFilter (filter: SqlFilter) : Result<string, DomainError> =
+                        let column = quoteCompositeIdentifier filter.Column
+
+                        match filter.Operator with
+                        | SqlFilterOperator.IsNull -> Ok $"{column} IS NULL"
+                        | SqlFilterOperator.IsNotNull -> Ok $"{column} IS NOT NULL"
+                        | SqlFilterOperator.In
+                        | SqlFilterOperator.NotIn ->
+                            match filter.Value with
+                            | None -> Error(ValidationError "SQL filter value is required")
+                            | Some rawValue ->
+                                let substituted = substituteTemplate rawValue
+
+                                let values =
+                                    substituted.Split([| ',' |], System.StringSplitOptions.RemoveEmptyEntries)
+                                    |> Array.map (fun v -> v.Trim())
+                                    |> Array.filter (fun v -> v <> "")
+
+                                if values.Length = 0 then
+                                    Error(ValidationError "SQL filter value is required")
+                                else
+                                    let placeholders = values |> Array.map addParam |> String.concat ", "
+
+                                    let op =
+                                        match filter.Operator with
+                                        | SqlFilterOperator.In -> "IN"
+                                        | _ -> "NOT IN"
+
+                                    Ok $"{column} {op} ({placeholders})"
+                        | _ ->
+                            match filter.Value with
+                            | None -> Error(ValidationError "SQL filter value is required")
+                            | Some rawValue ->
+                                let value = substituteTemplate rawValue
+                                let placeholder = addParam value
+
+                                let op =
+                                    match filter.Operator with
+                                    | SqlFilterOperator.Equals -> "="
+                                    | SqlFilterOperator.NotEquals -> "!="
+                                    | SqlFilterOperator.GreaterThan -> ">"
+                                    | SqlFilterOperator.GreaterThanOrEqual -> ">="
+                                    | SqlFilterOperator.LessThan -> "<"
+                                    | SqlFilterOperator.LessThanOrEqual -> "<="
+                                    | SqlFilterOperator.Like -> "LIKE"
+                                    | SqlFilterOperator.ILike -> "ILIKE"
+                                    | _ -> "="
+
+                                Ok $"{column} {op} {placeholder}"
+
+                    let filterResults =
+                        sqlConfig.Filters
+                        |> List.map buildFilter
+                        |> List.fold
+                            (fun acc item ->
+                                match acc, item with
+                                | Error err, _ -> Error err
+                                | _, Error err -> Error err
+                                | Ok items, Ok valid -> Ok(valid :: items))
+                            (Ok [])
+                        |> Result.map List.rev
+
+                    match filterResults with
+                    | Error err -> Error err
+                    | Ok filters ->
+                        let selectColumns =
+                            if sqlConfig.Columns.IsEmpty then
+                                "*"
+                            else
+                                sqlConfig.Columns |> List.map quoteCompositeIdentifier |> String.concat ", "
+
+                        let baseSql = $"SELECT {selectColumns} FROM {quoteCompositeIdentifier table}"
+
+                        let whereClause =
+                            if filters.IsEmpty then
+                                ""
+                            else
+                                let filterText = String.concat " AND " filters
+                                $" WHERE {filterText}"
+
+                        let orderByClause =
+                            if sqlConfig.OrderBy.IsEmpty then
+                                ""
+                            else
+                                let parts =
+                                    sqlConfig.OrderBy
+                                    |> List.map (fun orderBy ->
+                                        let dir =
+                                            match orderBy.Direction with
+                                            | SqlSortDirection.Asc -> "ASC"
+                                            | SqlSortDirection.Desc -> "DESC"
+
+                                        $"{quoteCompositeIdentifier orderBy.Column} {dir}")
+
+                                let orderByText = String.concat ", " parts
+                                $" ORDER BY {orderByText}"
+
+                        let limitClause =
+                            match sqlConfig.Limit with
+                            | None -> ""
+                            | Some limit -> $" LIMIT {limit}"
+
+                        let sql = $"{baseSql}{whereClause}{orderByClause}{limitClause}"
+
+                        Ok
+                            { Sql = sql
+                              Parameters = parameters |> Seq.toList }
 
     let markAsRunning (actorUserId: UserId) (run: ValidatedRun) : ValidatedRun =
         let updatedRunData =

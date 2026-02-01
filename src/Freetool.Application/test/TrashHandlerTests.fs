@@ -297,6 +297,7 @@ let createTestApp (name: string) (folderId: FolderId) (resourceId: ResourceId) :
           Headers = []
           Body = []
           UseDynamicJsonBody = false
+          SqlConfig = None
           Description = None
           CreatedAt = DateTime.UtcNow
           UpdatedAt = DateTime.UtcNow

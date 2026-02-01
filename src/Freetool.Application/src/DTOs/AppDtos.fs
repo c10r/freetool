@@ -11,6 +11,40 @@ type AppInputDto =
 
       DefaultValue: string option }
 
+type SqlFilterDto =
+    { [<Required>]
+      Column: string
+
+      [<Required>]
+      Operator: string
+
+      Value: string option }
+
+type SqlOrderByDto =
+    { [<Required>]
+      Column: string
+
+      [<Required>]
+      Direction: string }
+
+type SqlQueryConfigDto =
+    { [<Required>]
+      Mode: string
+
+      Table: string option
+
+      Columns: string list
+
+      Filters: SqlFilterDto list
+
+      Limit: int option
+
+      OrderBy: SqlOrderByDto list
+
+      RawSql: string option
+
+      RawSqlParams: KeyValuePairDto list }
+
 type CreateAppDto =
     { [<Required>]
       [<StringLength(ValidationConstants.NameMaxLength,
@@ -41,6 +75,8 @@ type CreateAppDto =
 
       UseDynamicJsonBody: bool
 
+      SqlConfig: SqlQueryConfigDto option
+
       Description: string option }
 
 type UpdateAppNameDto =
@@ -68,5 +104,7 @@ type UpdateAppHttpMethodDto =
       HttpMethod: string }
 
 type UpdateAppUseDynamicJsonBodyDto = { UseDynamicJsonBody: bool }
+
+type UpdateAppSqlConfigDto = { SqlConfig: SqlQueryConfigDto option }
 
 type UpdateAppDescriptionDto = { Description: string option }

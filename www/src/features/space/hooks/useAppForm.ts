@@ -4,10 +4,11 @@ import {
   updateAppHeaders,
   updateAppHttpMethod,
   updateAppQueryParams,
+  updateAppSqlConfig,
   updateAppUrlPath,
   updateAppUseDynamicJsonBody,
 } from "@/api/api";
-import type { EndpointMethod, KeyValuePair } from "../types";
+import type { EndpointMethod, KeyValuePair, SqlQueryConfig } from "../types";
 
 export interface AppFormData {
   httpMethod?: EndpointMethod;
@@ -16,6 +17,7 @@ export interface AppFormData {
   headers: KeyValuePair[];
   body: KeyValuePair[];
   useDynamicJsonBody?: boolean;
+  sqlConfig?: SqlQueryConfig;
 }
 
 interface SaveState {
@@ -52,6 +54,9 @@ function isFormDataEqual(a: AppFormData, b: AppFormData): boolean {
     return false;
   }
   if (a.useDynamicJsonBody !== b.useDynamicJsonBody) {
+    return false;
+  }
+  if (JSON.stringify(a.sqlConfig) !== JSON.stringify(b.sqlConfig)) {
     return false;
   }
 
@@ -98,7 +103,7 @@ export function useAppForm(
   const updateFormData = useCallback(
     (
       field: keyof AppFormData,
-      value: string | boolean | EndpointMethod | KeyValuePair[]
+      value: string | boolean | EndpointMethod | KeyValuePair[] | SqlQueryConfig
     ) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
     },
@@ -193,6 +198,17 @@ export function useAppForm(
           errors.push(
             response.error.message || "Failed to save dynamic JSON body setting"
           );
+        }
+      }
+
+      // Save SQL config if changed
+      if (
+        JSON.stringify(formData.sqlConfig) !==
+        JSON.stringify(savedData.sqlConfig)
+      ) {
+        const response = await updateAppSqlConfig(appId, formData.sqlConfig);
+        if (response?.error) {
+          errors.push(response.error.message || "Failed to save SQL config");
         }
       }
 

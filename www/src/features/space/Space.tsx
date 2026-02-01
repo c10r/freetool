@@ -25,6 +25,7 @@ import type {
   FolderNode,
   KeyValuePair,
   SpaceNode,
+  SqlQueryConfig,
 } from "./types";
 
 // Helper functions to convert between selectedId and URL paths
@@ -217,16 +218,17 @@ function WorkspaceContent() {
 
   const addApp = async (
     parentId: string,
-    name = "New App",
-    description = "",
-    resourceId = "",
+    name?: string,
+    description?: string,
+    resourceId?: string,
     httpMethod?: EndpointMethod,
-    urlPath = "",
-    urlParameters: KeyValuePair[] = [],
-    headers: KeyValuePair[] = [],
-    body: KeyValuePair[] = [],
-    inputs: AppField[] = [],
-    useDynamicJsonBody = false
+    urlPath?: string,
+    urlParameters?: KeyValuePair[],
+    headers?: KeyValuePair[],
+    body?: KeyValuePair[],
+    inputs?: AppField[],
+    useDynamicJsonBody?: boolean,
+    sqlConfig?: SqlQueryConfig
   ) => {
     // Map frontend AppField[] to backend AppInputDto[] format
     const backendInputs = inputs.map((f) => ({
@@ -240,17 +242,18 @@ function WorkspaceContent() {
 
     // Call backend API to create the app
     const response = await createAppAPI({
-      name: name.trim(),
-      description: description.trim() || null,
+      name: (name ?? "New App").trim(),
+      description: (description ?? "").trim() || null,
       folderId: parentId === "root" ? null : parentId,
       inputs: backendInputs,
-      resourceId: resourceId || "",
-      httpMethod: httpMethod || "GET",
-      urlPath: urlPath || "",
-      body: body,
-      headers: headers,
-      urlParameters: urlParameters,
-      useDynamicJsonBody: useDynamicJsonBody,
+      resourceId: resourceId ?? "",
+      httpMethod: httpMethod ?? "GET",
+      urlPath: urlPath ?? "",
+      body: body ?? [],
+      headers: headers ?? [],
+      urlParameters: urlParameters ?? [],
+      useDynamicJsonBody: useDynamicJsonBody ?? false,
+      sqlConfig,
     });
 
     if (response.error) {

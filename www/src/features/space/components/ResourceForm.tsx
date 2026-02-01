@@ -117,6 +117,7 @@ export default function ResourceForm({
       updateDatabaseConfig("databaseName", databaseName);
       updateDatabaseConfig("host", url.hostname);
       updateDatabaseConfig("port", portValue);
+      updateDatabaseConfig("engine", "postgres");
       updateDatabaseConfig("authScheme", "username_password");
       updateDatabaseConfig("username", decodeURIComponent(url.username));
       updateDatabaseConfig("password", decodeURIComponent(url.password));
@@ -272,6 +273,27 @@ export default function ResourceForm({
               }
               disabled={disabled}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="databaseEngine">Database Engine *</Label>
+            <Select
+              value={data.databaseConfig.engine}
+              onValueChange={(value) =>
+                updateDatabaseConfig(
+                  "engine",
+                  value as DatabaseConfig["engine"]
+                )
+              }
+              disabled={disabled}
+            >
+              <SelectTrigger id="databaseEngine">
+                <SelectValue placeholder="Select engine" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="postgres">Postgres</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">

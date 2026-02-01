@@ -78,6 +78,97 @@ type DatabaseAuthSchemeConverter() =
     override _.Write(writer: Utf8JsonWriter, value: DatabaseAuthScheme, _options: JsonSerializerOptions) =
         writer.WriteStringValue(value.ToString())
 
+type DatabaseEngineConverter() =
+    inherit JsonConverter<DatabaseEngine>()
+
+    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
+        let engineStr = reader.GetString()
+
+        match DatabaseEngine.Create(engineStr) with
+        | Ok engine -> engine
+        | Error _ -> raise (JsonException($"Invalid database engine: {engineStr}"))
+
+    override _.Write(writer: Utf8JsonWriter, value: DatabaseEngine, _options: JsonSerializerOptions) =
+        writer.WriteStringValue(value.ToString())
+
+type SqlQueryModeConverter() =
+    inherit JsonConverter<SqlQueryMode>()
+
+    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
+        let modeStr = reader.GetString()
+
+        match modeStr.Trim().ToLowerInvariant() with
+        | "gui" -> SqlQueryMode.Gui
+        | "raw" -> SqlQueryMode.Raw
+        | _ -> raise (JsonException($"Invalid SQL query mode: {modeStr}"))
+
+    override _.Write(writer: Utf8JsonWriter, value: SqlQueryMode, _options: JsonSerializerOptions) =
+        let stringValue =
+            match value with
+            | SqlQueryMode.Gui -> "gui"
+            | SqlQueryMode.Raw -> "raw"
+
+        writer.WriteStringValue(stringValue)
+
+type SqlFilterOperatorConverter() =
+    inherit JsonConverter<SqlFilterOperator>()
+
+    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
+        let opStr = reader.GetString()
+
+        match opStr.Trim().ToUpperInvariant() with
+        | "=" -> SqlFilterOperator.Equals
+        | "!="
+        | "<>" -> SqlFilterOperator.NotEquals
+        | ">" -> SqlFilterOperator.GreaterThan
+        | ">=" -> SqlFilterOperator.GreaterThanOrEqual
+        | "<" -> SqlFilterOperator.LessThan
+        | "<=" -> SqlFilterOperator.LessThanOrEqual
+        | "LIKE" -> SqlFilterOperator.Like
+        | "ILIKE" -> SqlFilterOperator.ILike
+        | "IN" -> SqlFilterOperator.In
+        | "NOT IN" -> SqlFilterOperator.NotIn
+        | "IS NULL" -> SqlFilterOperator.IsNull
+        | "IS NOT NULL" -> SqlFilterOperator.IsNotNull
+        | _ -> raise (JsonException($"Invalid SQL filter operator: {opStr}"))
+
+    override _.Write(writer: Utf8JsonWriter, value: SqlFilterOperator, _options: JsonSerializerOptions) =
+        let stringValue =
+            match value with
+            | SqlFilterOperator.Equals -> "="
+            | SqlFilterOperator.NotEquals -> "!="
+            | SqlFilterOperator.GreaterThan -> ">"
+            | SqlFilterOperator.GreaterThanOrEqual -> ">="
+            | SqlFilterOperator.LessThan -> "<"
+            | SqlFilterOperator.LessThanOrEqual -> "<="
+            | SqlFilterOperator.Like -> "LIKE"
+            | SqlFilterOperator.ILike -> "ILIKE"
+            | SqlFilterOperator.In -> "IN"
+            | SqlFilterOperator.NotIn -> "NOT IN"
+            | SqlFilterOperator.IsNull -> "IS NULL"
+            | SqlFilterOperator.IsNotNull -> "IS NOT NULL"
+
+        writer.WriteStringValue(stringValue)
+
+type SqlSortDirectionConverter() =
+    inherit JsonConverter<SqlSortDirection>()
+
+    override _.Read(reader: byref<Utf8JsonReader>, _typeToConvert: Type, _options: JsonSerializerOptions) =
+        let directionStr = reader.GetString()
+
+        match directionStr.Trim().ToUpperInvariant() with
+        | "ASC" -> SqlSortDirection.Asc
+        | "DESC" -> SqlSortDirection.Desc
+        | _ -> raise (JsonException($"Invalid SQL sort direction: {directionStr}"))
+
+    override _.Write(writer: Utf8JsonWriter, value: SqlSortDirection, _options: JsonSerializerOptions) =
+        let stringValue =
+            match value with
+            | SqlSortDirection.Asc -> "ASC"
+            | SqlSortDirection.Desc -> "DESC"
+
+        writer.WriteStringValue(stringValue)
+
 type EventTypeConverter() =
     inherit JsonConverter<EventType>()
 

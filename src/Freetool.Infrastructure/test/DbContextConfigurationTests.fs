@@ -100,6 +100,7 @@ let ``AppData with complex JSON properties can be persisted and retrieved`` () =
           Headers = [ testKeyValuePair ]
           Body = [ testKeyValuePair ]
           UseDynamicJsonBody = false
+          SqlConfig = None
           Description = None
           CreatedAt = DateTime.UtcNow
           UpdatedAt = DateTime.UtcNow
@@ -167,6 +168,7 @@ let ``ResourceData with complex JSON properties can be persisted and retrieved``
           DatabaseName = None
           DatabaseHost = None
           DatabasePort = None
+          DatabaseEngine = None
           DatabaseAuthScheme = None
           DatabaseUsername = None
           DatabasePassword = None

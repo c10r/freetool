@@ -60,6 +60,7 @@ export function InputWithPlaceholders({
   placeholder,
   disabled = false,
   className,
+  inputClassName,
   id,
   "aria-label": ariaLabel,
   disableExpressions = false,
@@ -234,7 +235,8 @@ export function InputWithPlaceholders({
                       "disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
                       "whitespace-pre-wrap break-words",
                       disabled && "cursor-not-allowed opacity-50",
-                      !value && placeholder && "text-muted-foreground"
+                      !value && placeholder && "text-muted-foreground",
+                      inputClassName
                     )}
                   />
                 }

@@ -17,6 +17,7 @@ module RunHandler =
         (runRepository: IRunRepository)
         (appRepository: IAppRepository)
         (resourceRepository: IResourceRepository)
+        (sqlExecutionService: ISqlExecutionService)
         (command: RunCommand)
         : Task<Result<RunCommandResult, DomainError>> =
         task {
@@ -52,54 +53,93 @@ module RunHandler =
                                 | Error error -> return Error error
                                 | Ok() -> return Ok(RunResult(runWithError.State))
                             | Some resource ->
-                                // Extract dynamic body from DTO and convert to tuple list
-                                let dynamicBody =
-                                    dto.DynamicBody |> Option.map (List.map (fun kvp -> (kvp.Key, kvp.Value)))
+                                match Resource.getResourceKind resource with
+                                | ResourceKind.Http ->
+                                    // Extract dynamic body from DTO and convert to tuple list
+                                    let dynamicBody =
+                                        dto.DynamicBody |> Option.map (List.map (fun kvp -> (kvp.Key, kvp.Value)))
 
-                                // Compose executable request with input substitution
-                                match
-                                    Run.composeExecutableRequestFromAppAndResource
-                                        validatedRun
-                                        app
-                                        resource
-                                        currentUser
-                                        dynamicBody
-                                with
-                                | Error err ->
-                                    let runWithError =
-                                        Run.markAsInvalidConfiguration actorUserId (err.ToString()) validatedRun
+                                    // Compose executable request with input substitution
+                                    match
+                                        Run.composeExecutableRequestFromAppAndResource
+                                            validatedRun
+                                            app
+                                            resource
+                                            currentUser
+                                            dynamicBody
+                                    with
+                                    | Error err ->
+                                        let runWithError =
+                                            Run.markAsInvalidConfiguration actorUserId (err.ToString()) validatedRun
 
-                                    match! runRepository.AddAsync runWithError with
-                                    | Error error -> return Error error
-                                    | Ok() -> return Ok(RunResult(runWithError.State))
-                                | Ok runWithExecutableRequest ->
-                                    // Save the run first
-                                    match! runRepository.AddAsync runWithExecutableRequest with
-                                    | Error error -> return Error error
-                                    | Ok() ->
-                                        // Get fresh run from database to avoid event conflicts
-                                        let runId = Run.getId runWithExecutableRequest
-                                        let! freshRunOption = runRepository.GetByIdAsync runId
+                                        match! runRepository.AddAsync runWithError with
+                                        | Error error -> return Error error
+                                        | Ok() -> return Ok(RunResult(runWithError.State))
+                                    | Ok runWithExecutableRequest ->
+                                        // Save the run first
+                                        match! runRepository.AddAsync runWithExecutableRequest with
+                                        | Error error -> return Error error
+                                        | Ok() ->
+                                            // Get fresh run from database to avoid event conflicts
+                                            let runId = Run.getId runWithExecutableRequest
+                                            let! freshRunOption = runRepository.GetByIdAsync runId
 
-                                        match freshRunOption with
-                                        | None -> return Error(NotFound "Run not found after save")
-                                        | Some freshRun ->
-                                            // Mark as running and execute the request in background
-                                            let runningRun = Run.markAsRunning actorUserId freshRun
+                                            match freshRunOption with
+                                            | None -> return Error(NotFound "Run not found after save")
+                                            | Some freshRun ->
+                                                // Mark as running and execute the request in background
+                                                let runningRun = Run.markAsRunning actorUserId freshRun
 
-                                            // Execute the HTTP request (this would typically be done asynchronously)
-                                            let executableRequest = Run.getExecutableRequest runningRun |> Option.get
-                                            let! executeResult = HttpExecutionService.executeRequest executableRequest
+                                                // Execute the HTTP request (this would typically be done asynchronously)
+                                                let executableRequest =
+                                                    Run.getExecutableRequest runningRun |> Option.get
 
-                                            let finalRun =
-                                                match executeResult with
-                                                | Ok response -> Run.markAsSuccess actorUserId response runningRun
-                                                | Error err -> Run.markAsFailure actorUserId (err.ToString()) runningRun
+                                                let! executeResult =
+                                                    HttpExecutionService.executeRequest executableRequest
 
-                                            // Update the run with final status
-                                            match! runRepository.UpdateAsync finalRun with
-                                            | Error error -> return Error error
-                                            | Ok() -> return Ok(RunResult(finalRun.State))
+                                                let finalRun =
+                                                    match executeResult with
+                                                    | Ok response -> Run.markAsSuccess actorUserId response runningRun
+                                                    | Error err ->
+                                                        Run.markAsFailure actorUserId (err.ToString()) runningRun
+
+                                                // Update the run with final status
+                                                match! runRepository.UpdateAsync finalRun with
+                                                | Error error -> return Error error
+                                                | Ok() -> return Ok(RunResult(finalRun.State))
+                                | ResourceKind.Sql ->
+                                    match Run.composeSqlQueryFromAppAndResource validatedRun app currentUser with
+                                    | Error err ->
+                                        let runWithError =
+                                            Run.markAsInvalidConfiguration actorUserId (err.ToString()) validatedRun
+
+                                        match! runRepository.AddAsync runWithError with
+                                        | Error error -> return Error error
+                                        | Ok() -> return Ok(RunResult(runWithError.State))
+                                    | Ok sqlQuery ->
+                                        match! runRepository.AddAsync validatedRun with
+                                        | Error error -> return Error error
+                                        | Ok() ->
+                                            let runId = Run.getId validatedRun
+                                            let! freshRunOption = runRepository.GetByIdAsync runId
+
+                                            match freshRunOption with
+                                            | None -> return Error(NotFound "Run not found after save")
+                                            | Some freshRun ->
+                                                let runningRun = Run.markAsRunning actorUserId freshRun
+
+                                                let! executeResult =
+                                                    sqlExecutionService.ExecuteQueryAsync resource.State sqlQuery
+
+                                                let finalRun =
+                                                    match executeResult with
+                                                    | Ok response -> Run.markAsSuccess actorUserId response runningRun
+                                                    | Error err ->
+                                                        Run.markAsFailure actorUserId (err.ToString()) runningRun
+
+                                                match! runRepository.UpdateAsync finalRun with
+                                                | Error error -> return Error error
+                                                | Ok() -> return Ok(RunResult(finalRun.State))
 
             | GetRunById runId ->
                 match Guid.TryParse runId with

@@ -70,6 +70,10 @@ type CreateSqlResourceDto =
       DatabasePort: int
 
       [<Required>]
+      [<StringLength(50, ErrorMessage = "Database engine cannot exceed 50 characters")>]
+      DatabaseEngine: string
+
+      [<Required>]
       [<StringLength(50, ErrorMessage = "Database auth scheme cannot exceed 50 characters")>]
       DatabaseAuthScheme: string
 
@@ -125,6 +129,10 @@ type UpdateResourceDatabaseConfigDto =
 
       [<Required>]
       DatabasePort: int
+
+      [<Required>]
+      [<StringLength(50, ErrorMessage = "Database engine cannot exceed 50 characters")>]
+      DatabaseEngine: string
 
       [<Required>]
       [<StringLength(50, ErrorMessage = "Database auth scheme cannot exceed 50 characters")>]

@@ -23,6 +23,7 @@
     <Compile Include="src/DTOs/SpaceDtos.fs" />
     <Compile Include="src/DTOs/SpacePermissionsDtos.fs" />
     <Compile Include="src/DTOs/ResourceDtos.fs" />
+    <Compile Include="src/DTOs/SqlMetadataDtos.fs" />
     <Compile Include="src/DTOs/FolderDtos.fs" />
     <Compile Include="src/DTOs/AppDtos.fs" />
     <Compile Include="src/DTOs/RunDtos.fs" />
@@ -35,6 +36,8 @@
     <Compile Include="src/Interfaces/IEventRepository.fs" />
     <Compile Include="src/Interfaces/IRunRepository.fs" />
     <Compile Include="src/Interfaces/IAuthorizationService.fs" />
+    <Compile Include="src/Interfaces/ISqlExecutionService.fs" />
+    <Compile Include="src/Interfaces/ISqlMetadataService.fs" />
     <Compile Include="src/Interfaces/IGenericCommandHandler.fs" />
     <Compile Include="src/Commands/UserCommands.fs" />
     <Compile Include="src/Commands/SpaceCommands.fs" />

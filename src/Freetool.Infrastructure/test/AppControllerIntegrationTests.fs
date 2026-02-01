@@ -124,6 +124,11 @@ type MockRunRepository() =
         member _.GetCountByStatusAsync(_) = Task.FromResult(0)
         member _.GetCountByAppIdAndStatusAsync _ _ = Task.FromResult(0)
 
+type MockSqlExecutionService() =
+    interface ISqlExecutionService with
+        member _.ExecuteQueryAsync (_resource: ResourceData) (_query: SqlQuery) : Task<Result<string, DomainError>> =
+            Task.FromResult(Ok "[]")
+
 // Mock space repository for testing
 type MockSpaceRepository(memberSpaces: ValidatedSpace list, moderatorSpaces: ValidatedSpace list) =
     let allSpaces =
@@ -208,6 +213,7 @@ let createTestResource (spaceId: SpaceId) (resourceId: ResourceId) : ValidatedRe
           DatabaseName = None
           DatabaseHost = None
           DatabasePort = None
+          DatabaseEngine = None
           DatabaseAuthScheme = None
           DatabaseUsername = None
           DatabasePassword = None
@@ -233,6 +239,7 @@ let createTestApp (folderId: FolderId) (resourceId: ResourceId) (appId: AppId) :
           Headers = []
           Body = []
           UseDynamicJsonBody = false
+          SqlConfig = None
           Description = None
           CreatedAt = DateTime.UtcNow
           UpdatedAt = DateTime.UtcNow
@@ -264,6 +271,7 @@ let createAppData (appId: AppId) (folderId: FolderId) (resourceId: ResourceId) :
       Headers = []
       Body = []
       UseDynamicJsonBody = false
+      SqlConfig = None
       Description = None
       CreatedAt = DateTime.UtcNow
       UpdatedAt = DateTime.UtcNow
@@ -290,6 +298,7 @@ let createTestControllerWithSpaceAccess
         MockResourceRepository(getResourceByIdFn) :> IResourceRepository
 
     let runRepository = MockRunRepository() :> IRunRepository
+    let sqlExecutionService = MockSqlExecutionService() :> ISqlExecutionService
 
     let spaceRepository =
         MockSpaceRepository(memberSpaces, moderatorSpaces) :> ISpaceRepository
@@ -305,6 +314,7 @@ let createTestControllerWithSpaceAccess
             appRepository,
             resourceRepository,
             runRepository,
+            sqlExecutionService,
             folderRepository,
             spaceRepository,
             userRepository,
@@ -391,6 +401,7 @@ let ``CreateApp returns 201 with valid request`` () : Task =
               Headers = []
               Body = []
               UseDynamicJsonBody = false
+              SqlConfig = None
               Description = None }
 
         // Act
@@ -454,6 +465,7 @@ let ``CreateApp returns 400 for invalid name`` () : Task =
               Headers = []
               Body = []
               UseDynamicJsonBody = false
+              SqlConfig = None
               Description = None }
 
         // Act
@@ -514,6 +526,7 @@ let ``CreateApp returns 409 for duplicate name`` () : Task =
               Headers = []
               Body = []
               UseDynamicJsonBody = false
+              SqlConfig = None
               Description = None }
 
         // Act

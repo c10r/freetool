@@ -214,6 +214,10 @@ let main args =
             options.JsonSerializerOptions.Converters.Add(HttpMethodConverter())
             options.JsonSerializerOptions.Converters.Add(ResourceKindConverter())
             options.JsonSerializerOptions.Converters.Add(DatabaseAuthSchemeConverter())
+            options.JsonSerializerOptions.Converters.Add(DatabaseEngineConverter())
+            options.JsonSerializerOptions.Converters.Add(SqlQueryModeConverter())
+            options.JsonSerializerOptions.Converters.Add(SqlFilterOperatorConverter())
+            options.JsonSerializerOptions.Converters.Add(SqlSortDirectionConverter())
             options.JsonSerializerOptions.Converters.Add(EventTypeConverter())
             options.JsonSerializerOptions.Converters.Add(EntityTypeConverter())
             options.JsonSerializerOptions.Converters.Add(KeyValuePairConverter())
@@ -257,6 +261,12 @@ let main args =
     builder.Services.AddScoped<IAppRepository, AppRepository>() |> ignore
     builder.Services.AddScoped<IRunRepository, RunRepository>() |> ignore
     builder.Services.AddScoped<IEventRepository, EventRepository>() |> ignore
+
+    builder.Services.AddScoped<ISqlExecutionService, PostgresSqlExecutionService>()
+    |> ignore
+
+    builder.Services.AddScoped<ISqlMetadataService, PostgresSqlMetadataService>()
+    |> ignore
     // Ensure OpenFGA store exists before registering the service
     // The store ID is persisted to the database to survive restarts
     let openFgaApiUrl = builder.Configuration[ConfigurationKeys.OpenFGA.ApiUrl]
