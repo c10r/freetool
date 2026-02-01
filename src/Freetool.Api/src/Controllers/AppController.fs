@@ -194,10 +194,12 @@ type AppController
                                         return
                                             match result with
                                             | Ok(AppResult appDto) ->
+                                                let sanitized = ResponseSanitizer.sanitizeApp appDto
+
                                                 this.CreatedAtAction(
                                                     nameof this.GetAppById,
-                                                    {| id = appDto.Id |},
-                                                    appDto
+                                                    {| id = sanitized.Id |},
+                                                    sanitized
                                                 )
                                                 :> IActionResult
                                             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
@@ -227,7 +229,9 @@ type AppController
 
                     return
                         match result with
-                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok(AppResult appDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeApp appDto
+                            this.Ok(sanitized) :> IActionResult
                         | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> this.HandleDomainError(error)
         }
@@ -269,7 +273,9 @@ type AppController
 
                         return
                             match result with
-                            | Ok(AppsResult pagedApps) -> this.Ok(pagedApps) :> IActionResult
+                            | Ok(AppsResult pagedApps) ->
+                                let sanitized = ResponseSanitizer.sanitizeApps pagedApps
+                                this.Ok(sanitized) :> IActionResult
                             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                             | Error error -> this.HandleDomainError(error)
         }
@@ -303,7 +309,9 @@ type AppController
 
                 return
                     match result with
-                    | Ok(AppsResult pagedApps) -> this.Ok(pagedApps) :> IActionResult
+                    | Ok(AppsResult pagedApps) ->
+                        let sanitized = ResponseSanitizer.sanitizeApps pagedApps
+                        this.Ok(sanitized) :> IActionResult
                     | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                     | Error error -> this.HandleDomainError(error)
         }
@@ -333,7 +341,9 @@ type AppController
 
                     return
                         match result with
-                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok(AppResult appDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeApp appDto
+                            this.Ok(sanitized) :> IActionResult
                         | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> this.HandleDomainError(error)
         }
@@ -363,7 +373,9 @@ type AppController
 
                     return
                         match result with
-                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok(AppResult appDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeApp appDto
+                            this.Ok(sanitized) :> IActionResult
                         | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> this.HandleDomainError(error)
         }
@@ -399,7 +411,9 @@ type AppController
 
                     return
                         match result with
-                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok(AppResult appDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeApp appDto
+                            this.Ok(sanitized) :> IActionResult
                         | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> this.HandleDomainError(error)
         }
@@ -433,7 +447,9 @@ type AppController
 
                     return
                         match result with
-                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok(AppResult appDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeApp appDto
+                            this.Ok(sanitized) :> IActionResult
                         | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> this.HandleDomainError(error)
         }
@@ -467,7 +483,9 @@ type AppController
 
                     return
                         match result with
-                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok(AppResult appDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeApp appDto
+                            this.Ok(sanitized) :> IActionResult
                         | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> this.HandleDomainError(error)
         }
@@ -501,7 +519,9 @@ type AppController
                         let! result = commandHandler.HandleCommand(UpdateAppUrlPath(userId, id, updateDto))
 
                         match result with
-                        | Ok(AppResult appDto) -> return this.Ok(appDto) :> IActionResult
+                        | Ok(AppResult appDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeApp appDto
+                            return this.Ok(sanitized) :> IActionResult
                         | Ok _ -> return this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> return this.HandleDomainError(error)
         }
@@ -531,7 +551,9 @@ type AppController
 
                     return
                         match result with
-                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok(AppResult appDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeApp appDto
+                            this.Ok(sanitized) :> IActionResult
                         | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> this.HandleDomainError(error)
         }
@@ -563,7 +585,9 @@ type AppController
 
                     return
                         match result with
-                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok(AppResult appDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeApp appDto
+                            this.Ok(sanitized) :> IActionResult
                         | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> this.HandleDomainError(error)
         }
@@ -595,7 +619,9 @@ type AppController
 
                     return
                         match result with
-                        | Ok(AppResult appDto) -> this.Ok(appDto) :> IActionResult
+                        | Ok(AppResult appDto) ->
+                            let sanitized = ResponseSanitizer.sanitizeApp appDto
+                            this.Ok(sanitized) :> IActionResult
                         | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> this.HandleDomainError(error)
         }
@@ -672,7 +698,9 @@ type AppController
 
                         return
                             match result with
-                            | Ok(RunResult runDto) -> this.Ok(runDto) :> IActionResult
+                            | Ok(RunResult runDto) ->
+                                let sanitized = ResponseSanitizer.sanitizeRun runDto
+                                this.Ok(sanitized) :> IActionResult
                             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                             | Error error -> this.HandleDomainError(error)
         }

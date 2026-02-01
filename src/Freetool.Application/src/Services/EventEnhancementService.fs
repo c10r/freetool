@@ -4,6 +4,7 @@ open System
 open System.Threading.Tasks
 open System.Text.Json
 open System.Text.Json.Serialization
+open System.Text.Json.Nodes
 open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
@@ -27,6 +28,52 @@ type EventEnhancementService
         let options = JsonSerializerOptions()
         options.Converters.Add(JsonFSharpConverter())
         options
+
+    let redactAuthorizationHeadersInEventData (eventData: string) : string =
+        let tryGetString (node: JsonNode) =
+            match node with
+            | :? JsonValue as value ->
+                let mutable result = Unchecked.defaultof<string>
+                if value.TryGetValue(&result) then Some result else None
+            | _ -> None
+
+        let tryRedactHeaderObject (obj: JsonObject) =
+            match obj["Key"], obj["Value"] with
+            | null, _
+            | _, null -> ()
+            | keyNode, valueNode ->
+                match tryGetString keyNode, tryGetString valueNode with
+                | Some key, Some value when AuthorizationHeaderRedaction.isAuthorizationHeaderKey key ->
+                    let redactedValue =
+                        AuthorizationHeaderRedaction.redactAuthorizationHeaderValue value
+
+                    obj["Value"] <- JsonValue.Create(redactedValue)
+                | _ -> ()
+
+        let rec walk (node: JsonNode) =
+            match node with
+            | :? JsonObject as obj ->
+                tryRedactHeaderObject obj
+
+                for property in obj do
+                    if not (isNull property.Value) then
+                        walk property.Value
+            | :? JsonArray as array ->
+                for item in array do
+                    if not (isNull item) then
+                        walk item
+            | _ -> ()
+
+        try
+            let root = JsonNode.Parse(eventData)
+
+            if isNull root then
+                eventData
+            else
+                walk root
+                root.ToJsonString()
+        with _ ->
+            eventData
 
     let extractEntityNameFromEventDataAsync
         (eventData: string)
@@ -301,6 +348,8 @@ type EventEnhancementService
 
                 let eventSummary = generateEventSummary event.EventType entityName userName
 
+                let redactedEventData = redactAuthorizationHeadersInEventData event.EventData
+
                 return
                     { Id = event.Id
                       EventId = event.EventId
@@ -308,7 +357,7 @@ type EventEnhancementService
                       EntityType = event.EntityType
                       EntityId = event.EntityId
                       EntityName = entityName
-                      EventData = event.EventData
+                      EventData = redactedEventData
                       OccurredAt = event.OccurredAt
                       CreatedAt = event.CreatedAt
                       UserId = event.UserId

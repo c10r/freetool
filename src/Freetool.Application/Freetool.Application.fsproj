@@ -49,6 +49,7 @@
     <Compile Include="src/Mappers/FolderMapper.fs" />
     <Compile Include="src/Mappers/AppMapper.fs" />
     <Compile Include="src/Mappers/RunMapper.fs" />
+    <Compile Include="src/Services/AuthorizationHeaderRedaction.fs" />
     <Compile Include="src/Handlers/UserHandler.fs" />
     <Compile Include="src/Handlers/ResourceHandler.fs" />
     <Compile Include="src/Handlers/FolderHandler.fs" />

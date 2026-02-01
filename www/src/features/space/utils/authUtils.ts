@@ -1,6 +1,7 @@
 import type { AuthConfig, KeyValuePair } from "../types";
 
 const AUTHORIZATION_HEADER_KEY = "Authorization";
+const REDACTED_PLACEHOLDER = "---- redacted ----";
 
 /**
  * Check if a key is the Authorization header (case-insensitive)
@@ -20,6 +21,23 @@ export function parseAuthFromHeaders(headers: KeyValuePair[]): AuthConfig {
   }
 
   const value = authHeader.value.trim();
+
+  if (value.includes(REDACTED_PLACEHOLDER)) {
+    if (value.toLowerCase().startsWith("basic ")) {
+      return {
+        type: "basic",
+        username: REDACTED_PLACEHOLDER,
+        password: REDACTED_PLACEHOLDER,
+        isRedacted: true,
+      };
+    }
+
+    return {
+      type: "bearer",
+      token: REDACTED_PLACEHOLDER,
+      isRedacted: true,
+    };
+  }
 
   // Check for Bearer token
   if (value.startsWith("Bearer ")) {
@@ -57,8 +75,20 @@ export function authConfigToHeaderValue(config: AuthConfig): string | null {
     case "none":
       return null;
     case "bearer":
-      return config.token ? `Bearer ${config.token}` : null;
+      if (!config.token) {
+        return null;
+      }
+
+      if (config.isRedacted) {
+        return `Bearer ${REDACTED_PLACEHOLDER}`;
+      }
+
+      return `Bearer ${config.token}`;
     case "basic":
+      if (config.isRedacted) {
+        return `Basic ${REDACTED_PLACEHOLDER}`;
+      }
+
       if (config.username || config.password) {
         return `Basic ${btoa(`${config.username}:${config.password}`)}`;
       }

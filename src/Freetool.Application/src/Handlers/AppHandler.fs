@@ -9,6 +9,7 @@ open Freetool.Application.Interfaces
 open Freetool.Application.Commands
 open Freetool.Application.Mappers
 open Freetool.Application.DTOs
+open Freetool.Application.Services
 
 module AppHandler =
 
@@ -370,7 +371,22 @@ module AppHandler =
                         match resourceOption with
                         | None -> return Error(NotFound "Resource not found")
                         | Some resource ->
-                            let newHeaders = dto.Headers |> List.map AppMapper.keyValuePairFromDto
+                            let existingHeaders =
+                                app.State.Headers |> List.map (fun header -> (header.Key, header.Value))
+
+                            let incomingHeaders =
+                                dto.Headers |> List.map (fun header -> (header.Key, header.Value))
+
+                            let mergedHeaders =
+                                AuthorizationHeaderRedaction.restoreRedactedAuthorizationHeader
+                                    existingHeaders
+                                    incomingHeaders
+
+                            let mergedDto =
+                                { dto with
+                                    Headers = mergedHeaders |> List.map (fun (k, v) -> { Key = k; Value = v }) }
+
+                            let newHeaders = mergedDto.Headers |> List.map AppMapper.keyValuePairFromDto
                             let resourceConflictData = Resource.toConflictData resource
 
                             match App.updateHeaders actorUserId newHeaders resourceConflictData app with

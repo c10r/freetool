@@ -32,6 +32,7 @@
     <Compile Include="src/Middleware/TailscaleAuthMiddleware.fs" />
     <Compile Include="src/Middleware/DevAuthMiddleware.fs" />
     <Compile Include="src/OpenApi/FSharpSchemaFilter.fs" />
+    <Compile Include="src/Controllers/ResponseSanitizer.fs" />
     <Compile Include="src/Controllers/AuthenticatedControllerBase.fs" />
     <Compile Include="src/Controllers/UserController.fs" />
     <Compile Include="src/Controllers/SpaceController.fs" />

@@ -9,6 +9,7 @@ open Freetool.Application.Interfaces
 open Freetool.Application.Commands
 open Freetool.Application.Mappers
 open Freetool.Application.DTOs
+open Freetool.Application.Services
 
 module ResourceHandler =
 
@@ -174,7 +175,22 @@ module ResourceHandler =
                                   Headers = App.getHeaders app
                                   Body = App.getBody app })
 
-                        match ResourceMapper.fromUpdateHeadersDto actorUserId dto appConflictData resource with
+                        let existingHeaders =
+                            resource.State.Headers |> List.map (fun header -> (header.Key, header.Value))
+
+                        let incomingHeaders =
+                            dto.Headers |> List.map (fun header -> (header.Key, header.Value))
+
+                        let mergedHeaders =
+                            AuthorizationHeaderRedaction.restoreRedactedAuthorizationHeader
+                                existingHeaders
+                                incomingHeaders
+
+                        let mergedDto =
+                            { dto with
+                                Headers = mergedHeaders |> List.map (fun (k, v) -> { Key = k; Value = v }) }
+
+                        match ResourceMapper.fromUpdateHeadersDto actorUserId mergedDto appConflictData resource with
                         | Error error -> return Error error
                         | Ok validatedResource ->
                             match! resourceRepository.UpdateAsync validatedResource with

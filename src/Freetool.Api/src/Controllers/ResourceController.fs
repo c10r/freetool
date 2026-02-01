@@ -54,7 +54,9 @@ type ResourceController
                     return
                         match result with
                         | Ok(ResourceResult resourceDto) ->
-                            this.CreatedAtAction(nameof this.GetResourceById, {| id = resourceDto.Id |}, resourceDto)
+                            let sanitized = ResponseSanitizer.sanitizeResource resourceDto
+
+                            this.CreatedAtAction(nameof this.GetResourceById, {| id = sanitized.Id |}, sanitized)
                             :> IActionResult
                         | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                         | Error error -> this.HandleDomainError(error)
@@ -71,7 +73,9 @@ type ResourceController
 
             return
                 match result with
-                | Ok(ResourceResult resourceDto) -> this.Ok(resourceDto) :> IActionResult
+                | Ok(ResourceResult resourceDto) ->
+                    let sanitized = ResponseSanitizer.sanitizeResource resourceDto
+                    this.Ok(sanitized) :> IActionResult
                 | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                 | Error error -> this.HandleDomainError(error)
         }
@@ -97,7 +101,9 @@ type ResourceController
 
                 return
                     match result with
-                    | Ok(ResourcesResult pagedResources) -> this.Ok(pagedResources) :> IActionResult
+                    | Ok(ResourcesResult pagedResources) ->
+                        let sanitized = ResponseSanitizer.sanitizeResources pagedResources
+                        this.Ok(sanitized) :> IActionResult
                     | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                     | Error error -> this.HandleDomainError(error)
         }
@@ -143,7 +149,9 @@ type ResourceController
 
                         return
                             match result with
-                            | Ok(ResourceResult resourceDto) -> this.Ok(resourceDto) :> IActionResult
+                            | Ok(ResourceResult resourceDto) ->
+                                let sanitized = ResponseSanitizer.sanitizeResource resourceDto
+                                this.Ok(sanitized) :> IActionResult
                             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                             | Error error -> this.HandleDomainError(error)
         }
@@ -191,7 +199,9 @@ type ResourceController
 
                         return
                             match result with
-                            | Ok(ResourceResult resourceDto) -> this.Ok(resourceDto) :> IActionResult
+                            | Ok(ResourceResult resourceDto) ->
+                                let sanitized = ResponseSanitizer.sanitizeResource resourceDto
+                                this.Ok(sanitized) :> IActionResult
                             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                             | Error error -> this.HandleDomainError(error)
         }
@@ -238,7 +248,9 @@ type ResourceController
 
                         return
                             match result with
-                            | Ok(ResourceResult resourceDto) -> this.Ok(resourceDto) :> IActionResult
+                            | Ok(ResourceResult resourceDto) ->
+                                let sanitized = ResponseSanitizer.sanitizeResource resourceDto
+                                this.Ok(sanitized) :> IActionResult
                             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                             | Error error -> this.HandleDomainError(error)
         }
@@ -285,7 +297,9 @@ type ResourceController
 
                         return
                             match result with
-                            | Ok(ResourceResult resourceDto) -> this.Ok(resourceDto) :> IActionResult
+                            | Ok(ResourceResult resourceDto) ->
+                                let sanitized = ResponseSanitizer.sanitizeResource resourceDto
+                                this.Ok(sanitized) :> IActionResult
                             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                             | Error error -> this.HandleDomainError(error)
         }
@@ -332,7 +346,9 @@ type ResourceController
 
                         return
                             match result with
-                            | Ok(ResourceResult resourceDto) -> this.Ok(resourceDto) :> IActionResult
+                            | Ok(ResourceResult resourceDto) ->
+                                let sanitized = ResponseSanitizer.sanitizeResource resourceDto
+                                this.Ok(sanitized) :> IActionResult
                             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                             | Error error -> this.HandleDomainError(error)
         }
@@ -377,7 +393,9 @@ type ResourceController
 
                         return
                             match result with
-                            | Ok(ResourceResult resourceDto) -> this.Ok(resourceDto) :> IActionResult
+                            | Ok(ResourceResult resourceDto) ->
+                                let sanitized = ResponseSanitizer.sanitizeResource resourceDto
+                                this.Ok(sanitized) :> IActionResult
                             | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
                             | Error error -> this.HandleDomainError(error)
         }

@@ -28,10 +28,15 @@ export default function AuthorizationSection({
         onChange({ type: "none" });
         break;
       case "basic":
-        onChange({ type: "basic", username: "", password: "" });
+        onChange({
+          type: "basic",
+          username: "",
+          password: "",
+          isRedacted: false,
+        });
         break;
       case "bearer":
-        onChange({ type: "bearer", token: "" });
+        onChange({ type: "bearer", token: "", isRedacted: false });
         break;
     }
   };
@@ -62,7 +67,11 @@ export default function AuthorizationSection({
             placeholder="Enter token"
             value={authConfig.token}
             onChange={(e) =>
-              onChange({ type: "bearer", token: e.target.value })
+              onChange({
+                type: "bearer",
+                token: e.target.value,
+                isRedacted: false,
+              })
             }
             onBlur={onBlur}
             disabled={disabled}
@@ -82,6 +91,7 @@ export default function AuthorizationSection({
                 type: "basic",
                 username: e.target.value,
                 password: authConfig.password,
+                isRedacted: false,
               })
             }
             onBlur={onBlur}
@@ -97,6 +107,7 @@ export default function AuthorizationSection({
                 type: "basic",
                 username: authConfig.username,
                 password: e.target.value,
+                isRedacted: false,
               })
             }
             onBlur={onBlur}

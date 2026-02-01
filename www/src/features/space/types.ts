@@ -56,8 +56,8 @@ export type AuthType = "none" | "basic" | "bearer";
 
 export type AuthConfig =
   | { type: "none" }
-  | { type: "basic"; username: string; password: string }
-  | { type: "bearer"; token: string };
+  | { type: "basic"; username: string; password: string; isRedacted?: boolean }
+  | { type: "bearer"; token: string; isRedacted?: boolean };
 
 export interface Endpoint {
   id: string;
