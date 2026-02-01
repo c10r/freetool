@@ -187,6 +187,41 @@ export default function ResourcesView({
     return apps.filter((app) => app.resourceId === resourceId);
   };
 
+  const renderUsageSummary = (resourceId: string) => {
+    const usedBy = getAppsUsingResource(resourceId);
+    if (usedBy.length === 0) {
+      return (
+        <p className="text-xs text-muted-foreground">
+          Not used by any apps yet.
+        </p>
+      );
+    }
+
+    const maxToShow = 3;
+    const shown = usedBy.slice(0, maxToShow);
+    const remaining = usedBy.length - shown.length;
+
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground">
+          Used in {usedBy.length} app{usedBy.length === 1 ? "" : "s"}:
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {shown.map((app) => (
+            <span key={app.id} className="text-xs bg-muted px-2 py-1 rounded">
+              {app.name}
+            </span>
+          ))}
+          {remaining > 0 && (
+            <span className="text-xs text-muted-foreground">
+              +{remaining} more
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const canDeleteResource = (resourceId: string) => {
     return getAppsUsingResource(resourceId).length === 0;
   };
@@ -467,6 +502,7 @@ export default function ResourcesView({
                   <p className="text-xs font-mono bg-gray-50 p-2 rounded">
                     {resource.baseUrl}
                   </p>
+                  <div className="mt-3">{renderUsageSummary(resource.id)}</div>
                 </CardContent>
               </Card>
             ))}
