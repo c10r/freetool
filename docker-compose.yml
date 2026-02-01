@@ -9,6 +9,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:18889
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+    restart: unless-stopped
     volumes:
       - freetool-db:/app/data
     depends_on:
@@ -18,6 +19,7 @@ services:
   aspire-dashboard:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
     container_name: aspire-dashboard
+    restart: unless-stopped
     ports:
       - 18888:18888
       - 4317:18889
@@ -40,6 +42,7 @@ services:
     container_name: openfga
     command: run
     user: nonroot
+    restart: unless-stopped
     environment:
       - OPENFGA_DATASTORE_ENGINE=sqlite
       - OPENFGA_DATASTORE_URI=file:/home/nonroot/openfga.db
