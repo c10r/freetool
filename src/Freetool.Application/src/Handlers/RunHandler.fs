@@ -117,10 +117,12 @@ module RunHandler =
                                         | Error error -> return Error error
                                         | Ok() -> return Ok(RunResult(runWithError.State))
                                     | Ok sqlQuery ->
-                                        match! runRepository.AddAsync validatedRun with
+                                        let runWithExecutedSql = Run.setExecutedSql sqlQuery.Sql validatedRun
+
+                                        match! runRepository.AddAsync runWithExecutedSql with
                                         | Error error -> return Error error
                                         | Ok() ->
-                                            let runId = Run.getId validatedRun
+                                            let runId = Run.getId runWithExecutedSql
                                             let! freshRunOption = runRepository.GetByIdAsync runId
 
                                             match freshRunOption with

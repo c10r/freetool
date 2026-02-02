@@ -305,6 +305,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
             entity.Property(fun r -> r.ExecutableRequest).HasConversion(executableHttpRequestConverter)
             |> ignore
 
+            entity.Property(fun r -> r.ExecutedSql).HasConversion(optionStringConverter)
+            |> ignore
+
             entity.Property(fun r -> r.StartedAt).HasConversion<System.Nullable<DateTime>>(optionDateTimeConverter)
             |> ignore
 

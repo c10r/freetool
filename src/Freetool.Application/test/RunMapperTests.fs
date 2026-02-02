@@ -123,6 +123,7 @@ let createTestRun () =
           Status = Success
           InputValues = inputValues
           ExecutableRequest = Some executableRequest
+          ExecutedSql = None
           Response = Some """{"id": 123, "name": "John Doe"}"""
           ErrorMessage = None
           StartedAt = Some(DateTime(2024, 1, 15, 10, 30, 0))

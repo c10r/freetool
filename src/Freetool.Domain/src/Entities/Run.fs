@@ -31,6 +31,9 @@ type RunData =
       [<Column(TypeName = "TEXT")>] // JSON serialized ExecutableHttpRequest (null until composed)
       ExecutableRequest: ExecutableHttpRequest option
 
+      [<Column(TypeName = "TEXT")>] // Final SQL string after template substitution (null until composed)
+      ExecutedSql: string option
+
       [<Column(TypeName = "TEXT")>] // HTTP response body (null until completed successfully)
       Response: string option
 
@@ -415,6 +418,7 @@ module Run =
                   Status = Pending
                   InputValues = validatedInputValues
                   ExecutableRequest = None
+                  ExecutedSql = None
                   Response = None
                   ErrorMessage = None
                   StartedAt = None
@@ -433,6 +437,14 @@ module Run =
         let updatedRunData =
             { run.State with
                 ExecutableRequest = Some executableRequest }
+
+        { State = updatedRunData
+          UncommittedEvents = run.UncommittedEvents }
+
+    let setExecutedSql (sql: string) (run: ValidatedRun) : ValidatedRun =
+        let updatedRunData =
+            { run.State with
+                ExecutedSql = Some sql }
 
         { State = updatedRunData
           UncommittedEvents = run.UncommittedEvents }

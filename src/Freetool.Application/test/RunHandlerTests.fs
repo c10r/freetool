@@ -210,6 +210,7 @@ let createTestRun (appId: AppId) (status: RunStatus) : ValidatedRun =
           Status = status
           InputValues = []
           ExecutableRequest = None
+          ExecutedSql = None
           Response = None
           ErrorMessage = None
           StartedAt = None

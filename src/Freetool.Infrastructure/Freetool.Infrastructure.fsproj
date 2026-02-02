@@ -48,6 +48,7 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.023_AddDescriptionToApps.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.024_AddResourceKindAndDatabaseFields.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.025_AddSqlConfigAndDatabaseEngine.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.026_AddExecutedSqlToRunsTable.sql" />
   </ItemGroup>
 
   <ItemGroup>

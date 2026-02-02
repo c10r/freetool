@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import DynamicBodyEditor from "@/features/space/components/DynamicBodyEditor";
 import { useHasPermission } from "@/hooks/usePermissions";
+import { useResources } from "@/hooks/useResources";
 import {
   extractDefaultValue,
   fromBackendInputType,
@@ -42,6 +43,9 @@ type AppData = components["schemas"]["AppData"];
 type RunData = components["schemas"]["RunData"];
 type KeyValuePair = components["schemas"]["KeyValuePair"];
 type AppInput = components["schemas"]["Input"];
+type ResourceData = components["schemas"]["ResourceData"];
+type SqlQueryConfig = components["schemas"]["SqlQueryConfig"];
+type RunDataWithSql = RunData & { executedSql?: string | null };
 
 // Helper function to validate email format
 const isValidEmail = (email: string): boolean => {
@@ -106,6 +110,14 @@ const RunApp = () => {
   const [dynamicBodyError, setDynamicBodyError] = useState<string | null>(null);
 
   const canRunApp = useHasPermission(spaceId, "run_app");
+  const { resources } = useResources(spaceId || undefined);
+  const selectedResource = (resources as ResourceData[]).find(
+    (resource) => resource.id === app?.resourceId
+  );
+  const isSqlResource =
+    selectedResource?.resourceKind === "sql" || !!app?.sqlConfig;
+  const sqlConfig = app?.sqlConfig as SqlQueryConfig | null | undefined;
+  const executedSql = (result as RunDataWithSql | null)?.executedSql;
 
   // Check if app has inputs that need to be filled
   const hasInputs = app?.inputs && app.inputs.length > 0;
@@ -788,79 +800,186 @@ const RunApp = () => {
                   <CollapsibleContent>
                     <div className="mt-4">
                       <div className="space-y-4">
-                        <div>
-                          <h4 className="font-medium mb-2">Method & URL</h4>
-                          <p className="text-sm bg-muted p-2 rounded font-mono">
-                            {result.executableRequest?.httpMethod}{" "}
-                            {result.executableRequest?.baseUrl}
-                            {result.executableRequest?.urlParameters &&
-                              result.executableRequest.urlParameters.length >
-                                0 &&
-                              `?${(
-                                result.executableRequest
-                                  .urlParameters as unknown as [
-                                  string,
-                                  string,
-                                ][]
-                              )
-                                .map(
-                                  (tuple) =>
-                                    `${tuple[0] ?? ""}=${tuple[1] ?? ""}`
-                                )
-                                .join("&")}`}
-                          </p>
-                        </div>
-
-                        {result.executableRequest?.headers &&
-                          result.executableRequest.headers.length > 0 && (
+                        {isSqlResource ? (
+                          <>
                             <div>
-                              <h4 className="font-medium mb-2">Headers</h4>
-                              <div className="bg-muted p-3 rounded">
-                                <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
-                                  {JSON.stringify(
-                                    Object.fromEntries(
-                                      (
-                                        result.executableRequest
-                                          .headers as unknown as [
-                                          string,
-                                          string,
-                                        ][]
-                                      ).map((tuple) => [
-                                        tuple[0] ?? "",
-                                        tuple[1] ?? "",
-                                      ])
-                                    ),
-                                    null,
-                                    2
-                                  )}
-                                </pre>
-                              </div>
+                              <h4 className="font-medium mb-2">SQL Query</h4>
+                              {executedSql || sqlConfig?.rawSql ? (
+                                <div className="bg-muted p-3 rounded">
+                                  <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
+                                    {executedSql || sqlConfig?.rawSql}
+                                  </pre>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  SQL query not available for this run.
+                                </p>
+                              )}
                             </div>
-                          )}
 
-                        {result.executableRequest?.body &&
-                          result.executableRequest.body.length > 0 && (
-                            <div>
-                              <h4 className="font-medium mb-2">Body</h4>
-                              <div className="bg-muted p-3 rounded">
-                                <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
-                                  {JSON.stringify(
-                                    Object.fromEntries(
-                                      (
-                                        result.executableRequest
-                                          .body as unknown as [string, string][]
-                                      ).map((tuple) => [
-                                        tuple[0] ?? "",
-                                        tuple[1] ?? "",
-                                      ])
-                                    ),
-                                    null,
-                                    2
-                                  )}
-                                </pre>
+                            {sqlConfig?.rawSqlParams &&
+                              sqlConfig.rawSqlParams.length > 0 && (
+                                <div>
+                                  <h4 className="font-medium mb-2">
+                                    SQL Parameters
+                                  </h4>
+                                  <div className="bg-muted p-3 rounded">
+                                    <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
+                                      {JSON.stringify(
+                                        Object.fromEntries(
+                                          (
+                                            sqlConfig.rawSqlParams as KeyValuePair[]
+                                          ).map((param) => [
+                                            param.key ?? "",
+                                            param.value ?? "",
+                                          ])
+                                        ),
+                                        null,
+                                        2
+                                      )}
+                                    </pre>
+                                  </div>
+                                </div>
+                              )}
+
+                            {!sqlConfig?.rawSql && sqlConfig && (
+                              <div>
+                                <h4 className="font-medium mb-2">
+                                  Query Configuration
+                                </h4>
+                                <div className="bg-muted p-3 rounded text-sm space-y-2">
+                                  <div>
+                                    <span className="font-medium">Table:</span>{" "}
+                                    {sqlConfig.table || "Not set"}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">
+                                      Columns:
+                                    </span>{" "}
+                                    {sqlConfig.columns?.length
+                                      ? sqlConfig.columns.join(", ")
+                                      : "All columns"}
+                                  </div>
+                                  {sqlConfig.filters?.length ? (
+                                    <div>
+                                      <span className="font-medium">
+                                        Filters:
+                                      </span>{" "}
+                                      {sqlConfig.filters
+                                        .map(
+                                          (filter) =>
+                                            `${filter.column} ${filter.operator} ${
+                                              filter.value ?? ""
+                                            }`
+                                        )
+                                        .join(", ")}
+                                    </div>
+                                  ) : null}
+                                  {sqlConfig.orderBy?.length ? (
+                                    <div>
+                                      <span className="font-medium">
+                                        Order By:
+                                      </span>{" "}
+                                      {sqlConfig.orderBy
+                                        .map(
+                                          (order) =>
+                                            `${order.column} ${order.direction}`
+                                        )
+                                        .join(", ")}
+                                    </div>
+                                  ) : null}
+                                  {sqlConfig.limit ? (
+                                    <div>
+                                      <span className="font-medium">
+                                        Limit:
+                                      </span>{" "}
+                                      {sqlConfig.limit}
+                                    </div>
+                                  ) : null}
+                                </div>
                               </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <div>
+                              <h4 className="font-medium mb-2">Method & URL</h4>
+                              <p className="text-sm bg-muted p-2 rounded font-mono">
+                                {result.executableRequest?.httpMethod}{" "}
+                                {result.executableRequest?.baseUrl}
+                                {result.executableRequest?.urlParameters &&
+                                  result.executableRequest.urlParameters
+                                    .length > 0 &&
+                                  `?${(
+                                    result.executableRequest
+                                      .urlParameters as unknown as [
+                                      string,
+                                      string,
+                                    ][]
+                                  )
+                                    .map(
+                                      (tuple) =>
+                                        `${tuple[0] ?? ""}=${tuple[1] ?? ""}`
+                                    )
+                                    .join("&")}`}
+                              </p>
                             </div>
-                          )}
+
+                            {result.executableRequest?.headers &&
+                              result.executableRequest.headers.length > 0 && (
+                                <div>
+                                  <h4 className="font-medium mb-2">Headers</h4>
+                                  <div className="bg-muted p-3 rounded">
+                                    <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
+                                      {JSON.stringify(
+                                        Object.fromEntries(
+                                          (
+                                            result.executableRequest
+                                              .headers as unknown as [
+                                              string,
+                                              string,
+                                            ][]
+                                          ).map((tuple) => [
+                                            tuple[0] ?? "",
+                                            tuple[1] ?? "",
+                                          ])
+                                        ),
+                                        null,
+                                        2
+                                      )}
+                                    </pre>
+                                  </div>
+                                </div>
+                              )}
+
+                            {result.executableRequest?.body &&
+                              result.executableRequest.body.length > 0 && (
+                                <div>
+                                  <h4 className="font-medium mb-2">Body</h4>
+                                  <div className="bg-muted p-3 rounded">
+                                    <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
+                                      {JSON.stringify(
+                                        Object.fromEntries(
+                                          (
+                                            result.executableRequest
+                                              .body as unknown as [
+                                              string,
+                                              string,
+                                            ][]
+                                          ).map((tuple) => [
+                                            tuple[0] ?? "",
+                                            tuple[1] ?? "",
+                                          ])
+                                        ),
+                                        null,
+                                        2
+                                      )}
+                                    </pre>
+                                  </div>
+                                </div>
+                              )}
+                          </>
+                        )}
 
                         <div>
                           <h4 className="font-medium mb-2">Timing</h4>
