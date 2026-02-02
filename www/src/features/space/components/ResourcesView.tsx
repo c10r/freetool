@@ -7,6 +7,8 @@ import {
   getApps,
   getResources,
 } from "@/api/api";
+import httpLogo from "@/assets/http.svg";
+import postgresLogo from "@/assets/postgres.png";
 import { PaginationControls } from "@/components/PaginationControls";
 import { PermissionButton } from "@/components/PermissionButton";
 import { PermissionGate } from "@/components/PermissionGate";
@@ -76,6 +78,12 @@ const initialFormData: ResourceFormData = {
   authConfig: { type: "none" },
   databaseConfig: emptyDatabaseConfig,
 };
+
+const getResourceLogo = (resourceKind: ResourceKind) =>
+  resourceKind === "http" ? httpLogo : postgresLogo;
+
+const getResourceLogoAlt = (resourceKind: ResourceKind) =>
+  resourceKind === "http" ? "HTTP" : "PostgreSQL";
 
 interface ResourcesViewProps {
   spaceId: string;
@@ -554,7 +562,16 @@ export default function ResourcesView({
               >
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
-                    <span>{resource.name}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-gray-50 p-1">
+                        <img
+                          src={getResourceLogo(resource.resourceKind)}
+                          alt={getResourceLogoAlt(resource.resourceKind)}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      <span>{resource.name}</span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <PermissionGate
                         spaceId={spaceId}

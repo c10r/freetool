@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { getResources } from "@/api/api";
+import httpLogo from "@/assets/http.svg";
+import postgresLogo from "@/assets/postgres.png";
 import {
   Select,
   SelectContent,
@@ -7,10 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { ResourceKind } from "../types";
 
 interface Resource {
   id: string;
   name: string;
+  resourceKind: ResourceKind;
 }
 
 interface ResourceSelectorProps {
@@ -51,6 +55,8 @@ export default function ResourceSelector({
           const resourceList = response.data.items.map((item) => ({
             id: item.id ?? "",
             name: item.name,
+            resourceKind:
+              item.resourceKind?.toLowerCase() === "sql" ? "sql" : "http",
           }));
           setResources(resourceList);
         } else {
@@ -71,6 +77,12 @@ export default function ResourceSelector({
     ? resources.find((r) => r.id === value)
     : undefined;
 
+  const getResourceLogo = (resourceKind: ResourceKind) =>
+    resourceKind === "http" ? httpLogo : postgresLogo;
+
+  const getResourceLogoAlt = (resourceKind: ResourceKind) =>
+    resourceKind === "http" ? "HTTP" : "PostgreSQL";
+
   return (
     <Select
       value={value || ""}
@@ -83,21 +95,43 @@ export default function ResourceSelector({
         aria-label="Select Resource"
         aria-required={required}
       >
-        <SelectValue
-          placeholder={
-            loading
-              ? "Loading resources..."
-              : value && !selectedResource
-                ? "Selected resource not found"
-                : placeholder
-          }
-        />
+        {selectedResource ? (
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded bg-gray-50 p-1">
+              <img
+                src={getResourceLogo(selectedResource.resourceKind)}
+                alt={getResourceLogoAlt(selectedResource.resourceKind)}
+                className="h-full w-full object-contain"
+              />
+            </div>
+            <span>{selectedResource.name}</span>
+          </div>
+        ) : (
+          <SelectValue
+            placeholder={
+              loading
+                ? "Loading resources..."
+                : value && !selectedResource
+                  ? "Selected resource not found"
+                  : placeholder
+            }
+          />
+        )}
       </SelectTrigger>
       <SelectContent>
         {resources.length > 0 ? (
           resources.map((resource) => (
             <SelectItem key={resource.id} value={resource.id}>
-              {resource.name}
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded bg-gray-50 p-1">
+                  <img
+                    src={getResourceLogo(resource.resourceKind)}
+                    alt={getResourceLogoAlt(resource.resourceKind)}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <span>{resource.name}</span>
+              </div>
             </SelectItem>
           ))
         ) : (
