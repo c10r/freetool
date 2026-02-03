@@ -35,6 +35,7 @@ import {
 import { OnBlurPlugin } from "./OnBlurPlugin";
 import { PlaceholderNode } from "./PlaceholderNode";
 import { PlaceholderPlugin } from "./PlaceholderPlugin";
+import { SqlHighlightPlugin } from "./SqlHighlightPlugin";
 import { theme } from "./theme";
 import { ValidityUpdatePlugin } from "./ValidityUpdatePlugin";
 import { ValueSyncPlugin } from "./ValueSyncPlugin";
@@ -64,6 +65,7 @@ export function InputWithPlaceholders({
   id,
   "aria-label": ariaLabel,
   disableExpressions = false,
+  syntaxHighlighting,
 }: InputWithPlaceholdersProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<{
@@ -325,6 +327,7 @@ export function InputWithPlaceholders({
           isPopoverOpen={popoverState.isOpen}
           popoverMode={popoverState.triggerType}
         />
+        {syntaxHighlighting === "sql" && <SqlHighlightPlugin />}
         {!disableExpressions && (
           <ExpressionPlugin
             availableInputs={availableInputs}

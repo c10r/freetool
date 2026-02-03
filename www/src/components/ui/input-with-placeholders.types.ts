@@ -41,4 +41,6 @@ export interface InputWithPlaceholdersProps {
   "aria-label"?: string;
   /** Disable {{ expression }} syntax - only allow @placeholder references */
   disableExpressions?: boolean;
+  /** Optional syntax highlighting mode */
+  syntaxHighlighting?: "sql";
 }

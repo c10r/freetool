@@ -56,6 +56,11 @@ All colors MUST be HSL.
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --sql-token-keyword: 221 83% 53%;
+    --sql-token-string: 142 71% 45%;
+    --sql-token-number: 24 94% 50%;
+    --sql-token-comment: 215.4 16.3% 46.9%;
   }
 
   .dark {
@@ -94,6 +99,11 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --sql-token-keyword: 213 94% 68%;
+    --sql-token-string: 142 70% 55%;
+    --sql-token-number: 30 90% 60%;
+    --sql-token-comment: 220 14% 60%;
   }
 }
 

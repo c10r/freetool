@@ -468,6 +468,7 @@ export default function SqlQueryConfigForm({
               disabled={!canEdit}
               inputClassName="min-h-[160px]"
               aria-label="SQL"
+              syntaxHighlighting="sql"
             />
             <p className="text-xs text-muted-foreground">
               Use @param names and define values below. Expressions like

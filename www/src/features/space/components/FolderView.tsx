@@ -97,7 +97,7 @@ export default function FolderView({
       body: [],
       inputs: [],
       useDynamicJsonBody: false,
-      sqlConfig: createDefaultSqlConfig(),
+      sqlConfig: undefined,
     });
   }, []);
   const [newFolderName, setNewFolderName] = useState("");
@@ -132,7 +132,7 @@ export default function FolderView({
     body: [] as KeyValuePair[],
     inputs: [] as AppField[],
     useDynamicJsonBody: false,
-    sqlConfig: createDefaultSqlConfig(),
+    sqlConfig: undefined,
   });
 
   // App running state
@@ -323,7 +323,7 @@ export default function FolderView({
         appFormData.body,
         appFormData.inputs,
         appFormData.useDynamicJsonBody,
-        appFormData.sqlConfig
+        appFormData.resourceKind === "sql" ? appFormData.sqlConfig : undefined
       );
 
       // Reset form and close on success
@@ -339,7 +339,7 @@ export default function FolderView({
         body: [],
         inputs: [],
         useDynamicJsonBody: false,
-        sqlConfig: createDefaultSqlConfig(),
+        sqlConfig: undefined,
       });
       setShowCreateAppForm(false);
     } catch (error) {
@@ -637,7 +637,12 @@ export default function FolderView({
                       sqlConfig: prev.sqlConfig || createDefaultSqlConfig(),
                     };
                   }
-                  return { ...prev, resourceId: nextResourceId, resourceKind };
+                  return {
+                    ...prev,
+                    resourceId: nextResourceId,
+                    resourceKind,
+                    sqlConfig: undefined,
+                  };
                 })
               }
               onHttpMethodChange={(httpMethod) =>
