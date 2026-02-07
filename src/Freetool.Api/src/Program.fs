@@ -240,7 +240,12 @@ let main args =
     |> ignore
 
     builder.Services.AddDbContext<FreetoolDbContext>(fun options ->
-        options.UseSqlite(builder.Configuration.GetConnectionString ConfigurationKeys.DefaultConnection)
+        options
+            .UseSqlite(builder.Configuration.GetConnectionString ConfigurationKeys.DefaultConnection)
+            .ReplaceService<
+                Microsoft.EntityFrameworkCore.Storage.IExecutionStrategyFactory,
+                SqliteExecutionStrategyFactory
+              >()
         |> ignore)
     |> ignore
 

@@ -53,6 +53,7 @@
 
   <ItemGroup>
     <Compile Include="src/Database/SettingsStore.fs" />
+    <Compile Include="src/Database/SqliteExecutionStrategy.fs" />
     <Compile Include="src/Database/FreetoolDbContext.fs" />
     <Compile Include="src/Database/Persistence.fs" />
     <Compile Include="src/Database/Repositories/UserRepository.fs" />
