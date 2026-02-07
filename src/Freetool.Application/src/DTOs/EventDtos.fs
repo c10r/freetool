@@ -13,7 +13,7 @@ type EventFilterDTO =
       FromDate: DateTime option
       ToDate: DateTime option
 
-      [<Range(0, 100)>]
+      [<Range(0, 2147483647)>]
       Skip: int option
 
       [<Range(0, 100)>]
@@ -58,6 +58,15 @@ module EventFilterValidator =
             | Some et -> entityType <- Some et
             | None -> errors <- $"Invalid EntityType: {entityTypeStr}" :: errors
         | None -> ()
+
+        // Validate pagination
+        match dto.Skip with
+        | Some skip when skip < 0 -> errors <- "Skip must be greater than or equal to 0" :: errors
+        | _ -> ()
+
+        match dto.Take with
+        | Some take when take < 0 || take > 100 -> errors <- "Take must be between 0 and 100" :: errors
+        | _ -> ()
 
         if List.isEmpty errors then
             Ok

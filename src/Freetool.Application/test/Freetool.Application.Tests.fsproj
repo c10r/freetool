@@ -35,6 +35,7 @@
     <Compile Include="RunHandlerTests.fs" />
     <Compile Include="TrashHandlerTests.fs" />
     <Compile Include="EventEnhancementServiceTests.fs" />
+    <Compile Include="EventFilterValidatorTests.fs" />
   </ItemGroup>
 
 </Project>
