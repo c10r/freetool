@@ -147,7 +147,7 @@ export function extractDefaultValue(defaultValue: unknown): string | null {
     case "EmailDefault":
       return String(value);
     case "BooleanDefault":
-      return value ? "Yes" : "No";
+      return value ? "true" : "false";
     case "DateDefault":
       return new Date(value as string).toLocaleDateString();
     default:

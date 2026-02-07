@@ -49,15 +49,18 @@ export function useAppInputs(
    * Maps frontend AppField[] to backend AppInputDto[] format
    */
   const mapFieldsToBackendFormat = useCallback((appFields: AppField[]) => {
-    return appFields.map((field) => ({
-      input: {
-        title: field.label,
-        description: field.description?.trim() || null,
-        type: toBackendInputType(field.type, field.options),
-      },
-      required: field.required ?? false,
-      defaultValue: field.defaultValue,
-    }));
+    return appFields.map((field) => {
+      const isBoolean = field.type === "boolean";
+      return {
+        input: {
+          title: field.label,
+          description: field.description?.trim() || null,
+          type: toBackendInputType(field.type, field.options),
+        },
+        required: isBoolean ? true : (field.required ?? false),
+        defaultValue: isBoolean ? undefined : field.defaultValue,
+      };
+    });
   }, []);
 
   /**
@@ -69,9 +72,9 @@ export function useAppInputs(
         label: f.label,
         description: f.description,
         type: f.type,
-        required: f.required ?? false,
+        required: f.type === "boolean" ? true : (f.required ?? false),
         options: f.options,
-        defaultValue: f.defaultValue,
+        defaultValue: f.type === "boolean" ? undefined : f.defaultValue,
       }))
     );
     const savedFieldsJson = JSON.stringify(
@@ -79,9 +82,9 @@ export function useAppInputs(
         label: f.label,
         description: f.description,
         type: f.type,
-        required: f.required ?? false,
+        required: f.type === "boolean" ? true : (f.required ?? false),
         options: f.options,
-        defaultValue: f.defaultValue,
+        defaultValue: f.type === "boolean" ? undefined : f.defaultValue,
       }))
     );
     return currentFieldsJson !== savedFieldsJson;

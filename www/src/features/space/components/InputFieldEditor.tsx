@@ -56,6 +56,10 @@ export default function InputFieldEditor({
         if (f.id !== id) {
           return f;
         }
+        // Enforce boolean inputs as required (toggles are always true/false)
+        if (updates.type === "boolean") {
+          return { ...f, ...updates, required: true, defaultValue: undefined };
+        }
         // Clear defaultValue when required is toggled to true
         if (updates.required === true) {
           return { ...f, ...updates, defaultValue: undefined };
@@ -159,11 +163,13 @@ export default function InputFieldEditor({
             </div>
             <div className="md:col-span-3 flex items-center gap-2">
               <Switch
-                checked={!!f.required}
+                checked={f.type === "boolean" ? true : !!f.required}
                 onCheckedChange={(v) => updateField(f.id, { required: v })}
-                disabled={disabled}
+                disabled={disabled || f.type === "boolean"}
               />
-              <span className="text-sm text-muted-foreground">Required</span>
+              <span className="text-sm text-muted-foreground">
+                {f.type === "boolean" ? "Required (boolean)" : "Required"}
+              </span>
             </div>
             <div className="md:col-span-2 flex justify-end">
               <Button
@@ -198,7 +204,7 @@ export default function InputFieldEditor({
                 />
               </div>
             )}
-            {!f.required && (
+            {!f.required && f.type !== "boolean" && (
               <div className="md:col-span-12 mt-2">
                 <Input
                   value={f.defaultValue || ""}

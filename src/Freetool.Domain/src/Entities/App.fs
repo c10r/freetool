@@ -87,10 +87,13 @@ module App =
         match InputTitle.Create(Some input.Title) with
         | Error err -> Error err
         | Ok validTitle ->
-            match input.Description with
-            | Some desc when desc.Length > 100 ->
-                Error(ValidationError "Input description cannot exceed 100 characters")
-            | _ -> Ok { input with Title = validTitle.Value }
+            match input.Type.Value with
+            | InputTypeValue.Boolean when not input.Required -> Error(ValidationError "Boolean inputs must be required")
+            | _ ->
+                match input.Description with
+                | Some desc when desc.Length > 100 ->
+                    Error(ValidationError "Input description cannot exceed 100 characters")
+                | _ -> Ok { input with Title = validTitle.Value }
 
     let private normalizeSqlText (value: string option) : string option =
         value

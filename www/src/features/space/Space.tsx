@@ -231,14 +231,17 @@ function WorkspaceContent() {
     sqlConfig?: SqlQueryConfig
   ) => {
     // Map frontend AppField[] to backend AppInputDto[] format
-    const backendInputs = inputs.map((f) => ({
-      input: {
-        title: f.label,
-        description: f.description?.trim() || null,
-        type: toBackendInputType(f.type, f.options),
-      },
-      required: f.required ?? false,
-    }));
+    const backendInputs = inputs.map((f) => {
+      const isBoolean = f.type === "boolean";
+      return {
+        input: {
+          title: f.label,
+          description: f.description?.trim() || null,
+          type: toBackendInputType(f.type, f.options),
+        },
+        required: isBoolean ? true : (f.required ?? false),
+      };
+    });
 
     // Call backend API to create the app
     const response = await createAppAPI({

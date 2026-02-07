@@ -169,16 +169,23 @@ export function useSidebarTree() {
             name: app.name || "Unnamed App",
             type: "app",
             parentId: app.folderId || rootId,
-            fields: (app.inputs || []).map((input) => ({
-              id: crypto.randomUUID(),
-              label: input.title || "",
-              description: input.description || undefined,
-              type: fromBackendInputType(input.type as InputType),
-              required: input.required ?? false,
-              options: getRadioOptionsFromBackendType(input.type as InputType),
-              defaultValue:
-                extractDefaultValue(input.defaultValue) || undefined,
-            })),
+            fields: (app.inputs || []).map((input) => {
+              const fieldType = fromBackendInputType(input.type as InputType);
+              const isBoolean = fieldType === "boolean";
+              return {
+                id: crypto.randomUUID(),
+                label: input.title || "",
+                description: input.description || undefined,
+                type: fieldType,
+                required: isBoolean ? true : (input.required ?? false),
+                options: getRadioOptionsFromBackendType(
+                  input.type as InputType
+                ),
+                defaultValue: isBoolean
+                  ? undefined
+                  : extractDefaultValue(input.defaultValue) || undefined,
+              };
+            }),
             resourceId: app.resourceId || undefined,
             httpMethod: (app.httpMethod as EndpointMethod) || undefined,
             urlPath: app.urlPath || "",

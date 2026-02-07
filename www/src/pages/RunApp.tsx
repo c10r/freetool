@@ -197,10 +197,18 @@ const RunApp = () => {
       const defaults: Record<string, string> = {};
       for (const input of app.inputs) {
         const title = input.title || "";
+        if (!title) {
+          continue;
+        }
+        const fieldType = input.type
+          ? fromBackendInputType(input.type)
+          : "text";
         const defaultValue = extractDefaultValue(
           (input as { defaultValue?: unknown }).defaultValue
         );
-        if (defaultValue) {
+        if (fieldType === "boolean") {
+          defaults[title] = defaultValue ?? "false";
+        } else if (defaultValue) {
           defaults[title] = defaultValue;
         }
       }
@@ -278,13 +286,34 @@ const RunApp = () => {
     setResult(null);
 
     try {
-      // Convert inputValues object to array format
-      const inputValuesArray = Object.entries(inputValues).map(
-        ([title, value]) => ({
-          title,
-          value: String(value),
-        })
-      );
+      // Convert inputValues object to array format (always include boolean toggles)
+      const inputValuesArray = app?.inputs
+        ? app.inputs.flatMap((input) => {
+            const title = input.title || "";
+            if (!title) {
+              return [];
+            }
+            const fieldType = input.type
+              ? fromBackendInputType(input.type)
+              : "text";
+            const rawValue = inputValues[title];
+            if (fieldType === "boolean") {
+              return [
+                {
+                  title,
+                  value: rawValue === "true" ? "true" : "false",
+                },
+              ];
+            }
+            if (rawValue === undefined || rawValue === "") {
+              return [];
+            }
+            return [{ title, value: String(rawValue) }];
+          })
+        : Object.entries(inputValues).map(([title, value]) => ({
+            title,
+            value: String(value),
+          }));
 
       // Prepare dynamic body if app uses it
       const dynamicBodyForApi = usesDynamicBody

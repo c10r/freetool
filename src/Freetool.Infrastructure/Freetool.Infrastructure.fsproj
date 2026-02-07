@@ -49,6 +49,7 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.024_AddResourceKindAndDatabaseFields.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.025_AddSqlConfigAndDatabaseEngine.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.026_AddExecutedSqlToRunsTable.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.027_ForceRequiredForBooleanInputs.sql" />
   </ItemGroup>
 
   <ItemGroup>
