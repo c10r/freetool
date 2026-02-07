@@ -602,3 +602,75 @@ type SpaceController
                 | Ok _ -> return this.StatusCode(500, "Unexpected result type") :> IActionResult
                 | Error error -> return this.HandleDomainError(error)
         }
+
+    [<HttpGet("{id}/default-member-permissions")>]
+    [<ProducesResponseType(typeof<SpaceDefaultMemberPermissionsResponseDto>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.GetDefaultMemberPermissions(id: string) : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+            let! hasPermission = this.CheckIsOrgAdminOrModeratorAsync(id)
+
+            if not hasPermission then
+                logger.LogWarning(
+                    "User {UserId} attempted to view default member permissions for space {SpaceId} without moderator/admin permissions",
+                    userId.Value,
+                    id
+                )
+
+                return
+                    this.Forbidden(
+                        "Only organization administrators or space moderators can view default member permissions"
+                    )
+            else
+                let! result = commandHandler.HandleCommand(GetDefaultMemberPermissions id)
+
+                return
+                    match result with
+                    | Ok(SpaceDefaultMemberPermissionsResult response) -> this.Ok(response) :> IActionResult
+                    | Ok _ -> this.StatusCode(500, "Unexpected result type") :> IActionResult
+                    | Error error -> this.HandleDomainError(error)
+        }
+
+    [<HttpPut("{id}/default-member-permissions")>]
+    [<ProducesResponseType(StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    [<ProducesResponseType(StatusCodes.Status403Forbidden)>]
+    [<ProducesResponseType(StatusCodes.Status404NotFound)>]
+    [<ProducesResponseType(StatusCodes.Status500InternalServerError)>]
+    member this.UpdateDefaultMemberPermissions
+        (id: string, [<FromBody>] updateDto: UpdateDefaultMemberPermissionsDto)
+        : Task<IActionResult> =
+        task {
+            let userId = this.CurrentUserId
+            let! hasPermission = this.CheckIsOrgAdminOrModeratorAsync(id)
+
+            if not hasPermission then
+                logger.LogWarning(
+                    "User {UserId} attempted to update default member permissions for space {SpaceId} without moderator/admin permissions",
+                    userId.Value,
+                    id
+                )
+
+                return
+                    this.Forbidden(
+                        "Only organization administrators or space moderators can update default member permissions"
+                    )
+            else
+                let! result = commandHandler.HandleCommand(UpdateDefaultMemberPermissions(userId, id, updateDto))
+
+                match result with
+                | Ok(SpaceCommandResult.UnitResult()) ->
+                    logger.LogInformation(
+                        "Default member permissions updated for space {SpaceId} by user {ActorUserId}",
+                        id,
+                        userId.Value
+                    )
+
+                    return this.Ok() :> IActionResult
+                | Ok _ -> return this.StatusCode(500, "Unexpected result type") :> IActionResult
+                | Error error -> return this.HandleDomainError(error)
+        }

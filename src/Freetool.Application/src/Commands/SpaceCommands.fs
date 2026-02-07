@@ -9,6 +9,7 @@ type SpaceCommandResult =
     | SpaceResult of SpaceData
     | SpacesResult of PagedResult<SpaceData>
     | SpaceMembersPermissionsResult of SpaceMembersPermissionsResponseDto
+    | SpaceDefaultMemberPermissionsResult of SpaceDefaultMemberPermissionsResponseDto
     | UnitResult of unit
 
 /// Commands for Space operations
@@ -37,3 +38,7 @@ type SpaceCommand =
     | GetSpaceMembersWithPermissions of spaceId: string * skip: int * take: int
     /// Updates a user's permissions in a Space
     | UpdateUserPermissions of actorUserId: UserId * spaceId: string * UpdateUserPermissionsDto
+    /// Gets default permissions applied to all members of a space
+    | GetDefaultMemberPermissions of spaceId: string
+    /// Updates default permissions applied to all members of a space
+    | UpdateDefaultMemberPermissions of actorUserId: UserId * spaceId: string * UpdateDefaultMemberPermissionsDto

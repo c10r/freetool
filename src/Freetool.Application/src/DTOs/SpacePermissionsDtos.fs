@@ -37,3 +37,14 @@ type UpdateUserPermissionsDto =
       UserId: string
       [<Required>]
       Permissions: SpacePermissionsDto }
+
+/// Response DTO containing default permissions applied to all non-moderator members of a space
+type SpaceDefaultMemberPermissionsResponseDto =
+    { SpaceId: string
+      SpaceName: string
+      Permissions: SpacePermissionsDto }
+
+/// DTO for updating default member permissions in a space
+type UpdateDefaultMemberPermissionsDto =
+    { [<Required>]
+      Permissions: SpacePermissionsDto }

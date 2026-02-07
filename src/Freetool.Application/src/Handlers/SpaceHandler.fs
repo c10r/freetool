@@ -54,6 +54,19 @@ module SpaceHandler =
           EditFolder = permissionsMap |> Map.tryFind FolderEdit |> Option.defaultValue false
           DeleteFolder = permissionsMap |> Map.tryFind FolderDelete |> Option.defaultValue false }
 
+    let permissionsDtoToMap (permissions: SpacePermissionsDto) : Map<AuthRelation, bool> =
+        Map.ofList
+            [ (ResourceCreate, permissions.CreateResource)
+              (ResourceEdit, permissions.EditResource)
+              (ResourceDelete, permissions.DeleteResource)
+              (AppCreate, permissions.CreateApp)
+              (AppEdit, permissions.EditApp)
+              (AppDelete, permissions.DeleteApp)
+              (AppRun, permissions.RunApp)
+              (FolderCreate, permissions.CreateFolder)
+              (FolderEdit, permissions.EditFolder)
+              (FolderDelete, permissions.DeleteFolder) ]
+
     /// Creates a SpacePermissionsDto with all permissions set to true (for moderators)
     let allPermissionsDto: SpacePermissionsDto =
         { CreateResource = true
@@ -444,10 +457,8 @@ module SpaceHandler =
                                     ValidationError
                                         "Cannot modify moderator permissions - moderators have all permissions by default"
                                 )
-                        else if
-                            // Verify target user is a member of the space
-                            not (List.contains targetUserId space.State.MemberIds)
-                        then
+                        // Verify target user is a member of the space
+                        else if not (List.contains targetUserId space.State.MemberIds) then
                             return Error(NotFound "User is not a member of this space")
                         else
                             let targetUserIdStr = dto.UserId
@@ -460,18 +471,7 @@ module SpaceHandler =
                                     (SpaceObject spaceId)
 
                             // Build the desired permissions map from DTO
-                            let desiredPermissions: Map<AuthRelation, bool> =
-                                Map.ofList
-                                    [ (ResourceCreate, dto.Permissions.CreateResource)
-                                      (ResourceEdit, dto.Permissions.EditResource)
-                                      (ResourceDelete, dto.Permissions.DeleteResource)
-                                      (AppCreate, dto.Permissions.CreateApp)
-                                      (AppEdit, dto.Permissions.EditApp)
-                                      (AppDelete, dto.Permissions.DeleteApp)
-                                      (AppRun, dto.Permissions.RunApp)
-                                      (FolderCreate, dto.Permissions.CreateFolder)
-                                      (FolderEdit, dto.Permissions.EditFolder)
-                                      (FolderDelete, dto.Permissions.DeleteFolder) ]
+                            let desiredPermissions = permissionsDtoToMap dto.Permissions
 
                             // Compute diff: what to add and what to remove
                             let tuplesToAdd =
@@ -537,6 +537,83 @@ module SpaceHandler =
                                 do! eventRepository.CommitAsync()
 
                             return Ok(SpaceCommandResult.UnitResult())
+
+            | GetDefaultMemberPermissions(spaceId) ->
+                match Guid.TryParse spaceId with
+                | false, _ -> return Error(ValidationError "Invalid space ID format")
+                | true, spaceGuid ->
+                    let spaceIdObj = SpaceId.FromGuid spaceGuid
+                    let! spaceOption = spaceRepository.GetByIdAsync spaceIdObj
+
+                    match spaceOption with
+                    | None -> return Error(NotFound "Space not found")
+                    | Some space ->
+                        let! permissionsMap =
+                            authService.BatchCheckPermissionsAsync
+                                (UserSetFromRelation("space", spaceId, "member"))
+                                allSpacePermissions
+                                (SpaceObject spaceId)
+
+                        let response: SpaceDefaultMemberPermissionsResponseDto =
+                            { SpaceId = spaceId
+                              SpaceName = space.State.Name
+                              Permissions = permissionsMapToDto permissionsMap }
+
+                        return Ok(SpaceDefaultMemberPermissionsResult response)
+
+            | UpdateDefaultMemberPermissions(_, spaceId, dto) ->
+                match Guid.TryParse spaceId with
+                | false, _ -> return Error(ValidationError "Invalid space ID format")
+                | true, spaceGuid ->
+                    let spaceIdObj = SpaceId.FromGuid spaceGuid
+                    let! spaceOption = spaceRepository.GetByIdAsync spaceIdObj
+
+                    match spaceOption with
+                    | None -> return Error(NotFound "Space not found")
+                    | Some _ ->
+                        let defaultMemberSubject = UserSetFromRelation("space", spaceId, "member")
+
+                        let! currentPermissionsMap =
+                            authService.BatchCheckPermissionsAsync
+                                defaultMemberSubject
+                                allSpacePermissions
+                                (SpaceObject spaceId)
+
+                        let desiredPermissions = permissionsDtoToMap dto.Permissions
+
+                        let tuplesToAdd =
+                            desiredPermissions
+                            |> Map.toList
+                            |> List.filter (fun (relation, desired) ->
+                                let current =
+                                    currentPermissionsMap |> Map.tryFind relation |> Option.defaultValue false
+
+                                desired && not current)
+                            |> List.map (fun (relation, _) ->
+                                { Subject = defaultMemberSubject
+                                  Relation = relation
+                                  Object = SpaceObject spaceId })
+
+                        let tuplesToRemove =
+                            desiredPermissions
+                            |> Map.toList
+                            |> List.filter (fun (relation, desired) ->
+                                let current =
+                                    currentPermissionsMap |> Map.tryFind relation |> Option.defaultValue false
+
+                                not desired && current)
+                            |> List.map (fun (relation, _) ->
+                                { Subject = defaultMemberSubject
+                                  Relation = relation
+                                  Object = SpaceObject spaceId })
+
+                        if not (List.isEmpty tuplesToAdd) || not (List.isEmpty tuplesToRemove) then
+                            do!
+                                authService.UpdateRelationshipsAsync
+                                    { TuplesToAdd = tuplesToAdd
+                                      TuplesToRemove = tuplesToRemove }
+
+                        return Ok(SpaceCommandResult.UnitResult())
         }
 
 /// SpaceHandler class that implements ICommandHandler

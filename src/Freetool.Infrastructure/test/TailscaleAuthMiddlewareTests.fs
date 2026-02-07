@@ -12,8 +12,10 @@ open Microsoft.Extensions.Primitives
 open Freetool.Domain
 open Freetool.Domain.Entities
 open Freetool.Domain.ValueObjects
+open Freetool.Application.DTOs
 open Freetool.Application.Interfaces
 open Freetool.Api.Middleware
+open Freetool.Api.Services
 
 // ============================================================================
 // Mock Types
@@ -91,6 +93,20 @@ type MockAuthorizationService(initOrgResult: Result<unit, exn>) =
         member _.StoreExistsAsync _ = Task.FromResult(true)
         member _.BatchCheckPermissionsAsync _ _ _ = Task.FromResult(Map.empty)
 
+type MockIdentityGroupSpaceMappingRepository() =
+    interface IIdentityGroupSpaceMappingRepository with
+        member _.GetAllAsync() = Task.FromResult([])
+        member _.GetSpaceIdsByGroupKeysAsync _ = Task.FromResult([])
+
+        member _.AddAsync _ _ _ =
+            Task.FromResult(Error(InvalidOperation "Not used in middleware tests"))
+
+        member _.UpdateIsActiveAsync _ _ _ =
+            Task.FromResult(Error(InvalidOperation "Not used in middleware tests"))
+
+        member _.DeleteAsync _ =
+            Task.FromResult(Error(InvalidOperation "Not used in middleware tests"))
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -123,6 +139,30 @@ let setupServices
     let config = ConfigurationBuilder().AddInMemoryCollection(configValues).Build()
 
     services.AddSingleton<IConfiguration>(config) |> ignore
+
+    services.AddSingleton<IIdentityGroupSpaceMappingRepository>(MockIdentityGroupSpaceMappingRepository())
+    |> ignore
+
+    services.AddSingleton<IIdentityProvisioningService>(fun serviceProvider ->
+        let userRepository = serviceProvider.GetRequiredService<IUserRepository>()
+
+        let authorizationService =
+            serviceProvider.GetRequiredService<IAuthorizationService>()
+
+        let mappingRepository =
+            serviceProvider.GetRequiredService<IIdentityGroupSpaceMappingRepository>()
+
+        let configuration = serviceProvider.GetRequiredService<IConfiguration>()
+
+        IdentityProvisioningService(
+            userRepository,
+            authorizationService,
+            mappingRepository,
+            configuration,
+            NullLogger<IdentityProvisioningService>.Instance
+        )
+        :> IIdentityProvisioningService)
+    |> ignore
 
     let serviceProvider = services.BuildServiceProvider()
     context.RequestServices <- serviceProvider

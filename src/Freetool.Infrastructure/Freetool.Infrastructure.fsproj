@@ -50,6 +50,7 @@
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.025_AddSqlConfigAndDatabaseEngine.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.026_AddExecutedSqlToRunsTable.sql" />
     <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.027_ForceRequiredForBooleanInputs.sql" />
+    <EmbeddedResource Include="src/Database/Migrations/DatabaseUpgradeScripts.DBUP.028_AddIdentityGroupSpaceMappings.sql" />
   </ItemGroup>
 
   <ItemGroup>
@@ -59,6 +60,7 @@
     <Compile Include="src/Database/Persistence.fs" />
     <Compile Include="src/Database/Repositories/UserRepository.fs" />
     <Compile Include="src/Database/Repositories/SpaceRepository.fs" />
+    <Compile Include="src/Database/Repositories/IdentityGroupSpaceMappingRepository.fs" />
     <Compile Include="src/Database/Repositories/ResourceRepository.fs" />
     <Compile Include="src/Database/Repositories/FolderRepository.fs" />
     <Compile Include="src/Database/Repositories/AppRepository.fs" />

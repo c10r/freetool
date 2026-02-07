@@ -200,6 +200,7 @@ type OpenFgaService(apiUrl: string, logger: ILogger<OpenFgaService>, ?storeId: s
                             DirectlyRelatedUserTypes =
                                 ResizeArray(
                                     [ RelationReference(Type = "user")
+                                      RelationReference(Type = "space", Relation = "member")
                                       RelationReference(Type = "organization", Relation = "admin") ]
                                 )
                         )

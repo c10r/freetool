@@ -261,6 +261,11 @@ let main args =
         SpaceRepository(context, eventRepository))
     |> ignore
 
+    builder.Services.AddScoped<IIdentityGroupSpaceMappingRepository>(fun serviceProvider ->
+        let context = serviceProvider.GetRequiredService<FreetoolDbContext>()
+        IdentityGroupSpaceMappingRepository(context))
+    |> ignore
+
     builder.Services.AddScoped<IResourceRepository, ResourceRepository>() |> ignore
     builder.Services.AddScoped<IFolderRepository, FolderRepository>() |> ignore
     builder.Services.AddScoped<IAppRepository, AppRepository>() |> ignore
@@ -308,6 +313,9 @@ let main args =
 
         EventEnhancementService(userRepository, appRepository, folderRepository, resourceRepository, spaceRepository)
         :> IEventEnhancementService)
+    |> ignore
+
+    builder.Services.AddScoped<IIdentityProvisioningService, IdentityProvisioningService>()
     |> ignore
 
     builder.Services.AddScoped<UserHandler>() |> ignore
@@ -513,11 +521,20 @@ let main args =
     staticFileOptions.ContentTypeProvider <- provider
     app.UseStaticFiles(staticFileOptions) |> ignore
 
-    // Use DevAuthMiddleware in dev mode, TailscaleAuthMiddleware otherwise
+    // Use DevAuthMiddleware in dev mode, otherwise select auth middleware by configuration.
+    // Supported values for Auth:Provider are "tailscale" and "iap". Defaults to tailscale.
     if isDevMode then
         app.UseMiddleware<DevAuthMiddleware>() |> ignore
     else
-        app.UseMiddleware<TailscaleAuthMiddleware>() |> ignore
+        let authProvider =
+            builder.Configuration[ConfigurationKeys.Auth.Provider]
+            |> Option.ofObj
+            |> Option.defaultValue "tailscale"
+            |> fun value -> value.Trim().ToLowerInvariant()
+
+        match authProvider with
+        | "iap" -> app.UseMiddleware<IapAuthMiddleware>() |> ignore
+        | _ -> app.UseMiddleware<TailscaleAuthMiddleware>() |> ignore
 
     app.MapControllers() |> ignore
 

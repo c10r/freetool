@@ -22,6 +22,27 @@ module ConfigurationKeys =
         [<Literal>]
         let OrgAdminEmail = "OpenFGA:OrgAdminEmail"
 
+    /// Authentication middleware selection and IAP claim mapping keys
+    module Auth =
+        [<Literal>]
+        let Provider = "Auth:Provider"
+
+        module IAP =
+            [<Literal>]
+            let EmailHeader = "Auth:IAP:EmailHeader"
+
+            [<Literal>]
+            let NameHeader = "Auth:IAP:NameHeader"
+
+            [<Literal>]
+            let PictureHeader = "Auth:IAP:PictureHeader"
+
+            [<Literal>]
+            let GroupsHeader = "Auth:IAP:GroupsHeader"
+
+            [<Literal>]
+            let GroupsDelimiter = "Auth:IAP:GroupsDelimiter"
+
     /// Environment variable keys
     module Environment =
         /// OpenTelemetry Protocol (OTLP) exporter endpoint

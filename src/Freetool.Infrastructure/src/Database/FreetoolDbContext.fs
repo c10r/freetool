@@ -20,6 +20,17 @@ type SerializableHttpRequest =
       HttpMethod: string
       UseJsonBody: bool }
 
+[<CLIMutable>]
+type IdentityGroupSpaceMappingData =
+    { Id: Guid
+      GroupKey: string
+      SpaceId: SpaceId
+      IsActive: bool
+      CreatedByUserId: UserId
+      UpdatedByUserId: UserId
+      CreatedAt: DateTime
+      UpdatedAt: DateTime }
+
 module ExecutableHttpRequestSerializer =
     let serialize (requestOpt: Freetool.Domain.ExecutableHttpRequest option) : string =
         match requestOpt with
@@ -89,6 +100,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     [<DefaultValue>]
     val mutable private _spaceMembers: DbSet<SpaceMemberData>
 
+    [<DefaultValue>]
+    val mutable private _identityGroupSpaceMappings: DbSet<IdentityGroupSpaceMappingData>
+
     member this.Users
         with get () = this._users
         and set value = this._users <- value
@@ -120,6 +134,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     member this.SpaceMembers
         with get () = this._spaceMembers
         and set value = this._spaceMembers <- value
+
+    member this.IdentityGroupSpaceMappings
+        with get () = this._identityGroupSpaceMappings
+        and set value = this._identityGroupSpaceMappings <- value
 
     override this.OnModelCreating(modelBuilder: ModelBuilder) =
         base.OnModelCreating modelBuilder
@@ -1031,4 +1049,38 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
             entity.HasOne<SpaceData>().WithMany().HasForeignKey(fun sm -> sm.SpaceId :> obj)
             |> ignore)
+        |> ignore
+
+        // Configure IdentityGroupSpaceMappingData
+        modelBuilder.Entity<IdentityGroupSpaceMappingData>(fun entity ->
+            let userIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.UserId, System.Guid>(
+                    (fun userId -> userId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.UserId(guid))
+                )
+
+            let spaceIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.SpaceId, System.Guid>(
+                    (fun spaceId -> spaceId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.SpaceId(guid))
+                )
+
+            entity.ToTable("IdentityGroupSpaceMappings") |> ignore
+            entity.HasKey("Id") |> ignore
+            entity.HasIndex("GroupKey", "SpaceId").IsUnique() |> ignore
+            entity.Property(fun m -> m.GroupKey).HasMaxLength(200).IsRequired() |> ignore
+
+            entity.Property(fun m -> m.SpaceId).HasConversion(spaceIdConverter).IsRequired()
+            |> ignore
+
+            entity.Property(fun m -> m.IsActive).IsRequired() |> ignore
+
+            entity.Property(fun m -> m.CreatedByUserId).HasConversion(userIdConverter).IsRequired()
+            |> ignore
+
+            entity.Property(fun m -> m.UpdatedByUserId).HasConversion(userIdConverter).IsRequired()
+            |> ignore
+
+            entity.Property(fun m -> m.CreatedAt).IsRequired() |> ignore
+            entity.Property(fun m -> m.UpdatedAt).IsRequired() |> ignore)
         |> ignore
