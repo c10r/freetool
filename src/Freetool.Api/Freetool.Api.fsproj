@@ -30,7 +30,6 @@
     <Compile Include="src/Tracing/TracingAttributes.fs" />
     <Compile Include="src/Tracing/AutoTracing.fs" />
     <Compile Include="src/Services/IdentityProvisioningService.fs" />
-    <Compile Include="src/Middleware/TailscaleAuthMiddleware.fs" />
     <Compile Include="src/Middleware/IapAuthMiddleware.fs" />
     <Compile Include="src/Middleware/DevAuthMiddleware.fs" />
     <Compile Include="src/OpenApi/FSharpSchemaFilter.fs" />

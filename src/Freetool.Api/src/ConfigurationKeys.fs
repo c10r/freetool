@@ -22,11 +22,8 @@ module ConfigurationKeys =
         [<Literal>]
         let OrgAdminEmail = "OpenFGA:OrgAdminEmail"
 
-    /// Authentication middleware selection and IAP claim mapping keys
+    /// Google IAP claim mapping keys
     module Auth =
-        [<Literal>]
-        let Provider = "Auth:Provider"
-
         module IAP =
             [<Literal>]
             let EmailHeader = "Auth:IAP:EmailHeader"

@@ -454,7 +454,7 @@ let main args =
                 )
 
             // Note: Organization admin is now set automatically when the user first logs in
-            // via TailscaleAuthMiddleware if their email matches OpenFGA:OrgAdminEmail config
+            // via IapAuthMiddleware if their email matches OpenFGA:OrgAdminEmail config
             let orgAdminEmail = builder.Configuration[ConfigurationKeys.OpenFGA.OrgAdminEmail]
 
             if not (System.String.IsNullOrEmpty(orgAdminEmail)) then
@@ -521,20 +521,11 @@ let main args =
     staticFileOptions.ContentTypeProvider <- provider
     app.UseStaticFiles(staticFileOptions) |> ignore
 
-    // Use DevAuthMiddleware in dev mode, otherwise select auth middleware by configuration.
-    // Supported values for Auth:Provider are "tailscale" and "iap". Defaults to tailscale.
+    // Use DevAuthMiddleware in dev mode; production always authenticates via Google IAP.
     if isDevMode then
         app.UseMiddleware<DevAuthMiddleware>() |> ignore
     else
-        let authProvider =
-            builder.Configuration[ConfigurationKeys.Auth.Provider]
-            |> Option.ofObj
-            |> Option.defaultValue "tailscale"
-            |> fun value -> value.Trim().ToLowerInvariant()
-
-        match authProvider with
-        | "iap" -> app.UseMiddleware<IapAuthMiddleware>() |> ignore
-        | _ -> app.UseMiddleware<TailscaleAuthMiddleware>() |> ignore
+        app.UseMiddleware<IapAuthMiddleware>() |> ignore
 
     app.MapControllers() |> ignore
 

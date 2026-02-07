@@ -704,14 +704,14 @@ The API supports full CRUD operations:
 
 ## 🧑‍💻 Local Development (Dev Mode)
 
-For local development without Tailscale, Freetool provides a **Dev Mode** that bypasses authentication and lets you impersonate different users to test permissions.
+For local development without Google IAP, Freetool provides a **Dev Mode** that bypasses authentication and lets you impersonate different users to test permissions.
 
 ### Production vs Dev Mode
 
 | Aspect | Production Mode | Dev Mode |
 |--------|----------------|----------|
-| **Authentication** | Tailscale identity headers | `X-Dev-User-Id` header |
-| **User identity** | Automatic from Tailscale | Manual selection via UI dropdown |
+| **Authentication** | Google IAP identity headers | `X-Dev-User-Id` header |
+| **User identity** | Automatic from IAP | Manual selection via UI dropdown |
 | **Backend port** | 5001 | 5002 |
 | **Frontend port** | (served by backend) | 8081 |
 | **Database** | `freetool-db` volume | `freetool-dev-db` volume (isolated) |
@@ -854,13 +854,9 @@ F# requires dependencies to be ordered correctly in `.fsproj` files. Always ensu
 
 # 💻 Deploying
 
-Freetool is meant to be deployed behind a [Tailscale](https://tailscale.com) network **under the /freetool** path.
+Freetool is meant to be deployed behind **Google Cloud IAP** (Identity-Aware Proxy) **under the /freetool** path.
 
-When deployed via Tailscale Serve, Tailscale will automatically set [identity headers](https://tailscale.com/kb/1312/serve#identity-headers), obviating the need for this app to handle auth at all.
-
-```bash
-tailscale serve --bg --set-path=/freetool 5001
-```
+IAP injects trusted identity headers (for example `X-Goog-Authenticated-User-Email`), and the API provisions/authorizes users from those headers.
 
 # 📄 License & 🙏 Acknowledgements
 

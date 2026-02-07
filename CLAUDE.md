@@ -257,7 +257,7 @@ Fine-grained, relationship-based authorization via OpenFGA (Google Zanzibar):
 ### Authorization Checks
 
 Controllers use `AuthzMiddleware` which:
-1. Extracts user from Tailscale identity headers
+1. Extracts user from Google IAP identity headers
 2. Checks permission via `IAuthorizationService.CheckPermissionAsync`
 3. Returns 403 if unauthorized
 
@@ -644,13 +644,9 @@ npm run check
 
 ## Deployment
 
-Freetool is designed to run behind **Tailscale Serve** at the `/freetool` path:
+Freetool is designed to run behind **Google Cloud IAP** at the `/freetool` path.
 
-```bash
-tailscale serve --bg --set-path=/freetool 5001
-```
-
-**Authentication:** Tailscale automatically sets identity headers, so the app doesn't handle auth directly - it trusts Tailscale's headers for user identity.
+**Authentication:** IAP sets trusted identity headers for authenticated users, and the app uses those headers for JIT provisioning and authorization.
 
 ## Configuration
 

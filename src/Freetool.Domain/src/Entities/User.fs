@@ -249,7 +249,7 @@ module User =
           UncommittedEvents = user.UncommittedEvents @ [ profilePicChangedEvent :> IDomainEvent ] }
 
     /// Creates an invited (placeholder) user with just an email address.
-    /// The user will be activated when they log in via Tailscale.
+    /// The user will be activated when they log in via the configured identity provider.
     let invite (actorUserId: UserId) (email: Email) : ValidatedUser =
         let now = DateTime.UtcNow
 

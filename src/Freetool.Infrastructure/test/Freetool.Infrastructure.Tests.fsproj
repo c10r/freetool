@@ -15,7 +15,7 @@
     <Compile Include="EventRepositoryTests.fs" />
     <Compile Include="FolderControllerTests.fs" />
     <Compile Include="AutoTracingTests.fs" />
-    <Compile Include="TailscaleAuthMiddlewareTests.fs" />
+    <Compile Include="IapAuthMiddlewareTests.fs" />
     <Compile Include="DevAuthMiddlewareTests.fs" />
     <Compile Include="AppControllerIntegrationTests.fs" />
     <Compile Include="../../Freetool.Api/test/AppControllerAuthTests.fs" />
