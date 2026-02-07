@@ -858,6 +858,8 @@ Freetool is meant to be deployed behind **Google Cloud IAP** (Identity-Aware Pro
 
 IAP injects trusted identity headers (for example `X-Goog-Authenticated-User-Email`), and the API provisions/authorizes users from those headers.
 
+Production requires JWT assertion validation to be configured with `Auth:IAP:JwtAudience` (plus optional issuer/certs overrides).
+
 # 📄 License & 🙏 Acknowledgements
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

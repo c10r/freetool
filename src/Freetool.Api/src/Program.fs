@@ -229,6 +229,8 @@ let main args =
 
     builder.Services.AddEndpointsApiExplorer() |> ignore
 
+    builder.Services.AddHttpClient() |> ignore
+
     builder.Services.AddSwaggerGen(fun c ->
         c.SupportNonNullableReferenceTypes()
         c.UseAllOfToExtendReferenceSchemas()

@@ -132,7 +132,8 @@ let setupServices
     services.AddSingleton<IAuthorizationService>(authService) |> ignore
 
     let configValues =
-        [ match orgAdminEmail with
+        [ "Auth:IAP:ValidateJwt", "false"
+          match orgAdminEmail with
           | Some email -> "OpenFGA:OrgAdminEmail", email
           | None -> ()
           yield! additionalConfig ]
@@ -223,6 +224,36 @@ let ``Returns 401 when IAP email header missing`` () : Task =
 
         let body = getResponseBody context
         Assert.Contains("X-Goog-Authenticated-User-Email", body)
+    }
+
+[<Fact>]
+let ``Returns 401 when JWT validation enabled and JWT assertion header missing`` () : Task =
+    task {
+        let context =
+            createTestHttpContext ()
+            |> fun c -> addHeader c "X-Goog-Authenticated-User-Email" "user@example.com"
+
+        let userRepo = MockUserRepository(Map.empty, Ok(), Ok())
+        let authService = MockAuthorizationService(Ok())
+
+        setupServices
+            context
+            userRepo
+            authService
+            None
+            [ "Auth:IAP:ValidateJwt", "true"
+              "Auth:IAP:JwtAudience", "/projects/123/global/backendServices/456" ]
+        |> ignore
+
+        let middleware, wasNextCalled = createMiddleware ()
+
+        do! middleware.InvokeAsync(context)
+
+        Assert.Equal(401, context.Response.StatusCode)
+        Assert.False(wasNextCalled ())
+
+        let body = getResponseBody context
+        Assert.Contains("X-Goog-Iap-Jwt-Assertion", body)
     }
 
 [<Fact>]

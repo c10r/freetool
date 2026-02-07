@@ -26,6 +26,9 @@ module ConfigurationKeys =
     module Auth =
         module IAP =
             [<Literal>]
+            let ValidateJwt = "Auth:IAP:ValidateJwt"
+
+            [<Literal>]
             let EmailHeader = "Auth:IAP:EmailHeader"
 
             [<Literal>]
@@ -39,6 +42,18 @@ module ConfigurationKeys =
 
             [<Literal>]
             let GroupsDelimiter = "Auth:IAP:GroupsDelimiter"
+
+            [<Literal>]
+            let JwtAssertionHeader = "Auth:IAP:JwtAssertionHeader"
+
+            [<Literal>]
+            let JwtAudience = "Auth:IAP:JwtAudience"
+
+            [<Literal>]
+            let JwtIssuer = "Auth:IAP:JwtIssuer"
+
+            [<Literal>]
+            let JwtCertsUrl = "Auth:IAP:JwtCertsUrl"
 
     /// Environment variable keys
     module Environment =
