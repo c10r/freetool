@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { getAuditEvents } from "@/api/api";
+import {
+  getAppAuditEvents,
+  getAuditEvents,
+  getUserAuditEvents,
+} from "@/api/api";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,6 +76,8 @@ interface AuditEvent {
   eventData: string;
 }
 
+type AuditScope = "global" | "app" | "user";
+
 const getEventTypeColor = (eventType: EventType): string => {
   if (eventType.includes("Created")) {
     return "bg-green-100 text-green-800";
@@ -127,6 +133,16 @@ export default function AuditLogView() {
   const [totalCount, setTotalCount] = useState(0);
 
   const pageSize = DEFAULT_PAGE_SIZE;
+  const scope = useMemo<AuditScope>(() => {
+    const scopeParam = searchParams.get("scope");
+    if (scopeParam === "app" || scopeParam === "user") {
+      return scopeParam;
+    }
+    return "global";
+  }, [searchParams]);
+  const scopedAppId = searchParams.get("appId");
+  const scopedUserId = searchParams.get("userId");
+
   const currentPage = useMemo(() => {
     const pageParam = searchParams.get("page");
     const parsedPage = pageParam ? Number.parseInt(pageParam, 10) : 1;
@@ -155,7 +171,28 @@ export default function AuditLogView() {
     try {
       setLoading(true);
       setError(null);
-      const response = await getAuditEvents(skip, pageSize);
+      const response =
+        scope === "app"
+          ? scopedAppId
+            ? await getAppAuditEvents(scopedAppId, skip, pageSize, true)
+            : null
+          : scope === "user"
+            ? scopedUserId
+              ? await getUserAuditEvents(scopedUserId, skip, pageSize)
+              : null
+            : await getAuditEvents(skip, pageSize);
+
+      if (!response) {
+        setEvents([]);
+        setTotalCount(0);
+        setError(
+          scope === "app"
+            ? "Missing app ID for app audit log"
+            : "Missing user ID for user audit log"
+        );
+        return;
+      }
+
       if (response.data?.items) {
         const mappedItems = response.data?.items?.map((item) => {
           return {
@@ -183,7 +220,7 @@ export default function AuditLogView() {
     } finally {
       setLoading(false);
     }
-  }, [skip, pageSize]);
+  }, [skip, pageSize, scope, scopedAppId, scopedUserId]);
 
   useEffect(() => {
     fetchAuditEvents();
@@ -203,7 +240,13 @@ export default function AuditLogView() {
     <section className="p-6 space-y-4 overflow-y-auto flex-1">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-semibold">Audit Log</h2>
+          <h2 className="text-2xl font-semibold">
+            {scope === "app"
+              ? "App Audit Log"
+              : scope === "user"
+                ? "User Audit Log"
+                : "Audit Log"}
+          </h2>
           {totalCount > 0 && (
             <Badge variant="secondary">{totalCount} events</Badge>
           )}

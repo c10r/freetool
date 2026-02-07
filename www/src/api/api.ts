@@ -345,7 +345,7 @@ export const updateAppDescription = (
  */
 
 export const getAuditEvents = (skip?: number, take?: number) => {
-  if (skip && take) {
+  if (typeof skip === "number" && typeof take === "number") {
     return client.GET("/audit/events", {
       params: {
         query: { skip, take },
@@ -353,6 +353,50 @@ export const getAuditEvents = (skip?: number, take?: number) => {
     });
   }
   return client.GET("/audit/events");
+};
+
+export const getAppAuditEvents = (
+  appId: string,
+  skip?: number,
+  take?: number,
+  includeRunEvents = true
+) => {
+  if (typeof skip === "number" && typeof take === "number") {
+    return client.GET("/audit/app/{appId}/events", {
+      params: {
+        path: { appId },
+        query: { skip, take, includeRunEvents },
+      },
+    });
+  }
+
+  return client.GET("/audit/app/{appId}/events", {
+    params: {
+      path: { appId },
+      query: { includeRunEvents },
+    },
+  });
+};
+
+export const getUserAuditEvents = (
+  userId: string,
+  skip?: number,
+  take?: number
+) => {
+  if (typeof skip === "number" && typeof take === "number") {
+    return client.GET("/audit/user/{userId}/events", {
+      params: {
+        path: { userId },
+        query: { skip, take },
+      },
+    });
+  }
+
+  return client.GET("/audit/user/{userId}/events", {
+    params: {
+      path: { userId },
+    },
+  });
 };
 
 /**

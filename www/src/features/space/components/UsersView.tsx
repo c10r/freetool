@@ -1,9 +1,11 @@
-import { Crown, GlobeLock, User as UserIcon } from "lucide-react";
+import { Crown, GlobeLock, ShieldAlert, User as UserIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { getSpaces, getUsers } from "@/api/api";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -247,6 +249,7 @@ export default function UsersView() {
                   <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Spaces</TableHead>
+                  <TableHead>Audit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -356,6 +359,24 @@ export default function UsersView() {
                           ))}
                         </div>
                       )}
+                    </TableCell>
+
+                    <TableCell>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="icon" asChild>
+                              <Link
+                                to={`/audit?scope=user&userId=${user.id}`}
+                                aria-label="View audit log"
+                              >
+                                <ShieldAlert className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View Audit Log</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                   </TableRow>
                 ))}

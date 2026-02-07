@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Loader,
   Play,
+  ShieldAlert,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -29,6 +30,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import DynamicBodyEditor from "@/features/space/components/DynamicBodyEditor";
 import { useHasPermission } from "@/hooks/usePermissions";
 import { useResources } from "@/hooks/useResources";
@@ -521,32 +528,51 @@ const RunApp = () => {
                 )}
               </div>
             </div>
-            {spaceReady ? (
-              <PermissionButton
-                spaceId={spaceId}
-                permission="run_app"
-                onClick={handleRunApp}
-                disabled={running}
-                variant={running ? "secondary" : "default"}
-              >
-                {running ? (
-                  <>
-                    <Loader className="mr-2 h-4 w-4 animate-spin" />
-                    Running...
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 h-4 w-4" />
-                    {result ? "Run Again" : "Run"}
-                  </>
-                )}
-              </PermissionButton>
-            ) : (
-              <Button variant="outline" disabled>
-                <Loader className="mr-2 h-4 w-4 animate-spin" />
-                Checking access...
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {nodeId && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" asChild>
+                        <Link
+                          to={`/audit?scope=app&appId=${nodeId}`}
+                          aria-label="View audit log"
+                        >
+                          <ShieldAlert className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>View Audit Log</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {spaceReady ? (
+                <PermissionButton
+                  spaceId={spaceId}
+                  permission="run_app"
+                  onClick={handleRunApp}
+                  disabled={running}
+                  variant={running ? "secondary" : "default"}
+                >
+                  {running ? (
+                    <>
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      Running...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" />
+                      {result ? "Run Again" : "Run"}
+                    </>
+                  )}
+                </PermissionButton>
+              ) : (
+                <Button variant="outline" disabled>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  Checking access...
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </header>
