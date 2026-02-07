@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { getAuditEvents } from "@/api/api";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { usePagination } from "@/hooks/usePagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 
 // Safe JSON parsing helper
 const safeJsonParse = (
@@ -118,20 +119,37 @@ const formatDate = (dateString: string): string => {
 };
 
 export default function AuditLogView() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const {
-    currentPage,
-    pageSize,
-    skip,
-    totalPages,
-    totalCount,
-    goToPage,
-    setTotalCount,
-  } = usePagination();
+  const pageSize = DEFAULT_PAGE_SIZE;
+  const currentPage = useMemo(() => {
+    const pageParam = searchParams.get("page");
+    const parsedPage = pageParam ? Number.parseInt(pageParam, 10) : 1;
+    return Number.isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
+  }, [searchParams]);
+  const skip = (currentPage - 1) * pageSize;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  const goToPage = useCallback(
+    (page: number) => {
+      const validPage = Math.max(1, Math.min(page, totalPages));
+      const nextSearchParams = new URLSearchParams(searchParams);
+
+      if (validPage === 1) {
+        nextSearchParams.delete("page");
+      } else {
+        nextSearchParams.set("page", String(validPage));
+      }
+
+      setSearchParams(nextSearchParams);
+    },
+    [searchParams, setSearchParams, totalPages]
+  );
 
   const fetchAuditEvents = useCallback(async () => {
     try {
@@ -165,11 +183,17 @@ export default function AuditLogView() {
     } finally {
       setLoading(false);
     }
-  }, [skip, pageSize, setTotalCount]);
+  }, [skip, pageSize]);
 
   useEffect(() => {
     fetchAuditEvents();
   }, [fetchAuditEvents]);
+
+  useEffect(() => {
+    if (!loading && currentPage > totalPages) {
+      goToPage(totalPages);
+    }
+  }, [currentPage, goToPage, loading, totalPages]);
 
   const toggleEventDetails = (eventId: string) => {
     setExpandedEvent(expandedEvent === eventId ? null : eventId);
