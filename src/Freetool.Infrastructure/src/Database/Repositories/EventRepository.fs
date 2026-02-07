@@ -13,6 +13,34 @@ open Freetool.Domain.Entities
 open Freetool.Infrastructure.Database
 
 type EventRepository(context: FreetoolDbContext) =
+    let applyDateFilters (query: IQueryable<EventData>) (fromDate: DateTime option) (toDate: DateTime option) =
+        query
+        |> fun q ->
+            match fromDate with
+            | Some fromDateValue -> q.Where(fun e -> e.OccurredAt >= fromDateValue)
+            | None -> q
+        |> fun q ->
+            match toDate with
+            | Some toDateValue -> q.Where(fun e -> e.OccurredAt <= toDateValue)
+            | None -> q
+
+    let toPagedResultAsync
+        (query: IQueryable<EventData>)
+        (skip: int)
+        (take: int)
+        : Threading.Tasks.Task<PagedResult<EventData>> =
+        task {
+            let! totalCount = query.CountAsync()
+
+            let! items = query.OrderByDescending(fun e -> e.OccurredAt).Skip(skip).Take(take).ToListAsync()
+
+            return
+                { Items = items |> List.ofSeq
+                  TotalCount = totalCount
+                  Skip = skip
+                  Take = take }
+        }
+
     interface IEventRepository with
         member this.SaveEventAsync(event: IDomainEvent) =
             task {
@@ -122,29 +150,50 @@ type EventRepository(context: FreetoolDbContext) =
                         match filter.EntityType with
                         | Some entityType -> q.Where(fun e -> e.EntityType = entityType)
                         | None -> q
-                    |> fun q ->
-                        match filter.FromDate with
-                        | Some fromDate -> q.Where(fun e -> e.OccurredAt >= fromDate)
-                        | None -> q
-                    |> fun q ->
-                        match filter.ToDate with
-                        | Some toDate -> q.Where(fun e -> e.OccurredAt <= toDate)
-                        | None -> q
+                    |> fun q -> applyDateFilters q filter.FromDate filter.ToDate
 
-                // Get total count before pagination
-                let! totalCount = filteredQuery.CountAsync()
+                return! toPagedResultAsync filteredQuery filter.Skip filter.Take
+            }
 
-                // Apply pagination and ordering (most recent first)
-                let! items =
-                    filteredQuery
-                        .OrderByDescending(fun e -> e.OccurredAt)
-                        .Skip(filter.Skip)
-                        .Take(filter.Take)
-                        .ToListAsync()
+        member this.GetEventsByAppIdAsync(filter: AppEventFilter) : Threading.Tasks.Task<PagedResult<EventData>> =
+            task {
+                let appIdValue = filter.AppId.Value.ToString()
+                let query = context.Events.AsQueryable()
 
-                return
-                    { Items = items |> List.ofSeq
-                      TotalCount = totalCount
-                      Skip = filter.Skip
-                      Take = filter.Take }
+                let appEventsQuery =
+                    query.Where(fun e -> e.EntityType = EntityType.App && e.EntityId = appIdValue)
+
+                let! runIdsForApp =
+                    if filter.IncludeRunEvents then
+                        task {
+                            let! runIds =
+                                context.Runs.Where(fun r -> r.AppId = filter.AppId).Select(fun r -> r.Id).ToListAsync()
+
+                            return
+                                runIds
+                                |> Seq.map (fun runId -> runId.Value.ToString())
+                                |> System.Collections.Generic.List<string>
+                        }
+                    else
+                        task { return System.Collections.Generic.List<string>() }
+
+                let filteredQuery =
+                    if filter.IncludeRunEvents then
+                        query.Where(fun e ->
+                            (e.EntityType = EntityType.App && e.EntityId = appIdValue)
+                            || (e.EntityType = EntityType.Run && runIdsForApp.Contains(e.EntityId)))
+                    else
+                        appEventsQuery
+                    |> fun q -> applyDateFilters q filter.FromDate filter.ToDate
+
+                return! toPagedResultAsync filteredQuery filter.Skip filter.Take
+            }
+
+        member this.GetEventsByUserIdAsync(filter: UserEventFilter) : Threading.Tasks.Task<PagedResult<EventData>> =
+            task {
+                let query =
+                    context.Events.Where(fun e -> e.UserId = filter.UserId)
+                    |> fun q -> applyDateFilters q filter.FromDate filter.ToDate
+
+                return! toPagedResultAsync query filter.Skip filter.Take
             }

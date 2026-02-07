@@ -121,6 +121,24 @@ type MockEventRepository() =
                       Take = 10 }
             }
 
+        member _.GetEventsByAppIdAsync(_filter: AppEventFilter) : Task<PagedResult<EventData>> =
+            task {
+                return
+                    { Items = []
+                      TotalCount = 0
+                      Skip = 0
+                      Take = 10 }
+            }
+
+        member _.GetEventsByUserIdAsync(_filter: UserEventFilter) : Task<PagedResult<EventData>> =
+            task {
+                return
+                    { Items = []
+                      TotalCount = 0
+                      Skip = 0
+                      Take = 10 }
+            }
+
 // Mock Authorization Service for testing
 type MockAuthorizationService() =
     let mutable permissions: Map<string, bool> = Map.empty

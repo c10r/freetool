@@ -13,8 +13,12 @@ open Freetool.Domain.Entities
 
 type MockEventRepository() =
     let mutable lastFilter: EventFilter option = None
+    let mutable lastAppFilter: AppEventFilter option = None
+    let mutable lastUserFilter: UserEventFilter option = None
 
     member _.LastFilter = lastFilter
+    member _.LastAppFilter = lastAppFilter
+    member _.LastUserFilter = lastUserFilter
 
     interface IEventRepository with
         member _.SaveEventAsync(_event: IDomainEvent) = Task.FromResult(())
@@ -24,6 +28,28 @@ type MockEventRepository() =
         member _.GetEventsAsync(filter: EventFilter) =
             task {
                 lastFilter <- Some filter
+
+                return
+                    { Items = []
+                      TotalCount = 0
+                      Skip = filter.Skip
+                      Take = filter.Take }
+            }
+
+        member _.GetEventsByAppIdAsync(filter: AppEventFilter) =
+            task {
+                lastAppFilter <- Some filter
+
+                return
+                    { Items = []
+                      TotalCount = 0
+                      Skip = filter.Skip
+                      Take = filter.Take }
+            }
+
+        member _.GetEventsByUserIdAsync(filter: UserEventFilter) =
+            task {
+                lastUserFilter <- Some filter
 
                 return
                     { Items = []
@@ -66,4 +92,54 @@ let ``GetAllEvents passes skip and take query params to repository filter`` () :
         Assert.True(eventRepository.LastFilter.IsSome)
         Assert.Equal(2000, eventRepository.LastFilter.Value.Skip)
         Assert.Equal(50, eventRepository.LastFilter.Value.Take)
+    }
+
+[<Fact>]
+let ``GetAppEvents passes appId and includeRunEvents to repository filter`` () : Task =
+    task {
+        let eventRepository = MockEventRepository()
+        let controller = AuditController(eventRepository, MockEventEnhancementService())
+        let appId = Guid.NewGuid().ToString()
+
+        let! result = controller.GetAppEvents(appId, Nullable(), Nullable(), Nullable 10, Nullable 25, Nullable true)
+
+        let okResult = Assert.IsType<OkObjectResult>(result)
+        let payload = Assert.IsType<PagedResult<EnhancedEventData>>(okResult.Value)
+
+        Assert.Equal(10, payload.Skip)
+        Assert.Equal(25, payload.Take)
+        Assert.True(eventRepository.LastAppFilter.IsSome)
+        Assert.Equal(appId, eventRepository.LastAppFilter.Value.AppId.Value.ToString())
+        Assert.True(eventRepository.LastAppFilter.Value.IncludeRunEvents)
+    }
+
+[<Fact>]
+let ``GetAppEvents returns bad request for invalid appId`` () : Task =
+    task {
+        let eventRepository = MockEventRepository()
+        let controller = AuditController(eventRepository, MockEventEnhancementService())
+
+        let! result = controller.GetAppEvents("not-a-guid", Nullable(), Nullable(), Nullable(), Nullable(), Nullable())
+
+        let badRequest = Assert.IsType<BadRequestObjectResult>(result)
+        let errors = Assert.IsType<string list>(badRequest.Value)
+        Assert.Contains("Invalid AppId format - must be a valid GUID", errors)
+    }
+
+[<Fact>]
+let ``GetUserEvents passes userId to repository filter`` () : Task =
+    task {
+        let eventRepository = MockEventRepository()
+        let controller = AuditController(eventRepository, MockEventEnhancementService())
+        let userId = Guid.NewGuid().ToString()
+
+        let! result = controller.GetUserEvents(userId, Nullable(), Nullable(), Nullable 5, Nullable 40)
+
+        let okResult = Assert.IsType<OkObjectResult>(result)
+        let payload = Assert.IsType<PagedResult<EnhancedEventData>>(okResult.Value)
+
+        Assert.Equal(5, payload.Skip)
+        Assert.Equal(40, payload.Take)
+        Assert.True(eventRepository.LastUserFilter.IsSome)
+        Assert.Equal(userId, eventRepository.LastUserFilter.Value.UserId.Value.ToString())
     }

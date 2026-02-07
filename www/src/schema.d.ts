@@ -1340,6 +1340,117 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/audit/app/{appId}/events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          fromDate?: string;
+          toDate?: string;
+          skip?: number;
+          take?: number;
+          includeRunEvents?: boolean;
+        };
+        header?: never;
+        path: {
+          appId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["EnhancedEventDataPagedResult"];
+            "application/json": components["schemas"]["EnhancedEventDataPagedResult"];
+            "text/json": components["schemas"]["EnhancedEventDataPagedResult"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/audit/user/{userId}/events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          fromDate?: string;
+          toDate?: string;
+          skip?: number;
+          take?: number;
+        };
+        header?: never;
+        path: {
+          userId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["EnhancedEventDataPagedResult"];
+            "application/json": components["schemas"]["EnhancedEventDataPagedResult"];
+            "text/json": components["schemas"]["EnhancedEventDataPagedResult"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/dev/mode": {
     parameters: {
       query?: never;
@@ -2018,7 +2129,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/resource": {
+  "/resource/http": {
     parameters: {
       query?: never;
       header?: never;
@@ -2036,9 +2147,81 @@ export interface paths {
       };
       requestBody?: {
         content: {
-          "application/json": components["schemas"]["CreateResourceDto"];
-          "text/json": components["schemas"]["CreateResourceDto"];
-          "application/*+json": components["schemas"]["CreateResourceDto"];
+          "application/json": components["schemas"]["CreateHttpResourceDto"];
+          "text/json": components["schemas"]["CreateHttpResourceDto"];
+          "application/*+json": components["schemas"]["CreateHttpResourceDto"];
+        };
+      };
+      responses: {
+        /** @description Created */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ResourceData"];
+            "application/json": components["schemas"]["ResourceData"];
+            "text/json": components["schemas"]["ResourceData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/resource/sql": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["CreateSqlResourceDto"];
+          "text/json": components["schemas"]["CreateSqlResourceDto"];
+          "application/*+json": components["schemas"]["CreateSqlResourceDto"];
         };
       };
       responses: {
@@ -2212,6 +2395,166 @@ export interface paths {
         };
       };
     };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/resource/{id}/schema/tables": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["SqlTableInfoDto"][];
+            "application/json": components["schemas"]["SqlTableInfoDto"][];
+            "text/json": components["schemas"]["SqlTableInfoDto"][];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/resource/{id}/schema/columns": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          table?: string;
+        };
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["SqlColumnInfoDto"][];
+            "application/json": components["schemas"]["SqlColumnInfoDto"][];
+            "text/json": components["schemas"]["SqlColumnInfoDto"][];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -2865,168 +3208,6 @@ export interface paths {
         };
       };
     };
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/resource/{id}/schema/tables": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "text/plain": components["schemas"]["SqlTableInfoDto"][];
-            "application/json": components["schemas"]["SqlTableInfoDto"][];
-            "text/json": components["schemas"]["SqlTableInfoDto"][];
-          };
-        };
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "text/plain": components["schemas"]["ProblemDetails"];
-            "application/json": components["schemas"]["ProblemDetails"];
-            "text/json": components["schemas"]["ProblemDetails"];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "text/plain": components["schemas"]["ProblemDetails"];
-            "application/json": components["schemas"]["ProblemDetails"];
-            "text/json": components["schemas"]["ProblemDetails"];
-          };
-        };
-        /** @description Not Found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "text/plain": components["schemas"]["ProblemDetails"];
-            "application/json": components["schemas"]["ProblemDetails"];
-            "text/json": components["schemas"]["ProblemDetails"];
-          };
-        };
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/resource/{id}/schema/columns": {
-    parameters: {
-      query?: {
-        table: string;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get: {
-      parameters: {
-        query: {
-          table: string;
-        };
-        header?: never;
-        path: {
-          id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "text/plain": components["schemas"]["SqlColumnInfoDto"][];
-            "application/json": components["schemas"]["SqlColumnInfoDto"][];
-            "text/json": components["schemas"]["SqlColumnInfoDto"][];
-          };
-        };
-        /** @description Bad Request */
-        400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "text/plain": components["schemas"]["ProblemDetails"];
-            "application/json": components["schemas"]["ProblemDetails"];
-            "text/json": components["schemas"]["ProblemDetails"];
-          };
-        };
-        /** @description Forbidden */
-        403: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "text/plain": components["schemas"]["ProblemDetails"];
-            "application/json": components["schemas"]["ProblemDetails"];
-            "text/json": components["schemas"]["ProblemDetails"];
-          };
-        };
-        /** @description Not Found */
-        404: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "text/plain": components["schemas"]["ProblemDetails"];
-            "application/json": components["schemas"]["ProblemDetails"];
-            "text/json": components["schemas"]["ProblemDetails"];
-          };
-        };
-        /** @description Internal Server Error */
-        500: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-      };
-    };
-    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -4958,7 +5139,7 @@ export interface components {
       headers: components["schemas"]["KeyValuePair"][];
       body: components["schemas"]["KeyValuePair"][];
       useDynamicJsonBody: boolean;
-      sqlConfig?: components["schemas"]["SqlQueryConfig"] | null;
+      sqlConfig?: components["schemas"]["SqlQueryConfigFSharpOption"] | null;
       description?:
         | (string & components["schemas"]["StringFSharpOption"])
         | null;
@@ -4986,6 +5167,7 @@ export interface components {
         | null;
     };
     BaseUrl: string;
+    BaseUrlFSharpOption: string | null;
     ChangeModeratorDto: {
       newModeratorUserId: string;
     };
@@ -5000,7 +5182,7 @@ export interface components {
       headers?: components["schemas"]["KeyValuePairDto"][] | null;
       body?: components["schemas"]["KeyValuePairDto"][] | null;
       useDynamicJsonBody?: boolean;
-      sqlConfig?: components["schemas"]["SqlQueryConfigDto"] | null;
+      sqlConfig?: components["schemas"]["SqlQueryConfigDtoFSharpOption"] | null;
       description?:
         | (string & components["schemas"]["StringFSharpOption"])
         | null;
@@ -5011,27 +5193,15 @@ export interface components {
       location?: components["schemas"]["FolderLocationFSharpOption"] | null;
       spaceId: string;
     };
-    CreateResourceDto: {
+    CreateHttpResourceDto: {
       name: string;
       description: string;
       spaceId: string;
-      resourceKind: string;
       /** Format: uri */
-      baseUrl?: (string & components["schemas"]["BaseUrl"]) | null;
+      baseUrl: string;
       urlParameters?: components["schemas"]["KeyValuePairDto"][] | null;
       headers?: components["schemas"]["KeyValuePairDto"][] | null;
       body?: components["schemas"]["KeyValuePairDto"][] | null;
-      databaseName?: string | null;
-      databaseHost?: string | null;
-      /** Format: int32 */
-      databasePort?: number | null;
-      databaseEngine?: string | null;
-      databaseAuthScheme?: string | null;
-      databaseUsername?: string | null;
-      databasePassword?: string | null;
-      useSsl?: boolean;
-      enableSshTunnel?: boolean;
-      connectionOptions?: components["schemas"]["KeyValuePairDto"][] | null;
     };
     CreateRunDto: {
       inputValues: components["schemas"]["RunInputDto"][];
@@ -5046,6 +5216,24 @@ export interface components {
         | (string[] & components["schemas"]["StringFSharpListFSharpOption"])
         | null;
     };
+    CreateSqlResourceDto: {
+      name: string;
+      description: string;
+      spaceId: string;
+      databaseName: string;
+      databaseHost: string;
+      /** Format: int32 */
+      databasePort: number;
+      databaseEngine: string;
+      databaseAuthScheme: string;
+      databaseUsername: string;
+      databasePassword?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
+      useSsl?: boolean;
+      enableSshTunnel?: boolean;
+      connectionOptions?: components["schemas"]["KeyValuePairDto"][] | null;
+    };
     CurrentUserDto: {
       id?: string | null;
       name?: string | null;
@@ -5056,6 +5244,29 @@ export interface components {
       isOrgAdmin?: boolean;
       teams?: components["schemas"]["TeamMembershipDto"][] | null;
     };
+    DatabaseAuthScheme: string;
+    DatabaseAuthSchemeFSharpOption: string | null;
+    DatabaseEngine: {
+      /** Format: int32 */
+      readonly tag?: number;
+    };
+    DatabaseEngineFSharpOption: {
+      value?: components["schemas"]["DatabaseEngine"];
+    };
+    DatabaseHost: string;
+    DatabaseHostFSharpOption: string | null;
+    DatabaseName: string;
+    DatabaseNameFSharpOption: string | null;
+    DatabasePassword: string;
+    DatabasePasswordFSharpOption: string | null;
+    DatabasePort: {
+      /** Format: int32 */
+      readonly value?: number;
+    };
+    /** Format: int32 */
+    DatabasePortFSharpOption: number | null;
+    DatabaseUsername: string;
+    DatabaseUsernameFSharpOption: string | null;
     /** Format: date-time */
     DateTimeFSharpOption: string | null;
     DefaultValue: {
@@ -5235,6 +5446,8 @@ export interface components {
       readonly isMultiInteger?: boolean;
       readonly isRadio?: boolean;
     };
+    /** Format: int32 */
+    Int32FSharpOption: number | null;
     InviteUserDto: {
       /** Format: email */
       email: string;
@@ -5271,18 +5484,34 @@ export interface components {
       description: string & components["schemas"]["ResourceDescription"];
       /** Format: uuid */
       spaceId: string & components["schemas"]["SpaceId"];
-      resourceKind: string;
-      baseUrl?: (string & components["schemas"]["BaseUrl"]) | null;
+      /** @enum {string} */
+      resourceKind: "HTTP" | "SQL";
+      baseUrl?: (string & components["schemas"]["BaseUrlFSharpOption"]) | null;
       urlParameters: components["schemas"]["KeyValuePair"][];
       headers: components["schemas"]["KeyValuePair"][];
       body: components["schemas"]["KeyValuePair"][];
-      databaseName?: string | null;
-      databaseHost?: string | null;
+      databaseName?:
+        | (string & components["schemas"]["DatabaseNameFSharpOption"])
+        | null;
+      databaseHost?:
+        | (string & components["schemas"]["DatabaseHostFSharpOption"])
+        | null;
       /** Format: int32 */
-      databasePort?: number | null;
-      databaseAuthScheme?: string | null;
-      databaseUsername?: string | null;
-      databasePassword?: string | null;
+      databasePort?:
+        | (number & components["schemas"]["DatabasePortFSharpOption"])
+        | null;
+      databaseEngine?:
+        | components["schemas"]["DatabaseEngineFSharpOption"]
+        | null;
+      databaseAuthScheme?:
+        | (string & components["schemas"]["DatabaseAuthSchemeFSharpOption"])
+        | null;
+      databaseUsername?:
+        | (string & components["schemas"]["DatabaseUsernameFSharpOption"])
+        | null;
+      databasePassword?:
+        | (string & components["schemas"]["DatabasePasswordFSharpOption"])
+        | null;
       useSsl?: boolean;
       enableSshTunnel?: boolean;
       connectionOptions: components["schemas"]["KeyValuePair"][];
@@ -5299,6 +5528,8 @@ export interface components {
     ResourceDescription: string;
     /** Format: uuid */
     ResourceId: string;
+    /** @enum {string} */
+    ResourceKind: string;
     ResourceName: string;
     RestoreResultDto: {
       restoredId?: string | null;
@@ -5316,6 +5547,9 @@ export interface components {
       inputValues: components["schemas"]["RunInputValue"][];
       executableRequest?:
         | components["schemas"]["ExecutableHttpRequestFSharpOption"]
+        | null;
+      executedSql?:
+        | (string & components["schemas"]["StringFSharpOption"])
         | null;
       response?: (string & components["schemas"]["StringFSharpOption"]) | null;
       errorMessage?:
@@ -5348,55 +5582,6 @@ export interface components {
       readonly isSuccess?: boolean;
       readonly isFailure?: boolean;
       readonly isInvalidConfiguration?: boolean;
-    };
-    SqlColumnInfoDto: {
-      name: string;
-      dataType: string;
-      isNullable: boolean;
-    };
-    SqlFilter: {
-      column: string;
-      operator: string;
-      value?: string | null;
-    };
-    SqlFilterDto: {
-      column: string;
-      operator: string;
-      value?: string | null;
-    };
-    SqlOrderBy: {
-      column: string;
-      direction: string;
-    };
-    SqlOrderByDto: {
-      column: string;
-      direction: string;
-    };
-    SqlQueryConfig: {
-      mode: string;
-      table?: string | null;
-      columns?: string[] | null;
-      filters?: components["schemas"]["SqlFilter"][] | null;
-      /** Format: int32 */
-      limit?: number | null;
-      orderBy?: components["schemas"]["SqlOrderBy"][] | null;
-      rawSql?: string | null;
-      rawSqlParams?: components["schemas"]["KeyValuePair"][] | null;
-    };
-    SqlQueryConfigDto: {
-      mode: string;
-      table?: string | null;
-      columns?: string[] | null;
-      filters?: components["schemas"]["SqlFilterDto"][] | null;
-      /** Format: int32 */
-      limit?: number | null;
-      orderBy?: components["schemas"]["SqlOrderByDto"][] | null;
-      rawSql?: string | null;
-      rawSqlParams?: components["schemas"]["KeyValuePairDto"][] | null;
-    };
-    SqlTableInfoDto: {
-      name: string;
-      schema: string;
     };
     SetProfilePictureDto: {
       /** Format: uri */
@@ -5460,6 +5645,89 @@ export interface components {
       editFolder?: boolean;
       deleteFolder?: boolean;
     };
+    SqlColumnInfoDto: {
+      name?: string | null;
+      dataType?: string | null;
+      isNullable?: boolean;
+    };
+    SqlFilter: {
+      column?: string | null;
+      operator?: components["schemas"]["SqlFilterOperator"] | null;
+      value?: (string & components["schemas"]["StringFSharpOption"]) | null;
+    };
+    SqlFilterDto: {
+      column: string;
+      operator: string;
+      value?: (string & components["schemas"]["StringFSharpOption"]) | null;
+    };
+    SqlFilterOperator: {
+      /** Format: int32 */
+      readonly tag?: number;
+      readonly isEquals?: boolean;
+      readonly isNotEquals?: boolean;
+      readonly isGreaterThan?: boolean;
+      readonly isGreaterThanOrEqual?: boolean;
+      readonly isLessThan?: boolean;
+      readonly isLessThanOrEqual?: boolean;
+      readonly isLike?: boolean;
+      readonly isILike?: boolean;
+      readonly isIn?: boolean;
+      readonly isNotIn?: boolean;
+      readonly isIsNull?: boolean;
+      readonly isIsNotNull?: boolean;
+    };
+    SqlOrderBy: {
+      column?: string | null;
+      direction?: components["schemas"]["SqlSortDirection"] | null;
+    };
+    SqlOrderByDto: {
+      column: string;
+      direction: string;
+    };
+    SqlQueryConfig: {
+      mode?: components["schemas"]["SqlQueryMode"] | null;
+      table?: (string & components["schemas"]["StringFSharpOption"]) | null;
+      columns?: string[] | null;
+      filters?: components["schemas"]["SqlFilter"][] | null;
+      /** Format: int32 */
+      limit?: (number & components["schemas"]["Int32FSharpOption"]) | null;
+      orderBy?: components["schemas"]["SqlOrderBy"][] | null;
+      rawSql?: (string & components["schemas"]["StringFSharpOption"]) | null;
+      rawSqlParams?: components["schemas"]["KeyValuePair"][] | null;
+    };
+    SqlQueryConfigDto: {
+      mode: string;
+      table?: (string & components["schemas"]["StringFSharpOption"]) | null;
+      columns?: string[] | null;
+      filters?: components["schemas"]["SqlFilterDto"][] | null;
+      /** Format: int32 */
+      limit?: (number & components["schemas"]["Int32FSharpOption"]) | null;
+      orderBy?: components["schemas"]["SqlOrderByDto"][] | null;
+      rawSql?: (string & components["schemas"]["StringFSharpOption"]) | null;
+      rawSqlParams?: components["schemas"]["KeyValuePairDto"][] | null;
+    };
+    SqlQueryConfigDtoFSharpOption: {
+      value?: components["schemas"]["SqlQueryConfigDto"] | null;
+    };
+    SqlQueryConfigFSharpOption: {
+      value?: components["schemas"]["SqlQueryConfig"] | null;
+    };
+    SqlQueryMode: {
+      /** Format: int32 */
+      readonly tag?: number;
+      readonly isGui?: boolean;
+      readonly isRaw?: boolean;
+    };
+    SqlSortDirection: {
+      /** Format: int32 */
+      readonly tag?: number;
+      readonly isAsc?: boolean;
+      readonly isDesc?: boolean;
+    };
+    SqlTableInfoDto: {
+      name?: string | null;
+      schema?: string | null;
+    };
     StringFSharpListFSharpOption: string[] | null;
     StringFSharpOption: string | null;
     "StringStringBoolean<>f__AnonymousType3183648458": {
@@ -5516,14 +5784,14 @@ export interface components {
     UpdateAppQueryParametersDto: {
       urlParameters?: components["schemas"]["KeyValuePairDto"][] | null;
     };
+    UpdateAppSqlConfigDto: {
+      sqlConfig?: components["schemas"]["SqlQueryConfigDtoFSharpOption"] | null;
+    };
     UpdateAppUrlPathDto: {
       urlPath?: (string & components["schemas"]["StringFSharpOption"]) | null;
     };
     UpdateAppUseDynamicJsonBodyDto: {
       useDynamicJsonBody?: boolean;
-    };
-    UpdateAppSqlConfigDto: {
-      sqlConfig?: components["schemas"]["SqlQueryConfigDto"] | null;
     };
     UpdateFolderNameDto: {
       name: string;
@@ -5543,7 +5811,9 @@ export interface components {
       databaseEngine: string;
       databaseAuthScheme: string;
       databaseUsername: string;
-      databasePassword?: string | null;
+      databasePassword?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
       useSsl?: boolean;
       enableSshTunnel?: boolean;
       connectionOptions?: components["schemas"]["KeyValuePairDto"][] | null;

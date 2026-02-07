@@ -10,3 +10,5 @@ type IEventRepository =
     /// Commits pending changes. Use for standalone event saves not part of an aggregate operation.
     abstract member CommitAsync: unit -> Task<unit>
     abstract member GetEventsAsync: filter: EventFilter -> Task<PagedResult<EventData>>
+    abstract member GetEventsByAppIdAsync: filter: AppEventFilter -> Task<PagedResult<EventData>>
+    abstract member GetEventsByUserIdAsync: filter: UserEventFilter -> Task<PagedResult<EventData>>

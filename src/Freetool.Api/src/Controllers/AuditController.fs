@@ -7,6 +7,7 @@ open Microsoft.AspNetCore.Http
 open Freetool.Application.Interfaces
 open Freetool.Application.DTOs
 open Freetool.Application.Services
+open Freetool.Domain.Entities
 
 [<ApiController>]
 [<Route("audit")>]
@@ -24,6 +25,25 @@ type AuditController(eventRepository: IEventRepository, eventEnhancementService:
 
     let toOptionInt (value: Nullable<int>) =
         if value.HasValue then Some value.Value else None
+
+    member private this.EnhancePagedEvents(result: PagedResult<EventData>) : Task<IActionResult> =
+        task {
+            let enhancementTasks =
+                result.Items
+                |> List.map (fun event -> eventEnhancementService.EnhanceEventAsync event)
+                |> List.toArray
+
+            let! enhancedItemsArray = Task.WhenAll(enhancementTasks)
+            let enhancedItems = enhancedItemsArray |> Array.toList
+
+            let enhancedResult =
+                { Items = enhancedItems
+                  TotalCount = result.TotalCount
+                  Skip = result.Skip
+                  Take = result.Take }
+
+            return this.Ok(enhancedResult) :> IActionResult
+        }
 
     [<HttpGet("events")>]
     [<ProducesResponseType(typeof<PagedResult<EnhancedEventData>>, StatusCodes.Status200OK)>]
@@ -51,22 +71,66 @@ type AuditController(eventRepository: IEventRepository, eventEnhancementService:
             match EventFilterValidator.validate filterDto with
             | Ok filter ->
                 let! result = eventRepository.GetEventsAsync filter
+                return! this.EnhancePagedEvents(result)
+            | Error errors -> return this.BadRequest errors :> IActionResult
+        }
 
-                // Enhance each event with human-readable information
-                let enhancementTasks =
-                    result.Items
-                    |> List.map (fun event -> eventEnhancementService.EnhanceEventAsync event)
-                    |> List.toArray
+    [<HttpGet("app/{appId}/events")>]
+    [<ProducesResponseType(typeof<PagedResult<EnhancedEventData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    member this.GetAppEvents
+        (
+            appId: string,
+            [<FromQuery>] fromDate: Nullable<DateTime>,
+            [<FromQuery>] toDate: Nullable<DateTime>,
+            [<FromQuery>] skip: Nullable<int>,
+            [<FromQuery>] take: Nullable<int>,
+            [<FromQuery>] includeRunEvents: Nullable<bool>
+        ) : Task<IActionResult> =
+        task {
+            let includeRuns =
+                if includeRunEvents.HasValue then
+                    Some includeRunEvents.Value
+                else
+                    None
 
-                let! enhancedItemsArray = Task.WhenAll(enhancementTasks)
-                let enhancedItems = enhancedItemsArray |> Array.toList
+            let filterDto: AppEventFilterDTO =
+                { AppId = appId
+                  FromDate = toOptionDate fromDate
+                  ToDate = toOptionDate toDate
+                  Skip = toOptionInt skip
+                  Take = toOptionInt take
+                  IncludeRunEvents = includeRuns }
 
-                let enhancedResult =
-                    { Items = enhancedItems
-                      TotalCount = result.TotalCount
-                      Skip = result.Skip
-                      Take = result.Take }
+            match EventFilterValidator.validateAppFilter filterDto with
+            | Ok filter ->
+                let! result = eventRepository.GetEventsByAppIdAsync filter
+                return! this.EnhancePagedEvents(result)
+            | Error errors -> return this.BadRequest errors :> IActionResult
+        }
 
-                return this.Ok(enhancedResult) :> IActionResult
+    [<HttpGet("user/{userId}/events")>]
+    [<ProducesResponseType(typeof<PagedResult<EnhancedEventData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    member this.GetUserEvents
+        (
+            userId: string,
+            [<FromQuery>] fromDate: Nullable<DateTime>,
+            [<FromQuery>] toDate: Nullable<DateTime>,
+            [<FromQuery>] skip: Nullable<int>,
+            [<FromQuery>] take: Nullable<int>
+        ) : Task<IActionResult> =
+        task {
+            let filterDto: UserEventFilterDTO =
+                { UserId = userId
+                  FromDate = toOptionDate fromDate
+                  ToDate = toOptionDate toDate
+                  Skip = toOptionInt skip
+                  Take = toOptionInt take }
+
+            match EventFilterValidator.validateUserFilter filterDto with
+            | Ok filter ->
+                let! result = eventRepository.GetEventsByUserIdAsync filter
+                return! this.EnhancePagedEvents(result)
             | Error errors -> return this.BadRequest errors :> IActionResult
         }

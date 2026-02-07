@@ -12,6 +12,7 @@
     <Compile Include="SpaceControllerTests.fs" />
     <Compile Include="UserControllerTests.fs" />
     <Compile Include="AuditControllerTests.fs" />
+    <Compile Include="EventRepositoryTests.fs" />
     <Compile Include="FolderControllerTests.fs" />
     <Compile Include="AutoTracingTests.fs" />
     <Compile Include="TailscaleAuthMiddlewareTests.fs" />
