@@ -29,6 +29,15 @@ module Persistence =
             return! callbackAsync dbConnection
         }
 
+    let configureSqliteWal (connectionString: string) =
+        use connection = new SqliteConnection(connectionString)
+        connection.Open()
+        use command = connection.CreateCommand()
+        command.CommandText <- "PRAGMA journal_mode=WAL;"
+        command.ExecuteNonQuery() |> ignore
+        command.CommandText <- "PRAGMA busy_timeout=5000;"
+        command.ExecuteNonQuery() |> ignore
+
     let upgradeDatabase (connectionString: string) =
         // SQLite creates the database file automatically if it doesn't exist
         let upgrader =
@@ -55,4 +64,6 @@ module Persistence =
             | ex -> printfn "Error: %s" ex.Message
 
             failwith "Failed to upgrade database!"
-        | true -> printfn "Database upgrade successful!"
+        | true ->
+            printfn "Database upgrade successful!"
+            configureSqliteWal connectionString
