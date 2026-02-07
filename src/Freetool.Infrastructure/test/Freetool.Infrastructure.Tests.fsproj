@@ -10,6 +10,8 @@
     <Compile Include="OpenFgaServiceTests.fs" />
     <Compile Include="SpaceAuthorizationTests.fs" />
     <Compile Include="SpaceControllerTests.fs" />
+    <Compile Include="SpaceDefaultMemberPermissionsControllerTests.fs" />
+    <Compile Include="IdentityProvisioningControllerTests.fs" />
     <Compile Include="UserControllerTests.fs" />
     <Compile Include="AuditControllerTests.fs" />
     <Compile Include="EventRepositoryTests.fs" />
