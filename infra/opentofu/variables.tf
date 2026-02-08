@@ -107,6 +107,12 @@ variable "iap_jwt_audience" {
   default     = ""
 }
 
+variable "iap_access_members" {
+  description = "Optional override for principals granted IAP-secured Web App User access. Leave empty to derive from domain_name."
+  type        = list(string)
+  default     = []
+}
+
 variable "allow_ssh_from" {
   description = "CIDRs allowed to SSH directly to VM"
   type        = list(string)

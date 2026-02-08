@@ -22,6 +22,8 @@ artifact_delete_older_than      = "7d"
 # IAP OAuth client credentials (create client in GCP Console)
 oauth2_client_id     = "your-iap-oauth-client-id.apps.googleusercontent.com"
 oauth2_client_secret = "your-iap-oauth-client-secret"
+# Optional override. When omitted, access defaults to domain:<base domain derived from domain_name>.
+# iap_access_members = ["domain:example.com"]
 
 # Application auth config
 # First apply can use validate_iap_jwt = false and empty audience.

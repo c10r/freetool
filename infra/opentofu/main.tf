@@ -3,6 +3,12 @@ locals {
   vm_name        = "${var.name_prefix}-vm"
   data_disk_name = "${var.name_prefix}-data"
   data_disk_id   = var.preserve_data_disk_on_destroy ? google_compute_disk.data_protected[0].id : google_compute_disk.data_unprotected[0].id
+  domain_parts   = split(".", var.domain_name)
+  iap_email_domain = length(local.domain_parts) > 2 ? join(
+    ".",
+    slice(local.domain_parts, length(local.domain_parts) - 2, length(local.domain_parts))
+  ) : var.domain_name
+  iap_effective_access_members = length(var.iap_access_members) > 0 ? var.iap_access_members : ["domain:${local.iap_email_domain}"]
   labels = {
     app         = "freetool"
     managed_by  = "opentofu"
@@ -240,6 +246,13 @@ resource "google_compute_backend_service" "freetool" {
   depends_on = [google_project_service.required]
 }
 
+resource "google_iap_web_backend_service_iam_binding" "freetool_access" {
+  project             = var.project_id
+  web_backend_service = google_compute_backend_service.freetool.name
+  role                = "roles/iap.httpsResourceAccessor"
+  members             = local.iap_effective_access_members
+}
+
 resource "google_compute_url_map" "freetool" {
   name            = "${local.lb_name}-url-map"
   default_service = google_compute_backend_service.freetool.id
@@ -261,10 +274,14 @@ resource "google_compute_url_map" "freetool" {
 }
 
 resource "google_compute_managed_ssl_certificate" "freetool" {
-  name = "${local.lb_name}-cert"
+  name = "${local.lb_name}-cert-${replace(var.domain_name, ".", "-")}"
 
   managed {
     domains = [var.domain_name]
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
