@@ -12,6 +12,7 @@
     <Compile Include="SpaceControllerTests.fs" />
     <Compile Include="SpaceDefaultMemberPermissionsControllerTests.fs" />
     <Compile Include="IdentityProvisioningControllerTests.fs" />
+    <Compile Include="IdentityProvisioningServiceTests.fs" />
     <Compile Include="UserControllerTests.fs" />
     <Compile Include="AuditControllerTests.fs" />
     <Compile Include="EventRepositoryTests.fs" />
