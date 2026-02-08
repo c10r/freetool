@@ -2,7 +2,6 @@ locals {
   lb_name        = "${var.name_prefix}-lb"
   vm_name        = "${var.name_prefix}-vm"
   data_disk_name = "${var.name_prefix}-data"
-  data_disk_id   = var.preserve_data_disk_on_destroy ? google_compute_disk.data_protected[0].id : google_compute_disk.data_unprotected[0].id
   domain_parts   = split(".", var.domain_name)
   iap_email_domain = length(local.domain_parts) > 2 ? join(
     ".",
@@ -86,11 +85,6 @@ resource "google_project_iam_member" "vm_logging_writer" {
   member  = "serviceAccount:${google_service_account.vm.email}"
 }
 
-resource "google_compute_address" "vm" {
-  name   = "${var.name_prefix}-vm-ip"
-  region = var.region
-}
-
 resource "google_compute_disk" "data_protected" {
   count = var.preserve_data_disk_on_destroy ? 1 : 0
 
@@ -119,25 +113,25 @@ resource "google_compute_disk" "data_unprotected" {
   labels                    = local.labels
 }
 
-resource "google_compute_instance" "freetool" {
-  name         = local.vm_name
+resource "google_compute_instance_template" "freetool" {
+  name_prefix  = "${var.name_prefix}-tpl-"
   machine_type = var.machine_type
-  zone         = var.zone
   tags         = ["${var.name_prefix}-freetool"]
 
-  boot_disk {
-    initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2204-lts"
-      size  = var.boot_disk_size_gb
-      type  = "pd-balanced"
-    }
+  disk {
+    boot         = true
+    auto_delete  = true
+    source_image = "ubuntu-os-cloud/ubuntu-2204-lts"
+    disk_size_gb = var.boot_disk_size_gb
+    disk_type    = "pd-balanced"
   }
 
   network_interface {
     subnetwork = google_compute_subnetwork.freetool.id
 
     access_config {
-      nat_ip = google_compute_address.vm.address
+      // Ephemeral external IP for package/image pulls and direct troubleshooting.
+      // The app itself is served via the HTTPS load balancer.
     }
   }
 
@@ -146,29 +140,31 @@ resource "google_compute_instance" "freetool" {
     scopes = ["cloud-platform"]
   }
 
-  attached_disk {
-    source      = local.data_disk_id
+  disk {
+    boot        = false
+    auto_delete = false
+    source      = local.data_disk_name
     device_name = local.data_disk_name
     mode        = "READ_WRITE"
   }
 
   metadata_startup_script = templatefile("${path.module}/templates/startup.sh.tmpl", {
-    artifact_registry_location = var.artifact_registry_location
-    project_id                 = var.project_id
-    artifact_registry_repo     = var.artifact_registry_repo
-    image_name                 = var.image_name
-    initial_image_tag          = var.initial_image_tag
-    iap_jwt_audience           = var.iap_jwt_audience
-    google_directory_enabled   = var.google_directory_enabled
-    google_directory_admin_user_email = var.google_directory_admin_user_email
-    google_directory_scope     = var.google_directory_scope
-    google_directory_org_unit_key_prefix = var.google_directory_org_unit_key_prefix
-    google_directory_include_org_unit_hierarchy = var.google_directory_include_org_unit_hierarchy
+    artifact_registry_location                   = var.artifact_registry_location
+    project_id                                   = var.project_id
+    artifact_registry_repo                       = var.artifact_registry_repo
+    image_name                                   = var.image_name
+    initial_image_tag                            = var.initial_image_tag
+    iap_jwt_audience                             = var.iap_jwt_audience
+    google_directory_enabled                     = var.google_directory_enabled
+    google_directory_admin_user_email            = var.google_directory_admin_user_email
+    google_directory_scope                       = var.google_directory_scope
+    google_directory_org_unit_key_prefix         = var.google_directory_org_unit_key_prefix
+    google_directory_include_org_unit_hierarchy  = var.google_directory_include_org_unit_hierarchy
     google_directory_custom_attribute_key_prefix = var.google_directory_custom_attribute_key_prefix
-    org_admin_email            = var.org_admin_email
-    validate_iap_jwt           = var.validate_iap_jwt
-    data_disk_name             = local.data_disk_name
-    data_mount_path            = var.data_mount_path
+    org_admin_email                              = var.org_admin_email
+    validate_iap_jwt                             = var.validate_iap_jwt
+    data_disk_name                               = local.data_disk_name
+    data_mount_path                              = var.data_mount_path
   })
 
   labels = local.labels
@@ -179,6 +175,29 @@ resource "google_compute_instance" "freetool" {
     google_artifact_registry_repository.freetool,
     google_project_service.required,
   ]
+}
+
+resource "google_compute_instance_group_manager" "freetool" {
+  name               = "${var.name_prefix}-mig"
+  zone               = var.zone
+  base_instance_name = local.vm_name
+  target_size        = 1
+
+  version {
+    instance_template = google_compute_instance_template.freetool.id
+  }
+
+  named_port {
+    name = "http"
+    port = 8080
+  }
+
+  update_policy {
+    type                  = "PROACTIVE"
+    minimal_action        = "REPLACE"
+    max_surge_fixed       = 0
+    max_unavailable_fixed = 1
+  }
 }
 
 resource "google_compute_firewall" "allow_ssh" {
@@ -207,17 +226,6 @@ resource "google_compute_firewall" "allow_lb_to_app" {
   target_tags   = ["${var.name_prefix}-freetool"]
 }
 
-resource "google_compute_instance_group" "freetool" {
-  name      = "${var.name_prefix}-ig"
-  zone      = var.zone
-  instances = [google_compute_instance.freetool.self_link]
-
-  named_port {
-    name = "http"
-    port = 8080
-  }
-}
-
 resource "google_compute_health_check" "freetool" {
   name               = "${var.name_prefix}-hc"
   check_interval_sec = 10
@@ -238,7 +246,7 @@ resource "google_compute_backend_service" "freetool" {
   load_balancing_scheme = "EXTERNAL_MANAGED"
 
   backend {
-    group           = google_compute_instance_group.freetool.self_link
+    group           = google_compute_instance_group_manager.freetool.instance_group
     balancing_mode  = "UTILIZATION"
     capacity_scaler = 1
   }

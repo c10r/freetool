@@ -5,7 +5,6 @@ required_vars=(
   GCP_PROJECT_ID
   GCP_REGION
   GCP_ARTIFACT_REPO
-  GCP_VM_NAME
   GCP_VM_ZONE
   FREETOOL_IAP_JWT_AUDIENCE
 )
@@ -27,6 +26,28 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
+resolve_target_vm_name() {
+  if [[ -n "${GCP_VM_NAME:-}" ]]; then
+    echo "${GCP_VM_NAME}"
+    return 0
+  fi
+
+  if [[ -z "${GCP_MIG_NAME:-}" ]]; then
+    echo "Either GCP_VM_NAME or GCP_MIG_NAME must be set." >&2
+    return 1
+  fi
+
+  local instance_url
+  instance_url="$(gcloud compute instance-groups managed list-instances "${GCP_MIG_NAME}" --zone "${GCP_VM_ZONE}" --format='value(instance)' | head -n1)"
+
+  if [[ -z "${instance_url}" ]]; then
+    echo "Managed instance group ${GCP_MIG_NAME} has no instances in zone ${GCP_VM_ZONE}." >&2
+    return 1
+  fi
+
+  basename "${instance_url}"
+}
+
 IMAGE_NAME="${IMAGE_NAME:-freetool-api}"
 REMOTE_DIR="${REMOTE_DIR:-~/freetool}"
 TAG="${TAG:-$(git rev-parse --short HEAD)}"
@@ -35,6 +56,7 @@ IMAGE_URI="${REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REPO}/${IMAGE_NAME}
 LATEST_IMAGE_URI="${REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REPO}/${IMAGE_NAME}:latest"
 USE_IAP_TUNNEL="${USE_IAP_TUNNEL:-true}"
 PUBLISH_LATEST="${PUBLISH_LATEST:-true}"
+TARGET_VM_NAME="$(resolve_target_vm_name)"
 
 ssh_iap_flag=()
 if [[ "${USE_IAP_TUNNEL}" == "true" ]]; then
@@ -60,15 +82,15 @@ FREETOOL_ORG_ADMIN_EMAIL=${FREETOOL_ORG_ADMIN_EMAIL:-}
 FREETOOL_DATA_ROOT=${FREETOOL_DATA_ROOT:-/mnt/freetool-data}
 EOF
 
-echo "Copying compose bundle to VM: ${GCP_VM_NAME}"
-gcloud compute ssh "${GCP_VM_NAME}" --zone "${GCP_VM_ZONE}" "${ssh_iap_flag[@]}" --command "mkdir -p ${REMOTE_DIR}"
+echo "Copying compose bundle to VM: ${TARGET_VM_NAME}"
+gcloud compute ssh "${TARGET_VM_NAME}" --zone "${GCP_VM_ZONE}" "${ssh_iap_flag[@]}" --command "mkdir -p ${REMOTE_DIR}"
 gcloud compute scp docker-compose.gce.yml "${tmp_env_file}" \
-  "${GCP_VM_NAME}:${REMOTE_DIR}/" \
+  "${TARGET_VM_NAME}:${REMOTE_DIR}/" \
   --zone "${GCP_VM_ZONE}" \
   "${ssh_iap_flag[@]}"
 
 echo "Deploying containers on VM"
-gcloud compute ssh "${GCP_VM_NAME}" --zone "${GCP_VM_ZONE}" "${ssh_iap_flag[@]}" --command "
+gcloud compute ssh "${TARGET_VM_NAME}" --zone "${GCP_VM_ZONE}" "${ssh_iap_flag[@]}" --command "
   set -euo pipefail
   cd ${REMOTE_DIR}
   mv -f $(basename "${tmp_env_file}") .env

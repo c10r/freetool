@@ -1,16 +1,21 @@
 output "vm_name" {
-  value       = google_compute_instance.freetool.name
-  description = "Compute instance name"
+  value       = "${var.name_prefix}-vm"
+  description = "Base instance name used by the managed instance group"
 }
 
 output "vm_zone" {
-  value       = google_compute_instance.freetool.zone
+  value       = var.zone
   description = "Compute instance zone"
 }
 
 output "vm_external_ip" {
-  value       = google_compute_address.vm.address
-  description = "VM external IP"
+  value       = null
+  description = "Managed instances use ephemeral external IPs, so there is no stable VM external IP output"
+}
+
+output "managed_instance_group_name" {
+  value       = google_compute_instance_group_manager.freetool.name
+  description = "Managed instance group name"
 }
 
 output "load_balancer_ip" {
