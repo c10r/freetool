@@ -54,6 +54,19 @@ fi
 mkdir -p "$${DATA_MOUNT_PATH}/freetool-db" "$${DATA_MOUNT_PATH}/openfga"
 chmod 0777 "$${DATA_MOUNT_PATH}/freetool-db" "$${DATA_MOUNT_PATH}/openfga"
 
+GOOGLE_DIRECTORY_CREDENTIALS_SECRET_NAME="${google_directory_credentials_secret_name}"
+GOOGLE_DIRECTORY_CREDENTIALS_PATH=""
+
+mkdir -p /opt/freetool/creds
+if [[ -n "$${GOOGLE_DIRECTORY_CREDENTIALS_SECRET_NAME}" ]]; then
+  GOOGLE_DIRECTORY_CREDENTIALS_PATH="/var/secrets/google/directory-dwd-key.json"
+  gcloud secrets versions access latest \
+    --secret "$${GOOGLE_DIRECTORY_CREDENTIALS_SECRET_NAME}" \
+    --project "${project_id}" \
+    > /opt/freetool/creds/directory-dwd-key.json
+  chmod 600 /opt/freetool/creds/directory-dwd-key.json
+fi
+
 cat > /opt/freetool/docker-compose.gce.yml <<'COMPOSE'
 services:
   freetool-api:
@@ -74,8 +87,10 @@ services:
       Auth__GoogleDirectory__OrgUnitKeyPrefix: $${FREETOOL_GOOGLE_DIRECTORY_OU_KEY_PREFIX}
       Auth__GoogleDirectory__IncludeOrgUnitHierarchy: "$${FREETOOL_GOOGLE_DIRECTORY_INCLUDE_OU_HIERARCHY}"
       Auth__GoogleDirectory__CustomAttributeKeyPrefix: $${FREETOOL_GOOGLE_DIRECTORY_CUSTOM_KEY_PREFIX}
+      Auth__GoogleDirectory__CredentialsFile: $${FREETOOL_GOOGLE_DIRECTORY_CREDENTIALS_FILE}
     volumes:
       - $${FREETOOL_DATA_ROOT}/freetool-db:/app/data
+      - /opt/freetool/creds:/var/secrets/google:ro
     restart: unless-stopped
     depends_on:
       - openfga
@@ -119,6 +134,7 @@ FREETOOL_GOOGLE_DIRECTORY_SCOPE=${google_directory_scope}
 FREETOOL_GOOGLE_DIRECTORY_OU_KEY_PREFIX=${google_directory_org_unit_key_prefix}
 FREETOOL_GOOGLE_DIRECTORY_INCLUDE_OU_HIERARCHY=${google_directory_include_org_unit_hierarchy}
 FREETOOL_GOOGLE_DIRECTORY_CUSTOM_KEY_PREFIX=${google_directory_custom_attribute_key_prefix}
+FREETOOL_GOOGLE_DIRECTORY_CREDENTIALS_FILE=$${GOOGLE_DIRECTORY_CREDENTIALS_PATH}
 FREETOOL_ORG_ADMIN_EMAIL=${org_admin_email}
 FREETOOL_VALIDATE_IAP_JWT=${validate_iap_jwt}
 FREETOOL_DATA_ROOT=${data_mount_path}

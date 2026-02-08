@@ -4,6 +4,7 @@ open System
 open System.Net.Http
 open System.Net.Http.Headers
 open System.Text.Json
+open System.Threading
 open System.Threading.Tasks
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Logging
@@ -76,7 +77,17 @@ type GoogleDirectoryIdentityService
 
     let getAccessTokenAsync (scope: string) (adminUserEmail: string option) =
         task {
-            let! credential = GoogleCredential.GetApplicationDefaultAsync()
+            let credentialsFile =
+                configuration[ConfigurationKeys.Auth.GoogleDirectory.CredentialsFile]
+                |> Option.ofObj
+                |> Option.map (fun value -> value.Trim())
+                |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value))
+
+            let! credential =
+                match credentialsFile with
+                | Some path -> GoogleCredential.FromFileAsync(path, CancellationToken.None)
+                | None -> GoogleCredential.GetApplicationDefaultAsync()
+
             let scopedCredential = credential.CreateScoped([ scope ])
 
             let delegatedCredential =

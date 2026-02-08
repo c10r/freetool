@@ -2,7 +2,12 @@ locals {
   lb_name        = "${var.name_prefix}-lb"
   vm_name        = "${var.name_prefix}-vm"
   data_disk_name = "${var.name_prefix}-data"
-  domain_parts   = split(".", var.domain_name)
+  google_directory_credentials_secret_name = (
+    trimspace(var.google_directory_credentials_secret_name) != ""
+    ? trimspace(var.google_directory_credentials_secret_name)
+    : try(google_secret_manager_secret.google_directory_credentials[0].secret_id, "")
+  )
+  domain_parts = split(".", var.domain_name)
   iap_email_domain = length(local.domain_parts) > 2 ? join(
     ".",
     slice(local.domain_parts, length(local.domain_parts) - 2, length(local.domain_parts))
@@ -21,6 +26,7 @@ resource "google_project_service" "required" {
     "compute.googleapis.com",
     "iap.googleapis.com",
     "dns.googleapis.com",
+    "secretmanager.googleapis.com",
   ])
 
   service            = each.value
@@ -85,6 +91,35 @@ resource "google_project_iam_member" "vm_logging_writer" {
   member  = "serviceAccount:${google_service_account.vm.email}"
 }
 
+resource "google_secret_manager_secret" "google_directory_credentials" {
+  count = trimspace(var.google_directory_service_account_key_json) != "" ? 1 : 0
+
+  project   = var.project_id
+  secret_id = "${var.name_prefix}-google-directory-dwd-key"
+
+  replication {
+    auto {}
+  }
+
+  depends_on = [google_project_service.required]
+}
+
+resource "google_secret_manager_secret_version" "google_directory_credentials" {
+  count = trimspace(var.google_directory_service_account_key_json) != "" ? 1 : 0
+
+  secret      = google_secret_manager_secret.google_directory_credentials[0].id
+  secret_data = var.google_directory_service_account_key_json
+}
+
+resource "google_secret_manager_secret_iam_member" "vm_google_directory_credentials_accessor" {
+  count = local.google_directory_credentials_secret_name != "" ? 1 : 0
+
+  project   = var.project_id
+  secret_id = local.google_directory_credentials_secret_name
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.vm.email}"
+}
+
 resource "google_compute_disk" "data_protected" {
   count = var.preserve_data_disk_on_destroy ? 1 : 0
 
@@ -117,6 +152,10 @@ resource "google_compute_instance_template" "freetool" {
   name_prefix  = "${var.name_prefix}-tpl-"
   machine_type = var.machine_type
   tags         = ["${var.name_prefix}-freetool"]
+
+  lifecycle {
+    create_before_destroy = true
+  }
 
   disk {
     boot         = true
@@ -161,6 +200,7 @@ resource "google_compute_instance_template" "freetool" {
     google_directory_org_unit_key_prefix         = var.google_directory_org_unit_key_prefix
     google_directory_include_org_unit_hierarchy  = var.google_directory_include_org_unit_hierarchy
     google_directory_custom_attribute_key_prefix = var.google_directory_custom_attribute_key_prefix
+    google_directory_credentials_secret_name     = local.google_directory_credentials_secret_name
     org_admin_email                              = var.org_admin_email
     validate_iap_jwt                             = var.validate_iap_jwt
     data_disk_name                               = local.data_disk_name

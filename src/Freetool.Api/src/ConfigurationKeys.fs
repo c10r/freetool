@@ -74,6 +74,9 @@ module ConfigurationKeys =
             [<Literal>]
             let CustomAttributeKeyPrefix = "Auth:GoogleDirectory:CustomAttributeKeyPrefix"
 
+            [<Literal>]
+            let CredentialsFile = "Auth:GoogleDirectory:CredentialsFile"
+
     /// Environment variable keys
     module Environment =
         /// OpenTelemetry Protocol (OTLP) exporter endpoint

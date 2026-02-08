@@ -37,15 +37,15 @@ resolve_target_vm_name() {
     return 1
   fi
 
-  local instance_url
-  instance_url="$(gcloud compute instance-groups managed list-instances "${GCP_MIG_NAME}" --zone "${GCP_VM_ZONE}" --format='value(instance)' | head -n1)"
+  local instance_name
+  instance_name="$(gcloud compute instance-groups managed list-instances "${GCP_MIG_NAME}" --zone "${GCP_VM_ZONE}" --format='value(instance.basename())' | head -n1)"
 
-  if [[ -z "${instance_url}" ]]; then
+  if [[ -z "${instance_name}" ]]; then
     echo "Managed instance group ${GCP_MIG_NAME} has no instances in zone ${GCP_VM_ZONE}." >&2
     return 1
   fi
 
-  basename "${instance_url}"
+  echo "${instance_name}"
 }
 
 IMAGE_NAME="${IMAGE_NAME:-freetool-api}"
@@ -57,6 +57,21 @@ LATEST_IMAGE_URI="${REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REPO}/${IMAG
 USE_IAP_TUNNEL="${USE_IAP_TUNNEL:-true}"
 PUBLISH_LATEST="${PUBLISH_LATEST:-true}"
 TARGET_VM_NAME="$(resolve_target_vm_name)"
+
+if [[ -z "${TARGET_VM_NAME}" ]]; then
+  echo "Resolved target VM name is empty." >&2
+  exit 1
+fi
+
+if [[ "${TARGET_VM_NAME}" == "${GCP_VM_ZONE}" ]]; then
+  echo "Resolved target VM name '${TARGET_VM_NAME}' matches zone '${GCP_VM_ZONE}', which is invalid." >&2
+  exit 1
+fi
+
+if ! gcloud compute instances describe "${TARGET_VM_NAME}" --zone "${GCP_VM_ZONE}" --project "${GCP_PROJECT_ID}" --format='value(name)' >/dev/null; then
+  echo "Target VM '${TARGET_VM_NAME}' not found in zone '${GCP_VM_ZONE}' (project '${GCP_PROJECT_ID}')." >&2
+  exit 1
+fi
 
 ssh_iap_flag=()
 if [[ "${USE_IAP_TUNNEL}" == "true" ]]; then

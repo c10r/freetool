@@ -143,6 +143,27 @@ variable "google_directory_custom_attribute_key_prefix" {
   default     = "custom"
 }
 
+variable "google_directory_credentials_secret_name" {
+  description = "Secret Manager secret ID containing a JSON service account key used for Google Directory Domain-Wide Delegation. If empty and google_directory_service_account_key_json is set, this module creates a secret."
+  type        = string
+  default     = ""
+}
+
+variable "google_directory_service_account_key_json" {
+  description = "Optional JSON key contents for a Google Directory DWD service account. Stored as a Secret Manager secret version when provided."
+  type        = string
+  sensitive   = true
+  default     = ""
+
+  validation {
+    condition = !(
+      trimspace(var.google_directory_credentials_secret_name) != "" &&
+      trimspace(var.google_directory_service_account_key_json) != ""
+    )
+    error_message = "Set either google_directory_credentials_secret_name or google_directory_service_account_key_json, not both."
+  }
+}
+
 variable "iap_access_members" {
   description = "Optional override for principals granted IAP-secured Web App User access. Leave empty to derive from domain_name."
   type        = list(string)

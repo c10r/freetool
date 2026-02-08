@@ -37,6 +37,11 @@ google_directory_scope                       = "https://www.googleapis.com/auth/
 google_directory_org_unit_key_prefix         = "ou"
 google_directory_include_org_unit_hierarchy  = true
 google_directory_custom_attribute_key_prefix = "custom"
+# Provide exactly one:
+# 1) Existing secret name with SA key JSON: google_directory_credentials_secret_name
+# 2) Raw SA key JSON to create/update a managed secret version: google_directory_service_account_key_json
+google_directory_credentials_secret_name     = "freetool-google-directory-dwd-key"
+# google_directory_service_account_key_json  = "{\"type\":\"service_account\",...}"
 
 # Restrict if needed
 allow_ssh_from = ["35.235.240.0/20"]
