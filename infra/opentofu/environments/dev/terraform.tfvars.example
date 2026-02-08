@@ -31,6 +31,12 @@ oauth2_client_secret = "your-iap-oauth-client-secret"
 validate_iap_jwt = true
 iap_jwt_audience = "/projects/123456789012/global/backendServices/1234567890123456789"
 org_admin_email  = "admin@example.com"
+google_directory_enabled                     = true
+google_directory_admin_user_email            = "admin@example.com"
+google_directory_scope                       = "https://www.googleapis.com/auth/admin.directory.user.readonly"
+google_directory_org_unit_key_prefix         = "ou"
+google_directory_include_org_unit_hierarchy  = true
+google_directory_custom_attribute_key_prefix = "custom"
 
 # Restrict if needed
 allow_ssh_from = ["35.235.240.0/20"]

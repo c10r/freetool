@@ -68,6 +68,12 @@ services:
       OpenFGA__OrgAdminEmail: $${FREETOOL_ORG_ADMIN_EMAIL}
       Auth__IAP__ValidateJwt: "$${FREETOOL_VALIDATE_IAP_JWT}"
       Auth__IAP__JwtAudience: $${FREETOOL_IAP_JWT_AUDIENCE}
+      Auth__GoogleDirectory__Enabled: "$${FREETOOL_GOOGLE_DIRECTORY_ENABLED}"
+      Auth__GoogleDirectory__AdminUserEmail: $${FREETOOL_GOOGLE_DIRECTORY_ADMIN_USER_EMAIL}
+      Auth__GoogleDirectory__Scope: $${FREETOOL_GOOGLE_DIRECTORY_SCOPE}
+      Auth__GoogleDirectory__OrgUnitKeyPrefix: $${FREETOOL_GOOGLE_DIRECTORY_OU_KEY_PREFIX}
+      Auth__GoogleDirectory__IncludeOrgUnitHierarchy: "$${FREETOOL_GOOGLE_DIRECTORY_INCLUDE_OU_HIERARCHY}"
+      Auth__GoogleDirectory__CustomAttributeKeyPrefix: $${FREETOOL_GOOGLE_DIRECTORY_CUSTOM_KEY_PREFIX}
     volumes:
       - $${FREETOOL_DATA_ROOT}/freetool-db:/app/data
     restart: unless-stopped
@@ -107,6 +113,12 @@ COMPOSE
 cat > /opt/freetool/.env <<ENVFILE
 FREETOOL_IMAGE=${artifact_registry_location}-docker.pkg.dev/${project_id}/${artifact_registry_repo}/${image_name}:${initial_image_tag}
 FREETOOL_IAP_JWT_AUDIENCE=${iap_jwt_audience}
+FREETOOL_GOOGLE_DIRECTORY_ENABLED=${google_directory_enabled}
+FREETOOL_GOOGLE_DIRECTORY_ADMIN_USER_EMAIL=${google_directory_admin_user_email}
+FREETOOL_GOOGLE_DIRECTORY_SCOPE=${google_directory_scope}
+FREETOOL_GOOGLE_DIRECTORY_OU_KEY_PREFIX=${google_directory_org_unit_key_prefix}
+FREETOOL_GOOGLE_DIRECTORY_INCLUDE_OU_HIERARCHY=${google_directory_include_org_unit_hierarchy}
+FREETOOL_GOOGLE_DIRECTORY_CUSTOM_KEY_PREFIX=${google_directory_custom_attribute_key_prefix}
 FREETOOL_ORG_ADMIN_EMAIL=${org_admin_email}
 FREETOOL_VALIDATE_IAP_JWT=${validate_iap_jwt}
 FREETOOL_DATA_ROOT=${data_mount_path}

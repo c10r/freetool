@@ -159,6 +159,12 @@ resource "google_compute_instance" "freetool" {
     image_name                 = var.image_name
     initial_image_tag          = var.initial_image_tag
     iap_jwt_audience           = var.iap_jwt_audience
+    google_directory_enabled   = var.google_directory_enabled
+    google_directory_admin_user_email = var.google_directory_admin_user_email
+    google_directory_scope     = var.google_directory_scope
+    google_directory_org_unit_key_prefix = var.google_directory_org_unit_key_prefix
+    google_directory_include_org_unit_hierarchy = var.google_directory_include_org_unit_hierarchy
+    google_directory_custom_attribute_key_prefix = var.google_directory_custom_attribute_key_prefix
     org_admin_email            = var.org_admin_email
     validate_iap_jwt           = var.validate_iap_jwt
     data_disk_name             = local.data_disk_name

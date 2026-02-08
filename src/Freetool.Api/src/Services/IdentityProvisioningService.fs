@@ -2,6 +2,8 @@ namespace Freetool.Api.Services
 
 open System
 open System.Threading.Tasks
+open System.Security.Cryptography
+open System.Text
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Logging
 open Freetool.Domain
@@ -41,6 +43,7 @@ type IdentityProvisioningService
         userRepository: IUserRepository,
         authService: IAuthorizationService,
         mappingRepository: IIdentityGroupSpaceMappingRepository,
+        spaceRepository: ISpaceRepository,
         configuration: IConfiguration,
         logger: ILogger<IdentityProvisioningService>
     ) =
@@ -71,6 +74,141 @@ type IdentityProvisioningService
         |> List.map (fun key -> key.Trim())
         |> List.filter (fun key -> not (String.IsNullOrWhiteSpace key))
         |> List.distinct
+
+    let deriveSpaceNameFromOrgUnitPath (orgUnitPath: string) =
+        let baseName =
+            orgUnitPath.Trim().Trim('/')
+            |> fun value -> value.Replace("/", " / ")
+            |> fun value ->
+                if String.IsNullOrWhiteSpace value then
+                    "Default Space"
+                else
+                    value
+
+        if baseName.Length <= 100 then
+            baseName
+        else
+            use sha = SHA256.Create()
+            let bytes = Encoding.UTF8.GetBytes(orgUnitPath)
+
+            let hash =
+                sha.ComputeHash(bytes)
+                |> Array.take 4
+                |> Array.map (fun b -> b.ToString("x2"))
+                |> String.concat ""
+
+            let maxPrefix = 100 - (hash.Length + 1)
+            let prefix = baseName.Substring(0, maxPrefix).TrimEnd()
+            $"{prefix}-{hash}"
+
+    let getCurrentOrgUnitGroupKey (groupKeys: string list) =
+        let ouPrefix =
+            configuration[ConfigurationKeys.Auth.GoogleDirectory.OrgUnitKeyPrefix]
+            |> Option.ofObj
+            |> Option.defaultValue "ou"
+
+        let prefix = $"{ouPrefix}:"
+
+        groupKeys
+        |> normalizeGroupKeys
+        |> List.choose (fun key ->
+            if key.StartsWith(prefix, StringComparison.Ordinal) then
+                let orgUnitPath = key.Substring(prefix.Length).Trim()
+
+                if String.IsNullOrWhiteSpace orgUnitPath then
+                    None
+                else
+                    Some(key, orgUnitPath)
+            else
+                None)
+        |> List.sortByDescending (fun (_, orgUnitPath) ->
+            orgUnitPath.Split('/', StringSplitOptions.RemoveEmptyEntries).Length)
+        |> List.tryHead
+        |> Option.map fst
+
+    let ensureSpaceForCurrentOrgUnitIfNeeded (userId: UserId) (groupKeys: string list) =
+        task {
+            match getCurrentOrgUnitGroupKey groupKeys with
+            | None -> return ()
+            | Some orgUnitGroupKey ->
+                let! allMappings = mappingRepository.GetAllAsync()
+
+                let hasActiveMapping =
+                    allMappings
+                    |> List.exists (fun mapping ->
+                        mapping.IsActive
+                        && mapping.GroupKey.Equals(orgUnitGroupKey, StringComparison.Ordinal))
+
+                if not hasActiveMapping then
+                    let orgUnitPath =
+                        orgUnitGroupKey.Split(':', 2, StringSplitOptions.None)
+                        |> fun parts -> if parts.Length = 2 then parts.[1] else orgUnitGroupKey
+
+                    let newSpaceName = deriveSpaceNameFromOrgUnitPath orgUnitPath
+
+                    let! targetSpaceOption = spaceRepository.GetByNameAsync newSpaceName
+
+                    let! targetSpaceId =
+                        match targetSpaceOption with
+                        | Some existingSpace -> Task.FromResult(Some existingSpace.State.Id)
+                        | None ->
+                            match Space.create userId newSpaceName userId None with
+                            | Error error ->
+                                logger.LogWarning(
+                                    "Failed to create auto-provisioned space for OU key {OrgUnitGroupKey}: {Error}",
+                                    orgUnitGroupKey,
+                                    error
+                                )
+
+                                Task.FromResult(None)
+                            | Ok newSpace ->
+                                task {
+                                    match! spaceRepository.AddAsync newSpace with
+                                    | Error error ->
+                                        logger.LogWarning(
+                                            "Failed to save auto-provisioned space for OU key {OrgUnitGroupKey}: {Error}",
+                                            orgUnitGroupKey,
+                                            error
+                                        )
+
+                                        return None
+                                    | Ok() -> return Some newSpace.State.Id
+                                }
+
+                    match targetSpaceId with
+                    | None -> return ()
+                    | Some spaceId ->
+                        let spaceIdStr = spaceId.Value.ToString()
+                        let userIdStr = userId.Value.ToString()
+
+                        try
+                            do!
+                                authService.CreateRelationshipsAsync(
+                                    [ { Subject = Organization "default"
+                                        Relation = SpaceOrganization
+                                        Object = SpaceObject spaceIdStr }
+                                      { Subject = User userIdStr
+                                        Relation = SpaceModerator
+                                        Object = SpaceObject spaceIdStr } ]
+                                )
+                        with ex ->
+                            logger.LogWarning(
+                                "Failed to configure OpenFGA tuples for auto-provisioned space {SpaceId}: {Error}",
+                                spaceIdStr,
+                                ex.Message
+                            )
+
+                        match! mappingRepository.AddAsync userId orgUnitGroupKey spaceId with
+                        | Ok _ -> ()
+                        | Error(Conflict _) -> ()
+                        | Error error ->
+                            logger.LogWarning(
+                                "Failed to create OU group-space mapping for {GroupKey} -> {SpaceId}: {Error}",
+                                orgUnitGroupKey,
+                                spaceIdStr,
+                                error
+                            )
+        }
 
     let reconcileMappedSpaceMemberships (userId: UserId) (groupKeys: string list) =
         task {
@@ -143,6 +281,7 @@ type IdentityProvisioningService
                         | Error err -> return Error(CreateUserFailed(domainErrorToMessage err))
                         | Ok() ->
                             do! ensureOrgAdminIfConfigured context.Email newUser.State.Id
+                            do! ensureSpaceForCurrentOrgUnitIfNeeded newUser.State.Id context.GroupKeys
                             do! reconcileMappedSpaceMemberships newUser.State.Id context.GroupKeys
                             return Ok newUser.State.Id
 
@@ -156,11 +295,13 @@ type IdentityProvisioningService
                             | Error err -> return Error(SaveActivatedUserFailed(domainErrorToMessage err))
                             | Ok() ->
                                 do! ensureOrgAdminIfConfigured context.Email activatedUser.State.Id
+                                do! ensureSpaceForCurrentOrgUnitIfNeeded activatedUser.State.Id context.GroupKeys
                                 do! reconcileMappedSpaceMemberships activatedUser.State.Id context.GroupKeys
                                 return Ok activatedUser.State.Id
 
                     | Some user ->
                         do! ensureOrgAdminIfConfigured context.Email user.State.Id
+                        do! ensureSpaceForCurrentOrgUnitIfNeeded user.State.Id context.GroupKeys
                         do! reconcileMappedSpaceMemberships user.State.Id context.GroupKeys
                         return Ok user.State.Id
             }

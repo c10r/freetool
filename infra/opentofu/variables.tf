@@ -107,6 +107,42 @@ variable "iap_jwt_audience" {
   default     = ""
 }
 
+variable "google_directory_enabled" {
+  description = "Enable Google Workspace Directory lookup for OU/custom-attribute group keys"
+  type        = bool
+  default     = false
+}
+
+variable "google_directory_admin_user_email" {
+  description = "Delegated admin user email for Google Directory domain-wide delegation"
+  type        = string
+  default     = ""
+}
+
+variable "google_directory_scope" {
+  description = "OAuth scope used for Google Directory lookups"
+  type        = string
+  default     = "https://www.googleapis.com/auth/admin.directory.user.readonly"
+}
+
+variable "google_directory_org_unit_key_prefix" {
+  description = "Group-key prefix used for org unit derived mappings"
+  type        = string
+  default     = "ou"
+}
+
+variable "google_directory_include_org_unit_hierarchy" {
+  description = "Whether OU hierarchy keys should be emitted (e.g. /Eng and /Eng/Support)"
+  type        = bool
+  default     = true
+}
+
+variable "google_directory_custom_attribute_key_prefix" {
+  description = "Group-key prefix used for custom schema derived mappings"
+  type        = string
+  default     = "custom"
+}
+
 variable "iap_access_members" {
   description = "Optional override for principals granted IAP-secured Web App User access. Leave empty to derive from domain_name."
   type        = list(string)

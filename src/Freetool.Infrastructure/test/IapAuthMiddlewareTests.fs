@@ -111,6 +111,20 @@ type MockGoogleDirectoryIdentityService() =
     interface IGoogleDirectoryIdentityService with
         member _.GetIdentityGroupKeysAsync _ = Task.FromResult([])
 
+type MockSpaceRepository() =
+    interface ISpaceRepository with
+        member _.GetByIdAsync _ = Task.FromResult(None)
+        member _.GetByNameAsync _ = Task.FromResult(None)
+        member _.GetAllAsync _ _ = Task.FromResult([])
+        member _.GetByUserIdAsync _ = Task.FromResult([])
+        member _.GetByModeratorUserIdAsync _ = Task.FromResult([])
+        member _.AddAsync _ = Task.FromResult(Ok())
+        member _.UpdateAsync _ = Task.FromResult(Ok())
+        member _.DeleteAsync _ = Task.FromResult(Ok())
+        member _.ExistsAsync _ = Task.FromResult(false)
+        member _.ExistsByNameAsync _ = Task.FromResult(false)
+        member _.GetCountAsync() = Task.FromResult(0)
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -153,6 +167,8 @@ let setupServices
     services.AddSingleton<IGoogleDirectoryIdentityService>(MockGoogleDirectoryIdentityService())
     |> ignore
 
+    services.AddSingleton<ISpaceRepository>(MockSpaceRepository()) |> ignore
+
     services.AddSingleton<IIdentityProvisioningService>(fun serviceProvider ->
         let userRepository = serviceProvider.GetRequiredService<IUserRepository>()
 
@@ -162,12 +178,15 @@ let setupServices
         let mappingRepository =
             serviceProvider.GetRequiredService<IIdentityGroupSpaceMappingRepository>()
 
+        let spaceRepository = serviceProvider.GetRequiredService<ISpaceRepository>()
+
         let configuration = serviceProvider.GetRequiredService<IConfiguration>()
 
         IdentityProvisioningService(
             userRepository,
             authorizationService,
             mappingRepository,
+            spaceRepository,
             configuration,
             NullLogger<IdentityProvisioningService>.Instance
         )
