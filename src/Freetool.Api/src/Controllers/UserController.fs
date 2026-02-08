@@ -148,10 +148,11 @@ type UserController
                 let! isOrgAdmin =
                     authService.CheckPermissionAsync (User userIdStr) OrganizationAdmin (OrganizationObject "default")
 
-                // Get user's spaces/teams using the space repository directly
-                let! spaces = spaceRepository.GetByUserIdAsync userId
+                // Build teams from effective OpenFGA permissions so this stays correct
+                // for identity-provisioned memberships.
+                let! totalSpaceCount = spaceRepository.GetCountAsync()
+                let! spaces = spaceRepository.GetAllAsync 0 totalSpaceCount
 
-                // For each space, check if user is moderator or member
                 let! teams =
                     task {
                         let mutable teamList = []
@@ -160,20 +161,26 @@ type UserController
                             let spaceData = space.State
                             let spaceIdStr = spaceData.Id.Value.ToString()
 
-                            let! isModerator =
-                                authService.CheckPermissionAsync
+                            let! permissionMap =
+                                authService.BatchCheckPermissionsAsync
                                     (User userIdStr)
-                                    SpaceModerator
+                                    [ SpaceModerator; SpaceMember ]
                                     (SpaceObject spaceIdStr)
 
-                            let role = if isModerator then "moderator" else "member"
+                            let isModerator =
+                                permissionMap |> Map.tryFind SpaceModerator |> Option.defaultValue false
 
-                            let teamDto: TeamMembershipDto =
-                                { Id = spaceIdStr
-                                  Name = spaceData.Name
-                                  Role = role }
+                            let isMember = permissionMap |> Map.tryFind SpaceMember |> Option.defaultValue false
 
-                            teamList <- teamDto :: teamList
+                            if isModerator || isMember then
+                                let role = if isModerator then "moderator" else "member"
+
+                                let teamDto: TeamMembershipDto =
+                                    { Id = spaceIdStr
+                                      Name = spaceData.Name
+                                      Role = role }
+
+                                teamList <- teamDto :: teamList
 
                         return List.rev teamList
                     }

@@ -28,6 +28,14 @@ export GCP_ARTIFACT_REPO="$(jq -r '.artifact_registry_repo_id.value' <<<"${outpu
 export GCP_VM_ZONE="$(jq -r '.vm_zone.value' <<<"${output_json}")"
 export FREETOOL_IAP_JWT_AUDIENCE="$(jq -r '.iap_jwt_audience.value' <<<"${output_json}")"
 export FREETOOL_DATA_ROOT="$(jq -r '.data_mount_path.value' <<<"${output_json}")"
+export FREETOOL_VALIDATE_IAP_JWT="$(jq -r '.validate_iap_jwt.value? // "true"' <<<"${output_json}")"
+export FREETOOL_GOOGLE_DIRECTORY_ENABLED="$(jq -r '.google_directory_enabled.value? // "false"' <<<"${output_json}")"
+export FREETOOL_GOOGLE_DIRECTORY_ADMIN_USER_EMAIL="$(jq -r '.google_directory_admin_user_email.value? // empty' <<<"${output_json}")"
+export FREETOOL_GOOGLE_DIRECTORY_SCOPE="$(jq -r '.google_directory_scope.value? // empty' <<<"${output_json}")"
+export FREETOOL_GOOGLE_DIRECTORY_OU_KEY_PREFIX="$(jq -r '.google_directory_org_unit_key_prefix.value? // empty' <<<"${output_json}")"
+export FREETOOL_GOOGLE_DIRECTORY_INCLUDE_OU_HIERARCHY="$(jq -r '.google_directory_include_org_unit_hierarchy.value? // "true"' <<<"${output_json}")"
+export FREETOOL_GOOGLE_DIRECTORY_CUSTOM_KEY_PREFIX="$(jq -r '.google_directory_custom_attribute_key_prefix.value? // empty' <<<"${output_json}")"
+export FREETOOL_GOOGLE_DIRECTORY_CREDENTIALS_SECRET_NAME="$(jq -r '.google_directory_credentials_secret_name.value? // empty' <<<"${output_json}")"
 
 MIG_NAME="$(jq -r '.managed_instance_group_name.value? // empty' <<<"${output_json}")"
 if [[ -n "${MIG_NAME}" ]]; then

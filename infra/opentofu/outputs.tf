@@ -78,3 +78,43 @@ output "backend_service_name" {
   value       = google_compute_backend_service.freetool.name
   description = "Backend service name for gcloud describe lookups"
 }
+
+output "validate_iap_jwt" {
+  value       = var.validate_iap_jwt
+  description = "Whether API validates IAP JWT assertions"
+}
+
+output "google_directory_enabled" {
+  value       = var.google_directory_enabled
+  description = "Whether Google Directory lookup is enabled"
+}
+
+output "google_directory_admin_user_email" {
+  value       = var.google_directory_admin_user_email
+  description = "Delegated admin user email for Google Directory lookups"
+}
+
+output "google_directory_scope" {
+  value       = var.google_directory_scope
+  description = "Google Directory OAuth scope"
+}
+
+output "google_directory_org_unit_key_prefix" {
+  value       = var.google_directory_org_unit_key_prefix
+  description = "Group-key prefix for org unit derived keys"
+}
+
+output "google_directory_include_org_unit_hierarchy" {
+  value       = var.google_directory_include_org_unit_hierarchy
+  description = "Whether org unit hierarchy keys are emitted"
+}
+
+output "google_directory_custom_attribute_key_prefix" {
+  value       = var.google_directory_custom_attribute_key_prefix
+  description = "Group-key prefix for custom schema derived keys"
+}
+
+output "google_directory_credentials_secret_name" {
+  value       = local.google_directory_credentials_secret_name
+  description = "Secret Manager secret ID containing Google Directory credentials JSON"
+}
