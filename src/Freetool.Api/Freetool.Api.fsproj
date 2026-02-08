@@ -16,6 +16,7 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.12" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.71.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,6 +31,7 @@
     <Compile Include="src/Tracing/TracingExtensions.fs" />
     <Compile Include="src/Tracing/TracingAttributes.fs" />
     <Compile Include="src/Tracing/AutoTracing.fs" />
+    <Compile Include="src/Services/GoogleDirectoryIdentityService.fs" />
     <Compile Include="src/Services/IdentityProvisioningService.fs" />
     <Compile Include="src/Middleware/IapAuthMiddleware.fs" />
     <Compile Include="src/Middleware/DevAuthMiddleware.fs" />

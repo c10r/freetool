@@ -107,6 +107,10 @@ type MockIdentityGroupSpaceMappingRepository() =
         member _.DeleteAsync _ =
             Task.FromResult(Error(InvalidOperation "Not used in middleware tests"))
 
+type MockGoogleDirectoryIdentityService() =
+    interface IGoogleDirectoryIdentityService with
+        member _.GetIdentityGroupKeysAsync _ = Task.FromResult([])
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -144,6 +148,9 @@ let setupServices
     services.AddSingleton<IConfiguration>(config) |> ignore
 
     services.AddSingleton<IIdentityGroupSpaceMappingRepository>(MockIdentityGroupSpaceMappingRepository())
+    |> ignore
+
+    services.AddSingleton<IGoogleDirectoryIdentityService>(MockGoogleDirectoryIdentityService())
     |> ignore
 
     services.AddSingleton<IIdentityProvisioningService>(fun serviceProvider ->

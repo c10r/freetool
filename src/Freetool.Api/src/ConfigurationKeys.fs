@@ -55,6 +55,25 @@ module ConfigurationKeys =
             [<Literal>]
             let JwtCertsUrl = "Auth:IAP:JwtCertsUrl"
 
+        module GoogleDirectory =
+            [<Literal>]
+            let Enabled = "Auth:GoogleDirectory:Enabled"
+
+            [<Literal>]
+            let AdminUserEmail = "Auth:GoogleDirectory:AdminUserEmail"
+
+            [<Literal>]
+            let Scope = "Auth:GoogleDirectory:Scope"
+
+            [<Literal>]
+            let OrgUnitKeyPrefix = "Auth:GoogleDirectory:OrgUnitKeyPrefix"
+
+            [<Literal>]
+            let IncludeOrgUnitHierarchy = "Auth:GoogleDirectory:IncludeOrgUnitHierarchy"
+
+            [<Literal>]
+            let CustomAttributeKeyPrefix = "Auth:GoogleDirectory:CustomAttributeKeyPrefix"
+
     /// Environment variable keys
     module Environment =
         /// OpenTelemetry Protocol (OTLP) exporter endpoint

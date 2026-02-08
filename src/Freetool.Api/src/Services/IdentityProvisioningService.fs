@@ -66,11 +66,32 @@ type IdentityProvisioningService
                     logger.LogWarning("Failed to ensure org admin for {Email}: {Error}", email, ex.Message)
         }
 
-    let ensureMappedSpaceMemberships (userId: UserId) (groupKeys: string list) =
-        task {
-            let! spaceIds = mappingRepository.GetSpaceIdsByGroupKeysAsync groupKeys
+    let normalizeGroupKeys (groupKeys: string list) =
+        groupKeys
+        |> List.map (fun key -> key.Trim())
+        |> List.filter (fun key -> not (String.IsNullOrWhiteSpace key))
+        |> List.distinct
 
-            for spaceId in spaceIds do
+    let reconcileMappedSpaceMemberships (userId: UserId) (groupKeys: string list) =
+        task {
+            let normalizedGroupKeys = normalizeGroupKeys groupKeys
+            let! desiredSpaceIds = mappingRepository.GetSpaceIdsByGroupKeysAsync normalizedGroupKeys
+            let! allMappings = mappingRepository.GetAllAsync()
+
+            let mappedSpaceIds =
+                allMappings
+                |> List.filter (fun m -> m.IsActive)
+                |> List.choose (fun m ->
+                    match Guid.TryParse m.SpaceId with
+                    | true, guid -> Some(SpaceId.FromGuid guid)
+                    | false, _ -> None)
+                |> List.distinct
+
+            let desiredSet = desiredSpaceIds |> Set.ofList
+            let mappedSet = mappedSpaceIds |> Set.ofList
+            let toRemove = Set.difference mappedSet desiredSet |> Set.toList
+
+            for spaceId in desiredSpaceIds do
                 try
                     do!
                         authService.CreateRelationshipsAsync(
@@ -81,6 +102,22 @@ type IdentityProvisioningService
                 with ex ->
                     logger.LogWarning(
                         "Failed to ensure mapped membership for user {UserId} in space {SpaceId}: {Error}",
+                        userId.Value,
+                        spaceId.Value,
+                        ex.Message
+                    )
+
+            for spaceId in toRemove do
+                try
+                    do!
+                        authService.DeleteRelationshipsAsync(
+                            [ { Subject = User(userId.Value.ToString())
+                                Relation = SpaceMember
+                                Object = SpaceObject(spaceId.Value.ToString()) } ]
+                        )
+                with ex ->
+                    logger.LogWarning(
+                        "Failed to remove mapped membership for user {UserId} in space {SpaceId}: {Error}",
                         userId.Value,
                         spaceId.Value,
                         ex.Message
@@ -106,7 +143,7 @@ type IdentityProvisioningService
                         | Error err -> return Error(CreateUserFailed(domainErrorToMessage err))
                         | Ok() ->
                             do! ensureOrgAdminIfConfigured context.Email newUser.State.Id
-                            do! ensureMappedSpaceMemberships newUser.State.Id context.GroupKeys
+                            do! reconcileMappedSpaceMemberships newUser.State.Id context.GroupKeys
                             return Ok newUser.State.Id
 
                     | Some user when User.isInvitedPlaceholder user ->
@@ -119,11 +156,11 @@ type IdentityProvisioningService
                             | Error err -> return Error(SaveActivatedUserFailed(domainErrorToMessage err))
                             | Ok() ->
                                 do! ensureOrgAdminIfConfigured context.Email activatedUser.State.Id
-                                do! ensureMappedSpaceMemberships activatedUser.State.Id context.GroupKeys
+                                do! reconcileMappedSpaceMemberships activatedUser.State.Id context.GroupKeys
                                 return Ok activatedUser.State.Id
 
                     | Some user ->
                         do! ensureOrgAdminIfConfigured context.Email user.State.Id
-                        do! ensureMappedSpaceMemberships user.State.Id context.GroupKeys
+                        do! reconcileMappedSpaceMemberships user.State.Id context.GroupKeys
                         return Ok user.State.Id
             }

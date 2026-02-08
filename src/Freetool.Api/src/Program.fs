@@ -318,6 +318,9 @@ let main args =
         :> IEventEnhancementService)
     |> ignore
 
+    builder.Services.AddScoped<IGoogleDirectoryIdentityService, GoogleDirectoryIdentityService>()
+    |> ignore
+
     builder.Services.AddScoped<IIdentityProvisioningService, IdentityProvisioningService>()
     |> ignore
 

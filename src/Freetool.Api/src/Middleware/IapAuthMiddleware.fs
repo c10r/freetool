@@ -321,7 +321,14 @@ type IapAuthMiddleware(next: RequestDelegate, logger: ILogger<IapAuthMiddleware>
                     | _ ->
                         let userName = extractHeader nameHeader context
                         let profilePicUrl = extractHeader pictureHeader context
-                        let groupKeys = parseGroups (extractHeader groupsHeader context) groupsDelimiter
+                        let iapGroupKeys = parseGroups (extractHeader groupsHeader context) groupsDelimiter
+
+                        let directoryIdentityService =
+                            context.RequestServices.GetRequiredService<IGoogleDirectoryIdentityService>()
+
+                        let! directoryGroupKeys = directoryIdentityService.GetIdentityGroupKeysAsync(userEmail)
+
+                        let groupKeys = (iapGroupKeys @ directoryGroupKeys) |> List.distinct
 
                         let provisioningService =
                             context.RequestServices.GetRequiredService<IIdentityProvisioningService>()
@@ -357,6 +364,17 @@ type IapAuthMiddleware(next: RequestDelegate, logger: ILogger<IapAuthMiddleware>
                             context.Items.["UserId"] <- userId
                             Tracing.addAttribute currentActivity "iap.auth.user_email" userEmail
                             Tracing.addAttribute currentActivity "iap.auth.groups_count" (string groupKeys.Length)
+
+                            Tracing.addAttribute
+                                currentActivity
+                                "iap.auth.iap_groups_count"
+                                (string iapGroupKeys.Length)
+
+                            Tracing.addAttribute
+                                currentActivity
+                                "iap.auth.directory_groups_count"
+                                (string directoryGroupKeys.Length)
+
                             Tracing.addAttribute currentActivity "user.id" (userId.Value.ToString())
                             Tracing.addAttribute currentActivity "iap.auth.success" "true"
                             Tracing.setSpanStatus currentActivity true None
