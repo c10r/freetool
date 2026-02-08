@@ -93,6 +93,12 @@ variable "machine_type" {
   default     = "e2-micro"
 }
 
+variable "boot_disk_size_gb" {
+  description = "Boot disk size in GB for the VM"
+  type        = number
+  default     = 10
+}
+
 variable "artifact_registry_repo" {
   description = "Artifact Registry Docker repository name"
   type        = string

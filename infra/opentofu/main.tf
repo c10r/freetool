@@ -124,7 +124,7 @@ resource "google_compute_instance" "freetool" {
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
-      size  = 20
+      size  = var.boot_disk_size_gb
       type  = "pd-balanced"
     }
   }
