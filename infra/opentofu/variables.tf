@@ -164,3 +164,21 @@ variable "preserve_data_disk_on_destroy" {
   type        = bool
   default     = true
 }
+
+variable "artifact_cleanup_policy_dry_run" {
+  description = "Whether Artifact Registry cleanup policy runs in dry-run mode"
+  type        = bool
+  default     = false
+}
+
+variable "artifact_keep_recent_count" {
+  description = "How many recent versions to keep for the main app image package"
+  type        = number
+  default     = 5
+}
+
+variable "artifact_delete_older_than" {
+  description = "Delete threshold for old image versions (e.g. 1d, 7d, 30d)"
+  type        = string
+  default     = "7d"
+}

@@ -14,6 +14,9 @@ data_disk_size_gb          = 30
 data_disk_type             = "pd-balanced"
 data_mount_path            = "/mnt/freetool-data"
 preserve_data_disk_on_destroy = true
+artifact_cleanup_policy_dry_run = false
+artifact_keep_recent_count      = 5
+artifact_delete_older_than      = "7d"
 
 # Recommended: use existing OAuth client credentials.
 # Google deprecated the API used by google_iap_brand/google_iap_client after July 2025.

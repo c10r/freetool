@@ -37,9 +37,30 @@ resource "google_compute_subnetwork" "freetool" {
 }
 
 resource "google_artifact_registry_repository" "freetool" {
-  location      = var.artifact_registry_location
-  repository_id = var.artifact_registry_repo
-  format        = "DOCKER"
+  location               = var.artifact_registry_location
+  repository_id          = var.artifact_registry_repo
+  format                 = "DOCKER"
+  cleanup_policy_dry_run = var.artifact_cleanup_policy_dry_run
+
+  cleanup_policies {
+    id     = "keep-recent-freetool-api"
+    action = "KEEP"
+
+    most_recent_versions {
+      package_name_prefixes = [var.image_name]
+      keep_count            = var.artifact_keep_recent_count
+    }
+  }
+
+  cleanup_policies {
+    id     = "delete-older-images"
+    action = "DELETE"
+
+    condition {
+      tag_state  = "ANY"
+      older_than = var.artifact_delete_older_than
+    }
+  }
 
   depends_on = [google_project_service.required]
 }

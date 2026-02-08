@@ -4,7 +4,8 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-apt-get install -y ca-certificates curl gnupg lsb-release apt-transport-https docker.io docker-compose-plugin
+apt-get install -y ca-certificates curl gnupg lsb-release apt-transport-https docker.io
+apt-get install -y docker-compose-plugin || apt-get install -y docker-compose-v2 || apt-get install -y docker-compose
 
 if ! command -v gcloud >/dev/null 2>&1; then
   install -m 0755 -d /etc/apt/keyrings
@@ -123,9 +124,10 @@ Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/freetool
 ExecStartPre=/usr/bin/gcloud auth configure-docker ${artifact_registry_location}-docker.pkg.dev --quiet
-ExecStartPre=/usr/bin/docker compose -f docker-compose.gce.yml --env-file .env pull
-ExecStart=/usr/bin/docker compose -f docker-compose.gce.yml --env-file .env up -d --remove-orphans
-ExecStop=/usr/bin/docker compose -f docker-compose.gce.yml --env-file .env down
+ExecStartPre=/bin/bash -lc 'TOKEN="$$(curl -fsS -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" | sed -n '"'"'s/.*"access_token":"\([^"]*\)".*/\1/p'"'"')"; if [ -z "$${TOKEN}" ]; then exit 1; fi; echo "$${TOKEN}" | /usr/bin/docker login -u oauth2accesstoken --password-stdin https://${artifact_registry_location}-docker.pkg.dev'
+ExecStartPre=/bin/bash -lc 'if /usr/bin/docker compose version >/dev/null 2>&1; then /usr/bin/docker compose -f docker-compose.gce.yml --env-file .env pull; else /usr/bin/docker-compose -f docker-compose.gce.yml --env-file .env pull; fi'
+ExecStart=/bin/bash -lc 'if /usr/bin/docker compose version >/dev/null 2>&1; then /usr/bin/docker compose -f docker-compose.gce.yml --env-file .env up -d --remove-orphans; else /usr/bin/docker-compose -f docker-compose.gce.yml --env-file .env up -d --remove-orphans; fi'
+ExecStop=/bin/bash -lc 'if /usr/bin/docker compose version >/dev/null 2>&1; then /usr/bin/docker compose -f docker-compose.gce.yml --env-file .env down; else /usr/bin/docker-compose -f docker-compose.gce.yml --env-file .env down; fi'
 TimeoutStartSec=0
 
 [Install]
