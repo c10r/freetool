@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update
+apt-get install -y ca-certificates curl gnupg lsb-release apt-transport-https docker.io docker-compose-plugin
+
+if ! command -v gcloud >/dev/null 2>&1; then
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /etc/apt/keyrings/google-cloud.gpg
+  chmod a+r /etc/apt/keyrings/google-cloud.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/google-cloud.gpg] https://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google-cloud-sdk.list
+  apt-get update
+  apt-get install -y google-cloud-cli
+fi
+
+systemctl enable docker
+systemctl start docker
+
+mkdir -p /opt/freetool
+
+DATA_DISK_DEVICE="/dev/disk/by-id/google-${data_disk_name}"
+DATA_MOUNT_PATH="${data_mount_path}"
+
+for _ in $(seq 1 30); do
+  if [[ -b "$${DATA_DISK_DEVICE}" ]]; then
+    break
+  fi
+  sleep 2
+done
+
+if [[ ! -b "$${DATA_DISK_DEVICE}" ]]; then
+  echo "Data disk not found at $${DATA_DISK_DEVICE}" >&2
+  exit 1
+fi
+
+mkdir -p "$${DATA_MOUNT_PATH}"
+
+if ! blkid "$${DATA_DISK_DEVICE}" >/dev/null 2>&1; then
+  mkfs.ext4 -F "$${DATA_DISK_DEVICE}"
+fi
+
+DATA_DISK_UUID="$(blkid -s UUID -o value "$${DATA_DISK_DEVICE}")"
+if ! grep -q "$${DATA_DISK_UUID}" /etc/fstab; then
+  echo "UUID=$${DATA_DISK_UUID} $${DATA_MOUNT_PATH} ext4 defaults,nofail,discard 0 2" >> /etc/fstab
+fi
+
+if ! mountpoint -q "$${DATA_MOUNT_PATH}"; then
+  mount "$${DATA_MOUNT_PATH}"
+fi
+
+mkdir -p "$${DATA_MOUNT_PATH}/freetool-db" "$${DATA_MOUNT_PATH}/openfga"
+chmod 0777 "$${DATA_MOUNT_PATH}/freetool-db" "$${DATA_MOUNT_PATH}/openfga"
+
+cat > /opt/freetool/docker-compose.gce.yml <<'COMPOSE'
+services:
+  freetool-api:
+    image: $${FREETOOL_IMAGE}
+    container_name: freetool-api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Data Source=/app/data/freetool.db
+      OpenFGA__ApiUrl: http://openfga:8090
+      OpenFGA__OrgAdminEmail: $${FREETOOL_ORG_ADMIN_EMAIL}
+      Auth__IAP__ValidateJwt: "$${FREETOOL_VALIDATE_IAP_JWT}"
+      Auth__IAP__JwtAudience: $${FREETOOL_IAP_JWT_AUDIENCE}
+      PathBase: /freetool
+    volumes:
+      - $${FREETOOL_DATA_ROOT}/freetool-db:/app/data
+    restart: unless-stopped
+    depends_on:
+      - openfga
+
+  openfga-migrate:
+    image: openfga/openfga:latest
+    container_name: openfga-migrate
+    command: migrate
+    user: nonroot
+    environment:
+      OPENFGA_DATASTORE_ENGINE: sqlite
+      OPENFGA_DATASTORE_URI: file:/home/nonroot/openfga.db
+    volumes:
+      - $${FREETOOL_DATA_ROOT}/openfga:/home/nonroot
+
+  openfga:
+    image: openfga/openfga:latest
+    container_name: openfga
+    command: run
+    user: nonroot
+    environment:
+      OPENFGA_DATASTORE_ENGINE: sqlite
+      OPENFGA_DATASTORE_URI: file:/home/nonroot/openfga.db
+      OPENFGA_LOG_FORMAT: json
+      OPENFGA_HTTP_ADDR: 0.0.0.0:8090
+      OPENFGA_GRPC_ADDR: 0.0.0.0:8091
+    volumes:
+      - $${FREETOOL_DATA_ROOT}/openfga:/home/nonroot
+    restart: unless-stopped
+    depends_on:
+      openfga-migrate:
+        condition: service_completed_successfully
+COMPOSE
+
+cat > /opt/freetool/.env <<ENVFILE
+FREETOOL_IMAGE=${artifact_registry_location}-docker.pkg.dev/${project_id}/${artifact_registry_repo}/${image_name}:${initial_image_tag}
+FREETOOL_IAP_JWT_AUDIENCE=${iap_jwt_audience}
+FREETOOL_ORG_ADMIN_EMAIL=${org_admin_email}
+FREETOOL_VALIDATE_IAP_JWT=${validate_iap_jwt}
+FREETOOL_DATA_ROOT=${data_mount_path}
+ENVFILE
+
+cat > /etc/systemd/system/freetool-compose.service <<UNIT
+[Unit]
+Description=Freetool Docker Compose stack
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/freetool
+ExecStartPre=/usr/bin/gcloud auth configure-docker ${artifact_registry_location}-docker.pkg.dev --quiet
+ExecStartPre=/usr/bin/docker compose -f docker-compose.gce.yml --env-file .env pull
+ExecStart=/usr/bin/docker compose -f docker-compose.gce.yml --env-file .env up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f docker-compose.gce.yml --env-file .env down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable freetool-compose.service
+systemctl start freetool-compose.service

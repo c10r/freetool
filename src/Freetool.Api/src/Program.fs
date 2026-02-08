@@ -5,6 +5,7 @@ open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.Logging.Abstractions
 open Microsoft.EntityFrameworkCore
+open Microsoft.AspNetCore.Http
 open Microsoft.AspNetCore.StaticFiles
 open System.Text.Json.Serialization
 open System.Diagnostics
@@ -406,6 +407,22 @@ let main args =
     |> ignore
 
     let app = builder.Build()
+
+    let configuredPathBase = builder.Configuration["PathBase"]
+
+    let pathBase =
+        if System.String.IsNullOrWhiteSpace(configuredPathBase) then
+            None
+        else if configuredPathBase.StartsWith("/") then
+            Some configuredPathBase
+        else
+            Some $"/{configuredPathBase}"
+
+    match pathBase with
+    | Some value ->
+        startupLogger.LogInformation("Using PathBase: {PathBase}", value)
+        app.UsePathBase(PathString(value)) |> ignore
+    | None -> ()
 
     // Debug logging for paths
     startupLogger.LogInformation("Content root: {ContentRoot}", builder.Environment.ContentRootPath)

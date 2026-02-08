@@ -1,0 +1,38 @@
+project_id                = "my-gcp-project"
+region                    = "us-central1"
+zone                      = "us-central1-a"
+name_prefix               = "freetool"
+domain_name               = "freetool.example.com"
+dns_managed_zone          = "" # optional
+
+artifact_registry_repo     = "freetool"
+artifact_registry_location = "us-central1"
+image_name                 = "freetool-api"
+initial_image_tag          = "latest"
+machine_type               = "e2-micro"
+data_disk_size_gb          = 30
+data_disk_type             = "pd-balanced"
+data_mount_path            = "/mnt/freetool-data"
+preserve_data_disk_on_destroy = true
+
+# Recommended: use existing OAuth client credentials.
+# Google deprecated the API used by google_iap_brand/google_iap_client after July 2025.
+create_iap_oauth_client = false
+oauth2_client_id        = "your-iap-oauth-client-id.apps.googleusercontent.com"
+oauth2_client_secret    = "your-iap-oauth-client-secret"
+
+# Optional legacy mode (may stop working due to Google API deprecation):
+# create_iap_oauth_client = true
+# project_number         = "123456789012"
+# iap_application_title   = "Freetool"
+# iap_support_email       = "admin@example.com"
+
+# Application auth config
+# First apply can use validate_iap_jwt = false and empty audience.
+# After backend service exists, compute real audience and update these values.
+validate_iap_jwt = true
+iap_jwt_audience = "/projects/123456789012/global/backendServices/1234567890123456789"
+org_admin_email  = "admin@example.com"
+
+# Restrict if needed
+allow_ssh_from = ["35.235.240.0/20"]

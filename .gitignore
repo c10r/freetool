@@ -218,3 +218,8 @@ packages/
 coveragereport/
 
 dist/
+
+# OpenTofu/Terraform secrets and local overrides
+*.tfvars
+*.tfvars.json
+terraform.tfvars

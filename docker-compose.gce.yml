@@ -1,0 +1,48 @@
+services:
+  freetool-api:
+    image: ${FREETOOL_IMAGE}
+    container_name: freetool-api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Data Source=/app/data/freetool.db
+      OpenFGA__ApiUrl: http://openfga:8090
+      OpenFGA__OrgAdminEmail: ${FREETOOL_ORG_ADMIN_EMAIL:-}
+      Auth__IAP__ValidateJwt: "true"
+      Auth__IAP__JwtAudience: ${FREETOOL_IAP_JWT_AUDIENCE}
+      PathBase: /freetool
+    volumes:
+      - ${FREETOOL_DATA_ROOT:-/mnt/freetool-data}/freetool-db:/app/data
+    restart: unless-stopped
+    depends_on:
+      - openfga
+
+  openfga-migrate:
+    image: openfga/openfga:latest
+    container_name: openfga-migrate
+    command: migrate
+    user: nonroot
+    environment:
+      OPENFGA_DATASTORE_ENGINE: sqlite
+      OPENFGA_DATASTORE_URI: file:/home/nonroot/openfga.db
+    volumes:
+      - ${FREETOOL_DATA_ROOT:-/mnt/freetool-data}/openfga:/home/nonroot
+
+  openfga:
+    image: openfga/openfga:latest
+    container_name: openfga
+    command: run
+    user: nonroot
+    environment:
+      OPENFGA_DATASTORE_ENGINE: sqlite
+      OPENFGA_DATASTORE_URI: file:/home/nonroot/openfga.db
+      OPENFGA_LOG_FORMAT: json
+      OPENFGA_HTTP_ADDR: 0.0.0.0:8090
+      OPENFGA_GRPC_ADDR: 0.0.0.0:8091
+    volumes:
+      - ${FREETOOL_DATA_ROOT:-/mnt/freetool-data}/openfga:/home/nonroot
+    restart: unless-stopped
+    depends_on:
+      openfga-migrate:
+        condition: service_completed_successfully
