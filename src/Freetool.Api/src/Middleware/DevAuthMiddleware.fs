@@ -29,10 +29,7 @@ type DevAuthMiddleware(next: RequestDelegate) =
             let path = context.Request.Path.Value
 
             // Allow /dev/* endpoints without authentication (needed to fetch user list)
-            if
-                not (isNull path)
-                && (path.StartsWith("/freetool/dev/") || path.StartsWith("/dev/"))
-            then
+            if not (isNull path) && path.StartsWith("/dev/") then
                 do! next.Invoke context
             else
                 let userIdOption = extractHeader DEV_USER_ID_HEADER context

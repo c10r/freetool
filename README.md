@@ -854,7 +854,7 @@ F# requires dependencies to be ordered correctly in `.fsproj` files. Always ensu
 
 # 💻 Deploying
 
-Freetool is meant to be deployed behind **Google Cloud IAP** (Identity-Aware Proxy) **under the /freetool** path.
+Freetool is meant to be deployed behind **Google Cloud IAP** (Identity-Aware Proxy) at the root path (`/`).
 
 IAP injects trusted identity headers (for example `X-Goog-Authenticated-User-Email`), and the API provisions/authorizes users from those headers.
 

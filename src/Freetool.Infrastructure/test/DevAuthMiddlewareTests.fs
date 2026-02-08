@@ -237,26 +237,6 @@ let ``Calls next middleware on success`` () : Task =
     }
 
 [<Fact>]
-let ``Allows freetool dev endpoints without authentication`` () : Task =
-    task {
-        // Arrange
-        let context = createTestHttpContext () |> fun c -> setPath c "/freetool/dev/users"
-
-        let userRepo = MockUserRepository(Map.empty)
-        setupServices context userRepo |> ignore
-
-        let middleware, wasNextCalled = createMiddleware ()
-
-        // Act
-        do! middleware.InvokeAsync(context)
-
-        // Assert
-        Assert.True(wasNextCalled ())
-        // Should not return 401
-        Assert.NotEqual(401, context.Response.StatusCode)
-    }
-
-[<Fact>]
 let ``Adds tracing attributes on authentication`` () : Task =
     task {
         // Note: This test verifies the code path runs successfully.

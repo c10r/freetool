@@ -68,7 +68,6 @@ services:
       OpenFGA__OrgAdminEmail: $${FREETOOL_ORG_ADMIN_EMAIL}
       Auth__IAP__ValidateJwt: "$${FREETOOL_VALIDATE_IAP_JWT}"
       Auth__IAP__JwtAudience: $${FREETOOL_IAP_JWT_AUDIENCE}
-      PathBase: /freetool
     volumes:
       - $${FREETOOL_DATA_ROOT}/freetool-db:/app/data
     restart: unless-stopped

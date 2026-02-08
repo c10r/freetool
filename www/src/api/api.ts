@@ -47,7 +47,7 @@ export async function getDevUsers(): Promise<DevUser[]> {
   const backendUrl =
     typeof window !== "undefined" && window.location.port === "8081"
       ? "http://localhost:5002" // Direct to backend, bypassing proxy
-      : `${window.location.origin}/freetool`;
+      : window.location.origin;
   const url = `${backendUrl}/dev/users`;
   const response = await fetch(url);
   if (!response.ok) {
@@ -58,7 +58,7 @@ export async function getDevUsers(): Promise<DevUser[]> {
 }
 
 const client = createClient<paths>({
-  baseUrl: `${typeof window !== "undefined" ? window.location.origin : "http://localhost:5000"}/freetool`,
+  baseUrl: `${typeof window !== "undefined" ? window.location.origin : "http://localhost:5000"}`,
 });
 
 // Dev mode middleware - adds X-Dev-User-Id header when in dev mode

@@ -12,7 +12,7 @@ This repo now includes infrastructure as code under `infra/opentofu`.
 - VM startup bootstrap (Docker, Compose, gcloud, stack startup)
 - Instance group + health check
 - Global external HTTPS load balancer
-- URL routing for `/freetool` and `/freetool/*`
+- URL routing for root path (`/`)
 - IAP enabled on backend service
 - Managed SSL certificate
 - Optional DNS A record in Cloud DNS
@@ -72,7 +72,7 @@ Manual mode is still available via `./scripts/deploy-gce.sh` if you want to pass
 
 ## 3. Notes
 
-- API is configured with `PathBase=/freetool`.
+- API is configured to run at root path (`/`) with no path base.
 - Runtime data is bind-mounted from `${data_mount_path}` on a dedicated persistent disk.
 - Disk defaults: `30 GB` (`pd-balanced`) with `preserve_data_disk_on_destroy=true`.
 - `e2-micro` is viable but memory headroom is limited; monitor usage after enabling production traffic.

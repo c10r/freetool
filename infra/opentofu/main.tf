@@ -219,7 +219,7 @@ resource "google_compute_health_check" "freetool" {
 
   http_health_check {
     port         = 8080
-    request_path = "/freetool/swagger/index.html"
+    request_path = "/swagger/index.html"
   }
 }
 
@@ -265,11 +265,6 @@ resource "google_compute_url_map" "freetool" {
   path_matcher {
     name            = "freetool"
     default_service = google_compute_backend_service.freetool.id
-
-    path_rule {
-      paths   = ["/freetool", "/freetool/*"]
-      service = google_compute_backend_service.freetool.id
-    }
   }
 }
 

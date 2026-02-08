@@ -16,7 +16,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <DevModeGate>
-        <BrowserRouter basename="/freetool">
+        <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/spaces" element={<Index />} />

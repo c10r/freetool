@@ -19,7 +19,7 @@ output "load_balancer_ip" {
 }
 
 output "https_url" {
-  value       = "https://${var.domain_name}/freetool/"
+  value       = "https://${var.domain_name}/"
   description = "Public Freetool URL"
 }
 

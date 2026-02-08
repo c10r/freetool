@@ -644,7 +644,7 @@ npm run check
 
 ## Deployment
 
-Freetool is designed to run behind **Google Cloud IAP** at the `/freetool` path.
+Freetool is designed to run behind **Google Cloud IAP** at the root path (`/`).
 
 **Authentication:** IAP sets trusted identity headers for authenticated users, and the app uses those headers for JIT provisioning and authorization.
 

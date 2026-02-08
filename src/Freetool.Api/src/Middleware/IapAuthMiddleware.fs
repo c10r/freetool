@@ -139,8 +139,12 @@ type IapAuthMiddleware(next: RequestDelegate, logger: ILogger<IapAuthMiddleware>
 
             let parsedToken = handler.ReadJwtToken(jwtAssertion)
 
-            if parsedToken.Header.Alg <> SecurityAlgorithms.RsaSha256 then
-                Error $"Unsupported JWT algorithm '{parsedToken.Header.Alg}'. Expected RS256."
+            let isSupportedAlgorithm =
+                parsedToken.Header.Alg = SecurityAlgorithms.EcdsaSha256
+                || parsedToken.Header.Alg = SecurityAlgorithms.RsaSha256
+
+            if not isSupportedAlgorithm then
+                Error $"Unsupported JWT algorithm '{parsedToken.Header.Alg}'. Expected ES256."
             else
                 let validationParameters = TokenValidationParameters()
                 validationParameters.ValidateIssuerSigningKey <- true

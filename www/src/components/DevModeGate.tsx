@@ -50,7 +50,7 @@ function DevUserSelector() {
   useEffect(() => {
     if (users && users.length > 0) {
       setDevUserId(users[0].id);
-      window.location.href = "/freetool";
+      window.location.href = "/";
     }
   }, [users]);
 
