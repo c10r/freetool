@@ -32,7 +32,9 @@ REMOTE_DIR="${REMOTE_DIR:-~/freetool}"
 TAG="${TAG:-$(git rev-parse --short HEAD)}"
 REGISTRY_HOST="${GCP_REGION}-docker.pkg.dev"
 IMAGE_URI="${REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REPO}/${IMAGE_NAME}:${TAG}"
+LATEST_IMAGE_URI="${REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REPO}/${IMAGE_NAME}:latest"
 USE_IAP_TUNNEL="${USE_IAP_TUNNEL:-true}"
+PUBLISH_LATEST="${PUBLISH_LATEST:-true}"
 
 ssh_iap_flag=()
 if [[ "${USE_IAP_TUNNEL}" == "true" ]]; then
@@ -43,6 +45,12 @@ echo "Building image: ${IMAGE_URI}"
 gcloud auth configure-docker "${REGISTRY_HOST}" --quiet
 docker build --platform linux/amd64 -f src/Freetool.Api/Dockerfile -t "${IMAGE_URI}" .
 docker push "${IMAGE_URI}"
+
+if [[ "${PUBLISH_LATEST}" == "true" && "${TAG}" != "latest" ]]; then
+  echo "Tagging and pushing: ${LATEST_IMAGE_URI}"
+  docker tag "${IMAGE_URI}" "${LATEST_IMAGE_URI}"
+  docker push "${LATEST_IMAGE_URI}"
+fi
 
 tmp_env_file="$(mktemp)"
 cat > "${tmp_env_file}" <<EOF

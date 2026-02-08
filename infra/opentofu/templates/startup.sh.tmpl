@@ -112,7 +112,19 @@ FREETOOL_VALIDATE_IAP_JWT=${validate_iap_jwt}
 FREETOOL_DATA_ROOT=${data_mount_path}
 ENVFILE
 
-cat > /etc/systemd/system/freetool-compose.service <<UNIT
+cat > /opt/freetool/docker-registry-login.sh <<LOGIN
+#!/usr/bin/env bash
+set -euo pipefail
+
+curl -fsS -H "Metadata-Flavor: Google" \
+  "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])' \
+  | /usr/bin/docker login -u oauth2accesstoken --password-stdin https://${artifact_registry_location}-docker.pkg.dev
+LOGIN
+
+chmod 0755 /opt/freetool/docker-registry-login.sh
+
+cat > /etc/systemd/system/freetool-compose.service <<'UNIT'
 [Unit]
 Description=Freetool Docker Compose stack
 After=docker.service
@@ -122,8 +134,7 @@ Requires=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/freetool
-ExecStartPre=/usr/bin/gcloud auth configure-docker ${artifact_registry_location}-docker.pkg.dev --quiet
-ExecStartPre=/bin/bash -lc 'TOKEN="$$(curl -fsS -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" | sed -n '"'"'s/.*"access_token":"\([^"]*\)".*/\1/p'"'"')"; if [ -z "$${TOKEN}" ]; then exit 1; fi; echo "$${TOKEN}" | /usr/bin/docker login -u oauth2accesstoken --password-stdin https://${artifact_registry_location}-docker.pkg.dev'
+ExecStartPre=/opt/freetool/docker-registry-login.sh
 ExecStartPre=/bin/bash -lc 'if /usr/bin/docker compose version >/dev/null 2>&1; then /usr/bin/docker compose -f docker-compose.gce.yml --env-file .env pull; else /usr/bin/docker-compose -f docker-compose.gce.yml --env-file .env pull; fi'
 ExecStart=/bin/bash -lc 'if /usr/bin/docker compose version >/dev/null 2>&1; then /usr/bin/docker compose -f docker-compose.gce.yml --env-file .env up -d --remove-orphans; else /usr/bin/docker-compose -f docker-compose.gce.yml --env-file .env up -d --remove-orphans; fi'
 ExecStop=/bin/bash -lc 'if /usr/bin/docker compose version >/dev/null 2>&1; then /usr/bin/docker compose -f docker-compose.gce.yml --env-file .env down; else /usr/bin/docker-compose -f docker-compose.gce.yml --env-file .env down; fi'
