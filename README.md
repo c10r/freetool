@@ -852,13 +852,78 @@ F# requires dependencies to be ordered correctly in `.fsproj` files. Always ensu
 - Keep business logic pure and free of infrastructure concerns
 - Use meaningful commit messages following [Conventional Commits](https://www.conventionalcommits.org/)
 
-# 💻 Deploying
+# 💻 Deploying (GCE + IAP)
 
-Freetool is meant to be deployed behind **Google Cloud IAP** (Identity-Aware Proxy) at the root path (`/`).
+Freetool is designed to run behind **Google Cloud IAP** at the root path (`/`) on GCE.
 
-IAP injects trusted identity headers (for example `X-Goog-Authenticated-User-Email`), and the API provisions/authorizes users from those headers.
+Use OpenTofu + deployment scripts in this repo:
 
-Production requires JWT assertion validation to be configured with `Auth:IAP:JwtAudience` (plus optional issuer/certs overrides).
+- Infra provisioning: `infra/opentofu/`
+- Deployment guide: `docs/gce-iap-deploy.md`
+- App deploy script (uses OpenTofu outputs): `scripts/deploy-gce-from-tofu.sh`
+
+## 🔐 Production Auth Flow (IAP + Google Directory DWD)
+
+At runtime, authentication and authorization flow works like this:
+
+1. User accesses the app through the HTTPS load balancer protected by IAP.
+2. IAP injects identity headers (`X-Goog-Authenticated-User-Email`, etc.) and JWT assertion header.
+3. `IapAuthMiddleware` validates the IAP JWT assertion (`Auth:IAP:*` config).
+4. Middleware extracts user identity and IAP group headers.
+5. If Google Directory integration is enabled (`Auth:GoogleDirectory:Enabled=true`), `GoogleDirectoryIdentityService`:
+   - obtains a token from service account credentials (ADC or credentials file),
+   - optionally impersonates delegated admin user (`AdminUserEmail`) for domain-wide delegation,
+   - calls Admin SDK Directory API (`users.get?projection=FULL`),
+   - derives group keys from:
+     - org unit path (`ou:/...`),
+     - custom schemas (`custom:<schema>.<field>[:value]`).
+6. Middleware merges IAP group keys + Directory-derived keys, then calls `IdentityProvisioningService`.
+7. Provisioning ensures user exists and reconciles group-key to space mappings.
+8. OpenFGA tuples determine effective access (org admin, moderator, member, app/resource/folder permissions).
+9. Controllers enforce access via authorization checks.
+
+## 🧾 Required Runtime Configuration
+
+Minimum production settings:
+
+```bash
+Auth__IAP__ValidateJwt=true
+Auth__IAP__JwtAudience=/projects/<project-number>/global/backendServices/<backend-service-id>
+```
+
+To enable Google Directory lookups:
+
+```bash
+Auth__GoogleDirectory__Enabled=true
+Auth__GoogleDirectory__AdminUserEmail=<delegated-admin@your-domain>
+Auth__GoogleDirectory__Scope=https://www.googleapis.com/auth/admin.directory.user.readonly
+Auth__GoogleDirectory__OrgUnitKeyPrefix=ou
+Auth__GoogleDirectory__IncludeOrgUnitHierarchy=true
+Auth__GoogleDirectory__CustomAttributeKeyPrefix=custom
+Auth__GoogleDirectory__CredentialsFile=/var/secrets/google/directory-dwd-key.json
+```
+
+If `Auth__GoogleDirectory__Enabled` is missing/false, Directory API calls are skipped and OU/custom-schema mappings will not work.
+
+## 🛠️ Quick Production Verification
+
+1. Confirm env vars in running container:
+   ```bash
+   sudo docker exec freetool-api printenv | grep -E 'Auth__IAP|Auth__GoogleDirectory|FREETOOL_DEV_MODE'
+   ```
+2. Trigger a request:
+   ```bash
+   curl -i https://<your-host>/user/me
+   ```
+3. Check logs for Directory failures:
+   ```bash
+   sudo docker logs --since 30m freetool-api 2>&1 | grep -E "Failed to obtain Google Directory access token|Google Directory lookup failed|lookup failed unexpectedly"
+   ```
+4. Check group-to-space mappings in DB:
+   ```bash
+   sudo docker cp freetool-api:/app/data/freetool.db /tmp/freetool.db.work
+   sqlite3 -header -column /tmp/freetool.db.work "select GroupKey, SpaceId, IsActive from IdentityGroupSpaceMappings order by CreatedAt desc;"
+   ```
 
 # 📄 License & 🙏 Acknowledgements
 
