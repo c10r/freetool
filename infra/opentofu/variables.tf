@@ -36,8 +36,8 @@ variable "oauth2_client_id" {
   default     = ""
 
   validation {
-    condition     = var.create_iap_oauth_client || trimspace(var.oauth2_client_id) != ""
-    error_message = "Set oauth2_client_id when create_iap_oauth_client=false."
+    condition     = trimspace(var.oauth2_client_id) != ""
+    error_message = "Set oauth2_client_id."
   }
 }
 
@@ -48,42 +48,8 @@ variable "oauth2_client_secret" {
   default     = ""
 
   validation {
-    condition     = var.create_iap_oauth_client || trimspace(var.oauth2_client_secret) != ""
-    error_message = "Set oauth2_client_secret when create_iap_oauth_client=false."
-  }
-}
-
-variable "create_iap_oauth_client" {
-  description = "Create IAP OAuth brand/client via IaC instead of using pre-created credentials"
-  type        = bool
-  default     = false
-}
-
-variable "iap_application_title" {
-  description = "Application title for IAP brand when create_iap_oauth_client=true"
-  type        = string
-  default     = "Freetool"
-}
-
-variable "iap_support_email" {
-  description = "Support email for IAP brand when create_iap_oauth_client=true"
-  type        = string
-  default     = ""
-
-  validation {
-    condition     = !var.create_iap_oauth_client || trimspace(var.iap_support_email) != ""
-    error_message = "Set iap_support_email when create_iap_oauth_client=true."
-  }
-}
-
-variable "project_number" {
-  description = "GCP project number (required only when create_iap_oauth_client=true)"
-  type        = string
-  default     = ""
-
-  validation {
-    condition     = !var.create_iap_oauth_client || trimspace(var.project_number) != ""
-    error_message = "Set project_number when create_iap_oauth_client=true."
+    condition     = trimspace(var.oauth2_client_secret) != ""
+    error_message = "Set oauth2_client_secret."
   }
 }
 

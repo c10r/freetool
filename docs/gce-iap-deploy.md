@@ -23,9 +23,7 @@ This repo now includes infrastructure as code under `infra/opentofu`.
 - `gcloud` installed and authenticated
 - Billing-enabled GCP project
 - A domain for TLS (or prepare one)
-- IAP OAuth client ID/secret
-
-Note: Google deprecated the API behind `google_iap_brand` / `google_iap_client` after July 2025. This stack supports those resources only as legacy fallback; prefer providing a pre-created OAuth client ID/secret (`create_iap_oauth_client=false`).
+- IAP OAuth client ID/secret (pre-created in GCP Console)
 
 ## 1. Apply Infra (one-time, then incremental)
 

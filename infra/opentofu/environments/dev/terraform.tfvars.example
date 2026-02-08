@@ -19,17 +19,9 @@ artifact_cleanup_policy_dry_run = false
 artifact_keep_recent_count      = 5
 artifact_delete_older_than      = "7d"
 
-# Recommended: use existing OAuth client credentials.
-# Google deprecated the API used by google_iap_brand/google_iap_client after July 2025.
-create_iap_oauth_client = false
-oauth2_client_id        = "your-iap-oauth-client-id.apps.googleusercontent.com"
-oauth2_client_secret    = "your-iap-oauth-client-secret"
-
-# Optional legacy mode (may stop working due to Google API deprecation):
-# create_iap_oauth_client = true
-# project_number         = "123456789012"
-# iap_application_title   = "Freetool"
-# iap_support_email       = "admin@example.com"
+# IAP OAuth client credentials (create client in GCP Console)
+oauth2_client_id     = "your-iap-oauth-client-id.apps.googleusercontent.com"
+oauth2_client_secret = "your-iap-oauth-client-secret"
 
 # Application auth config
 # First apply can use validate_iap_jwt = false and empty audience.

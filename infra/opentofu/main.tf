@@ -1,10 +1,8 @@
 locals {
-  lb_name           = "${var.name_prefix}-lb"
-  vm_name           = "${var.name_prefix}-vm"
-  data_disk_name    = "${var.name_prefix}-data"
-  data_disk_id      = var.preserve_data_disk_on_destroy ? google_compute_disk.data_protected[0].id : google_compute_disk.data_unprotected[0].id
-  iap_client_id     = var.create_iap_oauth_client ? google_iap_client.freetool[0].client_id : var.oauth2_client_id
-  iap_client_secret = var.create_iap_oauth_client ? google_iap_client.freetool[0].secret : var.oauth2_client_secret
+  lb_name        = "${var.name_prefix}-lb"
+  vm_name        = "${var.name_prefix}-vm"
+  data_disk_name = "${var.name_prefix}-data"
+  data_disk_id   = var.preserve_data_disk_on_destroy ? google_compute_disk.data_protected[0].id : google_compute_disk.data_unprotected[0].id
   labels = {
     app         = "freetool"
     managed_by  = "opentofu"
@@ -219,23 +217,6 @@ resource "google_compute_health_check" "freetool" {
   }
 }
 
-resource "google_iap_brand" "freetool" {
-  count = var.create_iap_oauth_client ? 1 : 0
-
-  provider          = google-beta
-  application_title = var.iap_application_title
-  support_email     = var.iap_support_email
-  project           = var.project_number
-}
-
-resource "google_iap_client" "freetool" {
-  count = var.create_iap_oauth_client ? 1 : 0
-
-  provider     = google-beta
-  display_name = "${var.name_prefix}-iap-client"
-  brand        = google_iap_brand.freetool[0].name
-}
-
 resource "google_compute_backend_service" "freetool" {
   name                  = "${var.name_prefix}-backend"
   protocol              = "HTTP"
@@ -252,8 +233,8 @@ resource "google_compute_backend_service" "freetool" {
 
   iap {
     enabled              = true
-    oauth2_client_id     = local.iap_client_id
-    oauth2_client_secret = local.iap_client_secret
+    oauth2_client_id     = var.oauth2_client_id
+    oauth2_client_secret = var.oauth2_client_secret
   }
 
   depends_on = [google_project_service.required]
