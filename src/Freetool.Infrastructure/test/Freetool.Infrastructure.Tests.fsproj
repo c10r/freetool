@@ -17,6 +17,7 @@
     <Compile Include="AuditControllerTests.fs" />
     <Compile Include="EventRepositoryTests.fs" />
     <Compile Include="SpaceRepositoryTests.fs" />
+    <Compile Include="FolderRepositoryTests.fs" />
     <Compile Include="FolderControllerTests.fs" />
     <Compile Include="AutoTracingTests.fs" />
     <Compile Include="IapAuthMiddlewareTests.fs" />
