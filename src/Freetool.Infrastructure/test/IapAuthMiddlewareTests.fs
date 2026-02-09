@@ -324,13 +324,15 @@ let ``Returns 401 when email format invalid`` () : Task =
     }
 
 [<Fact>]
-let ``Creates new user when email not in database`` () : Task =
+let ``Creates new user with IAP display name when email not in database`` () : Task =
     task {
         let email = "newuser@example.com"
+        let displayName = "New User"
 
         let context =
             createTestHttpContext ()
             |> fun c -> addHeader c "X-Goog-Authenticated-User-Email" $"accounts.google.com:{email}"
+            |> fun c -> addHeader c "X-Goog-Authenticated-User-Name" displayName
 
         let userRepo = MockUserRepository(Map.empty, Ok(), Ok())
         let authService = MockAuthorizationService(Ok())
@@ -346,6 +348,7 @@ let ``Creates new user when email not in database`` () : Task =
         let addedUsers = userRepo.GetAddedUsers()
         Assert.Single(addedUsers) |> ignore
         Assert.Equal(email, addedUsers.[0].State.Email)
+        Assert.Equal(displayName, addedUsers.[0].State.Name)
 
         Assert.True(context.Items.ContainsKey("UserId"))
     }

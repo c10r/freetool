@@ -75,6 +75,14 @@ type IdentityProvisioningService
         |> List.filter (fun key -> not (String.IsNullOrWhiteSpace key))
         |> List.distinct
 
+    let normalizeDisplayName (name: string option) =
+        name
+        |> Option.bind (fun value ->
+            if String.IsNullOrWhiteSpace value then
+                None
+            else
+                Some(value.Trim()))
+
     let deriveSpaceNameFromOrgUnitPath (orgUnitPath: string) =
         let baseName =
             orgUnitPath.Trim().Trim('/')
@@ -349,7 +357,9 @@ type IdentityProvisioningService
 
                     match existingUser with
                     | None ->
-                        let userName = context.Name |> Option.defaultValue context.Email
+                        let userName =
+                            normalizeDisplayName context.Name |> Option.defaultValue context.Email
+
                         let newUser = User.create userName validEmail context.ProfilePicUrl
 
                         match! userRepository.AddAsync newUser with
@@ -361,7 +371,8 @@ type IdentityProvisioningService
                             return Ok newUser.State.Id
 
                     | Some user when User.isInvitedPlaceholder user ->
-                        let userName = context.Name |> Option.defaultValue context.Email
+                        let userName =
+                            normalizeDisplayName context.Name |> Option.defaultValue context.Email
 
                         match User.activate userName context.ProfilePicUrl user with
                         | Error err -> return Error(ActivateUserFailed(domainErrorToMessage err))
