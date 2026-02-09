@@ -172,9 +172,9 @@ type IdentityProvisioningService
 
                     let! targetSpaceOption = spaceRepository.GetByNameAsync selectedSpaceName
 
-                    let! targetSpaceId =
+                    let! targetSpace =
                         match targetSpaceOption with
-                        | Some existingSpace -> Task.FromResult(Some existingSpace.State.Id)
+                        | Some existingSpace -> Task.FromResult(Some(existingSpace.State.Id, false))
                         | None ->
                             match Space.create userId selectedSpaceName userId None with
                             | Error error ->
@@ -196,25 +196,30 @@ type IdentityProvisioningService
                                         )
 
                                         return None
-                                    | Ok() -> return Some newSpace.State.Id
+                                    | Ok() -> return Some(newSpace.State.Id, true)
                                 }
 
-                    match targetSpaceId with
+                    match targetSpace with
                     | None -> return ()
-                    | Some spaceId ->
+                    | Some(spaceId, wasCreatedNow) ->
                         let spaceIdStr = spaceId.Value.ToString()
                         let userIdStr = userId.Value.ToString()
 
                         try
-                            do!
-                                authService.CreateRelationshipsAsync(
+                            let tuples =
+                                if wasCreatedNow then
                                     [ { Subject = Organization "default"
                                         Relation = SpaceOrganization
                                         Object = SpaceObject spaceIdStr }
                                       { Subject = User userIdStr
                                         Relation = SpaceModerator
                                         Object = SpaceObject spaceIdStr } ]
-                                )
+                                else
+                                    [ { Subject = Organization "default"
+                                        Relation = SpaceOrganization
+                                        Object = SpaceObject spaceIdStr } ]
+
+                            do! authService.CreateRelationshipsAsync tuples
                         with ex ->
                             logger.LogWarning(
                                 "Failed to configure OpenFGA tuples for auto-provisioned space {SpaceId}: {Error}",
