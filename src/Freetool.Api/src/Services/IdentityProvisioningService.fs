@@ -83,21 +83,12 @@ type IdentityProvisioningService
             else
                 Some(value.Trim()))
 
-    let deriveSpaceNameFromOrgUnitPath (orgUnitPath: string) =
-        let baseName =
-            orgUnitPath.Trim().Trim('/')
-            |> fun value -> value.Replace("/", " / ")
-            |> fun value ->
-                if String.IsNullOrWhiteSpace value then
-                    "Default Space"
-                else
-                    value
-
-        if baseName.Length <= 100 then
-            baseName
+    let truncateSpaceName (name: string) (hashSeed: string) =
+        if name.Length <= 100 then
+            name
         else
             use sha = SHA256.Create()
-            let bytes = Encoding.UTF8.GetBytes(orgUnitPath)
+            let bytes = Encoding.UTF8.GetBytes(hashSeed)
 
             let hash =
                 sha.ComputeHash(bytes)
@@ -106,8 +97,24 @@ type IdentityProvisioningService
                 |> String.concat ""
 
             let maxPrefix = 100 - (hash.Length + 1)
-            let prefix = baseName.Substring(0, maxPrefix).TrimEnd()
+            let prefix = name.Substring(0, maxPrefix).TrimEnd()
             $"{prefix}-{hash}"
+
+    let getOrgUnitSegments (orgUnitPath: string) =
+        orgUnitPath.Trim().Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries)
+        |> Array.map (fun segment -> segment.Trim())
+        |> Array.filter (fun segment -> not (String.IsNullOrWhiteSpace segment))
+        |> Array.toList
+
+    let deriveSpaceNamesFromOrgUnitPath (orgUnitPath: string) =
+        let segments = getOrgUnitSegments orgUnitPath
+
+        match segments with
+        | [] -> "Default Space", "Default Space"
+        | _ ->
+            let preferredName = segments |> List.last
+            let fullPathName = String.concat "/" segments
+            truncateSpaceName preferredName orgUnitPath, truncateSpaceName fullPathName orgUnitPath
 
     let getCurrentOrgUnitGroupKey (groupKeys: string list) =
         let ouPrefix =
@@ -152,15 +159,24 @@ type IdentityProvisioningService
                         orgUnitGroupKey.Split(':', 2, StringSplitOptions.None)
                         |> fun parts -> if parts.Length = 2 then parts.[1] else orgUnitGroupKey
 
-                    let newSpaceName = deriveSpaceNameFromOrgUnitPath orgUnitPath
+                    let preferredSpaceName, fallbackSpaceName =
+                        deriveSpaceNamesFromOrgUnitPath orgUnitPath
 
-                    let! targetSpaceOption = spaceRepository.GetByNameAsync newSpaceName
+                    let! preferredSpaceOption = spaceRepository.GetByNameAsync preferredSpaceName
+
+                    let selectedSpaceName =
+                        if preferredSpaceOption.IsNone || preferredSpaceName = fallbackSpaceName then
+                            preferredSpaceName
+                        else
+                            fallbackSpaceName
+
+                    let! targetSpaceOption = spaceRepository.GetByNameAsync selectedSpaceName
 
                     let! targetSpaceId =
                         match targetSpaceOption with
                         | Some existingSpace -> Task.FromResult(Some existingSpace.State.Id)
                         | None ->
-                            match Space.create userId newSpaceName userId None with
+                            match Space.create userId selectedSpaceName userId None with
                             | Error error ->
                                 logger.LogWarning(
                                     "Failed to create auto-provisioned space for OU key {OrgUnitGroupKey}: {Error}",
