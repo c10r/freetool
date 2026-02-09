@@ -326,7 +326,11 @@ type IapAuthMiddleware(next: RequestDelegate, logger: ILogger<IapAuthMiddleware>
                         let directoryIdentityService =
                             context.RequestServices.GetRequiredService<IGoogleDirectoryIdentityService>()
 
-                        let! directoryGroupKeys = directoryIdentityService.GetIdentityGroupKeysAsync(userEmail)
+                        let! directoryIdentityData = directoryIdentityService.GetIdentityDataAsync(userEmail)
+                        let directoryGroupKeys = directoryIdentityData.GroupKeys
+
+                        let resolvedProfilePicUrl =
+                            directoryIdentityData.ProfilePicUrl |> Option.orElse profilePicUrl
 
                         let groupKeys = (iapGroupKeys @ directoryGroupKeys) |> List.distinct
 
@@ -337,7 +341,7 @@ type IapAuthMiddleware(next: RequestDelegate, logger: ILogger<IapAuthMiddleware>
                             provisioningService.EnsureUserAsync
                                 { Email = userEmail
                                   Name = userName
-                                  ProfilePicUrl = profilePicUrl
+                                  ProfilePicUrl = resolvedProfilePicUrl
                                   GroupKeys = groupKeys
                                   Source = "iap" }
 

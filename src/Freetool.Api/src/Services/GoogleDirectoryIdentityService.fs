@@ -11,8 +11,13 @@ open Microsoft.Extensions.Logging
 open Google.Apis.Auth.OAuth2
 open Freetool.Api
 
+type GoogleDirectoryIdentityData =
+    { GroupKeys: string list
+      ProfilePicUrl: string option }
+
 type IGoogleDirectoryIdentityService =
     abstract member GetIdentityGroupKeysAsync: email: string -> Task<string list>
+    abstract member GetIdentityDataAsync: email: string -> Task<GoogleDirectoryIdentityData>
 
 type GoogleDirectoryIdentityService
     (
@@ -105,7 +110,20 @@ type GoogleDirectoryIdentityService
                 return Ok accessToken
         }
 
-    let getDirectoryGroupKeysAsync (email: string) =
+    let emptyIdentityData = { GroupKeys = []; ProfilePicUrl = None }
+
+    let tryGetStringProperty (propertyName: string) (element: JsonElement) =
+        match element.TryGetProperty(propertyName) with
+        | true, prop when prop.ValueKind = JsonValueKind.String ->
+            let value = prop.GetString()
+
+            if String.IsNullOrWhiteSpace value then
+                None
+            else
+                Some(value.Trim())
+        | _ -> None
+
+    let getDirectoryIdentityDataAsync (email: string) =
         task {
             let enabled =
                 configuration[ConfigurationKeys.Auth.GoogleDirectory.Enabled]
@@ -113,7 +131,7 @@ type GoogleDirectoryIdentityService
                 |> fun value -> tryParseBool value false
 
             if not enabled then
-                return []
+                return emptyIdentityData
             else
                 let adminUserEmail =
                     configuration[ConfigurationKeys.Auth.GoogleDirectory.AdminUserEmail]
@@ -155,7 +173,7 @@ type GoogleDirectoryIdentityService
                         errorMessage
                     )
 
-                    return []
+                    return emptyIdentityData
                 | Ok token ->
                     try
                         use client = httpClientFactory.CreateClient()
@@ -174,7 +192,7 @@ type GoogleDirectoryIdentityService
                                 body
                             )
 
-                            return []
+                            return emptyIdentityData
                         else
                             let! body = response.Content.ReadAsStringAsync()
                             use json = JsonDocument.Parse(body)
@@ -210,7 +228,13 @@ type GoogleDirectoryIdentityService
                                                 keys.Add($"{baseKey}:{value}")
                             | _ -> ()
 
-                            return keys |> Seq.distinct |> Seq.toList
+                            let directoryProfilePicUrl =
+                                tryGetStringProperty "thumbnailPhotoUrl" json.RootElement
+                                |> Option.orElseWith (fun () -> tryGetStringProperty "photoUrl" json.RootElement)
+
+                            return
+                                { GroupKeys = keys |> Seq.distinct |> Seq.toList
+                                  ProfilePicUrl = directoryProfilePicUrl }
                     with ex ->
                         logger.LogWarning(
                             "Google Directory lookup failed unexpectedly for {Email}: {Error}",
@@ -218,8 +242,15 @@ type GoogleDirectoryIdentityService
                             ex.Message
                         )
 
-                        return []
+                        return emptyIdentityData
         }
 
     interface IGoogleDirectoryIdentityService with
-        member _.GetIdentityGroupKeysAsync(email: string) : Task<string list> = getDirectoryGroupKeysAsync email
+        member _.GetIdentityGroupKeysAsync(email: string) : Task<string list> =
+            task {
+                let! identityData = getDirectoryIdentityDataAsync email
+                return identityData.GroupKeys
+            }
+
+        member _.GetIdentityDataAsync(email: string) : Task<GoogleDirectoryIdentityData> =
+            getDirectoryIdentityDataAsync email

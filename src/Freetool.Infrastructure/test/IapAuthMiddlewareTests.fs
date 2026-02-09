@@ -107,9 +107,12 @@ type MockIdentityGroupSpaceMappingRepository() =
         member _.DeleteAsync _ =
             Task.FromResult(Error(InvalidOperation "Not used in middleware tests"))
 
-type MockGoogleDirectoryIdentityService() =
+type MockGoogleDirectoryIdentityService(?identityData: GoogleDirectoryIdentityData) =
+    let identityData = defaultArg identityData { GroupKeys = []; ProfilePicUrl = None }
+
     interface IGoogleDirectoryIdentityService with
-        member _.GetIdentityGroupKeysAsync _ = Task.FromResult([])
+        member _.GetIdentityGroupKeysAsync _ = Task.FromResult(identityData.GroupKeys)
+        member _.GetIdentityDataAsync _ = Task.FromResult(identityData)
 
 type MockSpaceRepository() =
     interface ISpaceRepository with
@@ -138,12 +141,13 @@ let addHeader (context: HttpContext) (key: string) (value: string) =
     context.Request.Headers.[key] <- StringValues(value)
     context
 
-let setupServices
+let setupServicesWithDirectory
     (context: HttpContext)
     (userRepo: IUserRepository)
     (authService: IAuthorizationService)
     (orgAdminEmail: string option)
     (additionalConfig: (string * string) list)
+    (directoryIdentityData: GoogleDirectoryIdentityData option)
     =
     let services = ServiceCollection()
     services.AddSingleton<IUserRepository>(userRepo) |> ignore
@@ -164,7 +168,9 @@ let setupServices
     services.AddSingleton<IIdentityGroupSpaceMappingRepository>(MockIdentityGroupSpaceMappingRepository())
     |> ignore
 
-    services.AddSingleton<IGoogleDirectoryIdentityService>(MockGoogleDirectoryIdentityService())
+    services.AddSingleton<IGoogleDirectoryIdentityService>(
+        MockGoogleDirectoryIdentityService(?identityData = directoryIdentityData)
+    )
     |> ignore
 
     services.AddSingleton<ISpaceRepository>(MockSpaceRepository()) |> ignore
@@ -196,6 +202,15 @@ let setupServices
     let serviceProvider = services.BuildServiceProvider()
     context.RequestServices <- serviceProvider
     context
+
+let setupServices
+    (context: HttpContext)
+    (userRepo: IUserRepository)
+    (authService: IAuthorizationService)
+    (orgAdminEmail: string option)
+    (additionalConfig: (string * string) list)
+    =
+    setupServicesWithDirectory context userRepo authService orgAdminEmail additionalConfig None
 
 let getResponseBody (context: HttpContext) =
     context.Response.Body.Seek(0L, SeekOrigin.Begin) |> ignore
@@ -563,6 +578,35 @@ let ``Uses configured picture header for avatar`` () : Task =
         let addedUsers = userRepo.GetAddedUsers()
         Assert.Single(addedUsers) |> ignore
         Assert.Equal(Some profilePicUrl, addedUsers.[0].State.ProfilePicUrl)
+    }
+
+[<Fact>]
+let ``Uses directory profile picture for avatar when available`` () : Task =
+    task {
+        let email = "newuser@example.com"
+        let directoryProfilePicUrl = "https://lh3.googleusercontent.com/a-/directory-avatar"
+
+        let context =
+            createTestHttpContext ()
+            |> fun c -> addHeader c "X-Goog-Authenticated-User-Email" email
+
+        let userRepo = MockUserRepository(Map.empty, Ok(), Ok())
+        let authService = MockAuthorizationService(Ok())
+
+        let directoryIdentityData: GoogleDirectoryIdentityData =
+            { GroupKeys = []
+              ProfilePicUrl = Some directoryProfilePicUrl }
+
+        setupServicesWithDirectory context userRepo authService None [] (Some directoryIdentityData)
+        |> ignore
+
+        let middleware, _ = createMiddleware ()
+
+        do! middleware.InvokeAsync(context)
+
+        let addedUsers = userRepo.GetAddedUsers()
+        Assert.Single(addedUsers) |> ignore
+        Assert.Equal(Some directoryProfilePicUrl, addedUsers.[0].State.ProfilePicUrl)
     }
 
 [<Fact>]
