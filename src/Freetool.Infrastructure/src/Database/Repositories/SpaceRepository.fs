@@ -11,6 +11,13 @@ open Freetool.Infrastructure.Database
 
 type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventRepository) =
 
+    let normalizeMemberIds (memberIds: UserId list) : UserId list =
+        if isNull (box memberIds) then [] else memberIds
+
+    let ensureMemberIdsInitialized (spaceData: SpaceData) : unit =
+        if isNull (box spaceData.MemberIds) then
+            spaceData.MemberIds <- []
+
     interface ISpaceRepository with
 
         member _.GetByIdAsync(spaceId: SpaceId) : Task<ValidatedSpace option> =
@@ -20,6 +27,8 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                 match Option.ofObj spaceData with
                 | None -> return None
                 | Some data ->
+                    ensureMemberIdsInitialized data
+
                     // Get associated space-member relationships
                     let! spaceMemberEntities = context.SpaceMembers.Where(fun sm -> sm.SpaceId = spaceId).ToListAsync()
 
@@ -38,8 +47,13 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                 match Option.ofObj spaceData with
                 | None -> return None
                 | Some data ->
+                    ensureMemberIdsInitialized data
+
+                    // Capture scalar ID first to avoid closing over full F# record in EF query expression
+                    let spaceId = data.Id
+
                     // Get associated space-member relationships
-                    let! spaceMemberEntities = context.SpaceMembers.Where(fun sm -> sm.SpaceId = data.Id).ToListAsync()
+                    let! spaceMemberEntities = context.SpaceMembers.Where(fun sm -> sm.SpaceId = spaceId).ToListAsync()
 
                     // Convert SpaceMember entities to UserIds
                     let memberIds = spaceMemberEntities |> Seq.map (fun sm -> sm.UserId) |> Seq.toList
@@ -73,6 +87,7 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                     return
                         spaceDatas
                         |> Seq.map (fun data ->
+                            ensureMemberIdsInitialized data
                             data.MemberIds <- membersBySpaceId |> Map.tryFind data.Id |> Option.defaultValue []
 
                             Space.fromData data)
@@ -111,6 +126,7 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                     return
                         spaceDatas
                         |> Seq.map (fun data ->
+                            ensureMemberIdsInitialized data
                             data.MemberIds <- membersBySpaceId |> Map.tryFind data.Id |> Option.defaultValue []
 
                             Space.fromData data)
@@ -145,6 +161,7 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                     return
                         spaceDatas
                         |> Seq.map (fun data ->
+                            ensureMemberIdsInitialized data
                             data.MemberIds <- membersBySpaceId |> Map.tryFind data.Id |> Option.defaultValue []
 
                             Space.fromData data)
@@ -158,8 +175,10 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                     context.Spaces.Add space.State |> ignore
 
                     // 2. Save space-member relationships
+                    let memberIds = normalizeMemberIds space.State.MemberIds
+
                     let spaceMemberEntities =
-                        space.State.MemberIds
+                        memberIds
                         |> List.map (fun userId ->
                             { Id = System.Guid.NewGuid()
                               UserId = userId
@@ -207,8 +226,10 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
                         context.SpaceMembers.RemoveRange(existingSpaceMembers)
 
                         // Add new relationships
+                        let memberIds = normalizeMemberIds space.State.MemberIds
+
                         let spaceMemberEntities =
-                            space.State.MemberIds
+                            memberIds
                             |> List.map (fun userId ->
                                 { Id = System.Guid.NewGuid()
                                   UserId = userId
