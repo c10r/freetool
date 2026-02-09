@@ -159,24 +159,15 @@ type IdentityProvisioningService
                         orgUnitGroupKey.Split(':', 2, StringSplitOptions.None)
                         |> fun parts -> if parts.Length = 2 then parts.[1] else orgUnitGroupKey
 
-                    let preferredSpaceName, fallbackSpaceName =
-                        deriveSpaceNamesFromOrgUnitPath orgUnitPath
+                    let preferredSpaceName, _ = deriveSpaceNamesFromOrgUnitPath orgUnitPath
 
-                    let! preferredSpaceOption = spaceRepository.GetByNameAsync preferredSpaceName
-
-                    let selectedSpaceName =
-                        if preferredSpaceOption.IsNone || preferredSpaceName = fallbackSpaceName then
-                            preferredSpaceName
-                        else
-                            fallbackSpaceName
-
-                    let! targetSpaceOption = spaceRepository.GetByNameAsync selectedSpaceName
+                    let! targetSpaceOption = spaceRepository.GetByNameAsync preferredSpaceName
 
                     let! targetSpace =
                         match targetSpaceOption with
                         | Some existingSpace -> Task.FromResult(Some(existingSpace.State.Id, false))
                         | None ->
-                            match Space.create userId selectedSpaceName userId None with
+                            match Space.create userId preferredSpaceName userId None with
                             | Error error ->
                                 logger.LogWarning(
                                     "Failed to create auto-provisioned space for OU key {OrgUnitGroupKey}: {Error}",

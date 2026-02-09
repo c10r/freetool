@@ -320,7 +320,7 @@ let ``EnsureUserAsync creates space from final OU segment when no collision`` ()
     }
 
 [<Fact>]
-let ``EnsureUserAsync falls back to full OU path when final segment space name collides`` () : Task =
+let ``EnsureUserAsync reuses final OU segment when matching space name already exists`` () : Task =
     task {
         let existingModerator = createUser "existing.mod@example.com" "Existing Moderator"
 
@@ -365,22 +365,42 @@ let ``EnsureUserAsync falls back to full OU path when final segment space name c
         | Error error ->
             Assert.Fail($"Expected provisioning to succeed, but got: {IdentityProvisioningError.toMessage error}")
         | Ok provisionedUserId ->
-            let fallbackSpace = spaceRepositoryImpl.GetByName("Support/Support Managers")
-            Assert.True(fallbackSpace.IsSome, "Expected fallback space name 'Support/Support Managers' to be used")
+            let targetSpace = spaceRepositoryImpl.GetByName("Support Managers")
+            Assert.True(targetSpace.IsSome, "Expected existing space 'Support Managers' to be reused")
 
-            match fallbackSpace with
+            Assert.True(
+                spaceRepositoryImpl.GetByName("Support/Support Managers").IsNone,
+                "Expected no fallback space name to be created"
+            )
+
+            match targetSpace with
             | None -> ()
             | Some space ->
-                Assert.Equal(provisionedUserId, space.State.ModeratorUserId)
+                Assert.Equal(existingModerator.State.Id, space.State.ModeratorUserId)
 
-                let hasModeratorTuple =
+                let hasModeratorTupleForNewUser =
                     authServiceImpl.CreatedTuples
                     |> List.exists (fun tuple ->
                         tuple.Subject = User(provisionedUserId.Value.ToString())
                         && tuple.Relation = SpaceModerator
                         && tuple.Object = SpaceObject(space.State.Id.Value.ToString()))
 
-                Assert.True(hasModeratorTuple, "Expected OpenFGA moderator relationship to be created")
+                Assert.False(
+                    hasModeratorTupleForNewUser,
+                    "Expected no moderator relationship for new user when target space already exists"
+                )
+
+                let hasMemberTupleForNewUser =
+                    authServiceImpl.CreatedTuples
+                    |> List.exists (fun tuple ->
+                        tuple.Subject = User(provisionedUserId.Value.ToString())
+                        && tuple.Relation = SpaceMember
+                        && tuple.Object = SpaceObject(space.State.Id.Value.ToString()))
+
+                Assert.True(
+                    hasMemberTupleForNewUser,
+                    "Expected new user to still be provisioned as member via mapping reconciliation"
+                )
     }
 
 [<Fact>]
@@ -393,10 +413,6 @@ let ``EnsureUserAsync does not grant moderator when OU remap targets existing sp
             Space.create existingModerator.State.Id "Support Managers" existingModerator.State.Id None
             |> Result.defaultWith (fun error -> failwith $"Failed to create test space: {error}")
 
-        let existingFallbackSpace =
-            Space.create existingModerator.State.Id "Support/Support Managers" existingModerator.State.Id None
-            |> Result.defaultWith (fun error -> failwith $"Failed to create test space: {error}")
-
         let userRepository = TestUserRepository([]) :> IUserRepository
         let authServiceImpl = TestAuthorizationService()
         let authService = authServiceImpl :> IAuthorizationService
@@ -404,9 +420,7 @@ let ``EnsureUserAsync does not grant moderator when OU remap targets existing sp
         let mappingRepository =
             TestIdentityGroupSpaceMappingRepository([]) :> IIdentityGroupSpaceMappingRepository
 
-        let spaceRepositoryImpl =
-            TestSpaceRepository([ existingFinalSegmentSpace; existingFallbackSpace ])
-
+        let spaceRepositoryImpl = TestSpaceRepository([ existingFinalSegmentSpace ])
         let spaceRepository = spaceRepositoryImpl :> ISpaceRepository
 
         let configuration =
@@ -436,8 +450,8 @@ let ``EnsureUserAsync does not grant moderator when OU remap targets existing sp
         | Error error ->
             Assert.Fail($"Expected provisioning to succeed, but got: {IdentityProvisioningError.toMessage error}")
         | Ok provisionedUserId ->
-            let targetSpace = spaceRepositoryImpl.GetByName("Support/Support Managers")
-            Assert.True(targetSpace.IsSome, "Expected existing fallback space to be targeted")
+            let targetSpace = spaceRepositoryImpl.GetByName("Support Managers")
+            Assert.True(targetSpace.IsSome, "Expected existing final segment space to be targeted")
 
             match targetSpace with
             | None -> ()
