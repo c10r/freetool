@@ -256,28 +256,86 @@ type SpaceRepository(context: FreetoolDbContext, eventRepository: IEventReposito
             task {
                 try
                     let spaceId = Space.getId spaceWithDeleteEvent
+                    let deletedAt = System.DateTime.UtcNow
+                    let! existingSpaceEntity = context.Spaces.FirstOrDefaultAsync(fun s -> s.Id = spaceId)
 
-                    // Remove all space-member relationships first
-                    let! spaceMemberEntities = context.SpaceMembers.Where(fun sm -> sm.SpaceId = spaceId).ToListAsync()
+                    match Option.ofObj existingSpaceEntity with
+                    | None -> return Error(NotFound "Space not found")
+                    | Some existingSpace ->
+                        // Soft delete all folder records in this space.
+                        let! folderEntities = context.Folders.Where(fun f -> f.SpaceId = spaceId).ToListAsync()
 
-                    context.SpaceMembers.RemoveRange(spaceMemberEntities)
+                        let folderIds = folderEntities |> Seq.map (fun folder -> folder.Id) |> Seq.toList
 
-                    // Soft delete: create updated record with IsDeleted flag
-                    let updatedData =
-                        { spaceWithDeleteEvent.State with
-                            IsDeleted = true
-                            UpdatedAt = System.DateTime.UtcNow }
+                        for folder in folderEntities do
+                            let updatedFolder =
+                                { folder with
+                                    IsDeleted = true
+                                    UpdatedAt = deletedAt }
 
-                    context.Spaces.Update(updatedData) |> ignore
+                            context.Entry(folder).CurrentValues.SetValues(updatedFolder)
 
-                    // Save all uncommitted events
-                    let events = Space.getUncommittedEvents spaceWithDeleteEvent
+                        // Soft delete all resources in this space.
+                        let! resourceEntities = context.Resources.Where(fun r -> r.SpaceId = spaceId).ToListAsync()
 
-                    for event in events do
-                        do! eventRepository.SaveEventAsync event
+                        for resource in resourceEntities do
+                            let updatedResource =
+                                { resource with
+                                    IsDeleted = true
+                                    UpdatedAt = deletedAt }
 
-                    let! _ = context.SaveChangesAsync()
-                    return Ok()
+                            context.Entry(resource).CurrentValues.SetValues(updatedResource)
+
+                        // Soft delete all apps in folders that belong to this space.
+                        let! appEntities = context.Apps.Where(fun app -> folderIds.Contains(app.FolderId)).ToListAsync()
+
+                        let appIds = appEntities |> Seq.map (fun app -> app.Id) |> Seq.toList
+
+                        for app in appEntities do
+                            let updatedApp =
+                                { app with
+                                    IsDeleted = true
+                                    UpdatedAt = deletedAt }
+
+                            context.Entry(app).CurrentValues.SetValues(updatedApp)
+
+                        // Soft delete all runs for apps in this space.
+                        let! runEntities = context.Runs.Where(fun run -> appIds.Contains(run.AppId)).ToListAsync()
+
+                        for run in runEntities do
+                            let updatedRun = { run with IsDeleted = true }
+                            context.Entry(run).CurrentValues.SetValues(updatedRun)
+
+                        // Remove all space-member relationships first
+                        let! spaceMemberEntities =
+                            context.SpaceMembers.Where(fun sm -> sm.SpaceId = spaceId).ToListAsync()
+
+                        context.SpaceMembers.RemoveRange(spaceMemberEntities)
+
+                        // Remove all identity-group to space mappings (OU mapping keys) for this space.
+                        let! mappingEntities =
+                            context.IdentityGroupSpaceMappings
+                                .Where(fun mapping -> mapping.SpaceId = spaceId)
+                                .ToListAsync()
+
+                        context.IdentityGroupSpaceMappings.RemoveRange(mappingEntities)
+
+                        // Soft delete the tracked space entity to avoid duplicate tracking for the same key.
+                        let updatedData =
+                            { existingSpace with
+                                IsDeleted = true
+                                UpdatedAt = deletedAt }
+
+                        context.Entry(existingSpace).CurrentValues.SetValues(updatedData)
+
+                        // Save all uncommitted events
+                        let events = Space.getUncommittedEvents spaceWithDeleteEvent
+
+                        for event in events do
+                            do! eventRepository.SaveEventAsync event
+
+                        let! _ = context.SaveChangesAsync()
+                        return Ok()
                 with
                 | :? DbUpdateException as ex -> return Error(Conflict $"Failed to delete space: {ex.Message}")
                 | ex -> return Error(InvalidOperation $"Delete transaction failed: {ex.Message}")

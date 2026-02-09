@@ -7,10 +7,11 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   addSpaceMember,
   changeSpaceModerator,
+  deleteSpace,
   getSpaceById,
   getUsers,
   inviteUser,
@@ -111,6 +112,7 @@ export default function SpaceSettingsView({
   onBackClick,
 }: SpaceSettingsViewProps) {
   const { spaceId } = useParams<{ spaceId: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   // Permission checks
@@ -143,6 +145,7 @@ export default function SpaceSettingsView({
     Record<string, SpacePermissions>
   >({});
   const [isSavingPermissions, setIsSavingPermissions] = useState(false);
+  const [isDeletingSpace, setIsDeletingSpace] = useState(false);
 
   // Pagination for members permissions
   const {
@@ -423,6 +426,29 @@ export default function SpaceSettingsView({
       setPendingPermissionChanges({});
     } finally {
       setIsSavingPermissions(false);
+    }
+  };
+
+  const handleDeleteSpace = async () => {
+    if (!(isOrgAdmin && spaceId && space)) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete space "${space.name}"? This will also remove related members and OU mappings.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setIsDeletingSpace(true);
+      await deleteSpace(spaceId);
+      await queryClient.invalidateQueries({ queryKey: ["spaces"] });
+      navigate("/spaces-list");
+    } finally {
+      setIsDeletingSpace(false);
     }
   };
 
@@ -902,6 +928,29 @@ export default function SpaceSettingsView({
           )}
         </CardContent>
       </Card>
+
+      {/* Danger Zone */}
+      {isOrgAdmin && (
+        <Card className="border-destructive/40">
+          <CardHeader>
+            <CardTitle className="text-lg text-destructive">
+              Danger Zone
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Deleting a space is permanent and removes related access mappings.
+            </p>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteSpace}
+              disabled={isDeletingSpace}
+            >
+              {isDeletingSpace ? "Deleting Space..." : "Delete Space"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </section>
   );
 }

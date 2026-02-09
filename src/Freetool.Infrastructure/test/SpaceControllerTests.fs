@@ -510,6 +510,36 @@ let ``DeleteSpace returns 403 when user is not org admin`` () : Task =
     }
 
 [<Fact>]
+let ``DeleteSpace blocks moderator when not org admin and does not invoke command`` () : Task =
+    task {
+        // Arrange
+        let userId = UserId.NewId()
+        let mutable deleteCommandInvoked = false
+
+        // User is moderator only (no org-admin tuple)
+        let checkPermission (subject: AuthSubject) (relation: AuthRelation) (obj: AuthObject) =
+            match subject, relation, obj with
+            | User uid, SpaceModerator, SpaceObject _ -> uid = userId.Value.ToString()
+            | _ -> false
+
+        let handleCommand (_: SpaceCommand) : Task<Result<SpaceCommandResult, DomainError>> =
+            deleteCommandInvoked <- true
+            Task.FromResult(Error(InvalidOperation "Delete command should not be called"))
+
+        let controller = createTestController checkPermission handleCommand userId
+
+        // Act
+        let! result = controller.DeleteSpace("space-123")
+
+        // Assert
+        match result with
+        | :? ObjectResult as objResult -> Assert.Equal(403, objResult.StatusCode.Value)
+        | _ -> Assert.True(false, "Expected ObjectResult with status code 403")
+
+        Assert.False(deleteCommandInvoked)
+    }
+
+[<Fact>]
 let ``DeleteSpace succeeds when user is org admin`` () : Task =
     task {
         // Arrange
