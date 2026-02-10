@@ -270,55 +270,8 @@ type IdentityProvisioningService
                                     )
                 }
 
-            let removeSpaceMemberFromRepositoryIfPresent (spaceId: SpaceId) =
-                task {
-                    let! spaceOption = spaceRepository.GetByIdAsync spaceId
-
-                    match spaceOption with
-                    | None -> ()
-                    | Some space ->
-                        if
-                            space.State.ModeratorUserId = userId
-                            || not (space.State.MemberIds |> List.contains userId)
-                        then
-                            ()
-                        else
-                            match Space.removeMember userId userId space with
-                            | Error error ->
-                                logger.LogWarning(
-                                    "Failed to remove user {UserId} from unmapped space {SpaceId} in repository: {Error}",
-                                    userId.Value,
-                                    spaceId.Value,
-                                    error
-                                )
-                            | Ok updatedSpace ->
-                                match! spaceRepository.UpdateAsync updatedSpace with
-                                | Ok() -> ()
-                                | Error error ->
-                                    logger.LogWarning(
-                                        "Failed to persist membership removal for user {UserId} in space {SpaceId}: {Error}",
-                                        userId.Value,
-                                        spaceId.Value,
-                                        error
-                                    )
-                }
-
             let normalizedGroupKeys = normalizeGroupKeys groupKeys
             let! desiredSpaceIds = mappingRepository.GetSpaceIdsByGroupKeysAsync normalizedGroupKeys
-            let! allMappings = mappingRepository.GetAllAsync()
-
-            let mappedSpaceIds =
-                allMappings
-                |> List.filter (fun m -> m.IsActive)
-                |> List.choose (fun m ->
-                    match Guid.TryParse m.SpaceId with
-                    | true, guid -> Some(SpaceId.FromGuid guid)
-                    | false, _ -> None)
-                |> List.distinct
-
-            let desiredSet = desiredSpaceIds |> Set.ofList
-            let mappedSet = mappedSpaceIds |> Set.ofList
-            let toRemove = Set.difference mappedSet desiredSet |> Set.toList
 
             for spaceId in desiredSpaceIds do
                 do! ensureSpaceMemberInRepository spaceId
@@ -333,24 +286,6 @@ type IdentityProvisioningService
                 with ex ->
                     logger.LogWarning(
                         "Failed to ensure mapped membership for user {UserId} in space {SpaceId}: {Error}",
-                        userId.Value,
-                        spaceId.Value,
-                        ex.Message
-                    )
-
-            for spaceId in toRemove do
-                do! removeSpaceMemberFromRepositoryIfPresent spaceId
-
-                try
-                    do!
-                        authService.DeleteRelationshipsAsync(
-                            [ { Subject = User(userId.Value.ToString())
-                                Relation = SpaceMember
-                                Object = SpaceObject(spaceId.Value.ToString()) } ]
-                        )
-                with ex ->
-                    logger.LogWarning(
-                        "Failed to remove mapped membership for user {UserId} in space {SpaceId}: {Error}",
                         userId.Value,
                         spaceId.Value,
                         ex.Message
