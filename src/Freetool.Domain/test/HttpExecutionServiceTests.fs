@@ -3,6 +3,7 @@ module Freetool.Domain.Tests.HttpExecutionServiceTests
 open System.Net
 open System.Net.Http
 open System.Text
+open System.Text.Json
 open System.Threading
 open System.Threading.Tasks
 open Xunit
@@ -19,6 +20,26 @@ type MockHttpMessageHandler(responseContent: string, statusCode: HttpStatusCode)
         task {
             let response = new HttpResponseMessage(statusCode)
             response.Content <- new StringContent(responseContent, Encoding.UTF8, "application/json")
+            return response
+        }
+
+type CaptureRequestMessageHandler(statusCode: HttpStatusCode) =
+    inherit HttpMessageHandler()
+
+    let mutable capturedBody: string option = None
+
+    member _.CapturedBody = capturedBody
+
+    override _.SendAsync
+        (request: HttpRequestMessage, cancellationToken: CancellationToken)
+        : Task<HttpResponseMessage> =
+        task {
+            if not (isNull request.Content) then
+                let! body = request.Content.ReadAsStringAsync(cancellationToken)
+                capturedBody <- Some body
+
+            let response = new HttpResponseMessage(statusCode)
+            response.Content <- new StringContent("ok", Encoding.UTF8, "application/json")
             return response
         }
 
@@ -124,4 +145,39 @@ let ``HttpExecutionService executeRequestWithClient should handle POST with body
         match result with
         | Ok response -> Assert.Equal("Created", response)
         | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+    }
+
+[<Fact>]
+let ``HttpExecutionService executeRequestWithClient should preserve JSON primitive types in request body`` () =
+    task {
+        // Arrange
+        let captureHandler = new CaptureRequestMessageHandler(HttpStatusCode.OK)
+        use httpClient = new HttpClient(captureHandler)
+
+        let request =
+            { BaseUrl = "https://api.example.com/subscriptions"
+              UrlParameters = []
+              Headers = []
+              Body =
+                [ ("cancelImmediately", "true")
+                  ("count", "3")
+                  ("refundBehavior", "none")
+                  ("metadata", """{"source":"ui"}""") ]
+              HttpMethod = "DELETE"
+              UseJsonBody = true }
+
+        // Act
+        let! _ = HttpExecutionService.executeRequestWithClient httpClient request
+
+        // Assert
+        match captureHandler.CapturedBody with
+        | None -> Assert.True(false, "Expected request body to be sent")
+        | Some body ->
+            use doc = JsonDocument.Parse(body)
+            let root = doc.RootElement
+
+            Assert.Equal(JsonValueKind.True, root.GetProperty("cancelImmediately").ValueKind)
+            Assert.Equal(3, root.GetProperty("count").GetInt32())
+            Assert.Equal("none", root.GetProperty("refundBehavior").GetString())
+            Assert.Equal(JsonValueKind.Object, root.GetProperty("metadata").ValueKind)
     }

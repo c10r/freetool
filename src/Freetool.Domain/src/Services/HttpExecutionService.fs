@@ -1,6 +1,7 @@
 namespace Freetool.Domain.Services
 
 open System
+open System.IO
 open System.Net.Http
 open System.Text
 open System.Text.Json
@@ -8,6 +9,13 @@ open System.Threading.Tasks
 open Freetool.Domain
 
 module HttpExecutionService =
+
+    let private tryParseJsonValue (value: string) : JsonElement option =
+        try
+            use doc = JsonDocument.Parse(value.Trim())
+            Some(doc.RootElement.Clone())
+        with _ ->
+            None
 
     /// Build the full URL with query parameters
     let private buildUrl (baseUrl: string) (urlParameters: (string * string) list) : string =
@@ -30,40 +38,27 @@ module HttpExecutionService =
         : HttpContent option =
         match httpMethod.ToUpperInvariant() with
         | "GET"
-        | "DELETE"
         | "HEAD" -> None // These methods typically don't have request bodies
         | _ when List.isEmpty bodyParameters -> None // No body parameters provided
         | _ ->
             if useJsonBody then
-                // Build JSON object from key-value pairs, preserving value types
-                // Try to parse values as their proper JSON types (number, boolean, null)
-                let jsonObject =
-                    bodyParameters
-                    |> List.fold
-                        (fun (dict: System.Collections.Generic.Dictionary<string, obj>) (key, value) ->
-                            // Try parsing as different types to preserve JSON type information
-                            let typedValue: obj =
-                                match System.Int64.TryParse(value) with
-                                | true, intVal -> intVal :> obj
-                                | false, _ ->
-                                    match
-                                        System.Double.TryParse(
-                                            value,
-                                            System.Globalization.NumberStyles.Float,
-                                            System.Globalization.CultureInfo.InvariantCulture
-                                        )
-                                    with
-                                    | true, floatVal -> floatVal :> obj
-                                    | false, _ ->
-                                        match System.Boolean.TryParse(value) with
-                                        | true, boolVal -> boolVal :> obj
-                                        | false, _ -> if value = "null" then null else value :> obj
+                // Parse each value as JSON first so primitives/objects/arrays preserve type.
+                // If parsing fails (e.g., plain text), keep it as a JSON string.
+                use stream = new MemoryStream()
+                use writer = new Utf8JsonWriter(stream)
+                writer.WriteStartObject()
 
-                            dict.[key] <- typedValue
-                            dict)
-                        (System.Collections.Generic.Dictionary<string, obj>())
+                for (key, value) in bodyParameters do
+                    writer.WritePropertyName(key)
 
-                let jsonString = JsonSerializer.Serialize(jsonObject)
+                    match tryParseJsonValue value with
+                    | Some jsonValue -> jsonValue.WriteTo(writer)
+                    | None -> writer.WriteStringValue(value)
+
+                writer.WriteEndObject()
+                writer.Flush()
+
+                let jsonString = Encoding.UTF8.GetString(stream.ToArray())
                 let content = new StringContent(jsonString, Encoding.UTF8, "application/json")
                 Some(content :> HttpContent)
             else
