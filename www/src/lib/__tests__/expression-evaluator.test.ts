@@ -204,6 +204,45 @@ describe("evaluateExpression", () => {
     expect(result).toEqual({ success: true, value: "Premium" });
   });
 
+  it("should evaluate ternary with string input comparison using strict equality", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { Cancel: "Immediately" },
+      types: { Cancel: "text" },
+    };
+    const result = evaluateExpression(
+      '@Cancel === "Immediately" ? true : false',
+      context
+    );
+    expect(result).toEqual({ success: true, value: "true" });
+  });
+
+  it("should evaluate ternary with string input comparison to false branch", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { Cancel: "Later" },
+      types: { Cancel: "text" },
+    };
+    const result = evaluateExpression(
+      '@Cancel === "Immediately" ? true : false',
+      context
+    );
+    expect(result).toEqual({ success: true, value: "false" });
+  });
+
+  it("should treat quoted @variable as a string literal, not a variable", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { Cancel: "Immediately" },
+      types: { Cancel: "text" },
+    };
+    const result = evaluateExpression(
+      "'@Cancel' === 'Immediately' ? true : false",
+      context
+    );
+    expect(result).toEqual({ success: true, value: "false" });
+  });
+
   it("should access current_user properties", () => {
     const result = evaluateExpression("@current_user.email", defaultContext);
     expect(result).toEqual({ success: true, value: "test@example.com" });
@@ -398,6 +437,54 @@ describe("processTemplate", () => {
     expect(result).toEqual({
       success: true,
       value: 'payload={"amount":10}',
+    });
+  });
+
+  it("should process template expression for cancel flag true case", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { Cancel: "Immediately" },
+      types: { Cancel: "text" },
+    };
+    const result = processTemplate(
+      '{ "shouldCancel": {{ @Cancel === "Immediately" ? true : false }} }',
+      context
+    );
+    expect(result).toEqual({
+      success: true,
+      value: '{ "shouldCancel": true }',
+    });
+  });
+
+  it("should process template expression for cancel flag false case", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { Cancel: "Later" },
+      types: { Cancel: "text" },
+    };
+    const result = processTemplate(
+      '{ "shouldCancel": {{ @Cancel === "Immediately" ? true : false }} }',
+      context
+    );
+    expect(result).toEqual({
+      success: true,
+      value: '{ "shouldCancel": false }',
+    });
+  });
+
+  it("should process template with quoted @Cancel literal as false", () => {
+    const context: EvaluationContext = {
+      ...defaultContext,
+      variables: { Cancel: "Immediately" },
+      types: { Cancel: "text" },
+    };
+    const result = processTemplate(
+      "{ shouldCancel: {{ '@Cancel' === 'Immediately' ? true : false }} }",
+      context
+    );
+    expect(result).toEqual({
+      success: true,
+      value: "{ shouldCancel: false }",
     });
   });
 });

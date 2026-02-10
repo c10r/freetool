@@ -76,6 +76,100 @@ type SqlQuery =
       Parameters: (string * string) list }
 
 module Run =
+    type private ConditionValue =
+        | ConditionNumber of decimal
+        | ConditionBoolean of bool
+        | ConditionText of string
+
+    let private isTruthy (value: string) : bool =
+        match value.Trim().ToLowerInvariant() with
+        | ""
+        | "0"
+        | "false"
+        | "null"
+        | "undefined" -> false
+        | _ -> true
+
+    let private stripQuotes (value: string) : string =
+        let trimmed = value.Trim()
+
+        if trimmed.Length >= 2 then
+            let first = trimmed.[0]
+            let last = trimmed.[trimmed.Length - 1]
+
+            if (first = '\'' && last = '\'') || (first = '"' && last = '"') then
+                trimmed.Substring(1, trimmed.Length - 2)
+            else
+                trimmed
+        else
+            trimmed
+
+    let private parseConditionValue (value: string) : ConditionValue =
+        let normalized = stripQuotes value
+
+        match System.Decimal.TryParse(normalized) with
+        | true, numberValue -> ConditionNumber numberValue
+        | false, _ ->
+            match System.Boolean.TryParse(normalized) with
+            | true, boolValue -> ConditionBoolean boolValue
+            | false, _ -> ConditionText normalized
+
+    let private evaluateCondition (condition: string) : bool =
+        let trimmedCondition = condition.Trim()
+
+        match System.Boolean.TryParse(trimmedCondition) with
+        | true, boolValue -> boolValue
+        | false, _ ->
+            let comparisonPattern = @"^\s*(.+?)\s*(===|==|!==|!=|>=|<=|>|<)\s*(.+?)\s*$"
+            let comparisonMatch = Regex.Match(trimmedCondition, comparisonPattern)
+
+            if comparisonMatch.Success then
+                let left = parseConditionValue comparisonMatch.Groups.[1].Value
+                let op = comparisonMatch.Groups.[2].Value
+                let right = parseConditionValue comparisonMatch.Groups.[3].Value
+
+                let compareText leftText rightText =
+                    String.Compare(leftText, rightText, StringComparison.Ordinal)
+
+                match op with
+                | "=="
+                | "===" ->
+                    match left, right with
+                    | ConditionNumber l, ConditionNumber r -> l = r
+                    | ConditionBoolean l, ConditionBoolean r -> l = r
+                    | ConditionText l, ConditionText r -> l = r
+                    | _ -> false
+                | "!="
+                | "!==" ->
+                    match left, right with
+                    | ConditionNumber l, ConditionNumber r -> l <> r
+                    | ConditionBoolean l, ConditionBoolean r -> l <> r
+                    | ConditionText l, ConditionText r -> l <> r
+                    | _ -> true
+                | ">" ->
+                    match left, right with
+                    | ConditionNumber l, ConditionNumber r -> l > r
+                    | ConditionText l, ConditionText r -> compareText l r > 0
+                    | _ -> false
+                | "<" ->
+                    match left, right with
+                    | ConditionNumber l, ConditionNumber r -> l < r
+                    | ConditionText l, ConditionText r -> compareText l r < 0
+                    | _ -> false
+                | ">=" ->
+                    match left, right with
+                    | ConditionNumber l, ConditionNumber r -> l >= r
+                    | ConditionText l, ConditionText r -> compareText l r >= 0
+                    | _ -> false
+                | "<=" ->
+                    match left, right with
+                    | ConditionNumber l, ConditionNumber r -> l <= r
+                    | ConditionText l, ConditionText r -> compareText l r <= 0
+                    | _ -> false
+                | _ -> isTruthy trimmedCondition
+            else
+                isTruthy trimmedCondition
+
     let fromData (runData: RunData) : ValidatedRun =
         { State = runData
           UncommittedEvents = [] }
@@ -146,16 +240,6 @@ module Run =
                         | Some value -> value
                         | None -> m.Value // Keep original if not found
             )
-
-        /// Check if a value is "truthy" for ternary evaluation
-        let isTruthy (value: string) : bool =
-            match value.Trim().ToLowerInvariant() with
-            | ""
-            | "0"
-            | "false"
-            | "null"
-            | "undefined" -> false
-            | _ -> true
 
         /// Try to parse a string as a decimal for arithmetic
         let tryParseDecimal (s: string) : decimal option =
@@ -228,8 +312,8 @@ module Run =
                 let trueVal = ternaryMatch.Groups.[2].Value.Trim()
                 let falseVal = ternaryMatch.Groups.[3].Value.Trim()
 
-                // Evaluate condition (truthy check)
-                if isTruthy condition then
+                // Evaluate condition (boolean/comparison/truthy fallback)
+                if evaluateCondition condition then
                     evaluateArithmetic trueVal
                 else
                     evaluateArithmetic falseVal

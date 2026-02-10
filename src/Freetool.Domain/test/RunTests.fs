@@ -941,6 +941,37 @@ let createTestAppWithExpressions () =
 
     app, resource
 
+/// Helper function to create test app with string comparison expression templates
+let createTestAppWithStringComparisonExpression () =
+    let folderId = FolderId.NewId()
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
+
+    let inputs =
+        [ { Title = "Cancel"
+            Description = None
+            Type = InputType.Text(100) |> unwrapResult
+            Required = true
+            DefaultValue = None } ]
+
+    let resource =
+        Resource.create
+            actorUserId
+            spaceId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/transactions"
+            []
+            []
+            [ "shouldCancel", "{{ @Cancel == 'Immediately' ? true : false }}" ]
+        |> unwrapResult
+
+    let app =
+        App.create actorUserId "Test App" folderId resource HttpMethod.Post inputs None [] [] [] false None
+        |> unwrapResult
+
+    app, resource
+
 [<Fact>]
 let ``Run executable request should evaluate expression template with ternary and arithmetic (debit case)`` () =
     // Arrange
@@ -1004,6 +1035,68 @@ let ``Run executable request should evaluate expression template with ternary an
             let amountBody = execRequest.Body |> List.find (fun (k, _) -> k = "amount")
             Assert.Equal(("amount", "5000"), amountBody)
 
+        | None -> Assert.True(false, "Expected executable request to be set")
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run executable request should evaluate string comparison ternary to true`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let app, resource = createTestAppWithStringComparisonExpression ()
+
+    let inputValues =
+        [ { Title = "Cancel"
+            Value = "Immediately" } ]
+
+    let run = Run.createWithValidation actorUserId app inputValues |> unwrapResult
+
+    let testCurrentUser: CurrentUser =
+        { Id = "test-user-id"
+          Email = "test@example.com"
+          FirstName = "Test"
+          LastName = "User" }
+
+    // Act
+    let result =
+        Run.composeExecutableRequestFromAppAndResource run app resource testCurrentUser None
+
+    // Assert
+    match result with
+    | Ok runWithRequest ->
+        match Run.getExecutableRequest runWithRequest with
+        | Some execRequest ->
+            let cancelBody = execRequest.Body |> List.find (fun (k, _) -> k = "shouldCancel")
+            Assert.Equal(("shouldCancel", "true"), cancelBody)
+        | None -> Assert.True(false, "Expected executable request to be set")
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run executable request should evaluate string comparison ternary to false`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let app, resource = createTestAppWithStringComparisonExpression ()
+
+    let inputValues = [ { Title = "Cancel"; Value = "Later" } ]
+
+    let run = Run.createWithValidation actorUserId app inputValues |> unwrapResult
+
+    let testCurrentUser: CurrentUser =
+        { Id = "test-user-id"
+          Email = "test@example.com"
+          FirstName = "Test"
+          LastName = "User" }
+
+    // Act
+    let result =
+        Run.composeExecutableRequestFromAppAndResource run app resource testCurrentUser None
+
+    // Assert
+    match result with
+    | Ok runWithRequest ->
+        match Run.getExecutableRequest runWithRequest with
+        | Some execRequest ->
+            let cancelBody = execRequest.Body |> List.find (fun (k, _) -> k = "shouldCancel")
+            Assert.Equal(("shouldCancel", "false"), cancelBody)
         | None -> Assert.True(false, "Expected executable request to be set")
     | Error error -> Assert.True(false, $"Expected success but got error: {error}")
 

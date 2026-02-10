@@ -99,9 +99,13 @@ function isIndexInJsonString(expression: string, index: number): boolean {
  * - && -> and
  * - || -> or
  * - ! -> not (when not followed by =)
+ * - === -> ==
+ * - !== -> !=
  */
 function transformOperators(expression: string): string {
   return expression
+    .replace(/!==/g, "!=")
+    .replace(/===/g, "==")
     .replace(/&&/g, " and ")
     .replace(/\|\|/g, " or ")
     .replace(/!(?!=)/g, "not ");
