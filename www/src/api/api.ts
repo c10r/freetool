@@ -1091,3 +1091,34 @@ export const updateUserPermissions = ({
     body: { userId, permissions },
   });
 };
+
+/**
+ * Get default permissions applied to non-moderator members of a space
+ */
+export const getDefaultMemberPermissions = (spaceId: string) => {
+  return client.GET("/space/{id}/default-member-permissions", {
+    params: {
+      path: { id: spaceId },
+    },
+  });
+};
+
+/**
+ * Update default permissions applied to non-moderator members of a space
+ */
+export const updateDefaultMemberPermissions = ({
+  spaceId,
+  permissions,
+}: {
+  spaceId: string;
+  permissions: SpacePermissions;
+}) => {
+  return client.PUT("/space/{id}/default-member-permissions", {
+    params: {
+      path: { id: spaceId },
+    },
+    body: {
+      permissions,
+    },
+  });
+};

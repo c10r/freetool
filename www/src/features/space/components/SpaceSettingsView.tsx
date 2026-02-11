@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/tooltip";
 import { usePagination } from "@/hooks/usePagination";
 import { useIsOrgAdmin, useIsSpaceModerator } from "@/hooks/usePermissions";
+import { useSpaceDefaultMemberPermissions } from "@/hooks/useSpaceDefaultMemberPermissions";
 import { useSpaceMembersPermissions } from "@/hooks/useSpaceMembersPermissions";
 import { compareUsersByName } from "@/lib/utils";
 import type { Permission, SpacePermissions } from "@/types/permissions";
@@ -144,6 +145,8 @@ export default function SpaceSettingsView({
   const [pendingPermissionChanges, setPendingPermissionChanges] = useState<
     Record<string, SpacePermissions>
   >({});
+  const [pendingDefaultPermissions, setPendingDefaultPermissions] =
+    useState<SpacePermissions | null>(null);
   const [isSavingPermissions, setIsSavingPermissions] = useState(false);
   const [isDeletingSpace, setIsDeletingSpace] = useState(false);
 
@@ -168,6 +171,15 @@ export default function SpaceSettingsView({
     updatePermissions,
     refetch: refetchPermissions,
   } = useSpaceMembersPermissions(spaceId || "", { skip, take: pageSize });
+
+  const {
+    permissions: defaultMemberPermissions,
+    isLoading: defaultPermissionsLoading,
+    error: defaultPermissionsError,
+    updatePermissions: updateDefaultMemberPermissions,
+    refetch: refetchDefaultPermissions,
+    isUpdating: isUpdatingDefaultPermissions,
+  } = useSpaceDefaultMemberPermissions(spaceId || "");
 
   // Update pagination total count when data changes
   useEffect(() => {
@@ -429,6 +441,34 @@ export default function SpaceSettingsView({
     }
   };
 
+  const getEffectiveDefaultPermissions = (): SpacePermissions | null => {
+    return pendingDefaultPermissions || defaultMemberPermissions;
+  };
+
+  const handleDefaultPermissionChange = (permissionKey: Permission) => {
+    const effective = getEffectiveDefaultPermissions();
+    if (!effective) {
+      return;
+    }
+
+    setPendingDefaultPermissions({
+      ...effective,
+      [permissionKey]: !effective[permissionKey],
+    });
+  };
+
+  const handleSaveDefaultPermissions = async () => {
+    const effective = getEffectiveDefaultPermissions();
+    if (!(effective && pendingDefaultPermissions)) {
+      return;
+    }
+
+    await updateDefaultMemberPermissions(effective);
+    setPendingDefaultPermissions(null);
+    refetchDefaultPermissions();
+    refetchPermissions();
+  };
+
   const handleDeleteSpace = async () => {
     if (!(isOrgAdmin && spaceId && space)) {
       return;
@@ -453,7 +493,12 @@ export default function SpaceSettingsView({
   };
 
   const hasPermissionChanges = Object.keys(pendingPermissionChanges).length > 0;
-  const isLoading = spaceLoading || usersLoading || permissionsLoading;
+  const hasDefaultPermissionChanges = !!pendingDefaultPermissions;
+  const isLoading =
+    spaceLoading ||
+    usersLoading ||
+    permissionsLoading ||
+    defaultPermissionsLoading;
 
   if (isLoading) {
     return (
@@ -490,7 +535,7 @@ export default function SpaceSettingsView({
     );
   }
 
-  if (spaceError || permissionsError) {
+  if (spaceError || permissionsError || defaultPermissionsError) {
     return (
       <section className="p-6 space-y-6 overflow-y-auto flex-1">
         <header className="flex items-center gap-2">
@@ -505,7 +550,10 @@ export default function SpaceSettingsView({
         <Separator />
         <Card>
           <CardContent className="py-10 text-center text-destructive">
-            {spaceError || permissionsError?.message || "Failed to load data"}
+            {spaceError ||
+              permissionsError?.message ||
+              defaultPermissionsError?.message ||
+              "Failed to load data"}
           </CardContent>
         </Card>
       </section>
@@ -693,6 +741,102 @@ export default function SpaceSettingsView({
                 Invited users will be added once they log in
               </p>
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Default Permissions Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-lg">
+              Default Member Permissions
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Controls baseline access for non-moderator members, including
+              users auto-added via OU mapping.
+            </p>
+          </div>
+          {canEdit && hasDefaultPermissionChanges && (
+            <Button
+              onClick={handleSaveDefaultPermissions}
+              disabled={isUpdatingDefaultPermissions}
+              size="sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isUpdatingDefaultPermissions ? "Saving..." : "Save Defaults"}
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {getEffectiveDefaultPermissions() ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b-0">
+                    {PERMISSION_GROUPS.map((group) => (
+                      <TableHead
+                        key={group.label}
+                        colSpan={group.permissions.length}
+                        className="text-center border-l first:border-l-0"
+                      >
+                        {group.label}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    {PERMISSION_GROUPS.map((group) =>
+                      group.permissions.map((perm, idx) => (
+                        <TableHead
+                          key={perm.key}
+                          className={`text-center text-xs ${
+                            idx === 0 ? "border-l first:border-l-0" : ""
+                          }`}
+                        >
+                          {perm.label}
+                        </TableHead>
+                      ))
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    {PERMISSION_GROUPS.map((group) =>
+                      group.permissions.map((perm, idx) => (
+                        <TableCell
+                          key={perm.key}
+                          className={`text-center ${idx === 0 ? "border-l first:border-l-0" : ""}`}
+                        >
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={
+                                getEffectiveDefaultPermissions()?.[perm.key] ??
+                                false
+                              }
+                              disabled={!canEdit}
+                              onCheckedChange={() =>
+                                handleDefaultPermissionChange(perm.key)
+                              }
+                              aria-label={`${perm.label} default ${group.label.toLowerCase()} permission`}
+                            />
+                          </div>
+                        </TableCell>
+                      ))
+                    )}
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="py-6 text-sm text-muted-foreground">
+              Default member permissions are unavailable for this space.
+            </div>
+          )}
+          {!canEdit && (
+            <p className="text-sm text-muted-foreground mt-4">
+              Only moderators and organization administrators can edit default
+              permissions.
+            </p>
           )}
         </CardContent>
       </Card>
