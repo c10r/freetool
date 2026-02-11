@@ -219,3 +219,31 @@ let ``AppDeletedEvent extracts name from event`` () =
         Assert.Equal("My App", enhanced.EntityName)
         Assert.Contains("deleted app", enhanced.EventSummary)
     }
+
+[<Fact>]
+let ``SpaceDefaultMemberPermissionsChangedEvent enhances with correct summary`` () =
+    task {
+        let service = createService ()
+        let actorUserId = UserId.NewId()
+        let spaceId = SpaceId.NewId()
+
+        let event =
+            SpaceEvents.spaceDefaultMemberPermissionsChanged
+                actorUserId
+                spaceId
+                "Engineering"
+                [ "CreateApp"; "RunApp" ]
+                [ "DeleteApp" ]
+
+        let eventData =
+            createEventData
+                event
+                (SpaceEvents SpaceDefaultMemberPermissionsChangedEvent)
+                EntityType.Space
+                (spaceId.Value.ToString())
+
+        let! enhanced = service.EnhanceEventAsync(eventData)
+
+        Assert.Equal("Engineering", enhanced.EntityName)
+        Assert.Contains("changed default member permissions in space", enhanced.EventSummary)
+    }

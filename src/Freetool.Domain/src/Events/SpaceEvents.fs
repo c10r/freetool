@@ -71,6 +71,21 @@ type SpacePermissionsChangedEvent =
         member this.EventId = this.EventId
         member this.UserId = this.ActorUserId
 
+/// Event raised when default permissions for all space members are changed
+type SpaceDefaultMemberPermissionsChangedEvent =
+    { SpaceId: SpaceId
+      SpaceName: string
+      PermissionsGranted: string list
+      PermissionsRevoked: string list
+      OccurredAt: DateTime
+      EventId: Guid
+      ActorUserId: UserId }
+
+    interface IDomainEvent with
+        member this.OccurredAt = this.OccurredAt
+        member this.EventId = this.EventId
+        member this.UserId = this.ActorUserId
+
 module SpaceEvents =
     /// Creates a SpaceCreatedEvent
     let spaceCreated
@@ -127,3 +142,20 @@ module SpaceEvents =
           EventId = Guid.NewGuid()
           ActorUserId = actorUserId }
         : SpacePermissionsChangedEvent
+
+    /// Creates a SpaceDefaultMemberPermissionsChangedEvent
+    let spaceDefaultMemberPermissionsChanged
+        (actorUserId: UserId)
+        (spaceId: SpaceId)
+        (spaceName: string)
+        (permissionsGranted: string list)
+        (permissionsRevoked: string list)
+        =
+        { SpaceId = spaceId
+          SpaceName = spaceName
+          PermissionsGranted = permissionsGranted
+          PermissionsRevoked = permissionsRevoked
+          OccurredAt = DateTime.UtcNow
+          EventId = Guid.NewGuid()
+          ActorUserId = actorUserId }
+        : SpaceDefaultMemberPermissionsChangedEvent

@@ -104,6 +104,8 @@ type EventRepository(context: FreetoolDbContext) =
                         (e.SpaceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.SpacePermissionsChangedEvent as e ->
                         (e.SpaceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.SpaceDefaultMemberPermissionsChangedEvent as e ->
+                        (e.SpaceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | _ -> ("unknown", JsonSerializer.Serialize(event, jsonOptions))
 
                 let eventDataRecord: Entities.EventData =

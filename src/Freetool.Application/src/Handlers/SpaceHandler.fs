@@ -561,7 +561,7 @@ module SpaceHandler =
 
                         return Ok(SpaceDefaultMemberPermissionsResult response)
 
-            | UpdateDefaultMemberPermissions(_, spaceId, dto) ->
+            | UpdateDefaultMemberPermissions(actorUserId, spaceId, dto) ->
                 match Guid.TryParse spaceId with
                 | false, _ -> return Error(ValidationError "Invalid space ID format")
                 | true, spaceGuid ->
@@ -570,7 +570,7 @@ module SpaceHandler =
 
                     match spaceOption with
                     | None -> return Error(NotFound "Space not found")
-                    | Some _ ->
+                    | Some space ->
                         let defaultMemberSubject = UserSetFromRelation("space", spaceId, "member")
 
                         let! currentPermissionsMap =
@@ -612,6 +612,23 @@ module SpaceHandler =
                                 authService.UpdateRelationshipsAsync
                                     { TuplesToAdd = tuplesToAdd
                                       TuplesToRemove = tuplesToRemove }
+
+                            let permissionsGranted =
+                                tuplesToAdd |> List.map (fun t -> authRelationToString t.Relation)
+
+                            let permissionsRevoked =
+                                tuplesToRemove |> List.map (fun t -> authRelationToString t.Relation)
+
+                            let event =
+                                SpaceEvents.spaceDefaultMemberPermissionsChanged
+                                    actorUserId
+                                    spaceIdObj
+                                    space.State.Name
+                                    permissionsGranted
+                                    permissionsRevoked
+
+                            do! eventRepository.SaveEventAsync event
+                            do! eventRepository.CommitAsync()
 
                         return Ok(SpaceCommandResult.UnitResult())
         }

@@ -6,6 +6,7 @@ open Xunit
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Entities
+open Freetool.Domain.Events
 open Freetool.Application.Commands
 open Freetool.Application.Handlers
 open Freetool.Application.Interfaces
@@ -712,4 +713,66 @@ let ``GetSpaceMembersWithPermissions returns permissions`` () =
             Assert.True(moderatorResult.Value.Permissions.EditApp)
             Assert.True(moderatorResult.Value.Permissions.DeleteApp)
         | _ -> Assert.Fail("Expected SpaceMembersPermissionsResult")
+    }
+
+// ============================================================================
+// Default Member Permissions Tests
+// ============================================================================
+
+[<Fact>]
+let ``UpdateDefaultMemberPermissions writes audit event when permissions change`` () =
+    task {
+        // Arrange
+        let moderator = createTestUser "Moderator User" "moderator@test.com"
+        let space = createTestSpace "Engineering" moderator.State.Id moderator.State.Id None
+
+        let userRepository = MockUserRepository([ moderator ]) :> IUserRepository
+        let spaceRepository = MockSpaceRepository([ space ]) :> ISpaceRepository
+        let authService = MockAuthorizationService() :> IAuthorizationService
+        let eventRepository = MockEventRepository()
+
+        let updateDto: UpdateDefaultMemberPermissionsDto =
+            { Permissions =
+                { CreateResource = true
+                  EditResource = false
+                  DeleteResource = false
+                  CreateApp = true
+                  EditApp = false
+                  DeleteApp = false
+                  RunApp = false
+                  CreateFolder = false
+                  EditFolder = false
+                  DeleteFolder = false } }
+
+        let command =
+            UpdateDefaultMemberPermissions(moderator.State.Id, space.State.Id.Value.ToString(), updateDto)
+
+        // Act
+        let! result =
+            SpaceHandler.handleCommand
+                spaceRepository
+                userRepository
+                authService
+                (eventRepository :> IEventRepository)
+                command
+
+        // Assert
+        match result with
+        | Ok(SpaceCommandResult.UnitResult()) ->
+            let savedEvents = eventRepository.GetSavedEvents()
+
+            let defaultPermissionsEvent =
+                savedEvents
+                |> List.tryFind (fun e -> e :? SpaceDefaultMemberPermissionsChangedEvent)
+
+            Assert.True(defaultPermissionsEvent.IsSome)
+
+            let typedEvent =
+                defaultPermissionsEvent.Value :?> SpaceDefaultMemberPermissionsChangedEvent
+
+            Assert.Equal(space.State.Id, typedEvent.SpaceId)
+            Assert.Equal("Engineering", typedEvent.SpaceName)
+            Assert.Contains("CreateResource", typedEvent.PermissionsGranted)
+            Assert.Contains("CreateApp", typedEvent.PermissionsGranted)
+        | _ -> Assert.Fail("Expected UnitResult")
     }

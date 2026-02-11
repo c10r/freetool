@@ -60,7 +60,9 @@ let private validateEventTypeRegistry (logger: ILogger) =
           // Space events
           EventType.SpaceEvents SpaceCreatedEvent
           EventType.SpaceEvents SpaceUpdatedEvent
-          EventType.SpaceEvents SpaceDeletedEvent ]
+          EventType.SpaceEvents SpaceDeletedEvent
+          EventType.SpaceEvents SpacePermissionsChangedEvent
+          EventType.SpaceEvents SpaceDefaultMemberPermissionsChangedEvent ]
 
     let mutable hasErrors = false
 
