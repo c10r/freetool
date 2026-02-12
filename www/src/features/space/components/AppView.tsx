@@ -406,7 +406,8 @@ export default function AppView({
               value={app.resourceId}
               onValueChange={(resourceId) => updateNode({ ...app, resourceId })}
               className="w-64"
-              disabled={!canEditApp}
+              readOnly
+              readOnlyTooltip="For safety, you can't change an app's resource after it's created. Create a new app if you need to use a different resource."
               required
             />
           </div>

@@ -9,6 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import type { ResourceKind } from "../types";
 
 interface Resource {
@@ -26,6 +32,8 @@ interface ResourceSelectorProps {
   className?: string;
   id?: string;
   required?: boolean;
+  readOnly?: boolean;
+  readOnlyTooltip?: string;
 }
 
 export default function ResourceSelector({
@@ -37,6 +45,8 @@ export default function ResourceSelector({
   className,
   id,
   required = false,
+  readOnly = false,
+  readOnlyTooltip,
 }: ResourceSelectorProps) {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,41 +93,63 @@ export default function ResourceSelector({
   const getResourceLogoAlt = (resourceKind: ResourceKind) =>
     resourceKind === "http" ? "HTTP" : "PostgreSQL";
 
+  const showReadOnlyTooltip = readOnly && !!readOnlyTooltip;
+
+  const trigger = (
+    <SelectTrigger
+      id={id}
+      className={cn(className, readOnly && "cursor-not-allowed opacity-70")}
+      aria-label="Select Resource"
+      aria-required={required}
+      aria-disabled={readOnly || disabled || loading}
+    >
+      {selectedResource ? (
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-gray-50 p-1">
+            <img
+              src={getResourceLogo(selectedResource.resourceKind)}
+              alt={getResourceLogoAlt(selectedResource.resourceKind)}
+              className="h-full w-full object-contain"
+            />
+          </div>
+          <span>{selectedResource.name}</span>
+        </div>
+      ) : (
+        <SelectValue
+          placeholder={
+            loading
+              ? "Loading resources..."
+              : value && !selectedResource
+                ? "Selected resource not found"
+                : placeholder
+          }
+        />
+      )}
+    </SelectTrigger>
+  );
+
   return (
     <Select
       value={value || ""}
-      onValueChange={(v) => onValueChange(v || undefined)}
+      onValueChange={(v) => {
+        if (!readOnly) {
+          onValueChange(v || undefined);
+        }
+      }}
       disabled={disabled || loading}
+      open={readOnly ? false : undefined}
+      onOpenChange={readOnly ? (_open) => undefined : undefined}
     >
-      <SelectTrigger
-        id={id}
-        className={className}
-        aria-label="Select Resource"
-        aria-required={required}
-      >
-        {selectedResource ? (
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-gray-50 p-1">
-              <img
-                src={getResourceLogo(selectedResource.resourceKind)}
-                alt={getResourceLogoAlt(selectedResource.resourceKind)}
-                className="h-full w-full object-contain"
-              />
-            </div>
-            <span>{selectedResource.name}</span>
-          </div>
-        ) : (
-          <SelectValue
-            placeholder={
-              loading
-                ? "Loading resources..."
-                : value && !selectedResource
-                  ? "Selected resource not found"
-                  : placeholder
-            }
-          />
-        )}
-      </SelectTrigger>
+      {showReadOnlyTooltip ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+          <TooltipContent className="max-w-sm">
+            {readOnlyTooltip}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        trigger
+      )}
       <SelectContent>
         {resources.length > 0 ? (
           resources.map((resource) => (
