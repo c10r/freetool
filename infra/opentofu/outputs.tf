@@ -18,6 +18,16 @@ output "managed_instance_group_name" {
   description = "Managed instance group name"
 }
 
+output "bluegreen_vm_name" {
+  value       = var.bluegreen_enabled ? google_compute_instance.bluegreen[0].name : null
+  description = "Green VM name when blue/green is enabled"
+}
+
+output "bluegreen_instance_group_name" {
+  value       = var.bluegreen_enabled ? google_compute_instance_group.bluegreen[0].name : null
+  description = "Green unmanaged instance group name when blue/green is enabled"
+}
+
 output "load_balancer_ip" {
   value       = google_compute_global_address.freetool.address
   description = "Global IP for HTTPS load balancer"

@@ -65,6 +65,60 @@ variable "boot_disk_size_gb" {
   default     = 10
 }
 
+variable "primary_backend_capacity" {
+  description = "Capacity scaler for the primary MIG backend (0..1)"
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.primary_backend_capacity >= 0 && var.primary_backend_capacity <= 1
+    error_message = "primary_backend_capacity must be between 0 and 1."
+  }
+}
+
+variable "bluegreen_enabled" {
+  description = "Whether the OpenTofu-managed green VM/instance-group backend is provisioned"
+  type        = bool
+  default     = false
+
+  validation {
+    condition = !var.bluegreen_enabled || (
+      var.primary_mig_target_size == 0
+      && var.primary_backend_capacity == 0
+      && var.preserve_data_disk_on_destroy
+    )
+    error_message = "When bluegreen_enabled is true, primary_mig_target_size and primary_backend_capacity must be 0, and preserve_data_disk_on_destroy must be true."
+  }
+}
+
+variable "bluegreen_backend_capacity" {
+  description = "Capacity scaler for the green backend (0..1)"
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.bluegreen_backend_capacity >= 0 && var.bluegreen_backend_capacity <= 1
+    error_message = "bluegreen_backend_capacity must be between 0 and 1."
+  }
+}
+
+variable "bluegreen_image_tag" {
+  description = "Image tag for the green environment. If empty, initial_image_tag is used."
+  type        = string
+  default     = ""
+}
+
+variable "primary_mig_target_size" {
+  description = "Target size for the primary managed instance group."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.primary_mig_target_size >= 0
+    error_message = "primary_mig_target_size must be >= 0."
+  }
+}
+
 variable "artifact_registry_repo" {
   description = "Artifact Registry Docker repository name"
   type        = string

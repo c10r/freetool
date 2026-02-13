@@ -1,7 +1,11 @@
 locals {
-  lb_name        = "${var.name_prefix}-lb"
-  vm_name        = "${var.name_prefix}-vm"
-  data_disk_name = "${var.name_prefix}-data"
+  lb_name                       = "${var.name_prefix}-lb"
+  vm_name                       = "${var.name_prefix}-vm"
+  bluegreen_vm_name             = "${var.name_prefix}-green-vm"
+  bluegreen_ig_name             = "${var.name_prefix}-green-ig"
+  data_disk_name                = "${var.name_prefix}-data"
+  data_disk_self_link           = var.preserve_data_disk_on_destroy ? google_compute_disk.data_protected[0].self_link : google_compute_disk.data_unprotected[0].self_link
+  bluegreen_effective_image_tag = trimspace(var.bluegreen_image_tag) != "" ? trimspace(var.bluegreen_image_tag) : var.initial_image_tag
   google_directory_credentials_secret_name = (
     trimspace(var.google_directory_credentials_secret_name) != ""
     ? trimspace(var.google_directory_credentials_secret_name)
@@ -182,7 +186,7 @@ resource "google_compute_instance_template" "freetool" {
   disk {
     boot        = false
     auto_delete = false
-    source      = local.data_disk_name
+    source      = local.data_disk_self_link
     device_name = local.data_disk_name
     mode        = "READ_WRITE"
   }
@@ -221,7 +225,7 @@ resource "google_compute_instance_group_manager" "freetool" {
   name               = "${var.name_prefix}-mig"
   zone               = var.zone
   base_instance_name = local.vm_name
-  target_size        = 1
+  target_size        = var.primary_mig_target_size
 
   version {
     instance_template = google_compute_instance_template.freetool.id
@@ -237,6 +241,85 @@ resource "google_compute_instance_group_manager" "freetool" {
     minimal_action        = "REPLACE"
     max_surge_fixed       = 0
     max_unavailable_fixed = 1
+  }
+}
+
+resource "google_compute_instance" "bluegreen" {
+  count = var.bluegreen_enabled ? 1 : 0
+
+  name         = local.bluegreen_vm_name
+  machine_type = var.machine_type
+  zone         = var.zone
+  tags         = ["${var.name_prefix}-freetool"]
+
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+      size  = var.boot_disk_size_gb
+      type  = "pd-balanced"
+    }
+  }
+
+  attached_disk {
+    source      = local.data_disk_self_link
+    device_name = local.data_disk_name
+    mode        = "READ_WRITE"
+  }
+
+  network_interface {
+    subnetwork = google_compute_subnetwork.freetool.id
+
+    access_config {
+      // Ephemeral external IP for package/image pulls and direct troubleshooting.
+      // The app itself is served via the HTTPS load balancer.
+    }
+  }
+
+  service_account {
+    email  = google_service_account.vm.email
+    scopes = ["cloud-platform"]
+  }
+
+  metadata_startup_script = templatefile("${path.module}/templates/startup-bluegreen.sh.tmpl", {
+    artifact_registry_location                   = var.artifact_registry_location
+    project_id                                   = var.project_id
+    artifact_registry_repo                       = var.artifact_registry_repo
+    image_name                                   = var.image_name
+    image_tag                                    = local.bluegreen_effective_image_tag
+    iap_jwt_audience                             = var.iap_jwt_audience
+    google_directory_enabled                     = var.google_directory_enabled
+    google_directory_admin_user_email            = var.google_directory_admin_user_email
+    google_directory_scope                       = var.google_directory_scope
+    google_directory_org_unit_key_prefix         = var.google_directory_org_unit_key_prefix
+    google_directory_include_org_unit_hierarchy  = var.google_directory_include_org_unit_hierarchy
+    google_directory_custom_attribute_key_prefix = var.google_directory_custom_attribute_key_prefix
+    google_directory_credentials_secret_name     = local.google_directory_credentials_secret_name
+    org_admin_email                              = var.org_admin_email
+    validate_iap_jwt                             = var.validate_iap_jwt
+    data_disk_name                               = local.data_disk_name
+    data_mount_path                              = var.data_mount_path
+  })
+
+  labels = merge(local.labels, { role = "bluegreen" })
+
+  depends_on = [
+    google_project_iam_member.vm_artifact_reader,
+    google_project_iam_member.vm_logging_writer,
+    google_artifact_registry_repository.freetool,
+    google_project_service.required,
+  ]
+}
+
+resource "google_compute_instance_group" "bluegreen" {
+  count = var.bluegreen_enabled ? 1 : 0
+
+  name      = local.bluegreen_ig_name
+  zone      = var.zone
+  instances = [google_compute_instance.bluegreen[0].self_link]
+
+  named_port {
+    name = "http"
+    port = 8080
   }
 }
 
@@ -288,7 +371,16 @@ resource "google_compute_backend_service" "freetool" {
   backend {
     group           = google_compute_instance_group_manager.freetool.instance_group
     balancing_mode  = "UTILIZATION"
-    capacity_scaler = 1
+    capacity_scaler = var.primary_backend_capacity
+  }
+
+  dynamic "backend" {
+    for_each = var.bluegreen_enabled ? [google_compute_instance_group.bluegreen[0].self_link] : []
+    content {
+      group           = backend.value
+      balancing_mode  = "UTILIZATION"
+      capacity_scaler = var.bluegreen_backend_capacity
+    }
   }
 
   iap {
