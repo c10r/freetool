@@ -181,3 +181,36 @@ let ``HttpExecutionService executeRequestWithClient should preserve JSON primiti
             Assert.Equal("none", root.GetProperty("refundBehavior").GetString())
             Assert.Equal(JsonValueKind.Object, root.GetProperty("metadata").ValueKind)
     }
+
+[<Fact>]
+let ``HttpExecutionService executeRequestWithClient should omit undefined JSON body values`` () =
+    task {
+        // Arrange
+        let captureHandler = new CaptureRequestMessageHandler(HttpStatusCode.OK)
+        use httpClient = new HttpClient(captureHandler)
+
+        let request =
+            { BaseUrl = "https://api.example.com/subscriptions"
+              UrlParameters = []
+              Headers = []
+              Body =
+                [ ("subscriptionId", "\"sub_123\"")
+                  ("recreateEmail", "undefined")
+                  ("nested", """{"line1":"Rua dos Tordos"}""") ]
+              HttpMethod = "POST"
+              UseJsonBody = true }
+
+        // Act
+        let! _ = HttpExecutionService.executeRequestWithClient httpClient request
+
+        // Assert
+        match captureHandler.CapturedBody with
+        | None -> Assert.True(false, "Expected request body to be sent")
+        | Some body ->
+            use doc = JsonDocument.Parse(body)
+            let root = doc.RootElement
+            let mutable recreateEmailProp = Unchecked.defaultof<JsonElement>
+            Assert.False(root.TryGetProperty("recreateEmail", &recreateEmailProp))
+            Assert.Equal("sub_123", root.GetProperty("subscriptionId").GetString())
+            Assert.Equal(JsonValueKind.Object, root.GetProperty("nested").ValueKind)
+    }

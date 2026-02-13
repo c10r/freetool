@@ -17,6 +17,9 @@ module HttpExecutionService =
         with _ ->
             None
 
+    let private isUndefinedToken (value: string) : bool =
+        String.Equals(value.Trim(), "undefined", StringComparison.OrdinalIgnoreCase)
+
     /// Build the full URL with query parameters
     let private buildUrl (baseUrl: string) (urlParameters: (string * string) list) : string =
         if List.isEmpty urlParameters then
@@ -49,11 +52,13 @@ module HttpExecutionService =
                 writer.WriteStartObject()
 
                 for (key, value) in bodyParameters do
-                    writer.WritePropertyName(key)
+                    // Treat unquoted `undefined` as an omitted JSON property.
+                    if not (isUndefinedToken value) then
+                        writer.WritePropertyName(key)
 
-                    match tryParseJsonValue value with
-                    | Some jsonValue -> jsonValue.WriteTo(writer)
-                    | None -> writer.WriteStringValue(value)
+                        match tryParseJsonValue value with
+                        | Some jsonValue -> jsonValue.WriteTo(writer)
+                        | None -> writer.WriteStringValue(value)
 
                 writer.WriteEndObject()
                 writer.Flush()

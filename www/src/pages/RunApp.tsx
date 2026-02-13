@@ -86,6 +86,36 @@ const parseJsonResponse = (response: string): unknown | null => {
   }
 };
 
+const parseRequestBodyValue = (value: string): unknown | undefined => {
+  const trimmed = value.trim();
+
+  if (trimmed.toLowerCase() === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+};
+
+const formatRequestBodyForDisplay = (
+  bodyTuples: [string, string][]
+): string => {
+  const parsedEntries = bodyTuples.flatMap(([key, value]) => {
+    const parsedValue = parseRequestBodyValue(value ?? "");
+
+    if (parsedValue === undefined) {
+      return [];
+    }
+
+    return [[key ?? "", parsedValue] as [string, unknown]];
+  });
+
+  return JSON.stringify(Object.fromEntries(parsedEntries), null, 2);
+};
+
 const isTableData = (data: unknown): data is Record<string, unknown>[] => {
   return (
     Array.isArray(data) &&
@@ -1013,21 +1043,9 @@ const RunApp = () => {
                                   <h4 className="font-medium mb-2">Body</h4>
                                   <div className="bg-muted p-3 rounded">
                                     <pre className="text-sm overflow-x-auto whitespace-pre-wrap">
-                                      {JSON.stringify(
-                                        Object.fromEntries(
-                                          (
-                                            result.executableRequest
-                                              .body as unknown as [
-                                              string,
-                                              string,
-                                            ][]
-                                          ).map((tuple) => [
-                                            tuple[0] ?? "",
-                                            tuple[1] ?? "",
-                                          ])
-                                        ),
-                                        null,
-                                        2
+                                      {formatRequestBodyForDisplay(
+                                        result.executableRequest
+                                          .body as unknown as [string, string][]
                                       )}
                                     </pre>
                                   </div>
