@@ -135,10 +135,50 @@ wait_primary_mig_zero_instances() {
 }
 
 resolve_old_vm() {
-  gcloud compute instance-groups managed list-instances "${GCP_MIG_NAME}" \
+  local mig_vm bluegreen_vm backend_vm labeled_vm
+  mig_vm="$(gcloud compute instance-groups managed list-instances "${GCP_MIG_NAME}" \
     --project "${GCP_PROJECT_ID}" \
     --zone "${GCP_VM_ZONE}" \
-    --format='value(instance.basename())' | head -n1
+    --format='value(instance.basename())' | head -n1)"
+  if [[ -n "${mig_vm}" ]]; then
+    echo "${mig_vm}"
+    return 0
+  fi
+
+  # After a prior successful cutover the primary MIG can be size 0; in that state
+  # the currently serving VM is the existing blue/green VM tracked in OpenTofu state.
+  bluegreen_vm="$(jq -r '.bluegreen_vm_name.value // empty' <<<"${OUT:-}")"
+  if [[ -n "${bluegreen_vm}" ]]; then
+    echo "${bluegreen_vm}"
+    return 0
+  fi
+
+  backend_vm="$(
+    gcloud compute backend-services get-health "${GCP_BACKEND_SERVICE}" \
+      --project "${GCP_PROJECT_ID}" \
+      --global \
+      --format=json 2>/dev/null \
+      | jq -r '.. | .instance? // empty | capture(".*/instances/(?<name>[^/]+)$").name' 2>/dev/null \
+      | head -n1
+  )"
+  if [[ -n "${backend_vm}" ]]; then
+    echo "${backend_vm}"
+    return 0
+  fi
+
+  labeled_vm="$(
+    gcloud compute instances list \
+      --project "${GCP_PROJECT_ID}" \
+      --filter="zone:(${GCP_VM_ZONE}) AND labels.app=freetool AND status=RUNNING" \
+      --format='value(name)' 2>/dev/null \
+      | head -n1
+  )"
+  if [[ -n "${labeled_vm}" ]]; then
+    echo "${labeled_vm}"
+    return 0
+  fi
+
+  return 1
 }
 
 stop_stack() {
@@ -228,23 +268,28 @@ REGISTRY_HOST="${GCP_REGION}-docker.pkg.dev"
 IMAGE_URI="${REGISTRY_HOST}/${GCP_PROJECT_ID}/${GCP_ARTIFACT_REPO}/${IMAGE_NAME}:${TAG}"
 OLD_DATA_ROOT="${OLD_DATA_ROOT:-${FREETOOL_DATA_ROOT:-/mnt/freetool-data}}"
 GREEN_DATA_ROOT="${GREEN_DATA_ROOT:-${FREETOOL_DATA_ROOT:-/mnt/freetool-data}}"
+LOCAL_SQLITE_BACKUP_DIR=""
 
-OLD_VM_NAME="$(resolve_old_vm)"
-[[ -n "$OLD_VM_NAME" ]] || { echo "Could not resolve old VM from MIG" >&2; exit 1; }
-
-log "Preflight: create paranoid local SQLite backup before deploy actions"
-PRE_FLIGHT_ARCHIVE="$(mktemp /tmp/freetool-db-preflight.XXXXXX.tgz)"
-cleanup_files+=("${PRE_FLIGHT_ARCHIVE}")
-gcloud compute ssh "${OLD_VM_NAME}" --project "${GCP_PROJECT_ID}" --zone "${GCP_VM_ZONE}" --tunnel-through-iap --command "sudo tar -C ${OLD_DATA_ROOT} -czf - freetool-db openfga" > "${PRE_FLIGHT_ARCHIVE}"
-LOCAL_SQLITE_BACKUP_DIR="${LOCAL_SQLITE_BACKUP_ROOT}/preflight-$(date +%Y%m%d%H%M%S)-${OLD_VM_NAME}"
-mkdir -p "${LOCAL_SQLITE_BACKUP_DIR}"
-tar -C "${LOCAL_SQLITE_BACKUP_DIR}" -xzf "${PRE_FLIGHT_ARCHIVE}" freetool-db openfga
-find "${LOCAL_SQLITE_BACKUP_DIR}" -type f \( -name '*.db' -o -name '*.db-*' -o -name '*.sqlite' -o -name '*.sqlite-*' \) | sort > "${LOCAL_SQLITE_BACKUP_DIR}/sqlite-files.txt"
-if [[ ! -s "${LOCAL_SQLITE_BACKUP_DIR}/sqlite-files.txt" ]]; then
-  echo "Preflight backup validation failed: no sqlite files found in ${LOCAL_SQLITE_BACKUP_DIR}" >&2
-  exit 1
+OLD_VM_NAME="$(resolve_old_vm || true)"
+HAS_OLD_VM=1
+if [[ -z "${OLD_VM_NAME}" ]]; then
+  HAS_OLD_VM=0
+  log "No existing VM resolved from MIG, OpenTofu, backend health, or labels; continuing in bootstrap mode (no old-state copy)"
+else
+  log "Preflight: create paranoid local SQLite backup before deploy actions"
+  PRE_FLIGHT_ARCHIVE="$(mktemp /tmp/freetool-db-preflight.XXXXXX.tgz)"
+  cleanup_files+=("${PRE_FLIGHT_ARCHIVE}")
+  gcloud compute ssh "${OLD_VM_NAME}" --project "${GCP_PROJECT_ID}" --zone "${GCP_VM_ZONE}" --tunnel-through-iap --command "sudo tar -C ${OLD_DATA_ROOT} -czf - freetool-db openfga" > "${PRE_FLIGHT_ARCHIVE}"
+  LOCAL_SQLITE_BACKUP_DIR="${LOCAL_SQLITE_BACKUP_ROOT}/preflight-$(date +%Y%m%d%H%M%S)-${OLD_VM_NAME}"
+  mkdir -p "${LOCAL_SQLITE_BACKUP_DIR}"
+  tar -C "${LOCAL_SQLITE_BACKUP_DIR}" -xzf "${PRE_FLIGHT_ARCHIVE}" freetool-db openfga
+  find "${LOCAL_SQLITE_BACKUP_DIR}" -type f \( -name '*.db' -o -name '*.db-*' -o -name '*.sqlite' -o -name '*.sqlite-*' \) | sort > "${LOCAL_SQLITE_BACKUP_DIR}/sqlite-files.txt"
+  if [[ ! -s "${LOCAL_SQLITE_BACKUP_DIR}/sqlite-files.txt" ]]; then
+    echo "Preflight backup validation failed: no sqlite files found in ${LOCAL_SQLITE_BACKUP_DIR}" >&2
+    exit 1
+  fi
+  log "Preflight SQLite backup complete at ${LOCAL_SQLITE_BACKUP_DIR}"
 fi
-log "Preflight SQLite backup complete at ${LOCAL_SQLITE_BACKUP_DIR}"
 
 T0="$(now)"
 
@@ -254,7 +299,11 @@ docker build --platform linux/amd64 -f src/Freetool.Api/Dockerfile -t "${IMAGE_U
 docker push "${IMAGE_URI}"
 
 log "Provision green via OpenTofu (capacity 0)"
-apply_tofu_state 1 0 true "${TAG}" 1
+if (( HAS_OLD_VM == 1 )); then
+  apply_tofu_state 1 0 true "${TAG}" 1
+else
+  apply_tofu_state 0 0 true "${TAG}" 0
+fi
 [[ -n "${GREEN_VM_NAME:-}" ]] || { echo "OpenTofu did not return bluegreen_vm_name" >&2; exit 1; }
 
 wait_for_ssh "${GREEN_VM_NAME}"
@@ -263,33 +312,39 @@ wait_local_health "${GREEN_VM_NAME}"
 T1="$(now)"
 PREWARM_SECONDS="$((T1-T0))"
 
-log "Drain old backend via OpenTofu"
-apply_tofu_state "${PRIMARY_DRAIN_CAPACITY}" 0 true "${TAG}" 1
-OLD_BACKEND_DRAINED=1
-sleep "${DRAIN_SECONDS_TARGET}"
+if (( HAS_OLD_VM == 1 )); then
+  log "Drain old backend via OpenTofu"
+  apply_tofu_state "${PRIMARY_DRAIN_CAPACITY}" 0 true "${TAG}" 1
+  OLD_BACKEND_DRAINED=1
+  sleep "${DRAIN_SECONDS_TARGET}"
 
-T2="$(now)"
-DRAIN_SECONDS="$((T2-T1))"
+  T2="$(now)"
+  DRAIN_SECONDS="$((T2-T1))"
 
-log "Stop stacks + copy sqlite dirs"
-stop_stack "${OLD_VM_NAME}"
-stop_stack "${GREEN_VM_NAME}"
+  log "Stop stacks + copy sqlite dirs"
+  stop_stack "${OLD_VM_NAME}"
+  stop_stack "${GREEN_VM_NAME}"
 
-ARCHIVE="$(mktemp /tmp/freetool-db-sync.XXXXXX.tgz)"
-cleanup_files+=("${ARCHIVE}")
-gcloud compute ssh "${OLD_VM_NAME}" --project "${GCP_PROJECT_ID}" --zone "${GCP_VM_ZONE}" --tunnel-through-iap --command "sudo tar -C ${OLD_DATA_ROOT} -czf - freetool-db openfga" > "${ARCHIVE}"
-gcloud compute scp "${ARCHIVE}" "${GREEN_VM_NAME}:~/db-sync.tgz" --project "${GCP_PROJECT_ID}" --zone "${GCP_VM_ZONE}" --tunnel-through-iap
-gcloud compute ssh "${GREEN_VM_NAME}" --project "${GCP_PROJECT_ID}" --zone "${GCP_VM_ZONE}" --tunnel-through-iap --command "
-  set -euo pipefail
-  sudo rm -rf ${GREEN_DATA_ROOT}/freetool-db ${GREEN_DATA_ROOT}/openfga
-  sudo mkdir -p ${GREEN_DATA_ROOT}
-  sudo tar -C ${GREEN_DATA_ROOT} -xzf ~/db-sync.tgz
-  rm -f ~/db-sync.tgz
-  sudo chmod -R 0777 ${GREEN_DATA_ROOT}/freetool-db ${GREEN_DATA_ROOT}/openfga
-"
+  ARCHIVE="$(mktemp /tmp/freetool-db-sync.XXXXXX.tgz)"
+  cleanup_files+=("${ARCHIVE}")
+  gcloud compute ssh "${OLD_VM_NAME}" --project "${GCP_PROJECT_ID}" --zone "${GCP_VM_ZONE}" --tunnel-through-iap --command "sudo tar -C ${OLD_DATA_ROOT} -czf - freetool-db openfga" > "${ARCHIVE}"
+  gcloud compute scp "${ARCHIVE}" "${GREEN_VM_NAME}:~/db-sync.tgz" --project "${GCP_PROJECT_ID}" --zone "${GCP_VM_ZONE}" --tunnel-through-iap
+  gcloud compute ssh "${GREEN_VM_NAME}" --project "${GCP_PROJECT_ID}" --zone "${GCP_VM_ZONE}" --tunnel-through-iap --command "
+    set -euo pipefail
+    sudo rm -rf ${GREEN_DATA_ROOT}/freetool-db ${GREEN_DATA_ROOT}/openfga
+    sudo mkdir -p ${GREEN_DATA_ROOT}
+    sudo tar -C ${GREEN_DATA_ROOT} -xzf ~/db-sync.tgz
+    rm -f ~/db-sync.tgz
+    sudo chmod -R 0777 ${GREEN_DATA_ROOT}/freetool-db ${GREEN_DATA_ROOT}/openfga
+  "
 
-T3="$(now)"
-COPY_SECONDS="$((T3-T2))"
+  T3="$(now)"
+  COPY_SECONDS="$((T3-T2))"
+else
+  DRAIN_SECONDS=0
+  COPY_SECONDS=0
+  T3="$(now)"
+fi
 
 log "Restart green + enable traffic via OpenTofu"
 start_stack "${GREEN_VM_NAME}"
@@ -312,12 +367,12 @@ Timing summary:
   total_seconds=${TOTAL_SECONDS}
 
 Resources:
-  old_vm=${OLD_VM_NAME}
+  old_vm=${OLD_VM_NAME:-none}
   green_vm=${GREEN_VM_NAME}
   old_backend_group=${GCP_MIG_NAME}
   green_backend_group=${GREEN_IG_NAME}
   backend_service=${GCP_BACKEND_SERVICE}
-  preflight_sqlite_backup_dir=${LOCAL_SQLITE_BACKUP_DIR}
+  preflight_sqlite_backup_dir=${LOCAL_SQLITE_BACKUP_DIR:-none}
 
 Note:
   Old backend traffic is set to capacity 0 via OpenTofu.

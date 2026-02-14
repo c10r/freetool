@@ -82,12 +82,8 @@ variable "bluegreen_enabled" {
   default     = false
 
   validation {
-    condition = !var.bluegreen_enabled || (
-      var.primary_mig_target_size == 0
-      && var.primary_backend_capacity == 0
-      && var.preserve_data_disk_on_destroy
-    )
-    error_message = "When bluegreen_enabled is true, primary_mig_target_size and primary_backend_capacity must be 0, and preserve_data_disk_on_destroy must be true."
+    condition     = !var.bluegreen_enabled || var.preserve_data_disk_on_destroy
+    error_message = "When bluegreen_enabled is true, preserve_data_disk_on_destroy must be true."
   }
 }
 

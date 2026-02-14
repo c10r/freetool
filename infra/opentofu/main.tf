@@ -183,14 +183,6 @@ resource "google_compute_instance_template" "freetool" {
     scopes = ["cloud-platform"]
   }
 
-  disk {
-    boot        = false
-    auto_delete = false
-    source      = local.data_disk_self_link
-    device_name = local.data_disk_name
-    mode        = "READ_WRITE"
-  }
-
   metadata_startup_script = templatefile("${path.module}/templates/startup.sh.tmpl", {
     artifact_registry_location                   = var.artifact_registry_location
     project_id                                   = var.project_id
@@ -207,7 +199,6 @@ resource "google_compute_instance_template" "freetool" {
     google_directory_credentials_secret_name     = local.google_directory_credentials_secret_name
     org_admin_email                              = var.org_admin_email
     validate_iap_jwt                             = var.validate_iap_jwt
-    data_disk_name                               = local.data_disk_name
     data_mount_path                              = var.data_mount_path
   })
 
