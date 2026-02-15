@@ -40,6 +40,11 @@ type AuthRelation =
     | AppEdit
     | AppDelete
     | AppRun
+    // Dashboard permissions (apply to Space)
+    | DashboardCreate
+    | DashboardEdit
+    | DashboardDelete
+    | DashboardRun
     // Folder permissions (apply to Space)
     | FolderCreate
     | FolderEdit
@@ -80,6 +85,10 @@ module AuthTypes =
         | AppEdit -> "edit_app"
         | AppDelete -> "delete_app"
         | AppRun -> "run_app"
+        | DashboardCreate -> "create_dashboard"
+        | DashboardEdit -> "edit_dashboard"
+        | DashboardDelete -> "delete_dashboard"
+        | DashboardRun -> "run_dashboard"
         | FolderCreate -> "create_folder"
         | FolderEdit -> "edit_folder"
         | FolderDelete -> "delete_folder"

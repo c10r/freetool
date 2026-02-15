@@ -18,6 +18,7 @@ type EventEnhancementService
     (
         userRepository: IUserRepository,
         appRepository: IAppRepository,
+        dashboardRepository: IDashboardRepository,
         folderRepository: IFolderRepository,
         resourceRepository: IResourceRepository,
         spaceRepository: ISpaceRepository
@@ -145,6 +146,84 @@ type EventEnhancementService
                             JsonSerializer.Deserialize<Freetool.Domain.Events.AppRestoredEvent>(eventData, jsonOptions)
 
                         return appEventData.Name.Value
+                | DashboardEvents dashboardEvent ->
+                    match dashboardEvent with
+                    | DashboardCreatedEvent ->
+                        let dashboardEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.DashboardCreatedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        return dashboardEventData.Name.Value
+                    | DashboardUpdatedEvent ->
+                        let dashboardEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.DashboardUpdatedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        let! dashboard = dashboardRepository.GetByIdAsync dashboardEventData.DashboardId
+
+                        match dashboard with
+                        | Some d -> return Dashboard.getName d
+                        | None -> return $"Dashboard {dashboardEventData.DashboardId.Value}"
+                    | DashboardDeletedEvent ->
+                        let dashboardEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.DashboardDeletedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        return dashboardEventData.Name.Value
+                    | DashboardPreparedEvent ->
+                        let dashboardEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.DashboardPreparedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        let! dashboard = dashboardRepository.GetByIdAsync dashboardEventData.DashboardId
+
+                        match dashboard with
+                        | Some d -> return Dashboard.getName d
+                        | None -> return $"Dashboard {dashboardEventData.DashboardId.Value}"
+                    | DashboardPrepareFailedEvent ->
+                        let dashboardEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.DashboardPrepareFailedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        let! dashboard = dashboardRepository.GetByIdAsync dashboardEventData.DashboardId
+
+                        match dashboard with
+                        | Some d -> return Dashboard.getName d
+                        | None -> return $"Dashboard {dashboardEventData.DashboardId.Value}"
+                    | DashboardActionExecutedEvent ->
+                        let dashboardEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.DashboardActionExecutedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        let! dashboard = dashboardRepository.GetByIdAsync dashboardEventData.DashboardId
+
+                        match dashboard with
+                        | Some d -> return Dashboard.getName d
+                        | None -> return $"Dashboard {dashboardEventData.DashboardId.Value}"
+                    | DashboardActionFailedEvent ->
+                        let dashboardEventData =
+                            JsonSerializer.Deserialize<Freetool.Domain.Events.DashboardActionFailedEvent>(
+                                eventData,
+                                jsonOptions
+                            )
+
+                        let! dashboard = dashboardRepository.GetByIdAsync dashboardEventData.DashboardId
+
+                        match dashboard with
+                        | Some d -> return Dashboard.getName d
+                        | None -> return $"Dashboard {dashboardEventData.DashboardId.Value}"
                 | FolderEvents folderEvent ->
                     match folderEvent with
                     | FolderCreatedEvent ->
@@ -325,6 +404,15 @@ type EventEnhancementService
             | AppUpdatedEvent -> $"{userName} updated app \"{entityName}\""
             | AppDeletedEvent -> $"{userName} deleted app \"{entityName}\""
             | AppRestoredEvent -> $"{userName} restored app \"{entityName}\""
+        | DashboardEvents dashboardEvent ->
+            match dashboardEvent with
+            | DashboardCreatedEvent -> $"{userName} created dashboard \"{entityName}\""
+            | DashboardUpdatedEvent -> $"{userName} updated dashboard \"{entityName}\""
+            | DashboardDeletedEvent -> $"{userName} deleted dashboard \"{entityName}\""
+            | DashboardPreparedEvent -> $"{userName} prepared dashboard \"{entityName}\""
+            | DashboardPrepareFailedEvent -> $"{userName} failed to prepare dashboard \"{entityName}\""
+            | DashboardActionExecutedEvent -> $"{userName} executed a dashboard action in \"{entityName}\""
+            | DashboardActionFailedEvent -> $"{userName} failed a dashboard action in \"{entityName}\""
         | FolderEvents folderEvent ->
             match folderEvent with
             | FolderCreatedEvent -> $"{userName} created folder \"{entityName}\""

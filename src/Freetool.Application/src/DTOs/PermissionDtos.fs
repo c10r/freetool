@@ -2,7 +2,7 @@ namespace Freetool.Application.DTOs
 
 open System.Text.Json.Serialization
 
-/// Represents the 10 workspace-level permissions
+/// Represents workspace-level permissions
 type WorkspacePermissionsData =
     { CreateResource: bool
       EditResource: bool
@@ -11,6 +11,10 @@ type WorkspacePermissionsData =
       EditApp: bool
       DeleteApp: bool
       RunApp: bool
+      CreateDashboard: bool
+      EditDashboard: bool
+      DeleteDashboard: bool
+      RunDashboard: bool
       CreateFolder: bool
       EditFolder: bool
       DeleteFolder: bool }

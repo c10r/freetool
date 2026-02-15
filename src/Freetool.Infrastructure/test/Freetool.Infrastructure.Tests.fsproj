@@ -23,6 +23,7 @@
     <Compile Include="IapAuthMiddlewareTests.fs" />
     <Compile Include="DevAuthMiddlewareTests.fs" />
     <Compile Include="AppControllerIntegrationTests.fs" />
+    <Compile Include="DashboardControllerIntegrationTests.fs" />
     <Compile Include="../../Freetool.Api/test/AppControllerAuthTests.fs" />
   </ItemGroup>
   <ItemGroup>

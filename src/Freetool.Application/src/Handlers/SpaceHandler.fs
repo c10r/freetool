@@ -23,12 +23,16 @@ module SpaceHandler =
         | AppEdit -> "EditApp"
         | AppDelete -> "DeleteApp"
         | AppRun -> "RunApp"
+        | DashboardCreate -> "CreateDashboard"
+        | DashboardEdit -> "EditDashboard"
+        | DashboardDelete -> "DeleteDashboard"
+        | DashboardRun -> "RunDashboard"
         | FolderCreate -> "CreateFolder"
         | FolderEdit -> "EditFolder"
         | FolderDelete -> "DeleteFolder"
         | _ -> relation.ToString()
 
-    /// List of all 10 permission relations for space members
+    /// List of all permission relations for space members
     let allSpacePermissions =
         [ ResourceCreate
           ResourceEdit
@@ -37,6 +41,10 @@ module SpaceHandler =
           AppEdit
           AppDelete
           AppRun
+          DashboardCreate
+          DashboardEdit
+          DashboardDelete
+          DashboardRun
           FolderCreate
           FolderEdit
           FolderDelete ]
@@ -50,6 +58,10 @@ module SpaceHandler =
           EditApp = permissionsMap |> Map.tryFind AppEdit |> Option.defaultValue false
           DeleteApp = permissionsMap |> Map.tryFind AppDelete |> Option.defaultValue false
           RunApp = permissionsMap |> Map.tryFind AppRun |> Option.defaultValue false
+          CreateDashboard = permissionsMap |> Map.tryFind DashboardCreate |> Option.defaultValue false
+          EditDashboard = permissionsMap |> Map.tryFind DashboardEdit |> Option.defaultValue false
+          DeleteDashboard = permissionsMap |> Map.tryFind DashboardDelete |> Option.defaultValue false
+          RunDashboard = permissionsMap |> Map.tryFind DashboardRun |> Option.defaultValue false
           CreateFolder = permissionsMap |> Map.tryFind FolderCreate |> Option.defaultValue false
           EditFolder = permissionsMap |> Map.tryFind FolderEdit |> Option.defaultValue false
           DeleteFolder = permissionsMap |> Map.tryFind FolderDelete |> Option.defaultValue false }
@@ -63,6 +75,10 @@ module SpaceHandler =
               (AppEdit, permissions.EditApp)
               (AppDelete, permissions.DeleteApp)
               (AppRun, permissions.RunApp)
+              (DashboardCreate, permissions.CreateDashboard)
+              (DashboardEdit, permissions.EditDashboard)
+              (DashboardDelete, permissions.DeleteDashboard)
+              (DashboardRun, permissions.RunDashboard)
               (FolderCreate, permissions.CreateFolder)
               (FolderEdit, permissions.EditFolder)
               (FolderDelete, permissions.DeleteFolder) ]
@@ -76,6 +92,10 @@ module SpaceHandler =
           EditApp = true
           DeleteApp = true
           RunApp = true
+          CreateDashboard = true
+          EditDashboard = true
+          DeleteDashboard = true
+          RunDashboard = true
           CreateFolder = true
           EditFolder = true
           DeleteFolder = true }

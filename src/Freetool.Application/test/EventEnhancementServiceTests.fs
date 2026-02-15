@@ -52,6 +52,20 @@ type MockAppRepository() =
         member _.RestoreAsync _ = task { return Ok() }
         member _.CheckNameConflictAsync _ _ = task { return false }
 
+type MockDashboardRepository() =
+    interface IDashboardRepository with
+        member _.GetByIdAsync(_dashboardId: DashboardId) = task { return None }
+        member _.GetByFolderIdAsync _folderId _skip _take = task { return [] }
+        member _.GetBySpaceIdsAsync _spaceIds _skip _take = task { return [] }
+        member _.GetAllAsync _skip _take = task { return [] }
+        member _.AddAsync(_dashboard) = task { return Ok() }
+        member _.UpdateAsync(_dashboard) = task { return Ok() }
+        member _.DeleteAsync _ _ = task { return Ok() }
+        member _.ExistsByNameAndFolderIdAsync _ _ = task { return false }
+        member _.GetCountByFolderIdAsync _ = task { return 0 }
+        member _.GetCountBySpaceIdsAsync _ = task { return 0 }
+        member _.GetCountAsync() = task { return 0 }
+
 type MockFolderRepository() =
     interface IFolderRepository with
         member _.GetByIdAsync(folderId: FolderId) = task { return None }
@@ -110,6 +124,7 @@ let createService () =
     EventEnhancementService(
         MockUserRepository(),
         MockAppRepository(),
+        MockDashboardRepository(),
         MockFolderRepository(),
         MockResourceRepository(),
         MockSpaceRepository()
@@ -246,4 +261,59 @@ let ``SpaceDefaultMemberPermissionsChangedEvent enhances with correct summary`` 
 
         Assert.Equal("Engineering", enhanced.EntityName)
         Assert.Contains("changed default member permissions in space", enhanced.EventSummary)
+    }
+
+[<Fact>]
+let ``DashboardPreparedEvent enhances with runtime summary`` () =
+    task {
+        let service = createService ()
+        let actorUserId = UserId.NewId()
+        let dashboardId = DashboardId.NewId()
+        let prepareAppId = AppId.NewId()
+        let prepareRunId = RunId.NewId()
+
+        let event =
+            DashboardEvents.dashboardPrepared actorUserId dashboardId prepareAppId prepareRunId
+
+        let eventData =
+            createEventData
+                event
+                (DashboardEvents DashboardPreparedEvent)
+                EntityType.Dashboard
+                (dashboardId.Value.ToString())
+
+        let! enhanced = service.EnhanceEventAsync(eventData)
+
+        Assert.Contains("Dashboard", enhanced.EntityName)
+        Assert.Contains("prepared dashboard", enhanced.EventSummary)
+    }
+
+[<Fact>]
+let ``DashboardActionFailedEvent enhances with runtime failure summary`` () =
+    task {
+        let service = createService ()
+        let actorUserId = UserId.NewId()
+        let dashboardId = DashboardId.NewId()
+        let actionId = ActionId.Create(Some "approve") |> Result.toOption |> Option.get
+        let actionAppId = AppId.NewId()
+
+        let event =
+            DashboardEvents.dashboardActionFailed
+                actorUserId
+                dashboardId
+                actionId
+                (Some actionAppId)
+                "service unavailable"
+
+        let eventData =
+            createEventData
+                event
+                (DashboardEvents DashboardActionFailedEvent)
+                EntityType.Dashboard
+                (dashboardId.Value.ToString())
+
+        let! enhanced = service.EnhanceEventAsync(eventData)
+
+        Assert.Contains("Dashboard", enhanced.EntityName)
+        Assert.Contains("failed a dashboard action", enhanced.EventSummary)
     }

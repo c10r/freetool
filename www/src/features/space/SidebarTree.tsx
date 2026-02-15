@@ -6,6 +6,7 @@ import {
   FileType,
   FolderClosed,
   FolderOpen,
+  LayoutDashboard,
   ScrollText,
   Trash2,
   Users,
@@ -323,6 +324,8 @@ function TreeNodeComponent({
           ) : (
             <FolderClosed size={16} className="flex-shrink-0" />
           )
+        ) : node.type === "dashboard" ? (
+          <LayoutDashboard size={16} className="flex-shrink-0" />
         ) : (
           <FileType size={16} className="flex-shrink-0" />
         )}

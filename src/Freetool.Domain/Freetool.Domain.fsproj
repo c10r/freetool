@@ -19,6 +19,7 @@
     <Compile Include="src/ValueObjects/ResourceId.fs" />
     <Compile Include="src/ValueObjects/FolderId.fs" />
     <Compile Include="src/ValueObjects/AppId.fs" />
+    <Compile Include="src/ValueObjects/DashboardId.fs" />
     <Compile Include="src/ValueObjects/Email.fs" />
     <Compile Include="src/ValueObjects/ResourceName.fs" />
     <Compile Include="src/ValueObjects/ResourceDescription.fs" />
@@ -32,6 +33,8 @@
     <Compile Include="src/ValueObjects/DatabasePassword.fs" />
     <Compile Include="src/ValueObjects/FolderName.fs" />
     <Compile Include="src/ValueObjects/AppName.fs" />
+    <Compile Include="src/ValueObjects/DashboardName.fs" />
+    <Compile Include="src/ValueObjects/ActionId.fs" />
     <Compile Include="src/ValueObjects/InputTitle.fs" />
     <Compile Include="src/ValueObjects/InputType.fs" />
     <Compile Include="src/ValueObjects/DefaultValue.fs" />
@@ -45,6 +48,7 @@
     <Compile Include="src/Events/UserEvents.fs" />
     <Compile Include="src/Events/SpaceEvents.fs" />
     <Compile Include="src/Events/AppEvents.fs" />
+    <Compile Include="src/Events/DashboardEvents.fs" />
     <Compile Include="src/Events/ResourceEvents.fs" />
     <Compile Include="src/Events/FolderEvents.fs" />
     <Compile Include="src/Events/RunEvents.fs" />
@@ -53,6 +57,7 @@
     <Compile Include="src/Entities/Resource.fs" />
     <Compile Include="src/Entities/Folder.fs" />
     <Compile Include="src/Entities/App.fs" />
+    <Compile Include="src/Entities/Dashboard.fs" />
     <Compile Include="src/Entities/Event.fs" />
     <Compile Include="src/Services/RequestComposer.fs" />
     <Compile Include="src/Entities/Run.fs" />

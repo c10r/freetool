@@ -28,6 +28,10 @@ function mapPermissionsFromApi(
         createFolder?: boolean;
         editFolder?: boolean;
         deleteFolder?: boolean;
+        createDashboard?: boolean;
+        editDashboard?: boolean;
+        deleteDashboard?: boolean;
+        runDashboard?: boolean;
       }
     | null
     | undefined
@@ -43,6 +47,10 @@ function mapPermissionsFromApi(
     create_folder: apiPermissions?.createFolder ?? false,
     edit_folder: apiPermissions?.editFolder ?? false,
     delete_folder: apiPermissions?.deleteFolder ?? false,
+    create_dashboard: apiPermissions?.createDashboard ?? false,
+    edit_dashboard: apiPermissions?.editDashboard ?? false,
+    delete_dashboard: apiPermissions?.deleteDashboard ?? false,
+    run_dashboard: apiPermissions?.runDashboard ?? false,
   };
 }
 
@@ -60,6 +68,10 @@ function mapPermissionsToApi(permissions: SpacePermissions): {
   createFolder: boolean;
   editFolder: boolean;
   deleteFolder: boolean;
+  createDashboard: boolean;
+  editDashboard: boolean;
+  deleteDashboard: boolean;
+  runDashboard: boolean;
 } {
   return {
     createResource: permissions.create_resource,
@@ -72,6 +84,10 @@ function mapPermissionsToApi(permissions: SpacePermissions): {
     createFolder: permissions.create_folder,
     editFolder: permissions.edit_folder,
     deleteFolder: permissions.delete_folder,
+    createDashboard: permissions.create_dashboard,
+    editDashboard: permissions.edit_dashboard,
+    deleteDashboard: permissions.delete_dashboard,
+    runDashboard: permissions.run_dashboard,
   };
 }
 

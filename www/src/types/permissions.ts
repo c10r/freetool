@@ -18,7 +18,11 @@ export type Permission =
   | "run_app"
   | "create_folder"
   | "edit_folder"
-  | "delete_folder";
+  | "delete_folder"
+  | "create_dashboard"
+  | "edit_dashboard"
+  | "delete_dashboard"
+  | "run_dashboard";
 
 /**
  * Map of all space permissions with their granted/denied status
@@ -34,6 +38,10 @@ export interface SpacePermissions {
   create_folder: boolean;
   edit_folder: boolean;
   delete_folder: boolean;
+  create_dashboard: boolean;
+  edit_dashboard: boolean;
+  delete_dashboard: boolean;
+  run_dashboard: boolean;
 }
 
 /**

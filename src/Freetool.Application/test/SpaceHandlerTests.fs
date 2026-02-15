@@ -131,6 +131,15 @@ type MockEventRepository() =
                       Take = 10 }
             }
 
+        member _.GetEventsByDashboardIdAsync(_filter: DashboardEventFilter) : Task<PagedResult<EventData>> =
+            task {
+                return
+                    { Items = []
+                      TotalCount = 0
+                      Skip = 0
+                      Take = 10 }
+            }
+
         member _.GetEventsByUserIdAsync(_filter: UserEventFilter) : Task<PagedResult<EventData>> =
             task {
                 return
@@ -740,6 +749,10 @@ let ``UpdateDefaultMemberPermissions writes audit event when permissions change`
                   EditApp = false
                   DeleteApp = false
                   RunApp = false
+                  CreateDashboard = true
+                  EditDashboard = false
+                  DeleteDashboard = false
+                  RunDashboard = false
                   CreateFolder = false
                   EditFolder = false
                   DeleteFolder = false } }

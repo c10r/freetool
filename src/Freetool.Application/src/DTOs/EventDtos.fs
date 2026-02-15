@@ -50,6 +50,25 @@ type AppEventFilter =
       IncludeRunEvents: bool }
 
 [<CLIMutable>]
+type DashboardEventFilterDTO =
+    { DashboardId: string
+      FromDate: DateTime option
+      ToDate: DateTime option
+
+      [<Range(0, 2147483647)>]
+      Skip: int option
+
+      [<Range(0, 100)>]
+      Take: int option }
+
+type DashboardEventFilter =
+    { DashboardId: DashboardId
+      FromDate: DateTime option
+      ToDate: DateTime option
+      Skip: int
+      Take: int }
+
+[<CLIMutable>]
 type UserEventFilterDTO =
     { UserId: string
       FromDate: DateTime option
@@ -154,6 +173,27 @@ module EventFilterValidator =
                   Skip = dto.Skip |> Option.defaultValue 0
                   Take = dto.Take |> Option.defaultValue 50
                   IncludeRunEvents = dto.IncludeRunEvents |> Option.defaultValue true }
+        else
+            Error(List.rev errors)
+
+    let validateDashboardFilter (dto: DashboardEventFilterDTO) : Result<DashboardEventFilter, string list> =
+        let mutable errors = []
+        let mutable dashboardId = None
+
+        match Guid.TryParse(dto.DashboardId) with
+        | true, guid -> dashboardId <- Some(DashboardId.FromGuid guid)
+        | false, _ -> errors <- "Invalid DashboardId format - must be a valid GUID" :: errors
+
+        errors <- validatePagination dto.Skip dto.Take errors
+        errors <- validateDateRange dto.FromDate dto.ToDate errors
+
+        if List.isEmpty errors then
+            Ok
+                { DashboardId = dashboardId.Value
+                  FromDate = dto.FromDate
+                  ToDate = dto.ToDate
+                  Skip = dto.Skip |> Option.defaultValue 0
+                  Take = dto.Take |> Option.defaultValue 50 }
         else
             Error(List.rev errors)
 

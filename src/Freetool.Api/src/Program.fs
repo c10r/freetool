@@ -44,6 +44,14 @@ let private validateEventTypeRegistry (logger: ILogger) =
           EventType.AppEvents AppUpdatedEvent
           EventType.AppEvents AppDeletedEvent
           EventType.AppEvents AppRestoredEvent
+          // Dashboard events
+          EventType.DashboardEvents DashboardCreatedEvent
+          EventType.DashboardEvents DashboardUpdatedEvent
+          EventType.DashboardEvents DashboardDeletedEvent
+          EventType.DashboardEvents DashboardPreparedEvent
+          EventType.DashboardEvents DashboardPrepareFailedEvent
+          EventType.DashboardEvents DashboardActionExecutedEvent
+          EventType.DashboardEvents DashboardActionFailedEvent
           // Resource events
           EventType.ResourceEvents ResourceCreatedEvent
           EventType.ResourceEvents ResourceUpdatedEvent
@@ -274,6 +282,10 @@ let main args =
     builder.Services.AddScoped<IResourceRepository, ResourceRepository>() |> ignore
     builder.Services.AddScoped<IFolderRepository, FolderRepository>() |> ignore
     builder.Services.AddScoped<IAppRepository, AppRepository>() |> ignore
+
+    builder.Services.AddScoped<IDashboardRepository, DashboardRepository>()
+    |> ignore
+
     builder.Services.AddScoped<IRunRepository, RunRepository>() |> ignore
     builder.Services.AddScoped<IEventRepository, EventRepository>() |> ignore
 
@@ -312,11 +324,19 @@ let main args =
     builder.Services.AddScoped<IEventEnhancementService>(fun serviceProvider ->
         let userRepository = serviceProvider.GetRequiredService<IUserRepository>()
         let appRepository = serviceProvider.GetRequiredService<IAppRepository>()
+        let dashboardRepository = serviceProvider.GetRequiredService<IDashboardRepository>()
         let folderRepository = serviceProvider.GetRequiredService<IFolderRepository>()
         let resourceRepository = serviceProvider.GetRequiredService<IResourceRepository>()
         let spaceRepository = serviceProvider.GetRequiredService<ISpaceRepository>()
 
-        EventEnhancementService(userRepository, appRepository, folderRepository, resourceRepository, spaceRepository)
+        EventEnhancementService(
+            userRepository,
+            appRepository,
+            dashboardRepository,
+            folderRepository,
+            resourceRepository,
+            spaceRepository
+        )
         :> IEventEnhancementService)
     |> ignore
 
@@ -344,6 +364,7 @@ let main args =
 
     builder.Services.AddScoped<FolderHandler>() |> ignore
     builder.Services.AddScoped<AppHandler>() |> ignore
+    builder.Services.AddScoped<DashboardHandler>() |> ignore
 
     builder.Services.AddScoped<ICommandHandler<UserCommand, UserCommandResult>>(fun serviceProvider ->
         let userHandler = serviceProvider.GetRequiredService<UserHandler>()
@@ -373,6 +394,12 @@ let main args =
         let appHandler = serviceProvider.GetRequiredService<AppHandler>()
         let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
         AutoTracing.createTracingDecorator "app" appHandler activitySource)
+    |> ignore
+
+    builder.Services.AddScoped<ICommandHandler<DashboardCommand, DashboardCommandResult>>(fun serviceProvider ->
+        let dashboardHandler = serviceProvider.GetRequiredService<DashboardHandler>()
+        let activitySource = serviceProvider.GetRequiredService<ActivitySource>()
+        AutoTracing.createTracingDecorator "dashboard" dashboardHandler activitySource)
     |> ignore
 
     builder.Services.AddScoped<TrashHandler>(fun serviceProvider ->

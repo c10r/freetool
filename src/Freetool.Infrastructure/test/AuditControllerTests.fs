@@ -14,10 +14,12 @@ open Freetool.Domain.Entities
 type MockEventRepository() =
     let mutable lastFilter: EventFilter option = None
     let mutable lastAppFilter: AppEventFilter option = None
+    let mutable lastDashboardFilter: DashboardEventFilter option = None
     let mutable lastUserFilter: UserEventFilter option = None
 
     member _.LastFilter = lastFilter
     member _.LastAppFilter = lastAppFilter
+    member _.LastDashboardFilter = lastDashboardFilter
     member _.LastUserFilter = lastUserFilter
 
     interface IEventRepository with
@@ -39,6 +41,17 @@ type MockEventRepository() =
         member _.GetEventsByAppIdAsync(filter: AppEventFilter) =
             task {
                 lastAppFilter <- Some filter
+
+                return
+                    { Items = []
+                      TotalCount = 0
+                      Skip = filter.Skip
+                      Take = filter.Take }
+            }
+
+        member _.GetEventsByDashboardIdAsync(filter: DashboardEventFilter) =
+            task {
+                lastDashboardFilter <- Some filter
 
                 return
                     { Items = []

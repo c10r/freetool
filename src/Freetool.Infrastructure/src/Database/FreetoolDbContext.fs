@@ -89,6 +89,9 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     val mutable private _apps: DbSet<AppData>
 
     [<DefaultValue>]
+    val mutable private _dashboards: DbSet<DashboardData>
+
+    [<DefaultValue>]
     val mutable private _events: DbSet<EventData>
 
     [<DefaultValue>]
@@ -118,6 +121,10 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
     member this.Apps
         with get () = this._apps
         and set value = this._apps <- value
+
+    member this.Dashboards
+        with get () = this._dashboards
+        and set value = this._dashboards <- value
 
     member this.Events
         with get () = this._events
@@ -941,6 +948,61 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
 
             // Global query filter for soft delete
             entity.HasQueryFilter(fun a -> not a.IsDeleted) |> ignore)
+        |> ignore
+
+        // Configure DashboardData
+        modelBuilder.Entity<DashboardData>(fun entity ->
+            let dashboardIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.DashboardId, System.Guid>(
+                    (fun dashboardId -> dashboardId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.DashboardId(guid))
+                )
+
+            let dashboardNameConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.DashboardName, string>(
+                    (fun dashboardName -> dashboardName.Value),
+                    (fun str ->
+                        match DashboardName.Create(Some str) with
+                        | Ok validName -> validName
+                        | Error _ -> failwith $"Invalid DashboardName in database: {str}")
+                )
+
+            let folderIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.FolderId, System.Guid>(
+                    (fun folderId -> folderId.Value),
+                    (fun guid -> Freetool.Domain.ValueObjects.FolderId(guid))
+                )
+
+            let optionAppIdConverter =
+                ValueConverter<Freetool.Domain.ValueObjects.AppId option, System.Nullable<System.Guid>>(
+                    (fun opt ->
+                        match opt with
+                        | Some appId -> System.Nullable(appId.Value)
+                        | None -> System.Nullable()),
+                    (fun nullable ->
+                        if nullable.HasValue then
+                            Some(Freetool.Domain.ValueObjects.AppId(nullable.Value))
+                        else
+                            None)
+                )
+
+            entity.Property(fun d -> d.Id).HasConversion(dashboardIdConverter) |> ignore
+
+            entity.Property(fun d -> d.Name).HasConversion(dashboardNameConverter) |> ignore
+
+            entity.Property(fun d -> d.FolderId).HasConversion(folderIdConverter) |> ignore
+
+            entity.Property(fun d -> d.PrepareAppId).HasConversion(optionAppIdConverter)
+            |> ignore
+
+            entity.Property(fun d -> d.CreatedAt).HasColumnName("CreatedAt") |> ignore
+            entity.Property(fun d -> d.UpdatedAt).HasColumnName("UpdatedAt") |> ignore
+            entity.Property(fun d -> d.IsDeleted).HasColumnName("IsDeleted") |> ignore
+
+            entity.HasOne<FolderData>().WithMany().HasForeignKey(fun d -> d.FolderId :> obj)
+            |> ignore
+
+            entity.HasQueryFilter(fun d -> not d.IsDeleted) |> ignore)
         |> ignore
 
         // Configure EventData

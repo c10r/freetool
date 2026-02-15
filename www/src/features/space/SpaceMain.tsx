@@ -1,5 +1,6 @@
 import AppView from "./components/AppView";
 import AuditLogView from "./components/AuditLogView";
+import DashboardView from "./components/DashboardView";
 import FolderView from "./components/FolderView";
 import ResourcesView from "./components/ResourcesView";
 import SpaceSettingsView from "./components/SpaceSettingsView";
@@ -54,6 +55,10 @@ export default function WorkspaceMain(props: SpaceMainProps) {
 
   if (selected.type === "folder") {
     return <FolderView {...props} folder={selected} />;
+  }
+
+  if (selected.type === "dashboard") {
+    return <DashboardView {...props} dashboard={selected} />;
   }
 
   return <AppView {...props} app={selected} />;

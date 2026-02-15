@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import RunApp from "./pages/RunApp";
+import RunDashboard from "./pages/RunDashboard";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,10 @@ const App = () => (
             <Route path="/spaces/:spaceId" element={<Index />} />
             <Route path="/spaces/:spaceId/:nodeId" element={<Index />} />
             <Route path="/spaces/:spaceId/:nodeId/run" element={<RunApp />} />
+            <Route
+              path="/spaces/:spaceId/:nodeId/dashboard-run"
+              element={<RunDashboard />}
+            />
             <Route path="/spaces/:spaceId/resources" element={<Index />} />
             <Route path="/spaces/:spaceId/settings" element={<Index />} />
             <Route path="/spaces/:spaceId/permissions" element={<Index />} />

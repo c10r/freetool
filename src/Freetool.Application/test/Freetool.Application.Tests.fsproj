@@ -33,6 +33,7 @@
     <Compile Include="AppHandlerTests.fs" />
     <Compile Include="UserHandlerTests.fs" />
     <Compile Include="RunHandlerTests.fs" />
+    <Compile Include="DashboardHandlerRuntimeTests.fs" />
     <Compile Include="TrashHandlerTests.fs" />
     <Compile Include="EventEnhancementServiceTests.fs" />
     <Compile Include="EventFilterValidatorTests.fs" />

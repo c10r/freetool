@@ -22,6 +22,10 @@ export default defineConfig(({ mode }) => ({
         target: process.env.VITE_API_URL || "http://localhost:5002",
         changeOrigin: true,
       },
+      "/dashboard": {
+        target: process.env.VITE_API_URL || "http://localhost:5002",
+        changeOrigin: true,
+      },
       "/folder": {
         target: process.env.VITE_API_URL || "http://localhost:5002",
         changeOrigin: true,

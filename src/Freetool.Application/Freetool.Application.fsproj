@@ -28,12 +28,14 @@
     <Compile Include="src/DTOs/FolderDtos.fs" />
     <Compile Include="src/DTOs/AppDtos.fs" />
     <Compile Include="src/DTOs/RunDtos.fs" />
+    <Compile Include="src/DTOs/DashboardDtos.fs" />
     <Compile Include="src/DTOs/TrashDtos.fs" />
     <Compile Include="src/Interfaces/IUserRepository.fs" />
     <Compile Include="src/Interfaces/ISpaceRepository.fs" />
     <Compile Include="src/Interfaces/IResourceRepository.fs" />
     <Compile Include="src/Interfaces/IFolderRepository.fs" />
     <Compile Include="src/Interfaces/IAppRepository.fs" />
+    <Compile Include="src/Interfaces/IDashboardRepository.fs" />
     <Compile Include="src/Interfaces/IEventRepository.fs" />
     <Compile Include="src/Interfaces/IRunRepository.fs" />
     <Compile Include="src/Interfaces/IAuthorizationService.fs" />
@@ -46,6 +48,7 @@
     <Compile Include="src/Commands/ResourceCommands.fs" />
     <Compile Include="src/Commands/FolderCommands.fs" />
     <Compile Include="src/Commands/AppCommands.fs" />
+    <Compile Include="src/Commands/DashboardCommands.fs" />
     <Compile Include="src/Commands/RunCommands.fs" />
     <Compile Include="src/Commands/TrashCommands.fs" />
     <Compile Include="src/Mappers/UserMapper.fs" />
@@ -60,6 +63,7 @@
     <Compile Include="src/Handlers/FolderHandler.fs" />
     <Compile Include="src/Handlers/AppHandler.fs" />
     <Compile Include="src/Handlers/RunHandler.fs" />
+    <Compile Include="src/Handlers/DashboardHandler.fs" />
     <Compile Include="src/Handlers/SpaceHandler.fs" />
     <Compile Include="src/Handlers/TrashHandler.fs" />
     <Compile Include="src/Services/EventEnhancementService.fs" />

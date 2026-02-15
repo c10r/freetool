@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   getAppAuditEvents,
   getAuditEvents,
+  getDashboardAuditEvents,
   getUserAuditEvents,
 } from "@/api/api";
 import { PaginationControls } from "@/components/PaginationControls";
@@ -76,7 +77,7 @@ interface AuditEvent {
   eventData: string;
 }
 
-type AuditScope = "global" | "app" | "user";
+type AuditScope = "global" | "app" | "user" | "dashboard";
 
 const getEventTypeColor = (eventType: EventType): string => {
   if (eventType.includes("Created")) {
@@ -135,13 +136,18 @@ export default function AuditLogView() {
   const pageSize = DEFAULT_PAGE_SIZE;
   const scope = useMemo<AuditScope>(() => {
     const scopeParam = searchParams.get("scope");
-    if (scopeParam === "app" || scopeParam === "user") {
+    if (
+      scopeParam === "app" ||
+      scopeParam === "user" ||
+      scopeParam === "dashboard"
+    ) {
       return scopeParam;
     }
     return "global";
   }, [searchParams]);
   const scopedAppId = searchParams.get("appId");
   const scopedUserId = searchParams.get("userId");
+  const scopedDashboardId = searchParams.get("dashboardId");
 
   const currentPage = useMemo(() => {
     const pageParam = searchParams.get("page");
@@ -180,7 +186,15 @@ export default function AuditLogView() {
             ? scopedUserId
               ? await getUserAuditEvents(scopedUserId, skip, pageSize)
               : null
-            : await getAuditEvents(skip, pageSize);
+            : scope === "dashboard"
+              ? scopedDashboardId
+                ? await getDashboardAuditEvents(
+                    scopedDashboardId,
+                    skip,
+                    pageSize
+                  )
+                : null
+              : await getAuditEvents(skip, pageSize);
 
       if (!response) {
         setEvents([]);
@@ -188,7 +202,9 @@ export default function AuditLogView() {
         setError(
           scope === "app"
             ? "Missing app ID for app audit log"
-            : "Missing user ID for user audit log"
+            : scope === "user"
+              ? "Missing user ID for user audit log"
+              : "Missing dashboard ID for dashboard audit log"
         );
         return;
       }
@@ -220,7 +236,7 @@ export default function AuditLogView() {
     } finally {
       setLoading(false);
     }
-  }, [skip, pageSize, scope, scopedAppId, scopedUserId]);
+  }, [skip, pageSize, scope, scopedAppId, scopedUserId, scopedDashboardId]);
 
   useEffect(() => {
     fetchAuditEvents();
@@ -245,7 +261,9 @@ export default function AuditLogView() {
               ? "App Audit Log"
               : scope === "user"
                 ? "User Audit Log"
-                : "Audit Log"}
+                : scope === "dashboard"
+                  ? "Dashboard Audit Log"
+                  : "Audit Log"}
           </h2>
           {totalCount > 0 && (
             <Badge variant="secondary">{totalCount} events</Badge>

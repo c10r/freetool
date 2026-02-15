@@ -19,6 +19,15 @@ type AppEvents =
     | AppDeletedEvent
     | AppRestoredEvent
 
+type DashboardEvents =
+    | DashboardCreatedEvent
+    | DashboardUpdatedEvent
+    | DashboardDeletedEvent
+    | DashboardPreparedEvent
+    | DashboardPrepareFailedEvent
+    | DashboardActionExecutedEvent
+    | DashboardActionFailedEvent
+
 type FolderEvents =
     | FolderCreatedEvent
     | FolderUpdatedEvent
@@ -45,6 +54,7 @@ type SpaceEvents =
 type EventType =
     | UserEvents of UserEvents
     | AppEvents of AppEvents
+    | DashboardEvents of DashboardEvents
     | ResourceEvents of ResourceEvents
     | FolderEvents of FolderEvents
     | RunEvents of RunEvents
@@ -53,6 +63,7 @@ type EventType =
 type EntityType =
     | User
     | App
+    | Dashboard
     | Resource
     | Folder
     | Run
@@ -74,6 +85,15 @@ module EventTypeConverter =
             | AppUpdatedEvent -> "AppUpdatedEvent"
             | AppDeletedEvent -> "AppDeletedEvent"
             | AppRestoredEvent -> "AppRestoredEvent"
+        | DashboardEvents dashboardEvent ->
+            match dashboardEvent with
+            | DashboardCreatedEvent -> "DashboardCreatedEvent"
+            | DashboardUpdatedEvent -> "DashboardUpdatedEvent"
+            | DashboardDeletedEvent -> "DashboardDeletedEvent"
+            | DashboardPreparedEvent -> "DashboardPreparedEvent"
+            | DashboardPrepareFailedEvent -> "DashboardPrepareFailedEvent"
+            | DashboardActionExecutedEvent -> "DashboardActionExecutedEvent"
+            | DashboardActionFailedEvent -> "DashboardActionFailedEvent"
         | ResourceEvents resourceEvent ->
             match resourceEvent with
             | ResourceCreatedEvent -> "ResourceCreatedEvent"
@@ -109,6 +129,13 @@ module EventTypeConverter =
         | "AppUpdatedEvent" -> Some(AppEvents AppUpdatedEvent)
         | "AppDeletedEvent" -> Some(AppEvents AppDeletedEvent)
         | "AppRestoredEvent" -> Some(AppEvents AppRestoredEvent)
+        | "DashboardCreatedEvent" -> Some(DashboardEvents DashboardCreatedEvent)
+        | "DashboardUpdatedEvent" -> Some(DashboardEvents DashboardUpdatedEvent)
+        | "DashboardDeletedEvent" -> Some(DashboardEvents DashboardDeletedEvent)
+        | "DashboardPreparedEvent" -> Some(DashboardEvents DashboardPreparedEvent)
+        | "DashboardPrepareFailedEvent" -> Some(DashboardEvents DashboardPrepareFailedEvent)
+        | "DashboardActionExecutedEvent" -> Some(DashboardEvents DashboardActionExecutedEvent)
+        | "DashboardActionFailedEvent" -> Some(DashboardEvents DashboardActionFailedEvent)
         | "ResourceCreatedEvent" -> Some(ResourceEvents ResourceCreatedEvent)
         | "ResourceUpdatedEvent" -> Some(ResourceEvents ResourceUpdatedEvent)
         | "ResourceDeletedEvent" -> Some(ResourceEvents ResourceDeletedEvent)
@@ -131,6 +158,7 @@ module EntityTypeConverter =
         match entityType with
         | User -> "User"
         | App -> "App"
+        | Dashboard -> "Dashboard"
         | Resource -> "Resource"
         | Folder -> "Folder"
         | Run -> "Run"
@@ -140,6 +168,7 @@ module EntityTypeConverter =
         match str with
         | "User" -> Some User
         | "App" -> Some App
+        | "Dashboard" -> Some Dashboard
         | "Resource" -> Some Resource
         | "Folder" -> Some Folder
         | "Run" -> Some Run

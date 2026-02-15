@@ -1,9 +1,17 @@
-import { Edit, FilePlus2, FolderPlus, Play, Trash2 } from "lucide-react";
+import {
+  Edit,
+  FilePlus2,
+  FolderPlus,
+  LayoutDashboard,
+  Play,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   createFolder as createFolderAPI,
   deleteApp,
+  deleteDashboard as deleteDashboardAPI,
   deleteFolder as deleteFolderAPI,
   updateFolderName,
 } from "@/api/api";
@@ -48,11 +56,28 @@ import type {
 import AppConfigForm from "./AppConfigForm";
 import InputFieldEditor from "./InputFieldEditor";
 
+const DEFAULT_DASHBOARD_CONFIGURATION = JSON.stringify(
+  {
+    loadInputs: [],
+    actionInputs: [],
+    actions: [],
+    bindings: [],
+    layout: {
+      left: [],
+      center: [],
+      right: [],
+    },
+  },
+  null,
+  2
+);
+
 export default function FolderView({
   folder,
   nodes,
   onSelect,
   createApp,
+  createDashboard,
   updateNode,
   insertFolderNode,
   deleteNode,
@@ -69,6 +94,14 @@ export default function FolderView({
   const _canDeleteFolder = useHasPermission(effectiveSpaceId, "delete_folder");
   const _canCreateApp = useHasPermission(effectiveSpaceId, "create_app");
   const _canDeleteApp = useHasPermission(effectiveSpaceId, "delete_app");
+  const _canCreateDashboard = useHasPermission(
+    effectiveSpaceId,
+    "create_dashboard"
+  );
+  const _canDeleteDashboard = useHasPermission(
+    effectiveSpaceId,
+    "delete_dashboard"
+  );
 
   // Check if resources exist (needed to enable/disable New App button)
   const { hasResources, isLoading: loadingResources } =
@@ -85,6 +118,9 @@ export default function FolderView({
   useEffect(() => {
     setShowCreateAppForm(false);
     setCreateAppError(null);
+    setShowCreateDashboardForm(false);
+    setDashboardName("");
+    setCreateDashboardError(null);
     setAppFormData({
       name: "",
       description: "",
@@ -120,6 +156,12 @@ export default function FolderView({
   const [showCreateAppForm, setShowCreateAppForm] = useState(false);
   const [isCreatingApp, setIsCreatingApp] = useState(false);
   const [createAppError, setCreateAppError] = useState<string | null>(null);
+  const [showCreateDashboardForm, setShowCreateDashboardForm] = useState(false);
+  const [dashboardName, setDashboardName] = useState("");
+  const [isCreatingDashboard, setIsCreatingDashboard] = useState(false);
+  const [createDashboardError, setCreateDashboardError] = useState<
+    string | null
+  >(null);
   const [appFormData, setAppFormData] = useState({
     name: "",
     description: "",
@@ -358,6 +400,45 @@ export default function FolderView({
     setShowCreateAppForm(!showCreateAppForm);
   };
 
+  const handleCreateDashboard = async () => {
+    if (!dashboardName.trim()) {
+      setCreateDashboardError("Dashboard name is required");
+      return;
+    }
+
+    if (folder.id === "root") {
+      setCreateDashboardError(
+        "Dashboards must be created inside a folder, not at the space root."
+      );
+      return;
+    }
+
+    setIsCreatingDashboard(true);
+    setCreateDashboardError(null);
+
+    try {
+      await createDashboard(
+        folder.id,
+        dashboardName.trim(),
+        null,
+        DEFAULT_DASHBOARD_CONFIGURATION
+      );
+      setDashboardName("");
+      setShowCreateDashboardForm(false);
+    } catch (error) {
+      setCreateDashboardError(
+        error instanceof Error ? error.message : "Failed to create dashboard"
+      );
+    } finally {
+      setIsCreatingDashboard(false);
+    }
+  };
+
+  const handleToggleCreateDashboardForm = () => {
+    setShowCreateDashboardForm((previousState) => !previousState);
+    setCreateDashboardError(null);
+  };
+
   const handleCancelCreateApp = () => {
     setShowCreateAppForm(false);
     setCreateAppError(null);
@@ -381,12 +462,16 @@ export default function FolderView({
     navigate(`/spaces/${effectiveSpaceId}/${appId}/run`);
   };
 
+  const handleRunDashboard = (dashboardId: string) => {
+    navigate(`/spaces/${effectiveSpaceId}/${dashboardId}/dashboard-run`);
+  };
+
   const handleCardClick = (child: SpaceNode) => {
     if (child.type === "app") {
       handleRunApp(child.id);
-    } else {
-      onSelect(child.id);
+      return;
     }
+    onSelect(child.id);
   };
 
   return (
@@ -552,6 +637,16 @@ export default function FolderView({
               )}
             </Tooltip>
           </TooltipProvider>
+          <PermissionButton
+            spaceId={effectiveSpaceId}
+            permission="create_dashboard"
+            variant="secondary"
+            onClick={handleToggleCreateDashboardForm}
+            disabled={folder.id === "root"}
+          >
+            <LayoutDashboard className="mr-2 h-4 w-4" />
+            {showCreateDashboardForm ? "Cancel" : "New Dashboard"}
+          </PermissionButton>
         </div>
       </header>
 
@@ -695,6 +790,66 @@ export default function FolderView({
         </Card>
       )}
 
+      {showCreateDashboardForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Create New Dashboard</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {createDashboardError && (
+              <div className="text-red-500 text-sm bg-red-50 p-3 rounded">
+                {createDashboardError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="dashboard-name">Dashboard Name *</Label>
+              <Input
+                id="dashboard-name"
+                placeholder="Enter dashboard name"
+                value={dashboardName}
+                onChange={(event) => {
+                  setDashboardName(event.target.value);
+                  if (createDashboardError) {
+                    setCreateDashboardError(null);
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    handleCreateDashboard();
+                  }
+                }}
+                disabled={isCreatingDashboard}
+              />
+              <p className="text-xs text-muted-foreground">
+                You can configure prepare app, inputs, actions, and bindings in
+                the dashboard editor after creation.
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                onClick={handleCreateDashboard}
+                disabled={isCreatingDashboard || !dashboardName.trim()}
+              >
+                {isCreatingDashboard ? "Creating..." : "Create Dashboard"}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowCreateDashboardForm(false);
+                  setDashboardName("");
+                  setCreateDashboardError(null);
+                }}
+                variant="outline"
+                disabled={isCreatingDashboard}
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Separator />
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
         {children.map((child) => (
@@ -797,7 +952,7 @@ export default function FolderView({
                       </div>
                     </PopoverContent>
                   </Popover>
-                ) : (
+                ) : child.type === "app" ? (
                   <>
                     <PermissionButton
                       spaceId={effectiveSpaceId}
@@ -827,11 +982,45 @@ export default function FolderView({
                       <Edit size={16} />
                     </PermissionButton>
                   </>
+                ) : (
+                  <>
+                    <PermissionButton
+                      spaceId={effectiveSpaceId}
+                      permission="run_dashboard"
+                      variant="secondary"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRunDashboard(child.id);
+                      }}
+                      aria-label="Run Dashboard"
+                    >
+                      <Play size={16} />
+                    </PermissionButton>
+                    <PermissionButton
+                      spaceId={effectiveSpaceId}
+                      permission="edit_dashboard"
+                      variant="secondary"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelect(child.id);
+                      }}
+                      aria-label="Edit Dashboard"
+                      hideWhenDisabled
+                    >
+                      <Edit size={16} />
+                    </PermissionButton>
+                  </>
                 )}
                 <PermissionButton
                   spaceId={effectiveSpaceId}
                   permission={
-                    child.type === "folder" ? "delete_folder" : "delete_app"
+                    child.type === "folder"
+                      ? "delete_folder"
+                      : child.type === "dashboard"
+                        ? "delete_dashboard"
+                        : "delete_app"
                   }
                   variant="secondary"
                   size="icon"
@@ -839,6 +1028,15 @@ export default function FolderView({
                     e.stopPropagation();
                     if (child.type === "folder") {
                       handleDeleteClick(child.id);
+                    } else if (child.type === "dashboard") {
+                      try {
+                        const response = await deleteDashboardAPI(child.id);
+                        if (!response.error) {
+                          deleteNode(child.id);
+                        }
+                      } catch {
+                        // Silently ignore delete errors
+                      }
                     } else {
                       // Delete app using API
                       try {
@@ -861,7 +1059,11 @@ export default function FolderView({
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                {child.type === "folder" ? "Folder" : child.description || ""}
+                {child.type === "folder"
+                  ? "Folder"
+                  : child.type === "dashboard"
+                    ? "Dashboard"
+                    : child.description || ""}
               </p>
             </CardContent>
           </Card>

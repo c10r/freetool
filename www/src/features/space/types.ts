@@ -21,7 +21,7 @@ export interface AppField {
   defaultValue?: string; // Only applicable when required is false
 }
 
-export type NodeType = "folder" | "app";
+export type NodeType = "folder" | "app" | "dashboard";
 
 export interface BaseNode {
   id: string;
@@ -143,7 +143,54 @@ export interface AppNode extends BaseNode {
   description?: string; // optional description for the app
 }
 
-export type SpaceNode = FolderNode | AppNode;
+export type DashboardSection = "left" | "center" | "right";
+
+export type DashboardBindingSourceType =
+  | "load_input"
+  | "action_input"
+  | "prepare_output"
+  | "literal";
+
+export interface DashboardAction {
+  id: string;
+  appId: string;
+  label: string;
+  section: DashboardSection;
+  confirmEnabled?: boolean;
+  confirmTitle?: string;
+  confirmMessage?: string;
+  successMessage?: string;
+  errorMessage?: string;
+}
+
+export interface DashboardBinding {
+  id: string;
+  actionId: string;
+  inputName: string;
+  sourceType: DashboardBindingSourceType;
+  sourceKey?: string;
+  literalValue?: string;
+}
+
+export interface DashboardConfig {
+  loadInputs: AppField[];
+  actionInputs: AppField[];
+  actions: DashboardAction[];
+  bindings: DashboardBinding[];
+  layout: {
+    left: string[];
+    center: string[];
+    right: string[];
+  };
+}
+
+export interface DashboardNode extends BaseNode {
+  type: "dashboard";
+  prepareAppId?: string;
+  configuration: string;
+}
+
+export type SpaceNode = FolderNode | AppNode | DashboardNode;
 
 // Tree node type used for rendering (includes expanded children)
 export interface TreeNode extends BaseNode {
@@ -171,6 +218,12 @@ export interface SpaceMainProps {
     inputs?: AppField[],
     useDynamicJsonBody?: boolean,
     sqlConfig?: SqlQueryConfig
+  ) => Promise<void>;
+  createDashboard: (
+    parentId: string,
+    name?: string,
+    prepareAppId?: string | null,
+    configuration?: string
   ) => Promise<void>;
   deleteNode: (id: string) => void;
   endpoints: Record<string, Endpoint>;

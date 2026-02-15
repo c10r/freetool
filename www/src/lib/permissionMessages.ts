@@ -32,6 +32,14 @@ export const permissionMessages: Record<Permission, string> = {
     "You don't have permission to rename or move folders. Contact your space moderator to request access.",
   delete_folder:
     "You don't have permission to delete folders. Contact your space moderator to request access.",
+  create_dashboard:
+    "You don't have permission to create dashboards. Contact your space moderator to request access.",
+  edit_dashboard:
+    "You don't have permission to modify this dashboard. Contact your space moderator to request access.",
+  delete_dashboard:
+    "You don't have permission to delete dashboards. Contact your space moderator to request access.",
+  run_dashboard:
+    "You don't have permission to run this dashboard. Contact your space moderator to request access.",
 };
 
 /**
@@ -80,6 +88,10 @@ export function getPermissionLabel(permission: Permission): string {
     create_folder: "Create Folders",
     edit_folder: "Edit Folders",
     delete_folder: "Delete Folders",
+    create_dashboard: "Create Dashboards",
+    edit_dashboard: "Edit Dashboards",
+    delete_dashboard: "Delete Dashboards",
+    run_dashboard: "Run Dashboards",
   };
 
   return labels[permission] || permission;

@@ -54,6 +54,7 @@ type EventRepository(context: FreetoolDbContext) =
                     match eventType with
                     | UserEvents _ -> EntityType.User
                     | AppEvents _ -> EntityType.App
+                    | DashboardEvents _ -> EntityType.Dashboard
                     | ResourceEvents _ -> EntityType.Resource
                     | FolderEvents _ -> EntityType.Folder
                     | RunEvents _ -> EntityType.Run
@@ -77,6 +78,20 @@ type EventRepository(context: FreetoolDbContext) =
                     | :? Events.AppUpdatedEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.AppDeletedEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.AppRestoredEvent as e -> (e.AppId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.DashboardCreatedEvent as e ->
+                        (e.DashboardId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.DashboardUpdatedEvent as e ->
+                        (e.DashboardId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.DashboardDeletedEvent as e ->
+                        (e.DashboardId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.DashboardPreparedEvent as e ->
+                        (e.DashboardId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.DashboardPrepareFailedEvent as e ->
+                        (e.DashboardId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.DashboardActionExecutedEvent as e ->
+                        (e.DashboardId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
+                    | :? Events.DashboardActionFailedEvent as e ->
+                        (e.DashboardId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.ResourceCreatedEvent as e ->
                         (e.ResourceId.ToString(), JsonSerializer.Serialize(e, jsonOptions))
                     | :? Events.ResourceUpdatedEvent as e ->
@@ -186,6 +201,20 @@ type EventRepository(context: FreetoolDbContext) =
                             || (e.EntityType = EntityType.Run && runIdsForApp.Contains(e.EntityId)))
                     else
                         appEventsQuery
+                    |> fun q -> applyDateFilters q filter.FromDate filter.ToDate
+
+                return! toPagedResultAsync filteredQuery filter.Skip filter.Take
+            }
+
+        member this.GetEventsByDashboardIdAsync
+            (filter: DashboardEventFilter)
+            : Threading.Tasks.Task<PagedResult<EventData>> =
+            task {
+                let dashboardIdValue = filter.DashboardId.Value.ToString()
+                let query = context.Events.AsQueryable()
+
+                let filteredQuery =
+                    query.Where(fun e -> e.EntityType = EntityType.Dashboard && e.EntityId = dashboardIdValue)
                     |> fun q -> applyDateFilters q filter.FromDate filter.ToDate
 
                 return! toPagedResultAsync filteredQuery filter.Skip filter.Take

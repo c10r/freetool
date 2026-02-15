@@ -23,6 +23,10 @@ function getActionDescription(permission: Permission): string {
     create_folder: "create folders",
     edit_folder: "rename or move folders",
     delete_folder: "delete folders",
+    create_dashboard: "create dashboards",
+    edit_dashboard: "modify this dashboard",
+    delete_dashboard: "delete dashboards",
+    run_dashboard: "run this dashboard",
   };
   return descriptions[permission];
 }

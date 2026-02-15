@@ -34,6 +34,14 @@ type NoOpFolderEventRepository() =
                   Take = 0 }
             )
 
+        member _.GetEventsByDashboardIdAsync(_filter: DashboardEventFilter) =
+            Task.FromResult(
+                { Items = []
+                  TotalCount = 0
+                  Skip = 0
+                  Take = 0 }
+            )
+
         member _.GetEventsByUserIdAsync(_filter: UserEventFilter) =
             Task.FromResult(
                 { Items = []

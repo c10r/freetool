@@ -2,7 +2,7 @@ namespace Freetool.Application.DTOs
 
 open System.ComponentModel.DataAnnotations
 
-/// DTO containing all 10 space permissions as boolean fields
+/// DTO containing all space permissions as boolean fields
 type SpacePermissionsDto =
     { CreateResource: bool
       EditResource: bool
@@ -11,6 +11,10 @@ type SpacePermissionsDto =
       EditApp: bool
       DeleteApp: bool
       RunApp: bool
+      CreateDashboard: bool
+      EditDashboard: bool
+      DeleteDashboard: bool
+      RunDashboard: bool
       CreateFolder: bool
       EditFolder: bool
       DeleteFolder: bool }

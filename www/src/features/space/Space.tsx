@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { createApp as createAppAPI } from "@/api/api";
+import {
+  createApp as createAppAPI,
+  createDashboard as createDashboardAPI,
+} from "@/api/api";
 import { DevModeBanner } from "@/components/DevModeBanner";
 import { DevUserSwitcher } from "@/components/DevUserSwitcher";
 import { Button } from "@/components/ui/button";
@@ -275,6 +278,31 @@ function WorkspaceContent() {
     invalidateTree();
   };
 
+  const addDashboard = async (
+    parentId: string,
+    name?: string,
+    prepareAppId?: string | null,
+    configuration?: string
+  ) => {
+    const response = await createDashboardAPI({
+      name: (name ?? "New Dashboard").trim(),
+      folderId: parentId,
+      prepareAppId: prepareAppId ?? null,
+      configuration: configuration ?? "{}",
+    });
+
+    if (response.error) {
+      throw new Error(response.error.message || "Failed to create dashboard");
+    }
+
+    const id = response.data?.id;
+    if (!id) {
+      throw new Error("Failed to get dashboard ID from response");
+    }
+
+    invalidateTree();
+  };
+
   const deleteNode = (_id: string) => {
     // After a node is deleted via API, invalidate the tree cache to refetch
     invalidateTree();
@@ -518,6 +546,7 @@ function WorkspaceContent() {
               insertFolderNode={insertFolderNode}
               createFolder={addFolder}
               createApp={addApp}
+              createDashboard={addDashboard}
               deleteNode={deleteNode}
               endpoints={endpoints}
               createEndpoint={createEndpoint}

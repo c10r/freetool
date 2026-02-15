@@ -11,4 +11,5 @@ type IEventRepository =
     abstract member CommitAsync: unit -> Task<unit>
     abstract member GetEventsAsync: filter: EventFilter -> Task<PagedResult<EventData>>
     abstract member GetEventsByAppIdAsync: filter: AppEventFilter -> Task<PagedResult<EventData>>
+    abstract member GetEventsByDashboardIdAsync: filter: DashboardEventFilter -> Task<PagedResult<EventData>>
     abstract member GetEventsByUserIdAsync: filter: UserEventFilter -> Task<PagedResult<EventData>>

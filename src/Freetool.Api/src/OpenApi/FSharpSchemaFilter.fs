@@ -23,6 +23,7 @@ type FSharpUnionSchemaFilter() =
             elif
                 context.Type = typeof<UserId>
                 || context.Type = typeof<AppId>
+                || context.Type = typeof<DashboardId>
                 || context.Type = typeof<FolderId>
                 || context.Type = typeof<ResourceId>
                 || context.Type = typeof<RunId>
@@ -48,6 +49,7 @@ type FSharpUnionSchemaFilter() =
                 || context.Type = typeof<ResourceDescription>
                 || context.Type = typeof<ResourceName>
                 || context.Type = typeof<Url>
+                || context.Type = typeof<ActionId>
                 || context.Type = typeof<InputTitle>
             then
                 schema.Type <- "string"
@@ -141,6 +143,13 @@ type FSharpUnionSchemaFilter() =
                        OpenApiString("AppCreatedEvent") :> IOpenApiAny
                        OpenApiString("AppUpdatedEvent") :> IOpenApiAny
                        OpenApiString("AppDeletedEvent") :> IOpenApiAny
+                       OpenApiString("DashboardCreatedEvent") :> IOpenApiAny
+                       OpenApiString("DashboardUpdatedEvent") :> IOpenApiAny
+                       OpenApiString("DashboardDeletedEvent") :> IOpenApiAny
+                       OpenApiString("DashboardPreparedEvent") :> IOpenApiAny
+                       OpenApiString("DashboardPrepareFailedEvent") :> IOpenApiAny
+                       OpenApiString("DashboardActionExecutedEvent") :> IOpenApiAny
+                       OpenApiString("DashboardActionFailedEvent") :> IOpenApiAny
                        OpenApiString("ResourceCreatedEvent") :> IOpenApiAny
                        OpenApiString("ResourceUpdatedEvent") :> IOpenApiAny
                        OpenApiString("ResourceDeletedEvent") :> IOpenApiAny
@@ -189,6 +198,7 @@ type FSharpUnionSchemaFilter() =
                 schema.Enum <-
                     [| OpenApiString("User") :> IOpenApiAny
                        OpenApiString("App") :> IOpenApiAny
+                       OpenApiString("Dashboard") :> IOpenApiAny
                        OpenApiString("Resource") :> IOpenApiAny
                        OpenApiString("Folder") :> IOpenApiAny
                        OpenApiString("Run") :> IOpenApiAny

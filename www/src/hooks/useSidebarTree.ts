@@ -1,7 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAllFolders, getApps, getSpaces, getUsers } from "@/api/api";
+import {
+  type ApiDashboardData,
+  getAllFolders,
+  getApps,
+  getDashboards,
+  getSpaces,
+  getUsers,
+} from "@/api/api";
 import type {
   AppNode,
+  DashboardNode,
   EndpointMethod,
   FolderNode,
   SpaceNode,
@@ -115,12 +123,18 @@ export function useSidebarTree() {
     queryKey: sidebarQueryKeys.tree(),
     queryFn: async () => {
       // Fetch all data in parallel
-      const [allSpaces, allFolders, allApps, allUsers] = await Promise.all([
-        fetchAllPages<Space>((skip, take) => getSpaces(skip, take)),
-        fetchAllPages<ApiFolderData>((skip, take) => getAllFolders(skip, take)),
-        fetchAllPages<ApiAppData>((skip, take) => getApps(skip, take)),
-        fetchAllPages<ApiUserData>((skip, take) => getUsers(skip, take)),
-      ]);
+      const [allSpaces, allFolders, allApps, allDashboards, allUsers] =
+        await Promise.all([
+          fetchAllPages<Space>((skip, take) => getSpaces(skip, take)),
+          fetchAllPages<ApiFolderData>((skip, take) =>
+            getAllFolders(skip, take)
+          ),
+          fetchAllPages<ApiAppData>((skip, take) => getApps(skip, take)),
+          fetchAllPages<ApiDashboardData>((skip, take) =>
+            getDashboards(skip, take)
+          ),
+          fetchAllPages<ApiUserData>((skip, take) => getUsers(skip, take)),
+        ]);
 
       // Build users map for space enrichment
       const usersMap = new Map<string, SpaceUser>();
@@ -232,7 +246,22 @@ export function useSidebarTree() {
         }
       }
 
-      // Third pass: Build parent-child relationships
+      // Third pass: Create all dashboard nodes
+      for (const dashboard of allDashboards) {
+        if (dashboard.id) {
+          const dashboardNode: DashboardNode = {
+            id: dashboard.id,
+            name: dashboard.name || "Unnamed Dashboard",
+            type: "dashboard",
+            parentId: dashboard.folderId || rootId,
+            prepareAppId: dashboard.prepareAppId ?? undefined,
+            configuration: dashboard.configuration || "{}",
+          };
+          nodes[dashboard.id] = dashboardNode;
+        }
+      }
+
+      // Fourth pass: Build parent-child relationships
       for (const node of Object.values(nodes)) {
         if (node.id === rootId) {
           continue;

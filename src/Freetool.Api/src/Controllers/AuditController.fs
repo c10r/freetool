@@ -134,3 +134,29 @@ type AuditController(eventRepository: IEventRepository, eventEnhancementService:
                 return! this.EnhancePagedEvents(result)
             | Error errors -> return this.BadRequest errors :> IActionResult
         }
+
+    [<HttpGet("dashboard/{dashboardId}/events")>]
+    [<ProducesResponseType(typeof<PagedResult<EnhancedEventData>>, StatusCodes.Status200OK)>]
+    [<ProducesResponseType(StatusCodes.Status400BadRequest)>]
+    member this.GetDashboardEvents
+        (
+            dashboardId: string,
+            [<FromQuery>] fromDate: Nullable<DateTime>,
+            [<FromQuery>] toDate: Nullable<DateTime>,
+            [<FromQuery>] skip: Nullable<int>,
+            [<FromQuery>] take: Nullable<int>
+        ) : Task<IActionResult> =
+        task {
+            let filterDto: DashboardEventFilterDTO =
+                { DashboardId = dashboardId
+                  FromDate = toOptionDate fromDate
+                  ToDate = toOptionDate toDate
+                  Skip = toOptionInt skip
+                  Take = toOptionInt take }
+
+            match EventFilterValidator.validateDashboardFilter filterDto with
+            | Ok filter ->
+                let! result = eventRepository.GetEventsByDashboardIdAsync filter
+                return! this.EnhancePagedEvents(result)
+            | Error errors -> return this.BadRequest errors :> IActionResult
+        }

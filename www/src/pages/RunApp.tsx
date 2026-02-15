@@ -11,6 +11,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getAppById, getFolderById, runApp } from "@/api/api";
 import { PermissionButton } from "@/components/PermissionButton";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -138,6 +146,7 @@ const RunApp = () => {
   const [runError, setRunError] = useState<string | null>(null);
   const [isRequestCollapsed, setIsRequestCollapsed] = useState(true);
   const [spaceId, setSpaceId] = useState("");
+  const [folderName, setFolderName] = useState("");
   const [spaceLoading, setSpaceLoading] = useState(false);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -207,8 +216,13 @@ const RunApp = () => {
         }
 
         const folderSpaceId = (
-          folderResponse.data as { spaceId?: string | null } | undefined
+          folderResponse.data as
+            | { spaceId?: string | null; name?: string | null }
+            | undefined
         )?.spaceId;
+        const resolvedFolderName = (
+          folderResponse.data as { name?: string | null } | undefined
+        )?.name;
 
         if (!folderSpaceId) {
           setError("Space information missing for this folder");
@@ -216,6 +230,7 @@ const RunApp = () => {
         }
 
         setSpaceId(folderSpaceId);
+        setFolderName(resolvedFolderName || "");
       } catch (_err) {
         setError("Failed to load space information");
       } finally {
@@ -544,38 +559,34 @@ const RunApp = () => {
       <header className="border-b bg-card/30">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="outline" onClick={handleGoBack}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <div>
-                <h1 className="text-2xl font-semibold">
-                  {app?.name || "Run App"}
-                </h1>
-                {app?.description && (
-                  <p className="text-muted-foreground">{app.description}</p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {nodeId && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" asChild>
-                        <Link
-                          to={`/audit?scope=app&appId=${nodeId}`}
-                          aria-label="View audit log"
-                        >
-                          <ShieldAlert className="h-4 w-4" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to={spaceId ? `/spaces/${spaceId}` : "/spaces"}>
+                      Spaces
+                    </Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                {folderName && app?.folderId && spaceId && (
+                  <>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>
+                        <Link to={`/spaces/${spaceId}/${app.folderId}`}>
+                          {folderName}
                         </Link>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>View Audit Log</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                  </>
+                )}
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{app?.name || "Run App"}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+            <div className="flex items-center gap-2">
               {spaceReady ? (
                 <PermissionButton
                   spaceId={spaceId}
@@ -601,6 +612,23 @@ const RunApp = () => {
                   <Loader className="mr-2 h-4 w-4 animate-spin" />
                   Checking access...
                 </Button>
+              )}
+              {nodeId && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" asChild>
+                        <Link
+                          to={`/audit?scope=app&appId=${nodeId}`}
+                          aria-label="View audit log"
+                        >
+                          <ShieldAlert className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>View Audit Log</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </div>
           </div>

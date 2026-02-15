@@ -1,6 +1,6 @@
 import createClient, { type Middleware } from "openapi-fetch";
 import type { KeyValuePair, SqlQueryConfig } from "@/features/space/types";
-import type { paths } from "../schema";
+import type { components, paths } from "../schema";
 import { handleApiError } from "./errorHandler";
 
 /**
@@ -98,6 +98,58 @@ const errorMiddleware: Middleware = {
 // Register middleware
 client.use(devModeMiddleware);
 client.use(errorMiddleware);
+
+type ApiResult<T> = {
+  data?: T;
+  error?: { message: string };
+};
+
+async function rawJsonRequest<T>(
+  path: string,
+  init?: RequestInit
+): Promise<ApiResult<T>> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (isDevModeEnabled()) {
+    const devUserId = getDevUserId();
+    if (devUserId) {
+      headers.set("X-Dev-User-Id", devUserId);
+    }
+  }
+
+  const response = await fetch(path, {
+    ...init,
+    headers,
+  });
+
+  if (!response.ok) {
+    let serverMessage = `Request failed with status ${response.status}`;
+    try {
+      const body = (await response.clone().json()) as {
+        detail?: string;
+        title?: string;
+        message?: string;
+      };
+      serverMessage =
+        body.detail || body.title || body.message || serverMessage;
+    } catch {
+      // No JSON body available
+    }
+
+    handleApiError(response.status, serverMessage);
+    return { error: { message: serverMessage } };
+  }
+
+  if (response.status === 204) {
+    return {};
+  }
+
+  const body = (await response.json()) as T;
+  return { data: body };
+}
 
 /**
  * App
@@ -399,6 +451,30 @@ export const getUserAuditEvents = (
   });
 };
 
+export const getDashboardAuditEvents = (
+  dashboardId: string,
+  skip?: number,
+  take?: number
+) => {
+  const params = new URLSearchParams();
+  if (typeof skip === "number") {
+    params.set("skip", String(skip));
+  }
+  if (typeof take === "number") {
+    params.set("take", String(take));
+  }
+
+  const query = params.toString();
+  const path = query
+    ? `/audit/dashboard/${encodeURIComponent(dashboardId)}/events?${query}`
+    : `/audit/dashboard/${encodeURIComponent(dashboardId)}/events`;
+
+  return rawJsonRequest<components["schemas"]["EnhancedEventDataPagedResult"]>(
+    path,
+    { method: "GET" }
+  );
+};
+
 /**
  * Folders
  */
@@ -509,6 +585,166 @@ export const updateFolderName = (id: string, newName: string) => {
       name: newName,
     },
   });
+};
+
+/**
+ * Dashboards
+ */
+
+export interface ApiDashboardData {
+  id?: string;
+  name?: string;
+  folderId?: string;
+  prepareAppId?: string | null;
+  configuration?: string;
+}
+
+export interface DashboardRunInput {
+  title: string;
+  value: string;
+}
+
+export interface DashboardPrepareResponse {
+  prepareRunId?: string;
+  status?: string;
+  response?: string | null;
+  errorMessage?: string | null;
+}
+
+export interface DashboardActionResponse {
+  actionRunId?: string;
+  status?: string;
+  response?: string | null;
+  errorMessage?: string | null;
+}
+
+interface PagedApiResponse<T> {
+  items?: T[] | null;
+  totalCount?: number;
+  skip?: number;
+  take?: number;
+}
+
+export const getDashboards = (skip?: number, take?: number) => {
+  const params = new URLSearchParams();
+  if (typeof skip === "number") {
+    params.set("skip", String(skip));
+  }
+  if (typeof take === "number") {
+    params.set("take", String(take));
+  }
+
+  const query = params.toString();
+  const path = query ? `/dashboard?${query}` : "/dashboard";
+  return rawJsonRequest<PagedApiResponse<ApiDashboardData>>(path, {
+    method: "GET",
+  });
+};
+
+export const getDashboardById = (dashboardId: string) => {
+  return rawJsonRequest<ApiDashboardData>(`/dashboard/${dashboardId}`, {
+    method: "GET",
+  });
+};
+
+export const createDashboard = ({
+  name,
+  folderId,
+  prepareAppId,
+  configuration,
+}: {
+  name: string;
+  folderId: string;
+  prepareAppId?: string | null;
+  configuration: string;
+}) => {
+  return rawJsonRequest<ApiDashboardData>("/dashboard", {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      folderId,
+      prepareAppId: prepareAppId || null,
+      configuration,
+    }),
+  });
+};
+
+export const updateDashboardName = (dashboardId: string, name: string) => {
+  return rawJsonRequest<ApiDashboardData>(`/dashboard/${dashboardId}/name`, {
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
+};
+
+export const updateDashboardPrepareApp = (
+  dashboardId: string,
+  prepareAppId: string | null
+) => {
+  return rawJsonRequest<ApiDashboardData>(
+    `/dashboard/${dashboardId}/prepare-app`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ prepareAppId }),
+    }
+  );
+};
+
+export const updateDashboardConfiguration = (
+  dashboardId: string,
+  configuration: string
+) => {
+  return rawJsonRequest<ApiDashboardData>(
+    `/dashboard/${dashboardId}/configuration`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ configuration }),
+    }
+  );
+};
+
+export const deleteDashboard = (dashboardId: string) => {
+  return rawJsonRequest<void>(`/dashboard/${dashboardId}`, {
+    method: "DELETE",
+  });
+};
+
+export const prepareDashboard = (
+  dashboardId: string,
+  loadInputs: DashboardRunInput[]
+) => {
+  return rawJsonRequest<DashboardPrepareResponse>(
+    `/dashboard/${dashboardId}/prepare`,
+    {
+      method: "POST",
+      body: JSON.stringify({ loadInputs }),
+    }
+  );
+};
+
+export const runDashboardAction = ({
+  dashboardId,
+  actionId,
+  prepareRunId,
+  loadInputs,
+  actionInputs,
+}: {
+  dashboardId: string;
+  actionId: string;
+  prepareRunId?: string;
+  loadInputs: DashboardRunInput[];
+  actionInputs: DashboardRunInput[];
+}) => {
+  return rawJsonRequest<DashboardActionResponse>(
+    `/dashboard/${dashboardId}/action/${encodeURIComponent(actionId)}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        prepareRunId,
+        loadInputs,
+        actionInputs,
+      }),
+    }
+  );
 };
 
 /**
@@ -991,6 +1227,10 @@ export const getSpacePermissions = async (
         create_folder: true,
         edit_folder: true,
         delete_folder: true,
+        create_dashboard: true,
+        edit_dashboard: true,
+        delete_dashboard: true,
+        run_dashboard: true,
       },
       isOrgAdmin: true,
       isSpaceModerator: true,

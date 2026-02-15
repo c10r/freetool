@@ -148,6 +148,12 @@ type OpenFgaService(apiUrl: string, logger: ILogger<OpenFgaService>, ?storeId: s
                 spaceRelations.["delete_app"] <- createModeratorOrOrgAdminUserset ()
                 spaceRelations.["run_app"] <- createModeratorOrOrgAdminUserset ()
 
+                // Dashboard permissions
+                spaceRelations.["create_dashboard"] <- createModeratorOrOrgAdminUserset ()
+                spaceRelations.["edit_dashboard"] <- createModeratorOrOrgAdminUserset ()
+                spaceRelations.["delete_dashboard"] <- createModeratorOrOrgAdminUserset ()
+                spaceRelations.["run_dashboard"] <- createModeratorOrOrgAdminUserset ()
+
                 // Folder permissions
                 spaceRelations.["create_folder"] <- createModeratorOrOrgAdminUserset ()
                 spaceRelations.["edit_folder"] <- createModeratorOrOrgAdminUserset ()
@@ -189,6 +195,10 @@ type OpenFgaService(apiUrl: string, logger: ILogger<OpenFgaService>, ?storeId: s
                       "edit_app"
                       "delete_app"
                       "run_app"
+                      "create_dashboard"
+                      "edit_dashboard"
+                      "delete_dashboard"
+                      "run_dashboard"
                       "create_folder"
                       "edit_folder"
                       "delete_folder"

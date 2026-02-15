@@ -107,6 +107,15 @@ const PERMISSION_GROUPS = [
       { key: "delete_folder" as Permission, label: "Delete" },
     ],
   },
+  {
+    label: "Dashboards",
+    permissions: [
+      { key: "create_dashboard" as Permission, label: "Create" },
+      { key: "edit_dashboard" as Permission, label: "Edit" },
+      { key: "delete_dashboard" as Permission, label: "Delete" },
+      { key: "run_dashboard" as Permission, label: "Run" },
+    ],
+  },
 ];
 
 export default function SpaceSettingsView({

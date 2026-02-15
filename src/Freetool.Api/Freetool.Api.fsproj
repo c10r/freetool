@@ -43,6 +43,7 @@
     <Compile Include="src/Controllers/ResourceController.fs" />
     <Compile Include="src/Controllers/FolderController.fs" />
     <Compile Include="src/Controllers/AppController.fs" />
+    <Compile Include="src/Controllers/DashboardController.fs" />
     <Compile Include="src/Controllers/AuditController.fs" />
     <Compile Include="src/Controllers/TrashController.fs" />
     <Compile Include="src/Controllers/OpenFgaInitController.fs" />
