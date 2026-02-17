@@ -659,6 +659,16 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                         | "Date" -> Ok(InputType.Date())
                         | "Integer" -> Ok(InputType.Integer())
                         | "Boolean" -> Ok(InputType.Boolean())
+                        | typeStr when typeStr.StartsWith("Currency(") && typeStr.EndsWith(")") ->
+                            let currencyStr = typeStr.Substring(9, typeStr.Length - 10)
+
+                            match currencyStr with
+                            | "USD" -> Ok(InputType.Currency(SupportedCurrency.USD))
+                            | _ ->
+                                Error(
+                                    Freetool.Domain.ValidationError
+                                        $"Unknown Currency type format in database: {typeStr}"
+                                )
                         | typeStr when typeStr.StartsWith("Text(") && typeStr.EndsWith(")") ->
                             let lengthStr = typeStr.Substring(5, typeStr.Length - 6)
 
@@ -733,6 +743,12 @@ type FreetoolDbContext(options: DbContextOptions<FreetoolDbContext>) =
                 | "Date" -> InputType.Date()
                 | "Integer" -> InputType.Integer()
                 | "Boolean" -> InputType.Boolean()
+                | typeStr when typeStr.StartsWith("Currency(") && typeStr.EndsWith(")") ->
+                    let currencyStr = typeStr.Substring(9, typeStr.Length - 10)
+
+                    match currencyStr with
+                    | "USD" -> InputType.Currency(SupportedCurrency.USD)
+                    | _ -> failwith $"Unknown Currency type format in database: {typeStr}"
                 | typeStr when typeStr.StartsWith("Text(") && typeStr.EndsWith(")") ->
                     let lengthStr = typeStr.Substring(5, typeStr.Length - 6)
 

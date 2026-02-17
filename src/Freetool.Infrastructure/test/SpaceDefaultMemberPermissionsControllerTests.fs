@@ -130,7 +130,9 @@ let ``GetDefaultMemberPermissions returns 403 when user is neither org-admin nor
         | :? ObjectResult as objResult -> Assert.Equal(403, objResult.StatusCode.Value)
         | _ -> Assert.True(false, "Expected ObjectResult with status code 403")
 
-        Assert.True(handler.CapturedCommand.IsNone)
+        match handler.CapturedCommand with
+        | Some(GetSpaceById sid) -> Assert.Equal(spaceId, sid)
+        | _ -> Assert.True(false, "Expected GetSpaceById fallback check")
     }
 
 [<Fact>]
@@ -172,6 +174,46 @@ let ``GetDefaultMemberPermissions returns 200 and response when user is moderato
     }
 
 [<Fact>]
+let ``GetDefaultMemberPermissions falls back to persisted moderator when OpenFGA tuple is missing`` () : Task =
+    task {
+        let userId = UserId.NewId()
+        let spaceGuid = Guid.NewGuid()
+        let spaceId = spaceGuid.ToString()
+        let expected = createPermissionsResponse spaceId
+
+        let persistedSpace: SpaceData =
+            { Id = SpaceId.FromGuid spaceGuid
+              Name = "Engineering"
+              ModeratorUserId = userId
+              MemberIds = []
+              CreatedAt = DateTime.UtcNow
+              UpdatedAt = DateTime.UtcNow
+              IsDeleted = false }
+
+        let checkPermission _ _ _ = false
+
+        let controller, _ =
+            createTestController
+                checkPermission
+                (fun cmd ->
+                    match cmd with
+                    | GetSpaceById sid when sid = spaceId -> Task.FromResult(Ok(SpaceResult persistedSpace))
+                    | GetDefaultMemberPermissions sid when sid = spaceId ->
+                        Task.FromResult(Ok(SpaceDefaultMemberPermissionsResult expected))
+                    | _ -> Task.FromResult(Error(InvalidOperation "Unexpected command")))
+                userId
+
+        let! result = controller.GetDefaultMemberPermissions(spaceId)
+
+        match result with
+        | :? OkObjectResult as ok ->
+            let payload = Assert.IsType<SpaceDefaultMemberPermissionsResponseDto>(ok.Value)
+            Assert.Equal(expected.SpaceId, payload.SpaceId)
+            Assert.Equal(expected.Permissions.CreateApp, payload.Permissions.CreateApp)
+        | _ -> Assert.True(false, "Expected OkObjectResult")
+    }
+
+[<Fact>]
 let ``UpdateDefaultMemberPermissions returns 403 when user is neither org-admin nor moderator`` () : Task =
     task {
         let userId = UserId.NewId()
@@ -193,7 +235,9 @@ let ``UpdateDefaultMemberPermissions returns 403 when user is neither org-admin 
         | :? ObjectResult as objResult -> Assert.Equal(403, objResult.StatusCode.Value)
         | _ -> Assert.True(false, "Expected ObjectResult with status code 403")
 
-        Assert.True(handler.CapturedCommand.IsNone)
+        match handler.CapturedCommand with
+        | Some(GetSpaceById sid) -> Assert.Equal(spaceId, sid)
+        | _ -> Assert.True(false, "Expected GetSpaceById fallback check")
     }
 
 [<Fact>]

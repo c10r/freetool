@@ -83,6 +83,13 @@ let ``AppData with complex JSON properties can be persisted and retrieved`` () =
           Required = true
           DefaultValue = None }
 
+    let currencyInput: Freetool.Domain.Events.Input =
+        { Title = "Budget"
+          Description = Some "USD currency field"
+          Type = InputType.Currency(SupportedCurrency.USD)
+          Required = false
+          DefaultValue = None }
+
     let testKeyValuePair =
         match KeyValuePair.Create("testKey", "testValue") with
         | Ok kvp -> kvp
@@ -94,7 +101,7 @@ let ``AppData with complex JSON properties can be persisted and retrieved`` () =
           FolderId = FolderId.NewId()
           ResourceId = ResourceId.NewId()
           HttpMethod = HttpMethod.Get
-          Inputs = [ testInput ]
+          Inputs = [ testInput; currencyInput ]
           UrlPath = Some "/test"
           UrlParameters = [ testKeyValuePair ]
           Headers = [ testKeyValuePair ]
@@ -122,6 +129,11 @@ let ``AppData with complex JSON properties can be persisted and retrieved`` () =
     Assert.Equal(appData.Name, retrievedApp.Name)
     Assert.Equal(appData.Inputs.Length, retrievedApp.Inputs.Length)
     Assert.Equal(testInput.Title, retrievedApp.Inputs.[0].Title)
+    Assert.Equal(currencyInput.Title, retrievedApp.Inputs.[1].Title)
+
+    match retrievedApp.Inputs.[1].Type.Value with
+    | InputTypeValue.Currency SupportedCurrency.USD -> Assert.True(true)
+    | _ -> Assert.True(false, "Currency input type did not deserialize correctly")
 
 [<Fact>]
 let ``ResourceData with complex JSON properties can be persisted and retrieved`` () =

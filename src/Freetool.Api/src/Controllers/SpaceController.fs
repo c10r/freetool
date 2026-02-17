@@ -35,7 +35,18 @@ type SpaceController
             let userId = this.CurrentUserId
             let userIdStr = userId.Value.ToString()
 
-            return! authService.CheckPermissionAsync (User userIdStr) SpaceModerator (SpaceObject spaceId)
+            let! isModeratorByTuple =
+                authService.CheckPermissionAsync (User userIdStr) SpaceModerator (SpaceObject spaceId)
+
+            if isModeratorByTuple then
+                return true
+            else
+                // Fallback: tolerate tuple drift by checking the persisted space moderator.
+                let! spaceResult = commandHandler.HandleCommand(GetSpaceById spaceId)
+
+                match spaceResult with
+                | Ok(SpaceResult space) -> return space.ModeratorUserId = userId
+                | _ -> return false
         }
 
     /// Checks if the current user is either an org admin OR the moderator of the specified space
@@ -518,7 +529,19 @@ type SpaceController
                 return true
             else
                 // Check if user is member
-                return! authService.CheckPermissionAsync (User userIdStr) SpaceMember (SpaceObject spaceId)
+                let! isMemberByTuple =
+                    authService.CheckPermissionAsync (User userIdStr) SpaceMember (SpaceObject spaceId)
+
+                if isMemberByTuple then
+                    return true
+                else
+                    // Fallback: tolerate tuple drift by checking persisted membership data.
+                    let! spaceResult = commandHandler.HandleCommand(GetSpaceById spaceId)
+
+                    match spaceResult with
+                    | Ok(SpaceResult space) ->
+                        return space.ModeratorUserId = userId || (space.MemberIds |> List.contains userId)
+                    | _ -> return false
         }
 
     [<HttpGet("{id}/permissions")>]
