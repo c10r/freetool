@@ -49,7 +49,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { usePagination } from "@/hooks/usePagination";
-import { useIsOrgAdmin, useIsSpaceModerator } from "@/hooks/usePermissions";
+import {
+  useCurrentUser,
+  useIsOrgAdmin,
+  useIsSpaceModerator,
+} from "@/hooks/usePermissions";
 import { useSpaceDefaultMemberPermissions } from "@/hooks/useSpaceDefaultMemberPermissions";
 import { useSpaceMembersPermissions } from "@/hooks/useSpaceMembersPermissions";
 import { compareUsersByName } from "@/lib/utils";
@@ -128,7 +132,7 @@ export default function SpaceSettingsView({
   // Permission checks
   const isOrgAdmin = useIsOrgAdmin();
   const isSpaceModerator = useIsSpaceModerator(spaceId || "");
-  const canEdit = isOrgAdmin || isSpaceModerator;
+  const { currentUser } = useCurrentUser();
 
   // All users for member selection
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -138,6 +142,11 @@ export default function SpaceSettingsView({
   const [space, setSpace] = useState<Space | null>(null);
   const [spaceLoading, setSpaceLoading] = useState(true);
   const [spaceError, setSpaceError] = useState<string | null>(null);
+  const isCurrentUserPersistedModerator =
+    !!(currentUser?.id && space?.moderatorUserId) &&
+    currentUser.id === space.moderatorUserId;
+  const canEdit =
+    isOrgAdmin || isSpaceModerator || isCurrentUserPersistedModerator;
 
   // General settings form state
   const [editSpaceName, setEditSpaceName] = useState("");
