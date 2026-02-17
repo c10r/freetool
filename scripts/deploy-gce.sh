@@ -32,20 +32,57 @@ resolve_target_vm_name() {
     return 0
   fi
 
-  if [[ -z "${GCP_MIG_NAME:-}" ]]; then
-    echo "Either GCP_VM_NAME or GCP_MIG_NAME must be set." >&2
-    return 1
+  if [[ -n "${GCP_MIG_NAME:-}" ]]; then
+    local instance_name
+    instance_name="$(gcloud compute instance-groups managed list-instances "${GCP_MIG_NAME}" --project "${GCP_PROJECT_ID}" --zone "${GCP_VM_ZONE}" --format='value(instance.basename())' 2>/dev/null | head -n1)"
+
+    if [[ -n "${instance_name}" ]]; then
+      echo "${instance_name}"
+      return 0
+    fi
+
+    echo "Managed instance group ${GCP_MIG_NAME} has no instances in zone ${GCP_VM_ZONE}; trying fallbacks." >&2
   fi
 
-  local instance_name
-  instance_name="$(gcloud compute instance-groups managed list-instances "${GCP_MIG_NAME}" --zone "${GCP_VM_ZONE}" --format='value(instance.basename())' | head -n1)"
-
-  if [[ -z "${instance_name}" ]]; then
-    echo "Managed instance group ${GCP_MIG_NAME} has no instances in zone ${GCP_VM_ZONE}." >&2
-    return 1
+  if [[ -n "${GCP_BLUEGREEN_VM_NAME:-}" ]]; then
+    if gcloud compute instances describe "${GCP_BLUEGREEN_VM_NAME}" --zone "${GCP_VM_ZONE}" --project "${GCP_PROJECT_ID}" --format='value(name)' >/dev/null 2>&1; then
+      echo "${GCP_BLUEGREEN_VM_NAME}"
+      return 0
+    fi
   fi
 
-  echo "${instance_name}"
+  if [[ -n "${GCP_BACKEND_SERVICE:-}" ]]; then
+    local backend_vm_name
+    backend_vm_name="$(
+      gcloud compute backend-services get-health "${GCP_BACKEND_SERVICE}" \
+        --project "${GCP_PROJECT_ID}" \
+        --global \
+        --format='value(status.healthStatus.instance)' 2>/dev/null \
+      | sed -n 's|.*/instances/\([^/]*\)$|\1|p' \
+      | head -n1
+    )"
+
+    if [[ -n "${backend_vm_name}" ]]; then
+      echo "${backend_vm_name}"
+      return 0
+    fi
+  fi
+
+  local labeled_vm_name
+  labeled_vm_name="$(
+    gcloud compute instances list \
+      --project "${GCP_PROJECT_ID}" \
+      --filter="zone:(${GCP_VM_ZONE}) AND labels.app=freetool AND status=RUNNING" \
+      --format='value(name)' 2>/dev/null \
+      | head -n1
+  )"
+  if [[ -n "${labeled_vm_name}" ]]; then
+    echo "${labeled_vm_name}"
+    return 0
+  fi
+
+  echo "Could not resolve target VM. Set GCP_VM_NAME explicitly or ensure a running freetool VM exists in zone ${GCP_VM_ZONE}." >&2
+  return 1
 }
 
 IMAGE_NAME="${IMAGE_NAME:-freetool-api}"
