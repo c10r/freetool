@@ -466,6 +466,90 @@ let ``Run creation should reject Integer input type with invalid integer`` () =
     | _ -> Assert.True(false, "Expected validation error for invalid integer")
 
 [<Fact>]
+let ``Run creation should validate Currency input type with 2 decimal places`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
+    let folderId = FolderId.NewId()
+
+    let inputs =
+        [ { Title = "amount"
+            Description = None
+            Type = InputType.Currency(SupportedCurrency.USD)
+            Required = true
+            DefaultValue = None } ]
+
+    let resource =
+        Resource.create
+            actorUserId
+            spaceId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/payments"
+            []
+            []
+            [ "amount", "{amount}" ]
+
+        |> unwrapResult
+
+    let app =
+        App.create actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] [] false None
+        |> unwrapResult
+
+    let inputValues = [ { Title = "amount"; Value = "123.45" } ]
+
+    // Act
+    let result = Run.createWithValidation actorUserId app inputValues
+
+    // Assert
+    match result with
+    | Ok _ -> Assert.True(true)
+    | Error error -> Assert.True(false, $"Expected success but got error: {error}")
+
+[<Fact>]
+let ``Run creation should reject Currency input type with more than 2 decimal places`` () =
+    // Arrange
+    let actorUserId = UserId.FromGuid(Guid.NewGuid())
+    let spaceId = SpaceId.FromGuid(Guid.NewGuid())
+    let folderId = FolderId.NewId()
+
+    let inputs =
+        [ { Title = "amount"
+            Description = None
+            Type = InputType.Currency(SupportedCurrency.USD)
+            Required = true
+            DefaultValue = None } ]
+
+    let resource =
+        Resource.create
+            actorUserId
+            spaceId
+            "Test API"
+            "Test endpoint"
+            "https://api.test.com/payments"
+            []
+            []
+            [ "amount", "{amount}" ]
+
+        |> unwrapResult
+
+    let app =
+        App.create actorUserId "Test App" folderId resource HttpMethod.Get inputs (Some "/test") [] [] [] false None
+        |> unwrapResult
+
+    let inputValues = [ { Title = "amount"; Value = "123.456" } ]
+
+    // Act
+    let result = Run.createWithValidation actorUserId app inputValues
+
+    // Assert
+    match result with
+    | Error(ValidationError message) ->
+        Assert.Contains("amount", message)
+        Assert.Contains("2 decimal places", message)
+    | _ -> Assert.True(false, "Expected validation error for invalid currency amount")
+
+[<Fact>]
 let ``Run creation should validate Boolean input type with valid boolean`` () =
     // Arrange
     let actorUserId = UserId.FromGuid(Guid.NewGuid())

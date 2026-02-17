@@ -68,6 +68,10 @@ const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email);
 };
 
+const isValidCurrency = (value: string): boolean => {
+  return /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(value.trim());
+};
+
 // Helper function to safely format response content
 const formatResponse = (
   response: string
@@ -293,6 +297,10 @@ const RunApp = () => {
         else if (fieldType === "email" && value && !isValidEmail(value)) {
           errors[title] = "Please enter a valid email address";
         }
+        // Validate currency format (only if there's a value)
+        else if (fieldType === "currency" && value && !isValidCurrency(value)) {
+          errors[title] = "Enter a valid currency amount (max 2 decimals)";
+        }
       }
       if (Object.keys(errors).length > 0) {
         setFormErrors(errors);
@@ -477,6 +485,20 @@ const RunApp = () => {
             value={value}
             onChange={(e) => handleInputChange(title, e.target.value)}
             placeholder={`Enter ${title}`}
+            disabled={running}
+            className={hasError ? "border-red-500" : ""}
+          />
+        );
+      case "currency":
+        return (
+          <Input
+            id={`input-${title}`}
+            type="number"
+            min={0}
+            step={0.01}
+            value={value}
+            onChange={(e) => handleInputChange(title, e.target.value)}
+            placeholder={`Enter ${title} (USD)`}
             disabled={running}
             className={hasError ? "border-red-500" : ""}
           />

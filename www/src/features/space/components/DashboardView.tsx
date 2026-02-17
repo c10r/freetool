@@ -101,6 +101,7 @@ function toFieldType(value: unknown): FieldType {
     "email",
     "date",
     "integer",
+    "currency",
     "boolean",
     "radio",
   ];
@@ -818,6 +819,15 @@ export default function DashboardView({
       }
 
       if (
+        field.type === "currency" &&
+        value.trim() &&
+        !/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(value.trim())
+      ) {
+        errors[key] = "Enter a valid currency amount (max 2 decimals)";
+        continue;
+      }
+
+      if (
         field.type === "radio" &&
         value &&
         !(field.options || []).some((option) => option.value === value)
@@ -1041,13 +1051,22 @@ export default function DashboardView({
             type={
               field.type === "integer"
                 ? "number"
-                : field.type === "date"
-                  ? "date"
-                  : field.type === "email"
-                    ? "email"
-                    : "text"
+                : field.type === "currency"
+                  ? "number"
+                  : field.type === "date"
+                    ? "date"
+                    : field.type === "email"
+                      ? "email"
+                      : "text"
             }
-            step={field.type === "integer" ? 1 : undefined}
+            min={field.type === "currency" ? 0 : undefined}
+            step={
+              field.type === "integer"
+                ? 1
+                : field.type === "currency"
+                  ? 0.01
+                  : undefined
+            }
             value={value}
             onChange={(event) => onValueChange(field.id, event.target.value)}
             disabled={disabled}

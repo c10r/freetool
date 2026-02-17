@@ -8,6 +8,14 @@ open Freetool.Application.DTOs
 open Freetool.Domain
 
 module AppMapper =
+    let private supportedCurrencyToDto (currency: SupportedCurrency) : SupportedCurrencyDto =
+        match currency with
+        | SupportedCurrency.USD -> SupportedCurrencyDto.USD
+
+    let private supportedCurrencyFromDto (currencyDto: SupportedCurrencyDto) : SupportedCurrency =
+        match currencyDto with
+        | SupportedCurrencyDto.USD -> SupportedCurrency.USD
+
     /// Combine a list of Results into a Result containing a list
     let private sequenceResults (results: Result<'T, DomainError> list) : Result<'T list, DomainError> =
         let folder acc item =
@@ -25,6 +33,7 @@ module AppMapper =
         | InputTypeValue.Text maxLength -> Text(MaxLength = maxLength)
         | InputTypeValue.Integer -> Integer
         | InputTypeValue.Boolean -> Boolean
+        | InputTypeValue.Currency currency -> Currency(Currency = supportedCurrencyToDto currency)
         | InputTypeValue.MultiEmail allowedEmails ->
             let emailStrings = allowedEmails |> List.map (fun e -> e.ToString())
             MultiEmail(AllowedEmails = emailStrings)
@@ -52,6 +61,7 @@ module AppMapper =
             |> Result.mapError (fun _ -> ValidationError $"Invalid text max length: {maxLength}")
         | Integer -> Ok(InputType.Integer())
         | Boolean -> Ok(InputType.Boolean())
+        | Currency currencyDto -> Ok(InputType.Currency(supportedCurrencyFromDto currencyDto))
         | MultiEmail emailStrings ->
             let emailResults =
                 emailStrings

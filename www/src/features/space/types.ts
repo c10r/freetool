@@ -3,8 +3,11 @@ export type FieldType =
   | "email"
   | "date"
   | "integer"
+  | "currency"
   | "boolean"
   | "radio";
+
+export type SupportedCurrency = "USD";
 
 export interface RadioOption {
   value: string;
@@ -16,6 +19,7 @@ export interface AppField {
   label: string;
   description?: string;
   type: FieldType;
+  currency?: SupportedCurrency; // Used only for currency type
   required?: boolean;
   options?: RadioOption[]; // Used only for radio type
   defaultValue?: string; // Only applicable when required is false

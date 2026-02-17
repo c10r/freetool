@@ -5,6 +5,7 @@ open System.ComponentModel.DataAnnotations
 open System.ComponentModel.DataAnnotations.Schema
 open System.Text.Json.Serialization
 open System.Text.RegularExpressions
+open System.Globalization
 open Freetool.Domain
 open Freetool.Domain.ValueObjects
 open Freetool.Domain.Events
@@ -407,6 +408,19 @@ module Run =
                         | true, _ -> Ok inputValue
                         | false, _ ->
                             Error(ValidationError $"Input '{input.Title}' must be a valid boolean (true/false)")
+                    | Currency _ ->
+                        match Decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture) with
+                        | false, _ -> Error(ValidationError $"Input '{input.Title}' must be a valid currency amount")
+                        | true, amount when amount < 0m ->
+                            Error(ValidationError $"Input '{input.Title}' must be greater than or equal to 0")
+                        | true, amount ->
+                            let bits = Decimal.GetBits(amount)
+                            let scale = (bits.[3] >>> 16) &&& 0xFF
+
+                            if scale > 2 then
+                                Error(ValidationError $"Input '{input.Title}' must have at most 2 decimal places")
+                            else
+                                Ok inputValue
                     | Date ->
                         match System.DateTime.TryParse(value) with
                         | true, _ -> Ok inputValue

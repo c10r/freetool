@@ -1451,6 +1451,832 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/audit/dashboard/{dashboardId}/events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          fromDate?: string;
+          toDate?: string;
+          skip?: number;
+          take?: number;
+        };
+        header?: never;
+        path: {
+          dashboardId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["EnhancedEventDataPagedResult"];
+            "application/json": components["schemas"]["EnhancedEventDataPagedResult"];
+            "text/json": components["schemas"]["EnhancedEventDataPagedResult"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dashboard": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          skip?: number;
+          take?: number;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["DashboardDataPagedResult"];
+            "application/json": components["schemas"]["DashboardDataPagedResult"];
+            "text/json": components["schemas"]["DashboardDataPagedResult"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["CreateDashboardDto"];
+          "text/json": components["schemas"]["CreateDashboardDto"];
+          "application/*+json": components["schemas"]["CreateDashboardDto"];
+        };
+      };
+      responses: {
+        /** @description Created */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["DashboardData"];
+            "application/json": components["schemas"]["DashboardData"];
+            "text/json": components["schemas"]["DashboardData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dashboard/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["DashboardData"];
+            "application/json": components["schemas"]["DashboardData"];
+            "text/json": components["schemas"]["DashboardData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dashboard/folder/{folderId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          skip?: number;
+          take?: number;
+        };
+        header?: never;
+        path: {
+          folderId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["DashboardDataPagedResult"];
+            "application/json": components["schemas"]["DashboardDataPagedResult"];
+            "text/json": components["schemas"]["DashboardDataPagedResult"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dashboard/{id}/name": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["UpdateDashboardNameDto"];
+          "text/json": components["schemas"]["UpdateDashboardNameDto"];
+          "application/*+json": components["schemas"]["UpdateDashboardNameDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["DashboardData"];
+            "application/json": components["schemas"]["DashboardData"];
+            "text/json": components["schemas"]["DashboardData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dashboard/{id}/configuration": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["UpdateDashboardConfigurationDto"];
+          "text/json": components["schemas"]["UpdateDashboardConfigurationDto"];
+          "application/*+json": components["schemas"]["UpdateDashboardConfigurationDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["DashboardData"];
+            "application/json": components["schemas"]["DashboardData"];
+            "text/json": components["schemas"]["DashboardData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dashboard/{id}/prepare-app": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["UpdateDashboardPrepareAppDto"];
+          "text/json": components["schemas"]["UpdateDashboardPrepareAppDto"];
+          "application/*+json": components["schemas"]["UpdateDashboardPrepareAppDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["DashboardData"];
+            "application/json": components["schemas"]["DashboardData"];
+            "text/json": components["schemas"]["DashboardData"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dashboard/{id}/prepare": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["PrepareDashboardDto"];
+          "text/json": components["schemas"]["PrepareDashboardDto"];
+          "application/*+json": components["schemas"]["PrepareDashboardDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["DashboardPrepareResponseDto"];
+            "application/json": components["schemas"]["DashboardPrepareResponseDto"];
+            "text/json": components["schemas"]["DashboardPrepareResponseDto"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dashboard/{id}/action/{actionId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+          actionId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["RunDashboardActionDto"];
+          "text/json": components["schemas"]["RunDashboardActionDto"];
+          "application/*+json": components["schemas"]["RunDashboardActionDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["DashboardActionResponseDto"];
+            "application/json": components["schemas"]["DashboardActionResponseDto"];
+            "text/json": components["schemas"]["DashboardActionResponseDto"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/dev/mode": {
     parameters: {
       query?: never;
@@ -2080,6 +2906,273 @@ export interface paths {
     };
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/org/identity/group-space-mappings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["IdentityGroupSpaceMappingDto"][];
+            "application/json": components["schemas"]["IdentityGroupSpaceMappingDto"][];
+            "text/json": components["schemas"]["IdentityGroupSpaceMappingDto"][];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+      };
+    };
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["CreateIdentityGroupSpaceMappingDto"];
+          "text/json": components["schemas"]["CreateIdentityGroupSpaceMappingDto"];
+          "application/*+json": components["schemas"]["CreateIdentityGroupSpaceMappingDto"];
+        };
+      };
+      responses: {
+        /** @description Created */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["IdentityGroupSpaceMappingDto"];
+            "application/json": components["schemas"]["IdentityGroupSpaceMappingDto"];
+            "text/json": components["schemas"]["IdentityGroupSpaceMappingDto"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/org/identity/group-space-mappings/{mappingId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          mappingId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["UpdateIdentityGroupSpaceMappingDto"];
+          "text/json": components["schemas"]["UpdateIdentityGroupSpaceMappingDto"];
+          "application/*+json": components["schemas"]["UpdateIdentityGroupSpaceMappingDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+      };
+    };
+    post?: never;
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          mappingId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+      };
+    };
     options?: never;
     head?: never;
     patch?: never;
@@ -4066,6 +5159,150 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/space/{id}/default-member-permissions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["SpaceDefaultMemberPermissionsResponseDto"];
+            "application/json": components["schemas"]["SpaceDefaultMemberPermissionsResponseDto"];
+            "text/json": components["schemas"]["SpaceDefaultMemberPermissionsResponseDto"];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: {
+        content: {
+          "application/json": components["schemas"]["UpdateDefaultMemberPermissionsDto"];
+          "text/json": components["schemas"]["UpdateDefaultMemberPermissionsDto"];
+          "application/*+json": components["schemas"]["UpdateDefaultMemberPermissionsDto"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["ProblemDetails"];
+            "application/json": components["schemas"]["ProblemDetails"];
+            "text/json": components["schemas"]["ProblemDetails"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/trash/space/{spaceId}": {
     parameters: {
       query?: never;
@@ -5159,6 +6396,10 @@ export interface components {
     };
     /** Format: uuid */
     AppId: string;
+    AppIdFSharpOption: {
+      /** Format: uuid */
+      value?: string & components["schemas"]["AppId"];
+    };
     AppInputDto: {
       input: components["schemas"]["InputDto"];
       required: boolean;
@@ -5187,6 +6428,14 @@ export interface components {
         | (string & components["schemas"]["StringFSharpOption"])
         | null;
     };
+    CreateDashboardDto: {
+      name: string;
+      folderId: string;
+      prepareAppId?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
+      configuration: string;
+    };
     CreateFolderDto: {
       name: string;
       /** @description Parent folder ID. Leave null to create a root folder. */
@@ -5202,6 +6451,10 @@ export interface components {
       urlParameters?: components["schemas"]["KeyValuePairDto"][] | null;
       headers?: components["schemas"]["KeyValuePairDto"][] | null;
       body?: components["schemas"]["KeyValuePairDto"][] | null;
+    };
+    CreateIdentityGroupSpaceMappingDto: {
+      groupKey: string;
+      spaceId: string;
     };
     CreateRunDto: {
       inputValues: components["schemas"]["RunInputDto"][];
@@ -5243,6 +6496,52 @@ export interface components {
         | null;
       isOrgAdmin?: boolean;
       teams?: components["schemas"]["TeamMembershipDto"][] | null;
+    };
+    DashboardActionResponseDto: {
+      actionRunId?: string | null;
+      status?: string | null;
+      response?: (string & components["schemas"]["StringFSharpOption"]) | null;
+      errorMessage?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
+    };
+    DashboardData: {
+      /** Format: uuid */
+      id?: string & components["schemas"]["DashboardId"];
+      name: components["schemas"]["DashboardName"];
+      /** Format: uuid */
+      folderId: string & components["schemas"]["FolderId"];
+      prepareAppId?: components["schemas"]["AppIdFSharpOption"] | null;
+      configuration: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    DashboardDataPagedResult: {
+      items?: components["schemas"]["DashboardData"][] | null;
+      /** Format: int32 */
+      totalCount?: number;
+      /** Format: int32 */
+      skip?: number;
+      /** Format: int32 */
+      take?: number;
+    };
+    /** Format: uuid */
+    DashboardId: string;
+    DashboardName: {
+      /** Format: int32 */
+      readonly tag?: number;
+      readonly item?: string | null;
+      readonly value?: string | null;
+    };
+    DashboardPrepareResponseDto: {
+      prepareRunId?: string | null;
+      status?: string | null;
+      response?: (string & components["schemas"]["StringFSharpOption"]) | null;
+      errorMessage?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
     };
     DatabaseAuthScheme: string;
     DatabaseAuthSchemeFSharpOption: string | null;
@@ -5286,6 +6585,7 @@ export interface components {
       readonly isTextDefault?: boolean;
       readonly isIntegerDefault?: boolean;
       readonly isBooleanDefault?: boolean;
+      readonly isCurrencyDefault?: boolean;
       readonly isRadioDefault?: boolean;
     };
     DevModeResponseDto: {
@@ -5308,6 +6608,13 @@ export interface components {
         | "AppCreatedEvent"
         | "AppUpdatedEvent"
         | "AppDeletedEvent"
+        | "DashboardCreatedEvent"
+        | "DashboardUpdatedEvent"
+        | "DashboardDeletedEvent"
+        | "DashboardPreparedEvent"
+        | "DashboardPrepareFailedEvent"
+        | "DashboardActionExecutedEvent"
+        | "DashboardActionFailedEvent"
         | "ResourceCreatedEvent"
         | "ResourceUpdatedEvent"
         | "ResourceDeletedEvent"
@@ -5324,6 +6631,7 @@ export interface components {
       entityType?:
         | "User"
         | "App"
+        | "Dashboard"
         | "Resource"
         | "Folder"
         | "Run"
@@ -5396,6 +6704,17 @@ export interface components {
     FolderName: string;
     /** @enum {string} */
     HttpMethod: string;
+    IdentityGroupSpaceMappingDto: {
+      id?: string | null;
+      groupKey?: string | null;
+      spaceId?: string | null;
+      spaceName?: (string & components["schemas"]["StringFSharpOption"]) | null;
+      isActive?: boolean;
+      /** Format: date-time */
+      createdAt?: string;
+      /** Format: date-time */
+      updatedAt?: string;
+    };
     Input: {
       title?: string | null;
       description?:
@@ -5426,6 +6745,7 @@ export interface components {
       readonly isText?: boolean;
       readonly isInteger?: boolean;
       readonly isBoolean?: boolean;
+      readonly isCurrency?: boolean;
       readonly isMultiEmail?: boolean;
       readonly isMultiDate?: boolean;
       readonly isMultiText?: boolean;
@@ -5440,6 +6760,7 @@ export interface components {
       readonly isText?: boolean;
       readonly isInteger?: boolean;
       readonly isBoolean?: boolean;
+      readonly isCurrency?: boolean;
       readonly isMultiEmail?: boolean;
       readonly isMultiDate?: boolean;
       readonly isMultiText?: boolean;
@@ -5466,6 +6787,9 @@ export interface components {
     MoveFolderDto: {
       /** @description Parent folder ID. Leave null or empty to move to the root folder. */
       parentId?: components["schemas"]["FolderLocationFSharpOption"] | null;
+    };
+    PrepareDashboardDto: {
+      loadInputs: components["schemas"]["RunInputDto"][];
     };
     ProblemDetails: {
       type?: string | null;
@@ -5538,6 +6862,16 @@ export interface components {
         | (string & components["schemas"]["StringFSharpOption"])
         | null;
     };
+    RunDashboardActionDto: {
+      prepareRunId?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
+      loadInputs: components["schemas"]["RunInputDto"][];
+      actionInputs: components["schemas"]["RunInputDto"][];
+      priorActionRunIds?:
+        | components["schemas"]["KeyValuePairDtoFSharpListFSharpOption"]
+        | null;
+    };
     RunData: {
       /** Format: uuid */
       id?: string & components["schemas"]["RunId"];
@@ -5604,6 +6938,11 @@ export interface components {
       /** Format: int32 */
       take?: number;
     };
+    SpaceDefaultMemberPermissionsResponseDto: {
+      spaceId?: string | null;
+      spaceName?: string | null;
+      permissions?: components["schemas"]["SpacePermissionsDto"] | null;
+    };
     /** Format: uuid */
     SpaceId: string;
     SpaceMemberPermissionsDto: {
@@ -5641,6 +6980,10 @@ export interface components {
       editApp?: boolean;
       deleteApp?: boolean;
       runApp?: boolean;
+      createDashboard?: boolean;
+      editDashboard?: boolean;
+      deleteDashboard?: boolean;
+      runDashboard?: boolean;
       createFolder?: boolean;
       editFolder?: boolean;
       deleteFolder?: boolean;
@@ -5793,8 +7136,25 @@ export interface components {
     UpdateAppUseDynamicJsonBodyDto: {
       useDynamicJsonBody?: boolean;
     };
+    UpdateDashboardConfigurationDto: {
+      configuration: string;
+    };
+    UpdateDashboardNameDto: {
+      name: string;
+    };
+    UpdateDashboardPrepareAppDto: {
+      prepareAppId?:
+        | (string & components["schemas"]["StringFSharpOption"])
+        | null;
+    };
+    UpdateDefaultMemberPermissionsDto: {
+      permissions: components["schemas"]["SpacePermissionsDto"];
+    };
     UpdateFolderNameDto: {
       name: string;
+    };
+    UpdateIdentityGroupSpaceMappingDto: {
+      isActive: boolean;
     };
     UpdateResourceBaseUrlDto: {
       /** Format: uri */

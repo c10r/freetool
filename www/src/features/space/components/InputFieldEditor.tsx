@@ -2,6 +2,7 @@ import {
   ALargeSmall,
   Calendar,
   CircleDot,
+  DollarSign,
   Hash,
   Mail,
   Plus,
@@ -59,6 +60,13 @@ export default function InputFieldEditor({
         // Enforce boolean inputs as required (toggles are always true/false)
         if (updates.type === "boolean") {
           return { ...f, ...updates, required: true, defaultValue: undefined };
+        }
+        if (updates.type === "currency") {
+          return {
+            ...f,
+            ...updates,
+            currency: "USD",
+          };
         }
         // Clear defaultValue when required is toggled to true
         if (updates.required === true) {
@@ -153,6 +161,11 @@ export default function InputFieldEditor({
                       <ToggleLeft className="h-4 w-4" /> Boolean
                     </span>
                   </SelectItem>
+                  <SelectItem value="currency">
+                    <span className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" /> Currency (USD)
+                    </span>
+                  </SelectItem>
                   <SelectItem value="radio">
                     <span className="flex items-center gap-2">
                       <CircleDot className="h-4 w-4" /> Radio
@@ -215,8 +228,16 @@ export default function InputFieldEditor({
                   }
                   placeholder="Default value (optional)"
                   aria-label="Default value"
+                  type={f.type === "currency" ? "number" : "text"}
+                  min={f.type === "currency" ? "0" : undefined}
+                  step={f.type === "currency" ? "0.01" : undefined}
                   disabled={disabled}
                 />
+                {f.type === "currency" && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    USD only, up to 2 decimal places.
+                  </p>
+                )}
               </div>
             )}
           </CardContent>

@@ -181,6 +181,16 @@ function renderField(
           })}
         />
       );
+    case "currency":
+      return (
+        <Input
+          id={id}
+          type="number"
+          min={0}
+          step={0.01}
+          {...register(id, required ? { required: true } : undefined)}
+        />
+      );
     case "boolean":
       return (
         <Controller

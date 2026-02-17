@@ -240,7 +240,7 @@ function WorkspaceContent() {
         input: {
           title: f.label,
           description: f.description?.trim() || null,
-          type: toBackendInputType(f.type, f.options),
+          type: toBackendInputType(f.type, f.options, f.currency),
         },
         required: isBoolean ? true : (f.required ?? false),
       };

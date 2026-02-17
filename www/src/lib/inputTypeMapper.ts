@@ -1,4 +1,8 @@
-import type { FieldType, RadioOption } from "@/features/space/types";
+import type {
+  FieldType,
+  RadioOption,
+  SupportedCurrency,
+} from "@/features/space/types";
 import type { components } from "@/schema";
 
 type InputType = components["schemas"]["InputType"];
@@ -23,7 +27,8 @@ interface InputTypeDtoWrite {
  */
 export function toBackendInputType(
   frontendType: FieldType,
-  options?: RadioOption[]
+  options?: RadioOption[],
+  currency: SupportedCurrency = "USD"
 ): InputTypeDtoWrite {
   switch (frontendType) {
     case "email":
@@ -34,6 +39,8 @@ export function toBackendInputType(
       return { case: "Integer" };
     case "boolean":
       return { case: "Boolean" };
+    case "currency":
+      return { case: "Currency", fields: [{ case: currency }] };
     case "radio": {
       const backendOptions = (options || []).map((opt) => ({
         Value: opt.value,
@@ -70,6 +77,8 @@ export function fromBackendInputType(backendType: InputType): FieldType {
         return "integer";
       case "Boolean":
         return "boolean";
+      case "Currency":
+        return "currency";
       case "MultiEmail":
         return "email";
       case "MultiDate":
@@ -120,6 +129,30 @@ export function getRadioOptionsFromBackendType(
   }));
 }
 
+export function getCurrencyFromBackendType(
+  backendType: InputType
+): SupportedCurrency {
+  const typedBackend = backendType as unknown as {
+    Case?: string;
+    Fields?: unknown[];
+  };
+
+  if (typedBackend.Case !== "Currency" || !typedBackend.Fields?.length) {
+    return "USD";
+  }
+
+  const currencyField = typedBackend.Fields[0] as
+    | { Case?: string; case?: string }
+    | string;
+
+  const currencyCase =
+    typeof currencyField === "string"
+      ? currencyField
+      : currencyField.Case || currencyField.case;
+
+  return currencyCase === "USD" ? "USD" : "USD";
+}
+
 /**
  * Extracts the display value from a backend DefaultValue discriminated union object.
  * The backend returns default values in F# DU format:
@@ -145,6 +178,8 @@ export function extractDefaultValue(defaultValue: unknown): string | null {
     case "TextDefault":
     case "RadioDefault":
     case "EmailDefault":
+      return String(value);
+    case "CurrencyDefault":
       return String(value);
     case "BooleanDefault":
       return value ? "true" : "false";

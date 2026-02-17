@@ -55,7 +55,7 @@ export function useAppInputs(
         input: {
           title: field.label,
           description: field.description?.trim() || null,
-          type: toBackendInputType(field.type, field.options),
+          type: toBackendInputType(field.type, field.options, field.currency),
         },
         required: isBoolean ? true : (field.required ?? false),
         defaultValue: isBoolean ? undefined : field.defaultValue,

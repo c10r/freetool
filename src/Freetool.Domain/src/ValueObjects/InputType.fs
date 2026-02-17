@@ -6,12 +6,16 @@ open System
 /// Represents a single option in a radio button group
 type RadioOption = { Value: string; Label: string option }
 
+/// Supported currency literals for currency input types
+type SupportedCurrency = | USD
+
 type InputTypeValue =
     | Email
     | Date
     | Text of maxLength: int
     | Integer
     | Boolean
+    | Currency of currency: SupportedCurrency
     | MultiEmail of allowedEmails: Email list
     | MultiDate of allowedDates: DateTime list
     | MultiText of maxLength: int * allowedValues: string list
@@ -33,6 +37,7 @@ type InputType =
 
     static member Integer() = InputType(Integer)
     static member Boolean() = InputType(Boolean)
+    static member Currency(currency: SupportedCurrency) = InputType(Currency currency)
 
     static member MultiEmail(allowedEmails: Email list) : Result<InputType, DomainError> =
         if List.isEmpty allowedEmails then
@@ -99,6 +104,12 @@ type InputType =
         | Text maxLength -> sprintf "Text(%d)" maxLength
         | Integer -> "Integer"
         | Boolean -> "Boolean"
+        | Currency currency ->
+            let currencyCode =
+                match currency with
+                | USD -> "USD"
+
+            sprintf "Currency(%s)" currencyCode
         | MultiEmail allowedEmails ->
             let emailStrings = allowedEmails |> List.map (fun e -> e.ToString())
             sprintf "MultiEmail([%s])" (String.Join(", ", emailStrings))

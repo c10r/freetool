@@ -17,6 +17,7 @@ import type {
 import {
   extractDefaultValue,
   fromBackendInputType,
+  getCurrencyFromBackendType,
   getRadioOptionsFromBackendType,
 } from "@/lib/inputTypeMapper";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
@@ -191,6 +192,10 @@ export function useSidebarTree() {
                 label: input.title || "",
                 description: input.description || undefined,
                 type: fieldType,
+                currency:
+                  fieldType === "currency"
+                    ? getCurrencyFromBackendType(input.type as InputType)
+                    : undefined,
                 required: isBoolean ? true : (input.required ?? false),
                 options: getRadioOptionsFromBackendType(
                   input.type as InputType
