@@ -1,0 +1,4 @@
+interface:
+  display_name: "Freetool IAP Auth Architecture"
+  short_description: "IAP and OpenFGA architecture explainer"
+  default_prompt: "Analyze and explain how IAP authentication and OpenFGA authorization are implemented in this repository, mapped to onion/hexagonal layers, with concrete code samples and file references."

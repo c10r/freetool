@@ -1,0 +1,4 @@
+interface:
+  display_name: "Freetool OpenFGA Hexagonal Architecture"
+  short_description: "Guide OpenFGA architecture decisions in Freetool"
+  default_prompt: "Explain where OpenFGA belongs in Freetool architecture with code-backed best practices."

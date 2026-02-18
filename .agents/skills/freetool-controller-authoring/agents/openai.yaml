@@ -1,0 +1,4 @@
+interface:
+  display_name: "Freetool Controller Authoring"
+  short_description: "Patterns for creating Freetool API controllers"
+  default_prompt: "Use $freetool-controller-authoring to implement a new Freetool API controller with consistent endpoint, DTO, and JSON converter patterns."
