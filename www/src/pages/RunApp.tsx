@@ -158,6 +158,11 @@ const RunApp = () => {
     { key: string; value: string }[]
   >([{ key: "", value: "" }]);
   const [dynamicBodyError, setDynamicBodyError] = useState<string | null>(null);
+  const [lastSubmittedInputValues, setLastSubmittedInputValues] =
+    useState<Record<string, string> | null>(null);
+  const [lastSubmittedDynamicBody, setLastSubmittedDynamicBody] = useState<
+    { key: string; value: string }[] | null
+  >(null);
 
   const canRunApp = useHasPermission(spaceId, "run_app");
   const { resources } = useResources(spaceId || undefined);
@@ -382,6 +387,11 @@ const RunApp = () => {
           )
         : undefined;
 
+      setLastSubmittedInputValues({ ...inputValues });
+      setLastSubmittedDynamicBody(
+        usesDynamicBody ? [...dynamicBody] : [{ key: "", value: "" }]
+      );
+
       const response = await runApp(
         nodeId,
         inputValuesArray,
@@ -405,6 +415,21 @@ const RunApp = () => {
     usesDynamicBody,
     dynamicBody,
   ]);
+
+  const handlePrepareRunAgain = useCallback(() => {
+    if (lastSubmittedInputValues) {
+      setInputValues(lastSubmittedInputValues);
+    }
+
+    if (usesDynamicBody) {
+      setDynamicBody(lastSubmittedDynamicBody ?? [{ key: "", value: "" }]);
+    }
+
+    setFormErrors({});
+    setDynamicBodyError(null);
+    setRunError(null);
+    setResult(null);
+  }, [lastSubmittedDynamicBody, lastSubmittedInputValues, usesDynamicBody]);
 
   // Handle input value changes
   const handleInputChange = (title: string, value: string) => {
@@ -613,7 +638,7 @@ const RunApp = () => {
                 <PermissionButton
                   spaceId={spaceId}
                   permission="run_app"
-                  onClick={handleRunApp}
+                  onClick={result ? handlePrepareRunAgain : handleRunApp}
                   disabled={running}
                   variant={running ? "secondary" : "default"}
                 >

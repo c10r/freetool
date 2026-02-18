@@ -902,7 +902,7 @@ export default function SpaceSettingsView({
                     {/* Group headers row */}
                     <TableRow className="border-b-0">
                       <TableHead
-                        className="sticky left-0 bg-background z-10 w-48"
+                        className="sticky top-0 left-0 bg-background z-40 w-48"
                         rowSpan={2}
                       >
                         Member
@@ -911,7 +911,7 @@ export default function SpaceSettingsView({
                         <TableHead
                           key={group.label}
                           colSpan={group.permissions.length}
-                          className="text-center border-l"
+                          className="sticky top-0 z-30 bg-background text-center border-l"
                         >
                           {group.label}
                         </TableHead>
@@ -923,7 +923,7 @@ export default function SpaceSettingsView({
                         group.permissions.map((perm, idx) => (
                           <TableHead
                             key={perm.key}
-                            className={`text-center text-xs ${
+                            className={`sticky top-10 z-20 bg-background text-center text-xs ${
                               idx === 0 ? "border-l" : ""
                             }`}
                           >
