@@ -10,6 +10,9 @@ open Freetool.Application.Interfaces
 /// OpenFGA service implementation for fine-grained authorization
 type OpenFgaService(apiUrl: string, logger: ILogger<OpenFgaService>, ?storeId: string) =
 
+    let isDuplicateTupleWriteError (ex: exn) =
+        ex.Message.Contains("cannot write a tuple which already exists")
+
     /// Creates a new OpenFGA client instance without store ID (for store creation)
     let createClientWithoutStore () =
         let configuration = ClientConfiguration(ApiUrl = apiUrl)
@@ -64,8 +67,7 @@ type OpenFgaService(apiUrl: string, logger: ILogger<OpenFgaService>, ?storeId: s
                 try
                     do! (this :> IAuthorizationService).CreateRelationshipsAsync([ tuple ])
                     logger.LogDebug("Relationship created successfully")
-                with :? OpenFga.Sdk.Exceptions.FgaApiValidationError as ex when
-                    ex.Message.Contains("cannot write a tuple which already exists") ->
+                with ex when isDuplicateTupleWriteError ex ->
                     // Tuple already exists, that's fine - we're idempotent
                     logger.LogDebug("Relationship already exists (idempotent success)")
             }
@@ -248,8 +250,7 @@ type OpenFgaService(apiUrl: string, logger: ILogger<OpenFgaService>, ?storeId: s
                 try
                     let! _ = client.Write(body)
                     return ()
-                with :? OpenFga.Sdk.Exceptions.FgaApiValidationError as ex when
-                    ex.Message.Contains("cannot write a tuple which already exists") ->
+                with ex when isDuplicateTupleWriteError ex ->
                     // Tuple already exists - idempotent success
                     return ()
             }
@@ -275,8 +276,12 @@ type OpenFgaService(apiUrl: string, logger: ILogger<OpenFgaService>, ?storeId: s
 
                 let body = ClientWriteRequest(Writes = writes, Deletes = deletes)
 
-                let! _ = client.Write(body)
-                return ()
+                try
+                    let! _ = client.Write(body)
+                    return ()
+                with ex when isDuplicateTupleWriteError ex && request.TuplesToRemove.IsEmpty ->
+                    // Add-only updates are safe to treat idempotently when the target tuple already exists.
+                    return ()
             }
 
         /// Deletes relationship tuple(s)

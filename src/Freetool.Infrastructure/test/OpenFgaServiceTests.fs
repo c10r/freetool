@@ -74,6 +74,27 @@ let ``CreateRelationshipsAsync creates tuples successfully`` () : Task =
     }
 
 [<Fact>]
+let ``CreateRelationshipsAsync is idempotent when tuple already exists`` () : Task =
+    task {
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-idempotent-create-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        let tuple =
+            { Subject = User "alice"
+              Relation = SpaceMember
+              Object = SpaceObject "engineering" }
+
+        do! service.CreateRelationshipsAsync([ tuple ])
+        do! service.CreateRelationshipsAsync([ tuple ])
+
+        let! isMember = service.CheckPermissionAsync (User "alice") SpaceMember (SpaceObject "engineering")
+        Assert.True(isMember)
+    }
+
+[<Fact>]
 let ``DeleteRelationshipsAsync removes tuples successfully`` () : Task =
     task {
         // Arrange - Create store, write model, and add a tuple
@@ -134,6 +155,32 @@ let ``UpdateRelationshipsAsync adds and removes tuples atomically`` () : Task =
         // Verify Carol is no longer just a member
         let! isMember = service.CheckPermissionAsync (User "carol") SpaceMember (SpaceObject "engineering")
         Assert.False(isMember)
+    }
+
+[<Fact>]
+let ``UpdateRelationshipsAsync is idempotent for add-only duplicate tuples`` () : Task =
+    task {
+        let serviceWithoutStore = createServiceWithoutStore ()
+        let! storeResponse = serviceWithoutStore.CreateStoreAsync({ Name = $"test-idempotent-update-{Guid.NewGuid()}" })
+
+        let service = createServiceWithStore storeResponse.Id
+        let! _ = service.WriteAuthorizationModelAsync()
+
+        let tuple =
+            { Subject = User "carol"
+              Relation = SpaceMember
+              Object = SpaceObject "engineering" }
+
+        do! service.CreateRelationshipsAsync([ tuple ])
+
+        do!
+            service.UpdateRelationshipsAsync(
+                { TuplesToAdd = [ tuple ]
+                  TuplesToRemove = [] }
+            )
+
+        let! isMember = service.CheckPermissionAsync (User "carol") SpaceMember (SpaceObject "engineering")
+        Assert.True(isMember)
     }
 
 [<Fact>]
