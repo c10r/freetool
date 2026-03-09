@@ -28,6 +28,49 @@ cleanup() {
   done
 }
 
+validate_google_auth() {
+  local adc_err active_account
+
+  active_account="$(gcloud auth list --filter=status:ACTIVE --format='value(account)' 2>/dev/null | head -n1 || true)"
+  if [[ -z "${active_account}" ]]; then
+    cat >&2 <<'EOF'
+No active gcloud account found.
+
+Authenticate first with either:
+  gcloud auth login
+  gcloud auth application-default login
+
+For non-interactive deploys, prefer a service account credential file or service account impersonation.
+EOF
+    exit 1
+  fi
+
+  adc_err="$(mktemp /tmp/freetool-gcloud-adc.XXXXXX)"
+  cleanup_files+=("${adc_err}")
+  if ! gcloud auth application-default print-access-token >/dev/null 2>"${adc_err}"; then
+    cat >&2 <<EOF
+Google Application Default Credentials are not usable for OpenTofu.
+Active gcloud account: ${active_account}
+
+OpenTofu in this repo uses the Google provider's default credential chain, so stale user ADC will fail with errors like:
+  oauth2: "invalid_grant" "reauth related error (invalid_rapt)"
+
+Remediation:
+  1. Reauthenticate user ADC:
+     gcloud auth application-default login
+  2. If your login session also expired, refresh it:
+     gcloud auth login
+  3. For CI or repeatable deploys, prefer a service account:
+     export GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json
+     # or configure provider/service-account impersonation
+
+Original gcloud error:
+$(sed 's/^/  /' "${adc_err}")
+EOF
+    exit 1
+  fi
+}
+
 hydrate_from_tofu_output() {
   export GCP_PROJECT_ID="${GCP_PROJECT_ID:-$(jq -r '.project_id.value' <<<"$OUT")}"
   export GCP_REGION="${GCP_REGION:-$(jq -r '.artifact_registry_location.value' <<<"$OUT")}"
@@ -253,6 +296,7 @@ REMOTE_DIR="${REMOTE_DIR:-/opt/freetool}"
 trap cleanup EXIT
 trap 'on_error $?' ERR
 
+validate_google_auth
 load_tofu_outputs
 
 : "${GCP_PROJECT_ID:?}"
