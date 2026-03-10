@@ -17,8 +17,8 @@ ensure_not_default_branch() {
   local current_branch
   current_branch="$(git branch --show-current)"
 
-  if [ "$current_branch" = "master" ]; then
-    echo "Refusing to run on 'master'. Create a feature branch and retry."
+  if [ "$current_branch" = "$DEFAULT_BRANCH" ]; then
+    echo "Refusing to run on '$DEFAULT_BRANCH'. Create a feature branch and retry."
     exit 1
   fi
 }
@@ -30,6 +30,53 @@ pick_remote() {
   fi
 
   git remote | head -n 1
+}
+
+resolve_default_branch() {
+  local remote remote_head
+  remote="$(pick_remote)"
+
+  if [ -n "$remote" ]; then
+    remote_head="$(git symbolic-ref --quiet --short "refs/remotes/$remote/HEAD" 2>/dev/null || true)"
+    if [ -n "$remote_head" ]; then
+      echo "${remote_head#"$remote/"}"
+      return
+    fi
+  fi
+
+  if git show-ref --verify --quiet refs/heads/main; then
+    echo "main"
+    return
+  fi
+
+  if git show-ref --verify --quiet refs/heads/master; then
+    echo "master"
+    return
+  fi
+
+  echo "Could not determine the repository default branch."
+  echo "Set the remote HEAD, or create a local 'main' or 'master' branch, then retry."
+  exit 1
+}
+
+resolve_diff_base_ref() {
+  local remote branch
+  remote="$(pick_remote)"
+  branch="$DEFAULT_BRANCH"
+
+  if git show-ref --verify --quiet "refs/remotes/$remote/$branch"; then
+    echo "$remote/$branch"
+    return
+  fi
+
+  if git show-ref --verify --quiet "refs/heads/$branch"; then
+    echo "$branch"
+    return
+  fi
+
+  echo "Could not find a diff baseline for '$branch'."
+  echo "Fetch '$remote/$branch' or create a local '$branch', then retry."
+  exit 1
 }
 
 ensure_upstream_tracking() {
@@ -51,13 +98,12 @@ ensure_upstream_tracking() {
 }
 
 ensure_pull_request() {
-  local branch base_branch existing_pr_url
+  local branch existing_pr_url
   branch="$(git branch --show-current)"
-  base_branch="master"
 
   existing_pr_url="$(gh pr list \
     --head "$branch" \
-    --base "$base_branch" \
+    --base "$DEFAULT_BRANCH" \
     --state open \
     --json url \
     --jq '.[0].url' 2>/dev/null || true)"
@@ -67,19 +113,16 @@ ensure_pull_request() {
     return
   fi
 
-  echo "No pull request found for '$branch'; creating one against '$base_branch'."
-  gh pr create --head "$branch" --base "$base_branch" --fill
+  echo "No pull request found for '$branch'; creating one against '$DEFAULT_BRANCH'."
+  gh pr create --head "$branch" --base "$DEFAULT_BRANCH" --fill
 }
+
+DEFAULT_BRANCH="$(resolve_default_branch)"
+DIFF_BASE_REF="$(resolve_diff_base_ref)"
 
 ensure_not_default_branch
 
-if ! git rev-parse --verify master >/dev/null 2>&1; then
-  echo "Could not find local 'master' branch for diff baseline."
-  echo "Fetch or create 'master', then retry."
-  exit 1
-fi
-
-CHANGED_FILES="$(git diff --name-only master...HEAD)"
+CHANGED_FILES="$(git diff --name-only "$DIFF_BASE_REF"...HEAD)"
 RUN_BACKEND=false
 RUN_FRONTEND=false
 
@@ -93,8 +136,8 @@ fi
 
 if [ "$RUN_BACKEND" = true ]; then
   run_step "Running formatter" dotnet tool run fantomas .
-  run_step "Building solution (Release)" dotnet build CustomerDash.sln -c Release
-  run_step "Running backend tests" dotnet test CustomerDash.sln
+  run_step "Building solution (Release)" dotnet build Freetool.sln -c Release
+  run_step "Running backend tests" dotnet test Freetool.sln
 else
   echo "No changes under src/; skipping backend verification steps."
 fi
