@@ -44,7 +44,6 @@ cat > /opt/freetool/docker-compose.gce.yml <<'COMPOSE'
 services:
   freetool-api:
     image: $${FREETOOL_IMAGE}
-    container_name: freetool-api
     ports:
       - "8080:8080"
     environment:
@@ -70,7 +69,6 @@ services:
 
   openfga-migrate:
     image: openfga/openfga:latest
-    container_name: openfga-migrate
     command: migrate
     user: nonroot
     environment:
@@ -81,7 +79,6 @@ services:
 
   openfga:
     image: openfga/openfga:latest
-    container_name: openfga
     command: run
     user: nonroot
     environment:

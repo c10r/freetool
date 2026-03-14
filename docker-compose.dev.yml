@@ -38,7 +38,6 @@ services:
 
   openfga-migrate:
     image: openfga/openfga:latest
-    container_name: openfga-migrate
     command: migrate
     user: nonroot
     environment:
@@ -49,7 +48,6 @@ services:
 
   openfga:
     image: openfga/openfga:latest
-    container_name: openfga
     command: run
     user: nonroot
     environment:

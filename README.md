@@ -907,9 +907,9 @@ If `Auth__GoogleDirectory__Enabled` is missing/false, Directory API calls are sk
 
 ## 🛠️ Quick Production Verification
 
-1. Confirm env vars in running container:
+1. Confirm env vars in the running service:
    ```bash
-   sudo docker exec freetool-api printenv | grep -E 'Auth__IAP|Auth__GoogleDirectory|FREETOOL_DEV_MODE'
+   sudo docker compose -f /opt/freetool/docker-compose.gce.yml --env-file /opt/freetool/.env exec -T freetool-api printenv | grep -E 'Auth__IAP|Auth__GoogleDirectory|FREETOOL_DEV_MODE'
    ```
 2. Trigger a request:
    ```bash
@@ -917,11 +917,11 @@ If `Auth__GoogleDirectory__Enabled` is missing/false, Directory API calls are sk
    ```
 3. Check logs for Directory failures:
    ```bash
-   sudo docker logs --since 30m freetool-api 2>&1 | grep -E "Failed to obtain Google Directory access token|Google Directory lookup failed|lookup failed unexpectedly"
+   sudo docker compose -f /opt/freetool/docker-compose.gce.yml --env-file /opt/freetool/.env logs --since 30m freetool-api 2>&1 | grep -E "Failed to obtain Google Directory access token|Google Directory lookup failed|lookup failed unexpectedly"
    ```
 4. Check group-to-space mappings in DB:
    ```bash
-   sudo docker cp freetool-api:/app/data/freetool.db /tmp/freetool.db.work
+   sudo docker cp "$(sudo docker compose -f /opt/freetool/docker-compose.gce.yml --env-file /opt/freetool/.env ps -q freetool-api)":/app/data/freetool.db /tmp/freetool.db.work
    sqlite3 -header -column /tmp/freetool.db.work "select GroupKey, SpaceId, IsActive from IdentityGroupSpaceMappings order by CreatedAt desc;"
    ```
 
