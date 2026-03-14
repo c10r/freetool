@@ -18,7 +18,6 @@ services:
 
   aspire-dashboard:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
-    container_name: aspire-dashboard
     restart: unless-stopped
     ports:
       - 18888:18888
