@@ -1,7 +1,0 @@
-#!/usr/bin/env sh
-
-# Run lint-staged for formatting/linting
-npx lint-staged
-
-# Run tests conditionally based on file types
-./scripts/pre-commit-tests.sh

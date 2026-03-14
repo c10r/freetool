@@ -387,30 +387,34 @@ The frontend uses `openapi-fetch` to generate a type-safe client from `openapi.s
 
 The frontend uses **Biome** for linting and formatting - a unified, high-performance tool that replaces ESLint + Prettier. **All linting must pass with zero warnings before committing.**
 
-### Pre-commit Hooks
+### Signoff Workflow
 
-**Automated Quality Checks**: Pre-commit hooks automatically run on staged files to ensure code quality:
+Use `./scripts/signoff-pr.sh` before requesting review or signing off a pull request.
 
-**For F# files** (*.fs, *.fsx, *.fsi):
-- `dotnet fantomas` - Format code with Fantomas
-- `dotnet test Freetool.sln` - Run all backend tests
+**What it does:**
+- Detects whether the branch changes backend files under `src/` or frontend files under `www/`
+- Runs the relevant verification steps only for the changed area
+- Ensures the branch has an upstream
+- Creates a pull request with `gh pr create` if one does not already exist
+- Signs off the pull request with `gh signoff`
 
-**For TypeScript files** (*.ts, *.tsx):
-- `biome check --write` - Lint, format, and auto-fix code in one command
-- `npm test` - Run frontend tests (Vitest)
+**Checks run by the script:**
 
-**How it works:**
-- Hooks run conditionally based on which files are staged
-- Only relevant checks run (e.g., F# changes don't trigger frontend tests)
-- All checks must pass before commit succeeds
-- Commits will be rejected if linting, formatting, or tests fail
+**For backend changes**:
+- `dotnet tool run fantomas .` - Format the repository
+- `dotnet build Freetool.sln -c Release` - Build the solution
+- `dotnet test Freetool.sln` - Run backend tests
 
-**Bypass hooks** (use sparingly):
-```bash
-git commit --no-verify
-```
+**For frontend changes**:
+- `cd www && npm run check` - Lint, format, and auto-fix with Biome
+- `cd www && npm run lint` - Verify zero lint warnings
+- `cd www && npm run format` - Normalize formatting
 
-**Note:** Fix all warnings before attempting to commit. The hooks enforce zero-warning policy.
+**Requirements:**
+- GitHub CLI installed (`gh`)
+- GitHub signoff extension installed: `gh extension install basecamp/gh-signoff`
+
+**Note:** Fix all warnings before signing off a PR. The signoff script expects the repository checks to pass.
 
 ### Why Biome?
 
@@ -769,7 +773,7 @@ When adding properties to entities, you MUST configure them in `OnModelCreating`
 
 ### Frontend
 8. **Frontend Type Errors / `never` Types**: If `response.data` is typed as `never` or API calls show type mismatches, regenerate types: `docker compose up -d && curl http://localhost:5001/swagger/v1/swagger.json > openapi.spec.json && cd www && npm run generate-api-types`
-9. **Linting Fails on Commit**: Pre-commit hooks enforce zero warnings - run `npm run lint -- --fix` to auto-fix
+9. **Signoff Script Fails on Frontend Checks**: Run `cd www && npm run check && npm run lint && npm run format` to fix the repo before signing off the PR
 10. **Fast Refresh Not Working**: Component files must only export components - see [Frontend Code Quality Standards](#frontend-code-quality-standards)
 11. **Stale State in useEffect**: Fix React Hook dependency warnings immediately - they are real bugs
 12. **TypeScript Errors with `any`**: Never use `any` type - use proper interfaces or `unknown` with type guards
